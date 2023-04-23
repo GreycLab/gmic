@@ -1,0 +1,42 @@
+#!/usr/bin/env gmic
+# File : mandelbrot.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Mandelbrot" e[] "" animate 60
+
+# Main function
+go :
+  v 0
+
+  # Create colormap.
+  srand 0
+  input 256,1,1,3,u(255)
+  tsp. ,
+  point. 0
+
+  # Generate frame.
+  target=-0.77175402641296387,0.10690001025795937
+  zoom=1e-2
+  nbf=100
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "$f"/"$nbf
+    input 512,512
+    mandelbrot. {"C = ["$target"]; z = "$zoom"; [C - z, C + z ]"},16384
+    map. [0] rotate. {180*cos(pi*$f/$nbf)},2,0,50%,50%
+    cut. 0,255
+    resize. 256,192,1,3,0,0,0.5,0.5
+    zoom*=0.93
+  }
+  remove[0]
+
+  # Make frames loop, using temporal fading.
+  append z
+  +slices. 0,10%
+  input 100%,100%,100%,1,'z/d'
+  image[0] ..,0,0,{d#0-d#2},0,1,.
+  slices[0] {d#2},100%
+  keep[0]
+  split z
+
+# End of file.

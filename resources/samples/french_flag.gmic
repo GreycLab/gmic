@@ -1,0 +1,25 @@
+#!/usr/bin/env gmic
+# File : pacman.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "French Flag" e[] "" animate 30
+
+# Main function
+go :
+  v 0
+
+  # Render animation frames.
+  nbf=200
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}/$nbf
+    300,300,1,3,"*
+      const f = $f;
+      const nbf = $nbf;
+      begin(R = rot(10°*sin(f*2*pi/nbf)));
+      Z = 80 + 40*cos(x/230 + 2*pi*f/nbf)*sin(y/50 + 3*2*pi*f/nbf);
+      P = round(R*(Z + 100)*([x,y] - [w,h]/2)%);
+      (0.4+exp(-Z/60))*(P[0]<-96?[0,0,255]:P[0]<96?[255,255,255]:[255,0,0])*
+      lerp(0.5,1,xor(P[0]%64,P[1]%64)/64)"
+    c. 0,255
+  }

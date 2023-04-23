@@ -1,0 +1,23 @@
+#!/bin/bash
+export GMIC_LOGIN=`gmic v - +e[] \$\{\"gmic_ftp 0\"\}`
+export GMIC_PASSWD=`gmic v - +e[] \$\{\"gmic_ftp 1\"\}`
+export GMIC_FTP=ftp.cluster011.hosting.ovh.net
+
+echo "START : "`date` >> /tmp/log_gmic_upload_filters
+gmic $HOME/work/src/gmic/src/gmic_stdlib.gmic $HOME/work/src/private_tschumperle/gmic_resources.gmic upload_filters
+if [ ! -f /tmp/gui_filters.old ]; then
+    cp -f /tmp/gui_filters.txt /tmp/gui_filters.old;
+fi
+
+lftp sftp://$GMIC_LOGIN:@$GMIC_FTP -e "put -O /home/"$GMIC_LOGIN"/www/gmic/ /tmp/gui_filters.txt; quit"
+
+git diff /tmp/gui_filters.old /tmp/gui_filters.txt | grep ^+ > /tmp/gui_filters.diff
+diff=`cat /tmp/gui_filters.diff | wc -l`
+if [ $diff -gt 2 ]; then
+    lftp sftp://$GMIC_LOGIN:@$GMIC_FTP -e "put -O /home/"$GMIC_LOGIN"/www/gmic/ /tmp/gui_filters.diff; quit"
+    wget -O /tmp/sendmail.php http://gmic.eu/sendmail.php >/dev/null
+fi
+cp -f /tmp/gui_filters.txt /tmp/gui_filters.old
+echo "END : "`date` >> /tmp/log_gmic_upload_filters
+echo " " >> /tmp/log_gmic_upload_filters
+notify-send -i face-smile "G'MIC Filter Update" "Done!"

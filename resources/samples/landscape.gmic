@@ -1,0 +1,42 @@
+#!/usr/bin/env gmic
+# File : landscape.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] Landscape e[] "" animate 60
+
+# Main function
+go :
+  v 0
+  srand 512
+
+  # Generate elevation map [0] and texture [1]
+  input 512,480 plasma. 1,1,5 resize. 100%,400%,1,1,0,2 blur. 3 cut. 40%,inf normalize. 0,255
+  input (0,102,51;149,175,124;102,42,0;255,255,255) permute. yzcx srgb2rgb. resize. 256,1,1,3,3 rgb2srgb.
+  point. 0,0,0,1,64,100,200 +map.. . rm.. normalize[0] 0,40
+
+  # Generate background image [2].
+  input 1,4,1,3,"y==0?[50,0,100]:y==1?[219,140,15]:y==2?[140,18,15]:[100,0,0]" resize. 400,300,1,3,3
+
+  # Generate frames
+  nbf=50
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}/$nbf
+    y:=h#0/4*(1+$f/$nbf)
+    ang:=6*sin(2*pi*$f/$nbf)
+    +rows[0,1] $y,{$y+h#0/3-1} w,h={[w,h]}
+    rotate[-2,-1] $ang,1,0,50%,50%
+
+    +fill.. 'y/h' cut. 5%,50% normalize. 0,1
+    input 100%,100%,1,3,'[219,140,15]/3' image... .,0,0,0,0,1,.. remove[-2,-1]
+
+    elevation3d. .. remove.. reverse3d.
+    -3d. {$w/2},0,0 r3d. 1,0,0,90 +3d. 0,50,0 *3d. {-2,4*w/$w}
+    +object3d[2] .,50%,35%,-250,1,5,0,1,300,0,-1000,-2200,0.3,0.5 remove..
+  }
+  remove[0-2]
+
+  # Quantize all frames in 256 colors with the same colormap, to avoid .gif flickering.
+  +colormap[50%] 256 index[^-1] .,0,1 remove.
+
+# End of file.

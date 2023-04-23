@@ -1,0 +1,38 @@
+#!/usr/bin/env gmic
+# File : torus3d.gmic
+# Author : David Tschumperle
+
+# Entry point when run from CLI:
+go =>[^] "Torus 3D" e[] "" animate 60
+
+# Main function
+go :
+  v 0
+
+  # Create 3d textured double-torus object.
+  srand 16
+  repeat 2 {
+    torus3d 70,20 100,100,1,3
+    plasma. 1,1,3 normalize. 0,255 equalize. 256  # Generate plasma texture
+    +fill_color. ${-RGB} image.. .,0,0,0,0,0.6     # Tint it a little bit with a random color
+    texturize3d... ..
+    remove[-2,-1]
+  }
+  rotate3d. 1,0,0,90 +3d. 80,0,0  # Shift and merge torii
+  +3d center3d rotate3d 1,0,0,30 *3d 2
+
+  # Create background image.
+  600,600,1,3 plasma. 1,1 normalize. 0,255 *. '[0.2,0.3,0.7]'
+
+  # Generate animation frames.
+  repeat 45 {
+    e[] "\r  > Frame "{$>+1}/45
+    +water[1] 100
+    object3d. [0],50%,50%,0,1,5,0
+    rotate3d[0] 1,2,3,8
+  }
+
+  remove[0,1]  # Remove 3d object + background
+  r2dx 50%     # Anti-alias frames
+
+# End of file.
