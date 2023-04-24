@@ -10996,7 +10996,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
     Mlv=$2
   fi
   1,{$Mlv+1},1,2 # codebook -> [ code,nb_bits ] for each tree leaf
-  eval.. "i2<0?( # Leaf
+  eval.. ":i2<0?( # Leaf
     ind = y;
     code = nb_bits = 0;
     while (ind>=0, # Iteratively go up to root node
@@ -11013,13 +11013,13 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
   foreach[^-1] {
     nm={n} pass. 2
     0 eval... ">begin(da_push(w,h,d,s); out_stream = nb_bits = 0);
-      val = i;
-      C = I[#-2,i];
+      val = max(0,i);
+      C = I[#-2,val];
       (out_stream<<=C[1])|=C[0];
       nb_bits+=C[1];
       while (nb_bits>=8, # Write completed bytes
         da_push(out_stream>>(nb_bits-=8));
-        out_stream&=2^nb_bits-1;
+        out_stream%=1<<nb_bits;
       );
       end(nb_bits?da_push(out_stream<<(8 - nb_bits)); da_freeze())"
     k. => $nm
@@ -11058,7 +11058,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
       swap(I[oind1],I[active++]); # Move children in set of inactive nodes
       swap(I[oind2],I[active++]);
 
-    ,_(while) active<da_size()-1);
+    ,_(while) active<da_size() - 1);
     da_freeze()"
   sort. +,y channels. 2,5 => "[Huffman Tree]"
   u $Mlv
