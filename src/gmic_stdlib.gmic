@@ -10983,6 +10983,80 @@ compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
     rm
   }
 
+#@cli compress_huffman : [huffman_tree]
+#@cli : Compress selected images with Huffman coding.
+compress_huffman : check ${"is_image_arg $1"}
+  e[^-1] "Compress image$? with Huffman coding, using tree $1."
+  pass$1
+
+  # Transform Huffman tree to codebook to speed up encoding.
+  eval. ">begin(nb_leafs = 0); i2<0 && i3<0?++nb_leafs; end(set('nb_leafs',nb_leafs)); I" # Number of tree leafs
+  1,$nb_leafs,1,2 # codebook -> [ code,nb_bits ] for each tree leaf
+  eval.. "i2<0?( # Leaf
+    ind = y;
+    code = nb_bits = 0;
+    while (ind>=0, # Iteratively go up to root node
+      par = i(0,ind,0,1);
+      par>=0?((code<<=1)|=(i(0,par,0,3)==ind); ++nb_bits);
+      ind = par;
+    );
+    ncode = 0; repeat (nb_bits,(ncode<<=1)|=(code&1); code>>=1); # Reverse bit order
+    I[#-1,i0] = [ ncode,nb_bits ];
+  ); I"
+  rm..
+
+  # Encode input data.
+  foreach[^-1] {
+    nm={n} pass. 2
+    0 eval... ">begin(da_push(w,h,d,s); out_stream = nb_bits = 0);
+      val = i;
+      C = I[#-2,i];
+      (out_stream<<=C[1])|=C[0];
+      nb_bits+=C[1];
+      while (nb_bits>=8, # Write completed bytes
+        da_push(out_stream>>(nb_bits-=8));
+        out_stream&=2^nb_bits-1;
+      );
+      end(nb_bits?da_push(out_stream<<(8 - nb_bits)); da_freeze())"
+    k. => $nm
+  }
+  rm.
+
+#@cli huffman_tree : _nb_levels>0[%],_min_value[%],_max_value[%]
+#@cli : Generate Huffman coding tree from the statistics of all selected images.
+#@cli : Huffman tree is returned as a 1xN image inserted at the end of the image list, \
+# representing the 'N' vector-valued leafs/nodes of the tree, encoded as `[ value,parent,child1,child2 ]`.
+#@cli : Last row corresponds to the tree root.
+#@cli : Selected images must contain only integer values.
+#@cli : Default values: 'nb_levels=256', 'min_value=0' and 'max_value=255'.
++huffman_tree : check "${1=256}" skip "${2=0%},${3=100%}"
+  e[^-1] "Generate Huffman coding tree from the statistic of image$?, using $1 levels in range [$2,$3]."
+  l=$! +histogram $1,$2,$3 +[-$l--1] # Histogram of all selected images
+  1,1,1,6 eval.. "begin(id = 0); i?da_push([id++,i,x,-1,-1,-1])" rm..
+  # -> list of active leafs/nodes ( id,occurence,value,parent,child1,child2 )
+  eval "
+    id = da_size();
+    active = 0;
+    do (
+      # Find the two minimal occurrences in active nodes.
+      omin1 = omin2 = inf; oind1 = oind2 = 0;
+      for (k = da_size() - 1, k>=active, --k,
+        occ = i(0,k,0,1);
+        occ<=omin1?(oind2 = oind1; omin2 = omin1; oind1 = k; omin1 = occ):
+        occ<=omin2?(oind2 = k; omin2 = occ);
+      );
+      oind1>oind2?swap(oind1,oind2);
+
+      # Merge them as a new active node.
+      i(0,oind1,0,3) = i(0,oind2,0,3) = id;
+      da_push([ id++,omin1 + omin2,-1,-1,i[oind1],i[oind2] ]);
+      swap(I[oind1],I[active++]); # Move children in set of inactive nodes
+      swap(I[oind2],I[active++]);
+
+    ,_(while) active<da_size()-1);
+    da_freeze()"
+  sort. +,y channels. 2,5 => "[Huffman Tree]"
+
 #@cli compress_rle : _is_binary_data={ 0 | 1 },_maximum_sequence_length>=0
 #@cli : Compress selected images as 2xN data matrices, using RLE algorithm.
 #@cli : Set 'maximum_sequence_length=0' to disable maximum length constraint.
@@ -11089,6 +11163,34 @@ decompress_clut_pde : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
     => $nm
   }
   um srgb2srgb
+
+#@cli decompress_huffman : [huffman_tree]
+#@cli : Decompress selected images with Huffman decoding.
+decompress_huffman : check ${"is_image_arg $1"}
+  e[^-1] "Decompress image$? with Huffman decoding, using tree $1."
+  pass$1
+  foreach[^-1] {
+    nm={n} pass. 2
+
+    # Decode compressed data.
+    0 eval "
+      siz = prod(crop(#-3,0,0,1,4));
+      off = 4; mask = byte = bytes_written = 0;
+      ind = h#-2 - 1;
+      while (bytes_written<siz,
+        !mask?(byte = i[#-3,off++]; mask = 128);
+        bit = (byte&mask)!=0;
+        mask>>=1;
+        child = i(#-2,0,ind,0,bit?3:2);
+        i(#-2,0,child,0,2)<0?( # Leaf
+          da_push(i(#-2,0,child,0,0));
+          ind = h#-2 - 1;
+          ++bytes_written;
+        ):(ind = child);
+      ); da_freeze()"
+    r. {"crop(#-3,0,0,1,4)"},-1 k.
+  }
+  rm.
 
 #@cli decompress_rle
 #@cli : Decompress selected data vectors, using RLE algorithm.
