@@ -10983,16 +10983,19 @@ compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
     rm
   }
 
-#@cli compress_huffman : [huffman_tree]
+#@cli compress_huffman : [huffman_tree],_max_leaf_value
 #@cli : Compress selected images with Huffman coding.
-compress_huffman : check ${"is_image_arg $1"}
+compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
   e[^-1] "Compress image$? with Huffman coding, using tree $1."
   pass$1
 
   # Transform Huffman tree to codebook to speed up encoding.
-  eval. ">begin(nb_leafs = 0); i2<0 && i3<0?++nb_leafs; end(set('nb_leafs',nb_leafs)); I" # Number of tree leafs
-  nb_leafs=256
-  1,$nb_leafs,1,2 # codebook -> [ code,nb_bits ] for each tree leaf
+  if ['$2']==0 # Retrieve max value of all tree leafs
+    eval. ">begin(Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); I"
+  else
+    Mlv=$2
+  fi
+  1,{$Mlv+1},1,2 # codebook -> [ code,nb_bits ] for each tree leaf
   eval.. "i2<0?( # Leaf
     ind = y;
     code = nb_bits = 0;
