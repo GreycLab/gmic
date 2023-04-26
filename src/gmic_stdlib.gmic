@@ -10990,7 +10990,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
   pass$1
 
   # Transform Huffman tree to codebook to speed up encoding.
-  if ['$2']==0 # Retrieve max value of all tree leafs
+  if ['$2']==0 # Retrieve max integer value of all tree leafs
     eval. ">begin(Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); I"
   else
     Mlv=$2
@@ -11013,8 +11013,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
   foreach[^-1] {
     nm={n} pass. 2
     0 eval... ">begin(da_push(w,h,d,s); out_stream = nb_bits = 0);
-      val = max(0,i);
-      C = I[#-2,val];
+      C = I[#-2,int(i),1];
       (out_stream<<=C[1])|=C[0];
       nb_bits+=C[1];
       while (nb_bits>=8, # Write completed bytes
@@ -11035,8 +11034,8 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
 #@cli : Return maximal value of the input data in the status.
 +huffman_tree :
   e[^-1] "Generate Huffman coding tree from the statistic of image$?."
-  Mlv:="val=-inf;for(k=0,k<l,++k,val=max(val,iM#k));val"
-  l=$! +histogram {$Mlv+1},0,$Mlv +[-$l--1] # Histogram of all selected images
+  Mlv:="val=-inf;for(k=0,k<l,++k,val=max(val,iM#k));floor(val)"
+  l:=l +foreach { round 1,-1 histogram {$Mlv+1},0,$Mlv } +[-$l--1] # Histogram of all selected images
   1,1,1,6 eval.. "begin(id = 0); i?da_push([id++,i,x,-1,-1,-1])" rm..
   # -> list of active leafs/nodes ( id,occurence,value,parent,child1,child2 )
   eval "
