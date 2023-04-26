@@ -48394,9 +48394,10 @@ fx_flip_blocks_preview :
 #@gui Huffman Glitches : fx_huffman_glitches,fx_huffman_glitches_preview(1)
 #@gui : Noise Level (%) = float(50,0,100)
 #@gui : Split Mode = choice("None","Horizontally","Vertically","Patches")
-#@gui : Split Size (%) = int(10,0,100)
-#@gui : Patch Overlap (%) = float(0,0,50)_0
+#@gui : Split Size (%) = int(25,0,100)
+#@gui : Patch Overlap (%) = float(0,0,50)_1
 #@gui : Color Space = choice("RGB","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKLab","YCbCr","YIQ")
+#@gui : Random Seed = int(0,0,65536)
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
 #@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
@@ -48410,7 +48411,7 @@ fx_flip_blocks_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/04/26</i>.</small>")
 fx_huffman_glitches :
-  noise_level,split_mode,split_size,patch_overlap,colorspace=${1-5}
+  noise_level,split_mode,split_size,patch_overlap,colorspace,seed=${1-6}
 
   foreach {
     W,H,siz:=w,h,whds
@@ -48428,14 +48429,15 @@ fx_huffman_glitches :
     compress_huffman[^0] [0]
 
     # Add bit-inversion noise in compressed Huffman codes.
-    eval "repeat($siz*($noise_level/100)^6,
-      k = round(u(1,l - 1));
-      off = round(u(4,whds#k - 1));
-      bit = round(u(0,7));
-      val = i[#k,off];
-      mask = 1<<(int(u(8))%8);
-      i[#k,off] = xor(val,mask);
-    )"
+    eval "srand($seed);
+      repeat($siz*($noise_level/100)^6,
+        k = round(u(1,l - 1));
+        off = round(u(4,whds#k - 1));
+        bit = round(u(0,7));
+        val = i[#k,off];
+        mask = 1<<(int(u(8))%8);
+        i[#k,off] = xor(val,mask);
+      )"
 
     # Decompress image data.
     decompress_huffman[^0] [0]
@@ -48452,7 +48454,7 @@ fx_huffman_glitches :
 
 fx_huffman_glitches_preview :
   gui_split_preview "fx_huffman_glitches $*",${-3--1}
-  u "{$1}{$2}{$3}{$4}_"{$2==3?2:0}"{$5}{$6}{$7,$8}"
+  u "{$1}{$2}{$3}{$4}_"{$2==3?2:1}"{$5}{$6}{$7}{$8,$9}"
 
 #@gui JPEG Artefacts : fx_jpeg_artefacts, fx_jpeg_artefacts_preview(0)
 #@gui : note = note("<small>This filter simulates the JPEG compression artifacts,
