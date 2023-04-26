@@ -48391,6 +48391,63 @@ _fx_flip_blocks :
 fx_flip_blocks_preview :
   gui_split_preview "fx_flip_blocks $*",${-3--1}
 
+#@gui Huffman Glitches : fx_huffman_glitches,fx_huffman_glitches_preview(1)
+#@gui : Noise Level (%) = float(50,0,100)
+#@gui : Split Mode = choice("None","Horizontally","Vertically","Patches")
+#@gui : Split Size (%) = int(10,0,100)
+#@gui : Patch Overlap (%) = float(0,0,100)_0
+#@gui : Color Space = choice("RGB","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKLab","YCbCr","YIQ")
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/04/26</i>.</small>")
+fx_huffman_glitches :
+  noise_level,split_mode,split_size,patch_overlap,colorspace=${1-5}
+
+  foreach {
+    W,H,siz:=w,h,whds
+    cspace=${"arg0 "$colorspace",rgb,cmyk,hcy,hsi,hsl,hsv,jzazbz,lab,lch,oklab,ycbcr,yiq"}
+    if $colorspace rgb2$cspace fi
+    s c foreach { im$>,iM$>:=im,iM } n 0,255 a c round
+    huffman_tree mv. 0
+
+    # Decompose image into blocs.
+    bloc_size:=max(1,round($split_size*max(w,h)%))
+    if $split_mode==1 s. x,{-$bloc_size}
+    elif $split_mode==2 s. y,{-$bloc_size}
+    elif $split_mode==3 img2patches. $bloc_size,$patch_overlap%,2 s. z
+    fi
+    compress_huffman[^0] [0]
+
+    # Add bit-inversion noise in compressed Huffman codes.
+    eval "repeat($siz*($noise_level/100)^6,
+      k = round(u(1,l - 1));
+      off = round(u(4,whds#k - 1));
+      bit = round(u(0,7));
+      val = i[#k,off];
+      mask = 1<<(int(u(8))%8);
+      i[#k,off] = xor(val,mask);
+    )"
+
+    # Decompress image data.
+    decompress_huffman[^0] [0]
+
+    if $split_mode==1 a[^0] x
+    elif $split_mode==2 a[^0] y
+    elif $split_mode==3 a[^0] z patches2img. $W,$H,$patch_overlap%
+    fi
+
+    k.
+    s c foreach { n ${im$>},${iM$>} } a c
+    if $colorspace ${cspace}2rgb fi
+  }
+
+fx_huffman_glitches_preview :
+  gui_split_preview "fx_huffman_glitches $*",${-3--1}
+
 #@gui JPEG Artefacts : fx_jpeg_artefacts, fx_jpeg_artefacts_preview(0)
 #@gui : note = note("<small>This filter simulates the JPEG compression artifacts,
 #@gui : using DCT quantization on 8x8 blocks.</small>")
