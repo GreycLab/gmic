@@ -48403,6 +48403,9 @@ fx_flip_blocks_preview :
 #@gui : Split Size (%) = int(25,0,100)
 #@gui : Patch Overlap (%) = float(0,0,50)_1
 #@gui : Color Space = choice("RGB","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKLab","YCbCr","YIQ")
+#@gui : Quantization = int(0,0,64)
+#@gui : note = note("<small>Set <i>Quantization</i> to <i>0</i> to disable it</small>")
+#@gui : sep = separator()
 #@gui : Random Seed = int(0,0,65536)
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
@@ -48417,13 +48420,15 @@ fx_flip_blocks_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/04/26</i>.</small>")
 fx_huffman_glitches :
-  noise_level,split_mode,split_size,patch_overlap,colorspace,seed=${1-6}
+  noise_level,split_mode,split_size,patch_overlap,colorspace,quantization,seed=${1-7}
 
   foreach {
     W,H,siz:=w,h,whds
     cspace=${"arg0 "$colorspace",rgb,cmyk,hcy,hsi,hsl,hsv,jzazbz,lab,lch,oklab,ycbcr,yiq"}
     if $colorspace rgb2$cspace fi
     s c foreach { im$>,iM$>:=im,iM } n 0,255 a c round
+    if $quantization +colormap $quantization,0,0 index.. .,0,0 store. colormap fi
+
     huffman_tree mv. 0
 
     # Decompose image into blocs.
@@ -48453,13 +48458,14 @@ fx_huffman_glitches :
     fi
 
     k.
+    if $quantization $colormap map.. . rm. fi
     s c foreach { n ${im$>},${iM$>} } a c
     if $colorspace ${cspace}2rgb fi
   }
 
 fx_huffman_glitches_preview :
   gui_split_preview "fx_huffman_glitches $*",${-3--1}
-  u "{$1}{$2}{$3}{$4}_"{$2==3?2:1}"{$5}{$6}{$7}{$8,$9}"
+  u "{$1}{$2}{$3}{$4}_"{$2==3?2:1}"{$5}{$6}{$7}{$8}{$9,$10}"
 
 #@gui JPEG Artefacts : fx_jpeg_artefacts, fx_jpeg_artefacts_preview(0)
 #@gui : note = note("<small>This filter simulates the JPEG compression artifacts,
