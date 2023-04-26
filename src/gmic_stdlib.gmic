@@ -11171,6 +11171,7 @@ decompress_clut_pde : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
 
 #@cli decompress_huffman : [huffman_tree]
 #@cli : Decompress selected images with Huffman decoding.
+#@cli : $ image.jpg huffman_tree compress_huffman.. . +decompress_huffman.. .
 decompress_huffman : check ${"is_image_arg $1"}
   e[^-1] "Decompress image$? with Huffman decoding, using tree $1."
   pass$1
@@ -11179,22 +11180,27 @@ decompress_huffman : check ${"is_image_arg $1"}
 
     # Decode compressed data.
     0 eval "
+      hvalues = crop(#-2,0,0,0,0,1,h#-2,1,1);
+      hparent = crop(#-2,0,0,0,1,1,h#-2,1,1);
+      hchild0 = crop(#-2,0,0,0,2,1,h#-2,1,1);
+      hchild1 = crop(#-2,0,0,0,3,1,h#-2,1,1);
+      const root = size(hvalues) - 1;
       siz = prod(crop(#-3,0,0,1,4));
       off = 4; mask = byte = bytes_written = 0;
-      ind = h#-2 - 1;
+      ind = root;
       while (bytes_written<siz,
         !mask?(byte = i[#-3,off++]; mask = 128);
         bit = byte&mask;
         mask>>=1;
-        child = i(#-2,0,ind,0,bit?3:2);
-        val = i[#-2,child];
+        child = bit?hchild1[ind]:hchild0[ind];
+        val = hvalues[child];
         val>=0?( # Leaf
           da_push(val);
-          ind = h#-2 - 1;
+          ind = root;
           ++bytes_written;
         ):(ind = child);
       ); da_freeze()"
-    r. {"crop(#-3,0,0,1,4)"},-1 k.
+    r. {"crop(#-3,0,0,1,4)"},-1 k. => $nm
   }
   rm.
 
@@ -48393,7 +48399,7 @@ fx_flip_blocks_preview :
 
 #@gui Huffman Glitches : fx_huffman_glitches,fx_huffman_glitches_preview(1)
 #@gui : Noise Level (%) = float(50,0,100)
-#@gui : Split Mode = choice("None","Horizontally","Vertically","Patches")
+#@gui : Split Mode = choice("None","Horizontal Blocs","Vertical Blocs","Patches")
 #@gui : Split Size (%) = int(25,0,100)
 #@gui : Patch Overlap (%) = float(0,0,50)_1
 #@gui : Color Space = choice("RGB","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKLab","YCbCr","YIQ")
@@ -48422,8 +48428,8 @@ fx_huffman_glitches :
 
     # Decompose image into blocs.
     bloc_size:=max(1,round($split_size*max(w,h)%))
-    if $split_mode==1 s. x,{-$bloc_size}
-    elif $split_mode==2 s. y,{-$bloc_size}
+    if $split_mode==1 s. y,{-$bloc_size}
+    elif $split_mode==2 s. x,{-$bloc_size}
     elif $split_mode==3 img2patches. $bloc_size,$patch_overlap%,2 s. z
     fi
     compress_huffman[^0] [0]
@@ -48441,8 +48447,8 @@ fx_huffman_glitches :
 
     # Decompress image data.
     store[0] _tree ap "$_tree decompress_huffman[^-1] . rm." # Multi-threaded decompression
-    if $split_mode==1 a x
-    elif $split_mode==2 a y
+    if $split_mode==1 a y
+    elif $split_mode==2 a x
     elif $split_mode==3 a z patches2img. $W,$H,$patch_overlap%
     fi
 
