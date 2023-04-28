@@ -2221,10 +2221,6 @@ inline void* get_tid() {
 // Search G'MIC by image list (if 'p_list!=0') *or* thread_id (if 'p_list==0').
 const CImg<void*> gmic::current_run(const char *const func_name, void *const p_list) {
   CImgList<void*> &grl = gmic_runs();
-
-  std::fprintf(stderr,"\n** CURRENT RUNS %u\n",grl.size());
-  CImgList<cimg_uint64>(grl).print("DEBUG : RUNS");
-
   void *const tid = p_list?(void*)0:get_tid();
   int p;
   for (p = grl.width() - 1; p>=0; --p) {
