@@ -5317,20 +5317,20 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   cimg::mutex(24);
   CImgList<void*> &grl = gmic_runs();
   unsigned int ind_run = ~0U;
-  CImg<void*> gr(8);
-  gr[0] = (void*)this;
-  gr[1] = (void*)&images;
-  gr[2] = (void*)&images_names;
-  gr[3] = (void*)&parent_images;
-  gr[4] = (void*)&parent_images_names;
-  gr[5] = (void*)variables_sizes;
-  gr[6] = (void*)command_selection;
+  CImg<void*> curr_gr(8), prev_gr;
+  curr_gr[0] = (void*)this;
+  curr_gr[1] = (void*)&images;
+  curr_gr[2] = (void*)&images_names;
+  curr_gr[3] = (void*)&parent_images;
+  curr_gr[4] = (void*)&parent_images_names;
+  curr_gr[5] = (void*)variables_sizes;
+  curr_gr[6] = (void*)command_selection;
   if (!push_new_run) // Modify data for existing run
     for (int k = grl.width() - 1; k>=0; --k) {
-      CImg<void*> &_gr = grl[k];
-      if (_gr && _gr[0]==this) { ind_run = k; gr[7] = _gr[7]; gr.swap(_gr); break; }
+      CImg<void*> &gr = grl[k];
+      if (gr && gr[0]==this) { ind_run = k; curr_gr[7] = gr[7]; prev_gr = gr; gr = curr_gr; break; }
     }
-  if (ind_run==~0U) { ind_run = grl._width; gr[7] = get_tid(); gr.move_to(grl); } // Insert new run
+  if (ind_run==~0U) { ind_run = grl._width; curr_gr[7] = get_tid(); grl.insert(curr_gr); } // Insert new run
   cimg::mutex(24,0);
 
   typedef typename cimg::superset<T,float>::type Tfloat;
@@ -8945,7 +8945,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           is_lbrace_command = true;
           const int o_verbosity = verbosity;
           gmic_exception exception;
-          CImg<void*> gr_onfail = gmic_runs()[ind_run];
           try {
             if (next_debug_line!=~0U) { debug_line = next_debug_line; next_debug_line = ~0U; }
             if (next_debug_filename!=~0U) { debug_filename = next_debug_filename; next_debug_filename = ~0U; }
@@ -8984,12 +8983,13 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               cimg::swap(exception._message,e._message);
             }
 
-            // Put back the 'gr' data in managed runs (was not done in first 'run()' because of exception thrown).
+            // Put back the 'curr_gr' run in managed runs (as it has been skipped in
+            // first 'run()' because of exception thrown in 'local' block).
             cimg::mutex(24);
             for (int k = grl.width() - (ind_run<grl._width?0:1); k>=0; --k) {
               const int _k = k>=grl.width()?ind_run:k; // First try is 'ind_run' if defined
-              CImg<void*> &_gr = grl[_k];
-              if (_gr && _gr[0]==this) { gr_onfail.swap(_gr); break; }
+              CImg<void*> &gr = grl[_k];
+              if (gr && gr[0]==this) { gr = curr_gr; break; }
             }
             cimg::mutex(24,0);
           }
@@ -15618,8 +15618,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   cimg::mutex(24);
   for (int k = grl.width() - (ind_run<grl._width?0:1); k>=0; --k) {
     const int _k = k>=grl.width()?ind_run:k; // First try is 'ind_run' if defined
-    CImg<void*> &_gr = grl[_k];
-    if (_gr && _gr[0]==this) { if (push_new_run) grl.remove(_k); else gr.swap(_gr); break; }
+    CImg<void*> &gr = grl[_k];
+    if (gr && gr[0]==this) { if (push_new_run) grl.remove(_k); else gr = prev_gr; break; }
   }
   cimg::mutex(24,0);
 
