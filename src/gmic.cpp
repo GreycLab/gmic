@@ -2221,6 +2221,10 @@ inline void* get_tid() {
 // Search G'MIC by image list (if 'p_list!=0') *or* thread_id (if 'p_list==0').
 const CImg<void*> gmic::current_run(const char *const func_name, void *const p_list) {
   CImgList<void*> &grl = gmic_runs();
+
+  std::fprintf(stderr,"\n** CURRENT RUNS %u\n",grl.size());
+  CImgList<cimg_uint64>(grl).print("DEBUG : RUNS");
+
   void *const tid = p_list?(void*)0:get_tid();
   int p;
   for (p = grl.width() - 1; p>=0; --p) {
@@ -8945,6 +8949,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           is_lbrace_command = true;
           const int o_verbosity = verbosity;
           gmic_exception exception;
+          CImg<void*> gr_onfail = gmic_runs()[ind_run];
           try {
             if (next_debug_line!=~0U) { debug_line = next_debug_line; next_debug_line = ~0U; }
             if (next_debug_filename!=~0U) { debug_filename = next_debug_filename; next_debug_filename = ~0U; }
@@ -8982,6 +8987,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               cimg::swap(exception._command,e._command);
               cimg::swap(exception._message,e._message);
             }
+
+            // Put back the 'gr' data in managed runs (was not done in first 'run()' because of exception thrown).
+            cimg::mutex(24);
+            for (int k = grl.width() - (ind_run<grl._width?0:1); k>=0; --k) {
+              const int _k = k>=grl.width()?ind_run:k; // First try is 'ind_run' if defined
+              CImg<void*> &_gr = grl[_k];
+              if (_gr && _gr[0]==this) { gr_onfail.swap(_gr); break; }
+            }
+            cimg::mutex(24,0);
           }
 
           cimg::mutex(27);
