@@ -5168,7 +5168,7 @@ _parse_cli_images : check "isbool(${1=1})"
       r3d 1,1,0,-80 r3d 0,1,0,80 snapshot3d {max($W,$H)}
     else # Regular 1D,2D or 3D image
       label2="("{w}x{h}x{d}x{s}")"
-      r 100%,100%,100%,3,{s==1?1:0}
+      r 100%,100%,100%,{max(s,3)},{s==1?1:0}
       if d>1 # Volumetric image -> Render as a 2D image
         +slices 50%
         +z[0] 50%,0,0,50%,100%,100% permute. zyxc
@@ -5194,14 +5194,14 @@ _parse_cli_images : check "isbool(${1=1})"
         a[0,1] x a[1,2] x a y
       fi
     fi
-
     if w>5*h r $W,{$H/3},1,100%,1
     elif h>5*w r {$W/3},$H,1,100%,1
     else rr2d $W,$H,0,{w<$W&&h<$H?1:2}
     fi
     n 0,255
 
-    if $1
+    if $1 # Insert label at bottom
+      if s>3 drgba fi
       r {[w,h]+2},1,100%,0,0,0.5,0.5
       - 245 r {[w+10,h+5]},1,100%,0,0,0.5,0.5 r 100%,{h+1},1,100%,0,0,0,1 + 245
       0 t. $label" "$label2,5,0,32,1,1
@@ -5212,7 +5212,6 @@ _parse_cli_images : check "isbool(${1=1})"
       *. -1 n. 0,255 to_rgb.
       - 245 a y,0.5 + 245
     fi
-
   }
   c 0,255
 
