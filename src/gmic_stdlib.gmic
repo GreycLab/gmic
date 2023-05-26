@@ -29506,29 +29506,20 @@ wave : skip ${1=4},${2=0.4},${3=50},${4=50}
 #@cli : Default values: 'amplitude=20', 'angle=0', 'attenuation=0.7' and 'threshold=20'.
 #@cli : $ image.jpg +wind ,
 wind : check "isint(${1=20}) && $1>=0 && ${3=0.7}>=0 && $3<=1" skip "${2=0},${4=20}"
-  e[^-1] "Apply wind effect on image$?, with amplitude $1, angle "{round($2/45)*45}" deg., attenuation $3
-          and threshold $4."
+  e[^-1] "Apply wind effect on image$?, with amplitude $1, angle $2 deg., attenuation $3 and threshold $4."
   if !$1 return fi
-  dxdy=${-_wind{round($2/45)%8}}
-  fact={(1-$3)^(1/$1)}
+  dxdy:=cexp([0,$2°])
+  fact:=(1-$3)^(1/$1)
   foreach {
     +gradient_norm >=. $4%
     r. 100%,100%,1,.. *. ..
     repeat $1 {
-      shift. $dxdy,0,0,0 max.. . *. $fact
+      shift. $dxdy,0,0,0,1 max.. . *. $fact
       remove_pixels. {100/$1}%
     }
     rm.
   }
-
-_wind0 : u 1,0
-_wind1 : u 1,1
-_wind2 : u 0,1
-_wind3 : u -1,1
-_wind4 : u -1,0
-_wind5 : u -1,-1
-_wind6 : u 0,-1
-_wind7 : u 1,-1
+  to {``$dxdy}
 
 #@cli zoom : _factor,_cx,_cy,_cz,_boundary_conditions={ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }
 #@cli : Apply zoom factor to selected images.

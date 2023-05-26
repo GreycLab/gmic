@@ -646,11 +646,13 @@ CImg<T> get_gmic_set(const double value,
 CImg<T>& gmic_shift(const float delta_x, const float delta_y=0, const float delta_z=0, const float delta_c=0,
                     const unsigned int boundary_conditions=0, const bool interpolation=false) {
   if (is_empty()) return *this;
-  const int
-    idelta_x = (int)cimg::round(delta_x),
-    idelta_y = (int)cimg::round(delta_y),
-    idelta_z = (int)cimg::round(delta_z),
+  int idelta_x = 0, idelta_y = 0, idelta_z = 0, idelta_c = 0;
+  if (interpolation) {
+    idelta_x = (int)cimg::round(delta_x);
+    idelta_y = (int)cimg::round(delta_y);
+    idelta_z = (int)cimg::round(delta_z);
     idelta_c = (int)cimg::round(delta_c);
+  }
   if (!interpolation ||
       (delta_x==(float)idelta_x && delta_y==(float)idelta_y && delta_z==(float)idelta_z && delta_c==(float)idelta_c))
     return shift(idelta_x,idelta_y,idelta_z,idelta_c,boundary_conditions); // Integer displacement
@@ -660,11 +662,13 @@ CImg<T>& gmic_shift(const float delta_x, const float delta_y=0, const float delt
 CImg<T> get_gmic_shift(const float delta_x, const float delta_y=0, const float delta_z=0, const float delta_c=0,
                        const unsigned int boundary_conditions=0, const bool interpolation=false) const {
   if (is_empty()) return CImg<T>::empty();
-  const int
-    idelta_x = (int)cimg::round(delta_x),
-    idelta_y = (int)cimg::round(delta_y),
-    idelta_z = (int)cimg::round(delta_z),
+  int idelta_x = 0, idelta_y = 0, idelta_z = 0, idelta_c = 0;
+  if (interpolation) {
+    idelta_x = (int)cimg::round(delta_x);
+    idelta_y = (int)cimg::round(delta_y);
+    idelta_z = (int)cimg::round(delta_z);
     idelta_c = (int)cimg::round(delta_c);
+  }
   if (!interpolation ||
       (delta_x==(float)idelta_x && delta_y==(float)idelta_y && delta_z==(float)idelta_z && delta_c==(float)idelta_c))
     return (+*this).shift(idelta_x,idelta_y,idelta_z,idelta_c,boundary_conditions); // Integer displacement
@@ -673,6 +677,10 @@ CImg<T> get_gmic_shift(const float delta_x, const float delta_y=0, const float d
 
 CImg<T> _gmic_shift(const float delta_x, const float delta_y=0, const float delta_z=0, const float delta_c=0,
                     const unsigned int boundary_conditions=0) const {
+
+  std::fprintf(stderr,"\nDEBUG : %g,%g,%g,%g,%u\n",
+               delta_x,delta_y,delta_z,delta_c,boundary_conditions);
+
   CImg<T> res(_width,_height,_depth,_spectrum);
   if (delta_c!=0) // 4D shift
     switch (boundary_conditions) {
@@ -12188,10 +12196,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             cimg_forY(selection,l) {
               CImg<T> &img = images[selection[l]];
               const float
-                ndx = (float)cimg::round(sepx=='%'?dx*img.width()/100:dx),
-                ndy = (float)cimg::round(sepy=='%'?dy*img.height()/100:dy),
-                ndz = (float)cimg::round(sepz=='%'?dz*img.depth()/100:dz),
-                ndc = (float)cimg::round(sepc=='%'?dc*img.spectrum()/100:dc);
+                ndx = (float)(sepx=='%'?dx*img.width()/100:dx),
+                ndy = (float)(sepy=='%'?dy*img.height()/100:dy),
+                ndz = (float)(sepz=='%'?dz*img.depth()/100:dz),
+                ndc = (float)(sepc=='%'?dc*img.spectrum()/100:dc);
               gmic_apply(gmic_shift(ndx,ndy,ndz,ndc,boundary,(bool)interpolation),false);
             }
           } else arg_error("shift");
