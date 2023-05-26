@@ -677,10 +677,6 @@ CImg<T> get_gmic_shift(const float delta_x, const float delta_y=0, const float d
 
 CImg<T> _gmic_shift(const float delta_x, const float delta_y=0, const float delta_z=0, const float delta_c=0,
                     const unsigned int boundary_conditions=0) const {
-
-  std::fprintf(stderr,"\nDEBUG : %g,%g,%g,%g,%u\n",
-               delta_x,delta_y,delta_z,delta_c,boundary_conditions);
-
   CImg<T> res(_width,_height,_depth,_spectrum);
   if (delta_c!=0) // 4D shift
     switch (boundary_conditions) {
