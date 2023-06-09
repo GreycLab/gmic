@@ -3269,7 +3269,7 @@ display_quiver :
 
 _display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2}) && $3>=0 && $3<=2"
   e[0--3] "Render field of 2D arrows from image"$_gmic_s", with size factor $1, arrow size $2 in "\
-          ${arg\ 1+$3,monochrome,grayscale,color}" mode."
+          ${arg0\ $3,monochrome,grayscale,color}" mode."
   foreach {
     +norm. /.. {max(1e-6,iM)} rm. # Normalize vector values.
     {$1*w},{$1*h},1,{"1<<cut($3,0,2)"}
@@ -3343,7 +3343,7 @@ display_tensors :
 
 _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2}) && $3>=0 && $3<=2 && ${4=2}>=0"
   e[0--3] "Render field of 2x2 tensors from image"$_gmic_s", with size factor $1, ellipse size $2 in "\
-          ${arg\ 1+$3,monochrome,grayscale,color}" mode and outline $4."
+          ${arg0\ $3,monochrome,grayscale,color}" mode and outline $4."
   foreach {
     * {($2*$1/2)/max(abs(im),abs(iM))} # Normalize tensor values.
     {$1*w},{$1*h},1,{"1<<cut($3,0,2)"}
@@ -8749,7 +8749,7 @@ update_gallery_html : check "isbool(${1=0})"
   nb_cols=3
 
   repeat $nb_categories { ncat=$>
-    category=${arg\ 1+$>,$categories}
+    category=${arg0\ $>,$categories}
     if isfile('{/$category.html}') continue fi
     e "\n  * Process category '"$_vt100_b$category$_vt100_n"'."
 
@@ -8758,7 +8758,7 @@ update_gallery_html : check "isbool(${1=0})"
     col,nex=0
 
     repeat $nb_categories {
-      cat=${arg\ 1+$>,$categories}
+      cat=${arg0\ $>,$categories}
       if '$cat'=='$category' td_$cat="<td style=\"background-color: \#dddddd\">"
       else td_$cat="<td>"
       fi
@@ -11713,7 +11713,7 @@ polar2complex :
 #@cli : $ image.jpg luminance +quantize 3
 #@cli : $ 200,200,1,1,'cos(x/10)*sin(y/10)' +quantize[0] 6 +quantize[0] 4 +quantize[0] 3 +quantize[0] 2
 quantize : check "isint($1) && $1>=1 && isbool(${2=1}) && isint(${3=0}) && $3>=-1 && $3<=1"
-  e[^-1] "Quantize image$? using $1 levels, "${arg\ 1+!$2,with,without}" keeping value range."
+  e[^-1] "Quantize image$? using $1 levels, "${arg0\ !$2,with,without}" keeping value range."
   foreach {
     if $3==1 # Uniform quantization.
       if s==1 # Greyscale image.
@@ -12070,7 +12070,7 @@ _ac_yiq_q : _p="to_color" _f="rgb2yiq8" _b="yiq82rgb" _s=2
 #@cli : $ image.jpg +autoindex[0] 4 +autoindex[0] 8 +autoindex[0] 16
 autoindex : check "isint($1) && $1>0 && ${2=0}>=0" skip ${3=1}
   e[^-1] "Index colors in images$? by adapted colormap with $1 entries, dithering level $2 and "\
-          ${arg\ 1+!$3,k-means,median-cut}" method."
+          ${arg0\ !$3,k-means,median-cut}" method."
   foreach {
     if w>h if w>256 +r2dx 256 else [0] fi
     else if h>256 +r2dy 256 else [0] fi
@@ -12366,7 +12366,7 @@ colorblind : check "isint($1) && $1>=0 && $1<=7"
 #@cli : $ image.jpg +colormap[0] 4 +colormap[0] 8 +colormap[0] 16
 #@cli : $$ https://gmic.eu/oldtutorial/_colormap
 colormap : check "isint($1) && $1>=0" skip ${2=1},${3=1}
-  if $1 e[0--3] "Estimate colormap with $1 entries for image$?, by "${arg\ 1+!$2,k-means,median-cut}" method."
+  if $1 e[0--3] "Estimate colormap with $1 entries for image$?, by "${arg0\ !$2,k-means,median-cut}" method."
   else e[0--3] "Estimate full colormap for image$?."
   fi
   foreach {
@@ -12632,7 +12632,7 @@ ipremula :
 #@cli : Default value: 'illuminant=2'.
 jzazbz2rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Jzazbz to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Jzazbz to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   jzazbz2xyz xyz2rgb $illu
 
 #@cli jzazbz2xyz
@@ -12689,7 +12689,7 @@ lab2lch :
 #@cli : $ (50,50;50,50^-3,3;-3,3^-3,-3;3,3) resize 400,400,1,3,3 lab2rgb
 lab2rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lab to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lab to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   lab2xyz $illu xyz2rgb $illu
 
 #@cli lab2srgb : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -12698,7 +12698,7 @@ lab2rgb : skip "${1=,}"
 #@cli : $ (50,50;50,50^-3,3;-3,3^-3,-3;3,3) resize 400,400,1,3,3 lab2rgb
 lab2srgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lab to sRGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lab to sRGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   lab2rgb $illu rgb2srgb
 
 #@cli lab82srgb : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -12707,7 +12707,7 @@ lab2srgb : skip "${1=,}"
 #@cli : $ (50,50;50,50^-3,3;-3,3^-3,-3;3,3) resize 400,400,1,3,3 lab2rgb
 lab82srgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lab8 to sRGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lab8 to sRGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   lab82rgb $illu rgb2srgb
 
 #@cli lab2xyz : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -12715,7 +12715,7 @@ lab82srgb : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 lab2xyz : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lab to XYZ, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lab to XYZ, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   to_color
   f "
     begin(
@@ -12748,7 +12748,7 @@ lab2xyz : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 lab82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lab8 to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lab8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   repeat $! {
     sh[$>] 0 /. 2.55 rm.
     sh[$>] 1 /. 0.85 -. 127 rm.
@@ -12767,7 +12767,7 @@ lch2lab :
 #@cli : Default value: 'illuminant=2'.
 lch2rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lch to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lch to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   lch2lab lab2rgb $illu
 
 #@cli lch82rgb : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -12775,7 +12775,7 @@ lch2rgb : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 lch82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from Lch8 to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from Lch8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   pi,facth:=[pi,255/(2*pi)]
   repeat $! {
     sh[$>] 0 /. 2.55 rm.
@@ -13763,7 +13763,7 @@ _retinex :
 #@cli : Default values: 'start_pattern=0' and 'color_grid=0'.
 #@cli : $ image.jpg +rgb2bayer 0
 rgb2bayer : skip ${1=0},${2=0}
-  e[^-1] "Transform image$? to a RGB-Bayer "${arg\ 1+!$2,color,monochrome}" grid, starting from pattern '$1'."
+  e[^-1] "Transform image$? to a RGB-Bayer "${arg0\ !$2,color,monochrome}" grid, starting from pattern '$1'."
   to_rgb foreach { _rgb2bayer$1 ri[1] [0],0,2 * if !$2 s c + fi }
 
 _rgb2bayer0 : (1,0;0,0^0,1;1,0^0,0;0,1)
@@ -13883,7 +13883,7 @@ rgb2int :
 #@cli : Default value: 'illuminant=2'.
 rgb2jzazbz : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to Jzazbz, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to Jzazbz, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   rgb2xyz $illu xyz2jzazbz
 
 #@cli rgb2lab : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -13891,7 +13891,7 @@ rgb2jzazbz : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 rgb2lab : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to Lab, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to Lab, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   rgb2xyz $illu xyz2lab $illu
 
 #@cli rgb2lab8 : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -13900,7 +13900,7 @@ rgb2lab : skip "${1=,}"
 #@cli : $ image.jpg rgb2lab8 split c
 rgb2lab8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to Lab8, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to Lab8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   rgb2lab $illu repeat $! {
     sh[$>] 0 *. 2.55 rm.
     sh[$>] 1 +. 127 *. 0.85 rm.
@@ -13913,7 +13913,7 @@ rgb2lab8 : skip "${1=,}"
 #@cli : $ image.jpg rgb2lch split c
 rgb2lch : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to Lch, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to Lch, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   rgb2lab $illu lab2lch
 
 #@cli rgb2lch8 : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -13922,7 +13922,7 @@ rgb2lch : skip "${1=,}"
 #@cli : $ image.jpg rgb2lch8 split c
 rgb2lch8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to Lch8, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to Lch8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   pi,facth:=[pi,255/(2*pi)]
   rgb2lch $illu repeat $! {
     sh[$>] 0 *. 2.55 rm.
@@ -14005,7 +14005,7 @@ rgb2srgb :
 #@cli : $ image.jpg rgb2xyz split c
 rgb2xyz : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to XYZ, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to XYZ, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   if $illu==2 # E
      mix_rgb {[0.488718,0.3106803,0.2006017,\
                0.1762044,0.8129847,0.0108109,\
@@ -14026,7 +14026,7 @@ rgb2xyz : skip "${1=,}"
 #@cli : $ image.jpg rgb2xyz8 split c
 rgb2xyz8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from RGB to XYZ8, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from RGB to XYZ8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   rgb2xyz $illu repeat $! {
     sh[$>] 0 *. 255 rm.
     sh[$>] 1 *. 255 rm.
@@ -14192,7 +14192,7 @@ split_opacity :
 #@cli : $ image.jpg srgb2lab +split c mul[-2,-1] 2.5 append[-3--1] c lab2srgb
 srgb2lab : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from sRGB to Lab, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from sRGB to Lab, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   srgb2rgb rgb2lab $illu
 
 #@cli srgb2lab8 : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
@@ -14200,7 +14200,7 @@ srgb2lab : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 srgb2lab8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from sRGB to Lab8, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from sRGB to Lab8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   srgb2rgb rgb2lab8 $illu
 
 #@cli srgb2rgb
@@ -14364,7 +14364,7 @@ xyz2jzazbz :
 #@cli : Default value: 'illuminant=2'.
 xyz2lab : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from XYZ to Lab, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from XYZ to Lab, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   to_color
   f "
     begin(
@@ -14395,7 +14395,7 @@ xyz2lab : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 xyz2rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from XYZ to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from XYZ to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   if $illu==2 # E
     mix_rgb {[2.3706743,-0.9000405,-0.4706338,\
               -0.513885,1.4253036,0.0885814,\
@@ -14416,7 +14416,7 @@ xyz2rgb : skip "${1=,}"
 #@cli : Default value: 'illuminant=2'.
 xyz82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
-  e[^-1] "Convert color representation of image$? from XYZ8 to RGB, using the "${arg\ 1+$illu,D50,D65,E}" illuminant."
+  e[^-1] "Convert color representation of image$? from XYZ8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   repeat $! {
     sh[$>] 0 /. 255 rm.
     sh[$>] 1 /. 255 rm.
@@ -14566,8 +14566,8 @@ apply_scales : check "isint($2) && $2>0 && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}
 # +autocrop_components ,
 autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isint(${4=1}) && $4>=0 && $4<=2"
   e[^-1] "Autocrop connected components from image$?, with threshold $1, minimal area $2, "\
-         ${arg\ 1+$3,low,high}" connectivity "\
-         "and output type set to '"${arg\ 1+$4,crop,segmentation,coordinates}"'.\n"
+         ${arg0\ $3,low,high}" connectivity "\
+         "and output type set to '"${arg0\ $4,crop,segmentation,coordinates}"'.\n"
   foreach {
     min_area:=max(1,round(if(${is_percent\ $2},$2*w*h,$2)))
     +channels 100% >. $1 area_fg. 0,$3 >=. $min_area  # Discard background and small objects.
@@ -15045,7 +15045,7 @@ resize_ratio2d :
   _gmic_s="$?" v + _$0 $*
 
 _resize_ratio2d : check "$1>0 && $2>0 && ${3=0}>=0 && $3<=2 && ${4=6}>=0 && $4<=6"
-  e[0--3] "Resize 2D image"$_gmic_s" to $1x$2 with ratio-"${arg\ 1+$3,inside,outside,padded}\
+  e[0--3] "Resize 2D image"$_gmic_s" to $1x$2 with ratio-"${arg0\ $3,inside,outside,padded}\
            " mode and interpolation type $4."
   repeat $! {
     ratio={$>,if($3==1,max($1/w,$2/h),min($1/w,$2/h))}
@@ -15470,8 +15470,8 @@ scale_dcci2x : check "${1=1.15}>=0 && ${2=5}>=0" skip ${3=0}
 #@cli : $ image.jpg seamcarve 60%
 # The main code of this algorithm has been done by Andy (Garagecoder).
 seamcarve : check "${2=100%}>=0 && ${5=25%}>=0" skip ${3=0},${4=1}
-  e[^-1] "Resize image$? to $1x$2 using seam-carving algorithm, "${arg\ 1+!$3,with,without}" priority channel, "\
-         ${arg\ 1+!$4,with,without}" anti-aliasing and maximum seams $5."
+  e[^-1] "Resize image$? to $1x$2 using seam-carving algorithm, "${arg0\ !$3,with,without}" priority channel, "\
+         ${arg0\ !$4,with,without}" anti-aliasing and maximum seams $5."
   foreach {
     nw:=max(1,round(if(${is_percent\ $1},$1*w,$1)))
     nh:=max(1,round(if(${is_percent\ $2},$2*h,$2)))
@@ -15949,7 +15949,7 @@ blur_selective : check "${1=5}>=0 && ${2=0.5}>=0 && isint(${3=5}) && $3>0"
 #@cli : $ image.jpg +blur_x 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_x
 blur_x : check "isint(${2=1}) && inrange($2,0,3)"
-  e[^-1] "Blur image$? along the x-axis, with sigma $1 and "${arg\ 1+!$2,neumann,dirichlet}" boundary conditions."
+  e[^-1] "Blur image$? along the x-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$2
 
 #@cli blur_xy : amplitude_x[%],amplitude_y[%],_boundary_conditions={ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }
@@ -15958,7 +15958,7 @@ blur_x : check "isint(${2=1}) && inrange($2,0,3)"
 #@cli : $ image.jpg +blur_xy 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_y
 blur_xy : skip ${2=$1} check "isint(${3=1}) && inrange($3,0,3)"
-  e[^-1] "Blur image$? along the xy-axes, with sigma $1 and "${arg\ 1+!$2,neumann,dirichlet}" boundary conditions."
+  e[^-1] "Blur image$? along the xy-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$3 deriche $2,0,y,$3
 
 #@cli blur_xyz : amplitude_x[%],amplitude_y[%],amplitude_z,\
@@ -15967,7 +15967,7 @@ blur_xy : skip ${2=$1} check "isint(${3=1}) && inrange($3,0,3)"
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_xyz
 blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1}) && inrange($4,0,3)"
-  e[^-1] "Blur image$? along the xyz-axes, with sigma $1 and "${arg\ 1+!$2,neumann,dirichlet}" boundary conditions."
+  e[^-1] "Blur image$? along the xyz-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$4 deriche $2,0,y,$4 deriche $3,0,z,$4
 
 #@cli blur_y : amplitude[%]>=0,_boundary_conditions={ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }
@@ -15976,7 +15976,7 @@ blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1}) && inrange($4,0,3)"
 #@cli : $ image.jpg +blur_y 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_y
 blur_y : check "isint(${2=1}) && inrange($2,0,3)"
-  e[^-1] "Blur image$? along the y-axis, with sigma $1 and "${arg\ 1+!$2,neumann,dirichlet}" boundary conditions."
+  e[^-1] "Blur image$? along the y-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,y,$2
 
 #@cli blur_z : amplitude[%]>=0,_boundary_conditions={ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }
@@ -15984,7 +15984,7 @@ blur_y : check "isint(${2=1}) && inrange($2,0,3)"
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_z
 blur_z : check "isint(${2=1}) && inrange($2,0,3)"
-  e[^-1] "Blur image$? along the z-axis, with sigma $1 and "${arg\ 1+!$2,neumann,dirichlet}" boundary conditions."
+  e[^-1] "Blur image$? along the z-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,z,$2
 
 #@cli boxfilter : size>=0[%],_order,_boundary_conditions,_nb_iter>=0 : \
@@ -16235,7 +16235,7 @@ deblur : check "${2=10}>=0 && ${3=20}>=0 && ${4=0.7}>=0" skip ${5=1}
 ###### : (contribution from Jérôme Boulanger).
 deblur_goldmeinel : check "$1>=0 && ${2=8}>=0 && ${3=1}>=0" skip ${4=1}
   e[^-1] "Deblur image$? using Gold-Meinel algorithm, with sigma $1, $2 iterations, acceleration $3 and "\
-         ${arg\ 1+!$4,"",quasi-}"gaussian kernel."
+         ${arg0\ !$4,"",quasi-}"gaussian kernel."
   foreach {
     [0] repeat $2 {
       +b. $1,1,$4 +/[0,-1] rm.. ^. $3 *[-1,-2] # u *= f / Hu
@@ -16249,7 +16249,7 @@ deblur_goldmeinel : check "$1>=0 && ${2=8}>=0 && ${3=1}>=0" skip ${4=1}
 ###### : (contribution from Jérôme Boulanger).
 deblur_richardsonlucy : check "$1>=0 && ${2=50}>=0" skip ${3=1}
   e[^-1] "Deblur image$? using Richardson-Lucy algorithm, with sigma $1, $2 iterations and "\
-         ${arg\ 1+!$3,"",quasi-}"gaussian kernel."
+         ${arg0\ !$3,"",quasi-}"gaussian kernel."
   foreach {
     [0] repeat $2 {
       +b. $1,1,{$3!=0} max. 1e-6 +/[0,-1] rm.. b. $1,1,{$3!=0} *[-1,-2] # u *= H ( f / Hu )
@@ -16282,7 +16282,7 @@ deconvolve_fft : check ${is_image_arg\ $1}" && ${2=.001}>=0"
 #@cli : Default value: 'method=0'.
 #@cli : $ image.jpg +rotate 3,1,1,50%,50% resize 100%,50% resize 100%,200%,1,3,4 shift[-1] 0,1 add +deinterlace 1
 deinterlace : skip ${1=0}
-  e[^-1] "Deinterlace image$? with "${arg\ 1+!$1,motion-compensated,standard}" method."
+  e[^-1] "Deinterlace image$? with "${arg0\ !$1,motion-compensated,standard}" method."
   foreach {
     wh:=[w,h]
     s y a[0--1:2] y a[^0] y ri.. .,0 r 100%,200%,1,100%,5
@@ -16305,7 +16305,7 @@ deinterlace : skip ${1=0}
 #@cli : $ image.jpg noise 20 cut 0,255 +denoise_haar[-1] 0.8
 denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) && $3>0"
   e[^-1] "Denoise image$? using haar-wavelet thresholding, with threshold $1, "\
-          ${arg\ 1+($2>0),auto,$2}" scales and $3 spinning cycles."
+          ${arg0\ ($2>0),auto,$2}" scales and $3 spinning cycles."
   foreach {
     nm={n} nb_scales:=min(if($2,$2,32),int(log2(min(w,h))-1)) w,h,d:=[w,h,d] sigma=${-std_noise}
     r {round(w,2^($nb_scales+1),1)},{round(h,2^($nb_scales+1),1)},{if(d==1,1,round(d,2^($nb_scales+1),1))},100%,0,0
@@ -17134,7 +17134,7 @@ inpaint_flow : check ${is_image_arg\ $1}" && ${2=10}>=0 && ${3=100}>=0 && ${4=5}
 #@cli : $ image.jpg noise 5%,2 +inpaint_holes 8,40
 inpaint_holes : check "${1=4}>=0 && ${2=0}>=0" skip ${3=0}
   e[^-1] "Inpaint holes with area less than $1 pixels in image$?, with tolerance $2 and "\
-         ${arg\ 1+!$3,high,low}" connectivity."
+         ${arg0\ !$3,high,low}" connectivity."
   foreach {
     100%,100%,100%
     area:=${is_percent\ $1}?$1*w*h*d:$1
@@ -17358,7 +17358,7 @@ kuwahara : check $1>0
 #@cli : $ image.jpg laplacian
 laplacian :
   e[^-1] "Compute Laplacian of image$?."
-  foreach { hessian ${arg\ 1+(d==1),xxyyzz,xxyy} + }
+  foreach { hessian ${arg0\ (d==1),xxyyzz,xxyy} + }
 
 #@cli lic : _amplitude>0,_channels>0
 #@cli : Render LIC representation of selected vector fields.
@@ -17997,7 +17997,7 @@ split_freq :
 #@cli : $ image.jpg command "foo : gradient x" +solve_poisson foo +foo[0] +laplacian[1]
 solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
   e[^-1] "Solve Poisson equation for image$?, for laplacian command '$1', with $2 iterations, time step $3 and "\
-         ${arg\ 1+($4==0),$4,auto}" scales."
+         ${arg0\ ($4==0),$4,auto}" scales."
   foreach {
     [0]
     repeat if($4,$4,int(max(log2(max(w,h))-1,1))) {
@@ -18335,7 +18335,7 @@ watermark_fourier : check ${2=33}>0
 #@cli : $$ https://gmic.eu/oldtutorial/_area
 area : check "$1>=0" skip ${2=0}
   e[^-1] "Compute area of connected components in image$?, with tolerance $1 and "\
-         ${arg\ 1+!$2,high,low}" connectivity."
+         ${arg0\ !$2,high,low}" connectivity."
   foreach {
     s c
     foreach { label $1,$2 nb:=iM+1 +histogram $nb,0,{$nb-1} map.. . rm. }
@@ -18349,7 +18349,7 @@ area : check "$1>=0" skip ${2=0}
 #@cli : $ image.jpg luminance stencil[-1] 1 +area_fg 0
 area_fg : check "$1>=0" skip ${2=0}
   e[^-1] "Compute area of foreground connected components in image$?, with tolerance $1 and "\
-         ${arg\ 1+!$2,high,low}" connectivity."
+         ${arg0\ !$2,high,low}" connectivity."
   foreach {
     s c
     repeat $! { label_fg[$>] $1,$2 nb={$>,1+iM} +histogram[$>] $nb,0,{$nb-1} =. 0 map[$>] . rm. }
@@ -18665,7 +18665,7 @@ histogram_pointwise : skip ${2=0%},${3=100%}
 #@cli : Default values: 'width=512', 'height=width' and 'gradient_norm_voting=1'.
 #@cli : $ image.jpg +blur 1.5 hough[-1] 400,400 blur[-1] 0.5 add[-1] 1 log[-1]
 hough : check "${1=512}>0 && ${2=$1}>0" skip ${3=1}
-  e[^-1] "Compute $1x$2 hough transform of image$?, "${arg\ 1+!$3,with,without}" gradient norm voting."
+  e[^-1] "Compute $1x$2 hough transform of image$?, "${arg0\ !$3,with,without}" gradient norm voting."
   slices 50% luminance
   foreach {
     nm={n}
@@ -18744,7 +18744,7 @@ isophotes : skip ${1=64}
 #@cli : Default value: 'is_high_connectivity=0'.
 label_fg : check "$1>=0" skip ${2=0}
   e[^-1] "Label foreground connected components on image [1], with tolerance $1 and "\
-         ${arg\ 1+!$2,high,low}" connectivity."
+         ${arg0\ !$2,high,low}" connectivity."
   foreach {
     if d>1 +z -1,-1,-1,100%,100%,100% label. $1,$2 z. 1,1,1,100%,100%,100%
     else +z -1,-1,100%,100% label. $1,$2 z. 1,1,100%,100%
@@ -18866,7 +18866,7 @@ min_patch : check "isint(${1=16}) && $1>=1"
 # to_rgb[-1] ri[-1] [-2],0 or
 minimal_path : check "$1>=0 && $2>=0 && $3>=0" skip ${7=0}
   e[^-1] "Compute minimal path between points ($1,$2,$3) and ($4,$5,$6) for potential map$?, with "\
-         ${arg\ 1+$7,low,high}" connectivity."
+         ${arg0\ $7,low,high}" connectivity."
   foreach {
     nm={n}
     - {im} + {iM/100}
@@ -19367,7 +19367,7 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
 #@cli : Default value: 'use_fourier=0' and 'boundary_conditions=0'.
 #@cli : $ image.jpg +crop 20%,20%,35%,35% +ssd_patch[0] [1],0,0
 ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
-  e[^-1] "Compute field of SSD between image$? and patch $1 using "${arg\ 1+!$2,fourier,spatial}" mode."
+  e[^-1] "Compute field of SSD between image$? and patch $1 using "${arg0\ !$2,fourier,spatial}" mode."
   repeat $! { pass$1 0 l[$>,-1] {
     r 100%,100%,100%,${-max_s} s c
     repeat $!/2 { l[$>,{-1-$<}] {
@@ -20687,7 +20687,7 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 # to_rgba pack_sprites 3,25
 pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint(${3=3}) && $3>=0 && $3<=3 &&
                       isint(${4=1}) && isint(${5=7}) && $5>=0 && isint(${6=256}) && $6>=0"
-  e[^-1] "Randomly pack image$? with $1 scales, minimum scale $2%, "${arg\ 1+$3,no,180\"\ \"deg.,90\"\ \"deg.,any}\
+  e[^-1] "Randomly pack image$? with $1 scales, minimum scale $2%, "${arg0\ $3,no,180\"\ \"deg.,90\"\ \"deg.,any}\
          " rotation, spacing $4, precision $5 and $6 maximum iterations."
   N={$!-1} is_first_time=1
   repeat $! { r[$>] 100%,100%,1,{$>,max(2,s)} } # Ensure all images have a binary shape mask.
@@ -20916,7 +20916,7 @@ rectangle : skip ${5=1},${6=0},${7=$6}
 #@cli : Default values: 'smoothness=5%' and 'mirroring=1'.
 #@cli : $ 400,400 rorschach 3%
 rorschach : check "${1=5%}>=0 && isint(${2=1}) && $2>=0 && $2<=3"
-  e[^-1] "Render rorschach-like inkblots on image$?, with smoothness $1 and "${arg\ 1+$2,no,x,y,xy}"-mirroring."
+  e[^-1] "Render rorschach-like inkblots on image$?, with smoothness $1 and "${arg0\ $2,no,x,y,xy}"-mirroring."
   if $2==0 # No mirroring.
    rand -1,1 b $1 >= 0
   elif $2==1 # X-mirroring.
@@ -21130,7 +21130,7 @@ triangle_shade :
 #@cli : Default values: 'scale=32', 'radius=5' and 'pattern_type=1'.
 #@cli : $ 400,300 truchet ,
 truchet : check "isint(${1=32}) && $1>0 && ${2=3}>=0" skip ${3=1}
-  e[^-1] "Render "${arg\ 1+!$3,curved,straight}" truchet patterns in image$?, with scale $1 and radius $2."
+  e[^-1] "Render "${arg0\ !$3,curved,straight}" truchet patterns in image$?, with scale $1 and radius $2."
   foreach {
     nm={n} w={w} h={h} s={s} rm
     $1,$1 = 1,0,0 = 1,100%,100% distance 1,{1+$3} M={int(iM/2)} # Generate truchet pattern and its mirrored version.
@@ -21574,7 +21574,7 @@ chainring3d : check "isint(${1=16}) && $1>=3 && ${2=0.5}>0 && ${3=1}>0 && ${4=1}
 #@cli : Default values: 'radius=1' and 'is_outlined=1'.
 #@cli : $ image.jpg luminance resize2dy 40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 circles3d 0.7
 circles3d : check "${1=1}>=0 && isbool(${2=0})"
-  e[^-1] "Convert 3D object$? to sets of 3D "${arg\ 1+$2,filled,outlined}" circles with radius $1."
+  e[^-1] "Convert 3D object$? to sets of 3D "${arg0\ $2,filled,outlined}" circles with radius $1."
   p3d 0
   foreach {
     -3d {$1/2},0,0 ++3d $1,0,0 +3d[1] [0]
@@ -22515,9 +22515,9 @@ _opacity3d :
 #@cli : $ image.jpg pca_patch3d 7
 pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(${3=3000}) && $3>0"
               skip ${4=1},${5=0},${6=0}
-  e[^-1] "Get 3D patch-pca representation"${arg\ 1+($!>1),s,""}" of image$?, from $2 $1x$1 input patches,
-          with $3 output patches, input normalization "${arg\ 1+!$4,enabled,disabled}", output normalization "\
-          ${arg\ 1+!$5,enabled,disabled}" and lambda_xy $6."
+  e[^-1] "Get 3D patch-pca representation"${arg0\ ($!>1),s,""}" of image$?, from $2 $1x$1 input patches,
+          with $3 output patches, input normalization "${arg0\ !$4,enabled,disabled}", output normalization "\
+          ${arg0\ !$5,enabled,disabled}" and lambda_xy $6."
   P1={int($1/2)}       # Backward half-patch size.
   P2={$1-$P1-1}        # Forward half-patch size.
 
@@ -23024,8 +23024,8 @@ size3d :
 #@cli : Default values: 'metric=2', 'bones_type=3', 'skeleton_opacity=1' and 'frame_opacity=0.1'.
 #@cli : $ shape_cupid 480 +skeleton3d ,
 skeleton3d : check "isint(${1=2}) && $1>=0 && $1<=2 && isint(${2=3}) && $2>=0 && $2<=3" skip ${3=1},${4=0.1},${5=1}
-  e[^-1] "Build 3D skeletal structure object from image$?, with "${arg\ 1+$1,chebyshev,manhattan,euclidean}" metric, "\
-          ${arg\ 1+$2,squares,diamonds,circles,auto}" bones, skeleton opacity $3 and frame opacity $4 ."
+  e[^-1] "Build 3D skeletal structure object from image$?, with "${arg0\ $1,chebyshev,manhattan,euclidean}" metric, "\
+          ${arg0\ $2,squares,diamonds,circles,auto}" bones, skeleton opacity $3 and frame opacity $4 ."
   foreach {
     channels 0
 
@@ -28790,7 +28790,7 @@ poster_hope : check "${1=3}>=0"
 #@cli : $ image.jpg normalize_local 10,16 rodilius 10,4,400,16 smooth 60,0,1,1,4 normalize_local 10,16
 rodilius : check "${1=10}>=0 && $1<=200 && ${2=10}>=0 && $2<=100 && ${3=400}>=0 && ${4=7}>0" skip ${5=0},${6=1}
   e[^-1] "Apply rodilius filter on image$? with amplitude $1, thickness $2, sharpness $3, $4 orientations,
-          offset $5 and "${arg\ 1+!$6,brighter,darker}" color mode."
+          offset $5 and "${arg0\ !$6,brighter,darker}" color mode."
   foreach {
     split_opacity rv
     if !$6 negate. fi
@@ -28913,7 +28913,7 @@ _circle :
 #@cli : $ image.jpg stained_glass 20%,1 cut 0,20
 stained_glass : check "${1=40%}>=0 && ${2=0.2}>=0" skip ${3=0}
   e[^-1] "Apply stained glass effect on image$?, with edges $1, shading $2 and thin-separators "\
-         ${arg\ 1+!$3,enabled,disabled}"."
+         ${arg0\ !$3,enabled,disabled}"."
   foreach {
     im={im-1} - $im  # Ensure strict positiveness of image labels.
     +gradient_norm >=. $1 *.. .
@@ -29633,7 +29633,7 @@ scanlines : skip ${1=60},${2=2},${3=0},${4=0},${5=0}
 #@cli : Default values: 'frequency=5', 'direction=1', 'darkness=0.8' and 'lightness=2'.
 #@cli : $ image.jpg +shade_stripes 30
 shade_stripes : skip ${1=5},${2=1},${3=0.8},${4=2}
-  e[^-1] "Add "${arg\ 1+!$2,vertical,horizontal}" shaded stripes to image$?, with frequency $1, darkness $3 and
+  e[^-1] "Add "${arg0\ !$2,vertical,horizontal}" shaded stripes to image$?, with frequency $1, darkness $3 and
           lightness $4."
   n 0,255 foreach { {max(1,w*($2!=0))},{max(1,h*($2==0))} noise. $1,2 ==. 1 distance. 1 ri. .. n. $3,$4 * c 0,255 }
 
@@ -29712,7 +29712,7 @@ vignette : check "${1=100}>=0 && ${2=70}>=0 && $2<=100 && ${3=90}>=0 && $3<=100"
 #@cli : $ image.jpg watermark_visible ,0.7
 watermark_visible : check "${2=0.3}>0 && $2<1 && ${3=53}>0 && ${6=0.5}>=0"
                     skip "${1=\251\ G\47MIC}",${4=25},${5=1}
-  e[^-1] ${arg\ 1+!$5,Add,Remove}" visible watermark '$1' on image$?, with opacity $2, size $3, angle $4 deg."
+  e[^-1] ${arg0\ !$5,Add,Remove}" visible watermark '$1' on image$?, with opacity $2, size $3, angle $4 deg."
   foreach {
     0 t. "$1",0,0,$3,1,255 rotate. $4,0,0 b. $6 n. 0,255
     ri. ..,0,2 +. .. c. 0,255   # Generate opaque watermark image
@@ -31181,7 +31181,7 @@ basename : skip ${2=unused}
 #@cli : Print specified binary integers into their octal, decimal, hexadecimal and string representations.
 bin :
   dec=${bin2dec\ ${^0}}
-  e[^-1] "Convert binary integer"${arg\ 1+($#>1),"",s}" '${^0}' to octal '"${dec2oct\ $dec}"',
+  e[^-1] "Convert binary integer"${arg0\ ($#>1),"",s}" '${^0}' to octal '"${dec2oct\ $dec}"',
           decimal '"$dec"', hexadecimal '"${dec2hex\ $dec}"' and string '"${dec2str\ $dec}"'."
 
 #@cli bin2dec : binary_int1,...
@@ -31360,7 +31360,7 @@ da_freeze :
 #@cli dec : decimal_int1,...
 #@cli : Print specified decimal integers into their binary, octal, hexadecimal and string representations.
 dec :
-  e[^-1] "Convert decimal integer"${arg\ 1+($#>1),"",s}" '${^0}' to binary '"${dec2bin\ ${^0}}"',"\
+  e[^-1] "Convert decimal integer"${arg0\ ($#>1),"",s}" '${^0}' to binary '"${dec2bin\ ${^0}}"',"\
           " octal '"${dec2oct\ ${^0}}"', hexadecimal '"${dec2hex\ ${^0}}"' and string '"${dec2str\ ${^0}}"'."
 
 #@cli dec2str : decimal_int1,...
@@ -31589,7 +31589,7 @@ _gcd :
 #@cli : Print specified hexadecimal integers into their binary, octal, decimal and string representations.
 hex :
   dec=${hex2dec\ ${^0}}
-  e[^-1] "Convert hexadecimal integer"${arg\ 1+($#>1),s,""}" '${^0}' to binary '"${dec2bin\ $dec}"',
+  e[^-1] "Convert hexadecimal integer"${arg0\ ($#>1),s,""}" '${^0}' to binary '"${dec2bin\ $dec}"',
            octal '"${dec2oct\ $dec}"', decimal '"$dec"' and string '"${dec2str\ $dec}"'."
 
 #@cli hex2dec : hexadecimal_int1,...
@@ -32446,7 +32446,7 @@ normalize_filename :
 #@cli : Print specified octal integers into their binary, decimal, hexadecimal and string representations.
 oct :
   dec=${oct2dec\ ${^0}}
-  e[^-1] "Convert octal integer"${arg\ 1+($#>1),"",s}" '${^0}' to binary '"${dec2bin\ $dec}"', decimal '"$dec"',
+  e[^-1] "Convert octal integer"${arg0\ ($#>1),"",s}" '${^0}' to binary '"${dec2bin\ $dec}"', decimal '"$dec"',
            hexadecimal '"${dec2hex\ $dec}"' and string '"${dec2str\ $dec}"'."
 
 #@cli oct2dec : octal_int1,...
@@ -37040,7 +37040,7 @@ x_select_color : skip ${1=xsc_variable} check_display $0
   rm
   n={narg($$1)} if !$n $1=0,0,0 fi
   rgba_mode={$n>=4} R={arg(1,$$1)} G={arg(2,$$1)} B={arg(3,$$1)} A={if($rgba_mode,arg(4,$$1),255)}
-  e[^-1] "Open "${arg\ 1+$rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
+  e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
              ($$1)"."
   if !{*} w[] {400+24*$rgba_mode},400,0,"Select a color" fi
   update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable={arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_'}
@@ -37321,7 +37321,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
 x_select_palette : skip ${1=xsp_variable},${2=0} check_display $0
   if !$! error[0--3] "Command '$0': Missing specified palette image." fi
   k[0] +r {w*h*d},1,1,{s},-1 to_color. rgba_mode={s==4} to_rgba. => palette
-  e[^-1] "Open "${arg\ 1+$rgba_mode,RGB,RGBA}" color selector widget for palette$?, with variable name '$1'."
+  e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget for palette$?, with variable name '$1'."
 
   if w>1024 error[0--3] "Command '$0': Too much colors ("{w}") in selected palette." fi
   if !{*} w[] 400,400,0,0,-1,-1,"Palette: "{0,b} fi
@@ -39150,7 +39150,7 @@ gui_download_all_data :
 
 _gui_download_all_data :
    repeat narg(${_filenames_$1}) {
-     filename=${_prefix_$1}${arg\ 1+$>,${_filenames_$1}}.${_ext_$1}
+     filename=${_prefix_$1}${arg0\ $>,${_filenames_$1}}.${_ext_$1}
      e "Download "$filename
      if $2" || "!isfile(['{/${-path_cache}$filename}']) l[] {
        ${_url_$1}/$filename o ${-path_cache}$filename rm onfail
@@ -42489,7 +42489,7 @@ _fx_colorize_lineart_smart :
   fi
   min_color_area={$15^2}
 
-  repeat $1?1:$! { inds=${arg\ 1+!!$1,$<,0--1} l[$inds] {
+  repeat $1?1:$! { inds=${arg0\ !!$1,$<,0--1} l[$inds] {
 
     ind_lineart={$1==1?1:0}
     nm=${gui_layer_name[$ind_lineart]} =>[$ind_lineart] lineart
@@ -44073,7 +44073,7 @@ fx_colorblind_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.
 #@gui :         Latest Update: <i>2023/06/01</i>.</small>")
 fx_color_presets :
-  category=${arg\ 1+$1,abigailgonzalez,alexjordan,berat,cinematic,cinematic_travel,creative,editingcorp,ericellerbrock,\
+  category=${arg0\ $1,abigailgonzalez,alexjordan,berat,cinematic,cinematic_travel,creative,editingcorp,ericellerbrock,\
                        filtergrade,hollywood,inavision,jtsemple,kylerholland,lutifyme,michaelezra,moviz,ohadperetz,\
                        oliviosarikas,on1,picturefx,pixelmator,pixlsus,purple11,rocketstock,shamoonabbasi,smallhd,\
                        toddblankenship,youssefhossam,others}
@@ -44086,7 +44086,7 @@ fx_color_presets :
   fi
   if $index>=2 # Apply CLUT
     path_clut=${-path_cache}
-    name=${arg\ 1+$index-2,$presets}
+    name=${arg0\ $index-2,$presets}
     clut $name,{0$_is_preview" && "!isfile(['{/${path_clut}clut_$name.cimgz}'])?17:48}
     repeat $!-1 { if $strength<100 +map_clut[$>] . j[$>] .,0,0,0,0,{$strength%} rm. else map_clut[$>] . fi }
     rm.
@@ -44102,7 +44102,7 @@ fx_color_presets :
     N=$! +to "Original",1%,1%,7.5%,2,0.5
     Np={narg($presets)}
     repeat $Np {
-      clut_name=${arg\ 1+$>,$presets}
+      clut_name=${arg0\ $>,$presets}
       clut $clut_name mv. $N
       repeat $N {
         if $strength<100 [$>] +map_clut. [$N] j.. .,0,0,0,0,{$strength%} rm. else +map_clut[$>] [$N] fi
@@ -44694,7 +44694,7 @@ fx_mask_color :
      cmyk_c,cmyk_m,cmyk_y,cmyk_k,yiq_y,yiq_iq
   foreach {
     to_rgb nm={n} => ${-gui_layer_name}
-    +x_mask_color ${arg\ 1+$1,$cs},$2,$3
+    +x_mask_color ${arg0\ $1,$cs},$2,$3
     if $4==1 channels. 100% fi
     => $nm rv
   }
@@ -45883,7 +45883,7 @@ fx_sepia_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/02/27</i>.</small>")
 fx_simulate_film :
-  category=${arg\ 1+$1,bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_new,negative_old,\
+  category=${arg0\ $1,bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_new,negative_old,\
            print,colorslide}
   presets=${-_fx_cluts_$category}
   index={arg(1+$1,${2-10})}
@@ -45893,7 +45893,7 @@ fx_simulate_film :
   fi
   if $index>=2 # Apply CLUT
     path_clut=${-path_cache}
-    name=${arg\ 1+$index-2,$presets}
+    name=${arg0\ $index-2,$presets}
     clut $name,{0$_is_preview" && "!isfile(['{/${path_clut}clut_$name.cimgz}'])?17:48}
     repeat $!-1 { if $strength<100 +map_clut[$>] . j[$>] .,0,0,0,0,{$strength%} rm. else map_clut[$>] . fi }
     rm.
@@ -45909,7 +45909,7 @@ fx_simulate_film :
     N=$! +to "Original",1%,1%,7.5%,2,0.5
     Np={narg($presets)}
     repeat $Np {
-      clut_name=${arg\ 1+$>,$presets}
+      clut_name=${arg0\ $>,$presets}
       clut $clut_name mv. $N
       repeat $N {
         if $strength<100 [$>] +map_clut. [$N] j.. .,0,0,0,0,{$strength%} rm. else +map_clut[$>] [$N] fi
@@ -46243,7 +46243,7 @@ _fx_tune_hsv :
 
     # Define list of considered colors.
     colors,sep=
-    repeat narg($all_colors) { color=${arg\ 1+$>,$all_colors} if ${mode_$color} colors.=$sep$color sep=, fi }
+    repeat narg($all_colors) { color=${arg0\ $>,$all_colors} if ${mode_$color} colors.=$sep$color sep=, fi }
 
     # Find darkest, lightest and average colors.
     +srgb2lab channels. 0 darklight={"[I(#-2,xm,ym),I(#-2,xM,yM)]"} rm.
@@ -46281,7 +46281,7 @@ _fx_tune_hsv :
 
         # Define color correspondences.
         repeat narg($colors) {
-          color=${arg\ 1+$>,$colors}
+          color=${arg0\ $>,$colors}
           if ${mode_$color}==2 (${$color},${R$color},${G$color},${B$color},${H$color},${S$color},${V$color})
           else (${$color},${$color},0,0,0)
           fi
@@ -46301,7 +46301,7 @@ _fx_tune_hsv :
           [ H,S,V ]"
         rm.
         hsv2rgb rgb2srgb
-        repeat w { color=${arg\ 1+$>,$colors} t_$color={I[$>]} }
+        repeat w { color=${arg0\ $>,$colors} t_$color={I[$>]} }
         -. .. a c
 
         # Create CLUT.
@@ -46323,10 +46323,10 @@ _fx_tune_hsv :
                                                     p==3?[1,0,48]:\
                                                     p==4?[0,1,64]:[1,1,64]}
       l[] {
-        repeat narg($all_colors) { color=${arg\ 1+$>,$all_colors} (${$color}) } a y permute. yzcx
+        repeat narg($all_colors) { color=${arg0\ $>,$all_colors} (${$color}) } a y permute. yzcx
         s x r {s=round(max($__ps,16));[s,s]}
         foreach[0-{narg($all_colors)-1}] {
-          color=${arg\ 1+$>,$all_colors}
+          color=${arg0\ $>,$all_colors}
           mode=${mode_$color}
           if $mode==2
             polygon 3,0,100%,100%,100%,100%,0,1,${t_$color}
@@ -48287,7 +48287,7 @@ _fx_blur_multidirectional :
 
       # Blur and blend.
       +convolve_fft[0] .,$boundary_conditions rm.. n. 0,255 sharpen. $sharpness
-      if $blend_mode<3 ${arg\ 1+$blend_mode,min,max,+}[1,-1] fi
+      if $blend_mode<3 ${arg0\ $blend_mode,min,max,+}[1,-1] fi
     }
     rm[0]
 
@@ -50661,7 +50661,7 @@ fx_blend_seamless_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2017/03/08</i>.</small>")
 fx_blend :
-  mode=${arg\ 1+$1,add,alpha,and,average,blue,burn,custom_formula,darken,difference,\
+  mode=${arg0\ $1,add,alpha,and,average,blue,burn,custom_formula,darken,difference,\
        divide,dodge,edges,exclusion,freeze,grainextract,grainmerge,green,hardlight,\
        hardmix,hue,interpolation,lighten,lightness,linearburn,linearlight,luminance,\
        multiply,negation,or,overlay,pinlight,red,reflect,saturation,\
@@ -51219,7 +51219,7 @@ fx_illuminate_shape2d :
   preview_shapes,\
   blending_mode,\
   opacity=$1,$2,$7,$10,$16,$17
-  blending_mode=${arg\ 1+$blending_mode,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,\
+  blending_mode=${arg0\ $blending_mode,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,\
                   softlight,hardlight,grainmerge}
   keep_input_bg&={$!>1}
 
@@ -51482,7 +51482,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/21/02</i>.</small>")
 _fx_lightglow :
-  mode=${arg\ 1+$3,burn,dodge,freeze,grainmerge,hardlight,interpolation,lighten,multiply,overlay,reflect,\
+  mode=${arg0\ $3,burn,dodge,freeze,grainmerge,hardlight,interpolation,lighten,multiply,overlay,reflect,\
          softlight,stamp,value}
   repeat $! {
     +gradient_norm. >=. {100-$1}% distance. 1 ^. $2 *. -1 n. 0,255 blend $mode,$4
@@ -51518,7 +51518,7 @@ fx_lightglow_preview :
 fx_light_leaks :
   filename=lightleak_${"padint $1",6}.cimgz
   input_cached data_lightleaks/$filename
-  mode=${arg\ 1+$7,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,softlight,hardlight,difference,\
+  mode=${arg0\ $7,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,softlight,hardlight,difference,\
          subtract,grainextract,grainmerge,divide,hue,saturation,value}
   mv. 0
   repeat $!-1 { l[0,{1+$<}] {
@@ -57005,7 +57005,7 @@ fx_gmic_demos_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_display_histogram :
-  mode=${arg\ 1+$2,all,rgba,rgb,rgb_r,rgb_g,rgb_b,rgba_a,\
+  mode=${arg0\ $2,all,rgba,rgb,rgb_r,rgb_g,rgb_b,rgba_a,\
              lrgb,lrgb_r,lrgb_g,lrgb_b,\
              ycbcr_y,ycbcr_cbcr,ycbcr_cb,ycbcr_cr,ycbcr_cg,\
              lab_l,lab_ab,lab_a,lab_b,\
