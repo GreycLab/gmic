@@ -1135,7 +1135,7 @@ reference : skip "${2=}"
   if ['$xfolder']!=0
     files $xfolder/*.gmd files=${}
     repeat narg({/$files}) {
-      arg 1+$>,$files file=${}
+      arg0 $>,$files file=${}
       l[] { it $file s={b} t={t} rm }
       _section {/$s}
       _text {/$t}
@@ -4832,7 +4832,7 @@ parse_cli_html :
   # Insert TOC for categories.
   toc_html="    <h1 class=\"ref_h1\">Categories:</h1><ul>"\n
   repeat narg({/$list_categories}) {
-    arg 1+$>,{/$list_categories} category=${}
+    arg0 $>,{/$list_categories} category=${}
     ('$category') replace_str. "&#44;","," category={t} rm.
     strvar $category category_id=${}
     toc_html.="      <li><a href=\"#"$category_id"\">"$category"</a></li>"\n
@@ -8371,7 +8371,7 @@ update_color_presets_html : check "isbool(${1=0})"
   # Load default set of images if none selected.
   if !$!
     files ../img/color_presets_sample* files=${}
-    repeat narg($files) { arg 1+$>,$files ${} }
+    repeat narg($files) { arg0 $>,$files ${} }
   fi
 
   # Init variables.
@@ -11972,14 +11972,14 @@ _apply_channels : check "isint(${3=0}) && $3>=0 && $3<=2"
 
 _ac_list :
   if isnum("$1")
-    arg 1+round($1),all,rgba,rgb,rgb_r,rgb_g,rgb_b,rgba_a,\
-                    lrgb,lrgb_r,lrgb_g,lrgb_b,\
-                    ycbcr_y,ycbcr_cbcr,ycbcr_cb,ycbcr_cr,ycbcr_cg,\
-                    lab_l,lab_ab,lab_a,lab_b,\
-                    lch_ch,lch_c,lch_h,\
-                    hsv_h,hsv_s,hsv_v,hsi_i,hsl_l,\
-                    cmyk_c,cmyk_m,cmyk_y,cmyk_k,\
-                    yiq_y,yiq_iq,ryb,ryb_r,ryb_y,ryb_b
+    arg0 round($1),all,rgba,rgb,rgb_r,rgb_g,rgb_b,rgba_a,\
+                   lrgb,lrgb_r,lrgb_g,lrgb_b,\
+                   ycbcr_y,ycbcr_cbcr,ycbcr_cb,ycbcr_cr,ycbcr_cg,\
+                   lab_l,lab_ab,lab_a,lab_b,\
+                   lch_ch,lch_c,lch_h,\
+                   hsv_h,hsv_s,hsv_v,hsi_i,hsl_l,\
+                   cmyk_c,cmyk_m,cmyk_y,cmyk_k,\
+                   yiq_y,yiq_iq,ryb,ryb_r,ryb_y,ryb_b
   else u "$1" fi
 
 _ac :
@@ -12525,7 +12525,7 @@ _fill_color :
 #@cli : Default value: 'is_orientation=0'.
 #@cli : $ image.jpg +gradient2rgb 0 equalize[-1]
 gradient2rgb : check "isbool(${1=0})"
-  arg 1+!$1,"orientation ",""
+  arg0 !$1,"orientation ",""
   e[^-1] "Compute RGB representation of 2D gradient "${}"of image$?."
   norm foreach {
     if $1 gradient_orientation 2 else g xy fi
@@ -18633,7 +18633,7 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
 #@cli : Default values: 'nb_levels=256', 'is_normalized=0', 'val0=0%' and 'val1=100%'.
 #@cli : $ image.jpg +histogram_cumul 256 histogram[0] 256 display_graph 400,300,3
 histogram_cumul : check ${1=256}>0 skip ${2=0},${3=0%},${4=100%}
-  arg 1+!$2,"normalized ",""
+  arg0 !$2,"normalized ",""
   e[^-1] "Compute "${}"cumulative histogram of image$?, using $1 levels."
   histogram $1,$3,$4 cumulate if $2 repeat $! { /[$>] {$>,iM} } fi
 
@@ -28569,7 +28569,7 @@ light_relief : skip ${1=0.3},${2=0.5},${3=0.2},${4=0},${5=0.2},${6=0.5},${7=0.5}
 linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 && isint(${5=24}) && $5>0 &&
                 isbool(${6=0})"
   e[^-1] "Apply linify effect on image$?, with density $1, spreading $2, resolution $3, line opacity $4,
-          line precision $5 and "${"-arg 1+$6,subtractive,additive"}" mode."
+          line precision $5 and "${"arg0 $6,subtractive,additive"}" mode."
   foreach {
     remove_opacity nm={n}
     100%,100%,1,{s},$6?0:255
@@ -31239,7 +31239,7 @@ check120 :
   files 0,*.c c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
   files 0,*.gmic c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
   repeat narg($files) {
-    arg 1+$>,$files file=${}
+    arg0 $>,$files file=${}
     e " * File '"$file"'."
     v + _check120 $file v -
   }
@@ -33139,7 +33139,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
   # Generate menu graphics.
   l[] {
     repeat $nb_entries {
-      arg 1+$>,$entries entry=${}
+      arg0 $>,$entries entry=${}
       0 t. $entry,0,0,24,1,1
     }
     r ${-max_wh},1,1,0,0,0.5,0.5
