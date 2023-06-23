@@ -3719,7 +3719,6 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
   do {
     double ind0, ind1;
     int read, istep = 1, _iind0, _iind1, iind0 = -1, iind1 = -1;
-
     if (p!=p0 && *p==',') ++p;
     if (cimg_sscanf(p,"%lf%n",&ind0,&read)==1) {
       p+=read;
@@ -3763,8 +3762,8 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
         error(true,"Command '%s': Invalid %s '%s%s%s' (undefined label '%s').",
               command,stype,ctypel,string,ctyper,name.data());
     }
-    if (*p && *p!=',')
-      error(true,"Command '%s': Invalid %s '%s%s%s' (cannot parse '%s').",
+    if (*p && (*p!=',' || (*p==',' && p==p0)))
+      error(true,"Command '%s': Invalid %s '%s%s%s' (malformed item '%s').",
             command,stype,ctypel,string,ctyper,p);
   } while (*p);
 
@@ -5641,8 +5640,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               for (pd = s_selection; *ps && pd<pde2; ++ps) {
                 const char c = *ps;
                 if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') ||
-                    c=='_' || c=='.' || c=='e' || c=='E' || c=='%' || c=='^' || c==','
-                    || c==':' || c=='+' || c=='-') *(pd++) = c;
+                    c=='_' || c=='.' || c=='^' || c=='+' || c=='-' || c=='%' || c==',' || c==':')
+                  *(pd++) = c;
                 else break;
               }
               if (pd!=s_selection) {
