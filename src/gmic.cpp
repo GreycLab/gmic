@@ -7823,7 +7823,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           const CImg<char> &s = callstack.back();
           if (s[0]!='*' || s[1]!='i')
             error(true,images,0,0,
-                  "Command 'endif': Not associated to a 'if' command within the same scope.");
+                  "Command 'fi': Not associated to a 'if' command within the same scope.");
           if (is_very_verbose) print(images,0,"End 'if...endif' block.");
           check_elif = false;
           callstack.remove();
