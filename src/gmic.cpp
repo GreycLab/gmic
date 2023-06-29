@@ -7587,7 +7587,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         gmic_simple_command("exp",exp,"Compute pointwise exponential of image%s.");
 
         // Error function.
+#if cimg_use_cpp11==1
         gmic_simple_command("erf",erf,"Compute pointwise error function of image%s.");
+#endif
 
         // Test equality.
         gmic_arithmetic_command("eq",
