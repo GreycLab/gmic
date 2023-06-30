@@ -15703,126 +15703,6 @@ upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=
     fi
   }
 
-#@cli warp : [warping_field],_mode,_interpolation,_boundary_conditions,_nb_frames>0 : (+)
-#@cli : Warp selected images with specified displacement field.
-#@cli : 'mode' can be { 0=backward-absolute | 1=backward-relative | 2=forward-absolute | 3=forward-relative }.
-#@cli : 'interpolation' can be { 0=nearest-neighbor | 1=linear | 2=cubic }.
-#@cli : 'boundary_conditions' can be { 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }.
-#@cli : Default values: 'mode=0', 'interpolation=1', 'boundary_conditions=0' and 'nb_frames=1'.
-#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*if(c==0,cos(4*A),sin(8*A))' \
-# warp[-2] [-1],1,1,0 quiver[-1] [-1],10,1,1,1,100
-#@cli : $$ https://gmic.eu/oldtutorial/_warp
-
-#@cli warp_patch : [warping_field],patch_width>=1,_patch_height>=1,_patch_depth>=1,_std_factor>0,_boundary_conditions.
-#@cli : Patch-warp selected images, with specified 2D or 3D displacement field (in backward-absolute mode).
-#@cli : Argument 'std_factor' sets the std of the gaussian weights for the patch overlap,
-#@cli : equal to 'std = std_factor*patch_size'.
-#@cli : 'boundary_conditions' can be { 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }.
-#@cli : Default values: 'std_factor=0.3' and 'boundary_conditions=3'.
-warp_patch : check ${is_image_arg\ $1}" && isint(${2=3}) && $2>=1 && isint(${3=$2}) && $3>=1 &&
-                    isint(${4=1}) && $4>=1 && isnum(${5=0.3}) && $5>0 && isint(${6=3}) && $6>=0 && $6<=3"
-  e[^-1] "Patch-warp image$? with backward-absolute displacement field $1, using $2x$3x$4 patches, std factor $5
-          and "${"arg0 $6,dirichlet,neumann,periodic,mirror"}" boundary conditions."
-  if $2<=1 pass$1 warp[^-1] .,0 rm. return fi
-  repeat $! { pass$1 l[$>,-1] {
-    nm={0,n}
-    [0],[0],[0],1,1 a[0,-1] c # Add weighting channel
-    100%,100%,100%,{0,s}
-
-    if s#1>=3 # 3D version
-      eval[1] ">
-        begin(
-          const pw = $2;
-          const ph = $3;
-          const pd = $4;
-          const stdf = $5;
-          const boundary = $6;
-          const pw1 = int(pw/2);
-          const pw2 = pw - pw1 - 1;
-          const ph1 = int(ph/2);
-          const ph2 = ph - ph1 - 1;
-          const pd1 = int(pd/2);
-          const pd2 = pd - pd1 - 1;
-          const pwhd = pw*ph*pd;
-          return = vector(s);
-
-          # Pre-compute gaussian weights.
-          if (stdf<5,
-            ref(vectorpwhd(),weights);
-            offw = 0;
-            for (zw = -pd1, zw<=pd2, ++zw,
-              for (yw = -ph1, yw<=ph2, ++yw,
-                for (xw = -pw1, xw<=pw2, ++xw,
-                  weights[offw++] = exp(-xw^2/(2*(stdf*pw)^2) - yw^2/(2*(stdf*ph)^2) - zw^2/(2*(stdf*pd)^2));
-                );
-              );
-            );
-          );
-        );
-        u = i(x,y,z,0);
-        v = i(x,y,z,1);
-        w = i(x,y,z,2);
-        ref(crop(#0,u - pw1, v - ph1,w - pd1,pw,ph,pd,boundary),patch);
-        stdf<5?
-          draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1,weights):
-          draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1);
-        return"
-    else # 2D version
-      eval[1] ">
-        begin(
-          const pw = $2;
-          const ph = $3;
-          const stdf = $5;
-          const boundary = $6;
-
-          const pw1 = int(pw/2);
-          const pw2 = pw - pw1 - 1;
-          const ph1 = int(ph/2);
-          const ph2 = ph - ph1 - 1;
-          const pwh = pw*ph;
-          return = vector(s);
-
-          # Pre-compute gaussian weights.
-          if (stdf<5,
-            ref(vectorpwh(),weights);
-            offw = 0;
-            for (yw = -ph1, yw<=ph2, ++yw,
-              for (xw = -pw1, xw<=pw2, ++xw,
-                weights[offw++] = exp(-xw^2/(2*(stdf*pw)^2) - yw^2/(2*(stdf*ph)^2));
-              );
-            );
-          );
-        );
-        u = i(x,y,z,0);
-        v = i(x,y,z,1);
-        ref(crop(#0,u - pw1, v - ph1,pw,ph,boundary),patch);
-        stdf<5?
-          draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1,weights):
-          draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1);
-        return"
-    fi
-    s. c,-{0,s-1} /[-2,-1] k. => $nm
-  } }
-
-#@cli warp_rbf : xs0[%],ys0[%],xt0[%],yt0[%],...,xsN[%],ysN[%],xtN[%],ytN[%]
-#@cli : Warp selected images using RBF-based interpolation.
-#@cli : Each argument (xsk,ysk)-(xtk,ytk) corresponds to the coordinates of a keypoint
-#@cli : respectively on the source and target images. The set of all keypoints define the overall image deformation.
-#@cli : $ image.jpg +warp_rbf 0,0,0,0,100%,0,100%,0,100%,100%,100%,100%,0,100%,0,100%,50%,50%,70%,50%,25%,25%,25%,75%
-warp_rbf :
-  e[^-1] "Warp image$? using RBF interpolation, with keypoints ($*)."
-  $=arg N:=$#/4
-  if int($N)!=$N error[0--2] "Command 'warp_rbf': Wrong number of arguments ($#)." fi
-  foreach {
-    # Retrieve absolute keypoints coordinates.
-    4,$N
-    repeat wh { a=${arg{1+$>}} isp=${"is_percent "$a} eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
-    s. x,2 -. .. a[-2,-1] x permute. yzcx
-
-    # Generate warping field by RBF interpolation.
-    rbf. {0,[w,h]} warp[0] .,1,1,3 rm.
-  }
-
 #---------------------------------
 #
 #@cli :: Filtering
@@ -29503,6 +29383,107 @@ twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
   repeat $! { [$>],[$>],1,1,$1*x channels. -1,0 warp[$>] .,1,1,2 rm. }
   polar2euclidean $2,$3,1,1
 
+#@cli warp : [warping_field],_mode,_interpolation,_boundary_conditions,_nb_frames>0 : (+)
+#@cli : Warp selected images with specified displacement field.
+#@cli : 'mode' can be { 0=backward-absolute | 1=backward-relative | 2=forward-absolute | 3=forward-relative }.
+#@cli : 'interpolation' can be { 0=nearest-neighbor | 1=linear | 2=cubic }.
+#@cli : 'boundary_conditions' can be { 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }.
+#@cli : Default values: 'mode=0', 'interpolation=1', 'boundary_conditions=0' and 'nb_frames=1'.
+#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*if(c==0,cos(4*A),sin(8*A))' \
+# warp[-2] [-1],1,1,0 quiver[-1] [-1],10,1,1,1,100
+#@cli : $$ https://gmic.eu/oldtutorial/_warp
+
+#@cli warp_patch : [warping_field],patch_width>=1,_patch_height>=1,_patch_depth>=1,_std_factor>0,_boundary_conditions.
+#@cli : Patch-warp selected images, with specified 2D or 3D displacement field (in backward-absolute mode).
+#@cli : Argument 'std_factor' sets the std of the gaussian weights for the patch overlap,
+#@cli : equal to 'std = std_factor*patch_size'.
+#@cli : 'boundary_conditions' can be { 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }.
+#@cli : Default values: 'std_factor=0.3' and 'boundary_conditions=3'.
+warp_patch : check ${is_image_arg\ $1}" && isint(${2=3}) && $2>=1 && isint(${3=$2}) && $3>=1 &&
+                    isint(${4=1}) && $4>=1 && isnum(${5=0.3}) && $5>0 && isint(${6=3}) && $6>=0 && $6<=3"
+  e[^-1] "Patch-warp image$? with backward-absolute displacement field $1, using $2x$3x$4 patches, std factor $5
+          and "${"arg0 $6,dirichlet,neumann,periodic,mirror"}" boundary conditions."
+  if $2<=1 pass$1 warp[^-1] .,0 rm. return fi
+  repeat $! { pass$1 l[$>,-1] {
+    nm={0,n}
+    [0],[0],[0],1,1 a[0,-1] c # Add weighting channel
+    100%,100%,100%,{0,s}
+
+    if s#1>=3 # 3D version
+      eval[1] ">
+        begin(
+          const pw = $2;
+          const ph = $3;
+          const pd = $4;
+          const stdf = $5;
+          const boundary = $6;
+          const pw1 = int(pw/2);
+          const pw2 = pw - pw1 - 1;
+          const ph1 = int(ph/2);
+          const ph2 = ph - ph1 - 1;
+          const pd1 = int(pd/2);
+          const pd2 = pd - pd1 - 1;
+          const pwhd = pw*ph*pd;
+          return = vector(s);
+
+          # Pre-compute gaussian weights.
+          if (stdf<5,
+            ref(vectorpwhd(),weights);
+            offw = 0;
+            for (zw = -pd1, zw<=pd2, ++zw,
+              for (yw = -ph1, yw<=ph2, ++yw,
+                for (xw = -pw1, xw<=pw2, ++xw,
+                  weights[offw++] = exp(-xw^2/(2*(stdf*pw)^2) - yw^2/(2*(stdf*ph)^2) - zw^2/(2*(stdf*pd)^2));
+                );
+              );
+            );
+          );
+        );
+        u = i(x,y,z,0);
+        v = i(x,y,z,1);
+        w = i(x,y,z,2);
+        ref(crop(#0,u - pw1, v - ph1,w - pd1,pw,ph,pd,boundary),patch);
+        stdf<5?
+          draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1,weights):
+          draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1);
+        return"
+    else # 2D version
+      eval[1] ">
+        begin(
+          const pw = $2;
+          const ph = $3;
+          const stdf = $5;
+          const boundary = $6;
+
+          const pw1 = int(pw/2);
+          const pw2 = pw - pw1 - 1;
+          const ph1 = int(ph/2);
+          const ph2 = ph - ph1 - 1;
+          const pwh = pw*ph;
+          return = vector(s);
+
+          # Pre-compute gaussian weights.
+          if (stdf<5,
+            ref(vectorpwh(),weights);
+            offw = 0;
+            for (yw = -ph1, yw<=ph2, ++yw,
+              for (xw = -pw1, xw<=pw2, ++xw,
+                weights[offw++] = exp(-xw^2/(2*(stdf*pw)^2) - yw^2/(2*(stdf*ph)^2));
+              );
+            );
+          );
+        );
+        u = i(x,y,z,0);
+        v = i(x,y,z,1);
+        ref(crop(#0,u - pw1, v - ph1,pw,ph,boundary),patch);
+        stdf<5?
+          draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1,weights):
+          draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1);
+        return"
+    fi
+    s. c,-{0,s-1} /[-2,-1] k. => $nm
+  } }
+
 #@cli warp_perspective : _x-angle,_y-angle,_zoom>0,_x-center,_y-center,\
 # _boundary_conditions={ 0=dirichlet | 1=neumann | 2=periodic | 3=mirror }
 #@cli : Warp selected images with perspective deformation.
@@ -29516,6 +29497,25 @@ warp_perspective : skip ${1=1.5},${2=0},${3=1},${4=50},${5=50},${6=2}
     *.. 100 +.. $4 /.. 100 *.. {-3,w}
     *. 100 +. $5 /. 100 *. {-3,h}
     a[-2,-1] c warp.. .,0,1,$6 rm.
+  }
+
+#@cli warp_rbf : xs0[%],ys0[%],xt0[%],yt0[%],...,xsN[%],ysN[%],xtN[%],ytN[%]
+#@cli : Warp selected images using RBF-based interpolation.
+#@cli : Each argument (xsk,ysk)-(xtk,ytk) corresponds to the coordinates of a keypoint
+#@cli : respectively on the source and target images. The set of all keypoints define the overall image deformation.
+#@cli : $ image.jpg +warp_rbf 0,0,0,0,100%,0,100%,0,100%,100%,100%,100%,0,100%,0,100%,50%,50%,70%,50%,25%,25%,25%,75%
+warp_rbf :
+  e[^-1] "Warp image$? using RBF interpolation, with keypoints ($*)."
+  $=arg N:=$#/4
+  if int($N)!=$N error[0--2] "Command 'warp_rbf': Wrong number of arguments ($#)." fi
+  foreach {
+    # Retrieve absolute keypoints coordinates.
+    4,$N
+    repeat wh { a=${arg{1+$>}} isp=${"is_percent "$a} eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
+    s. x,2 -. .. a[-2,-1] x permute. yzcx
+
+    # Generate warping field by RBF interpolation.
+    rbf. {0,[w,h]} warp[0] .,1,1,3 rm.
   }
 
 #@cli water : _amplitude,_smoothness>=0,_angle
