@@ -3338,7 +3338,7 @@ dt :
 #@cli : Render selected images of tensors as a field of 2D ellipses.
 #@cli : (eq. to 'dt').
 #@cli : Default values: 'size_factor=16', 'ellipse_size=1.5', 'color_mode=2' and 'outline=2'.
-#@cli : $ image.jpg +diffusiontensors 0.1,0.9 resize2dx. 32 +display_tensors. 64,2
+#@cli : $ image.jpg +diffusiontensors 0.1,0.9 resize2dx. 64 +display_tensors. 16,2
 #@cli : $$ https://gmic.eu/oldtutorial/_display_tensors
 display_tensors :
   _gmic_s="$?" v + _$0 $*
@@ -3664,7 +3664,7 @@ _input_csv_val :
     k[0]
     permute yzcx
     if [$range]!=[0,0,0,1,1,1]
-      f "begin(
+      f ":begin(
            range = ["$range"];
            dmin = range[0,3];
            dmax = range[3,3];
@@ -7899,9 +7899,9 @@ _random_pattern_check_image :
   if !$ir 0
   else l[] {
     (0,1^0,0) ind=1
-    repeat $2 { +f "begin(C = I["$ind"]; R = rot(90°)); R*(I - C) + C" ind:=2*h a y }
+    repeat $2 { +f ":begin(C = I["$ind"]; R = rot(90°)); R*(I - C) + C" ind:=2*h a y }
     s c -.. {-2,ia} -. {ia} a c / {max(abs(im),abs(iM))}
-    angle:=$3-atan2(i1,i0)*180/pi f. "begin(R = rot("$angle"°)); R*I"
+    angle:=$3-atan2(i1,i0)*180/pi f. ":begin(R = rot("$angle"°)); R*I"
     n 0,{$1-1} round $1,$1,1,1 eval.. "!x?polygon(#1,2,I(0,y),I(1,y),1,1); I" k.
   } fi
   => "[2D dragon shape]"
@@ -11176,7 +11176,7 @@ decompress_clut_pde : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
     2,2,2,{s-3}
     do
       +f. 0 .,.,.,1
-      eval[0] "begin(fact = ([w#1,h#1,d#1] - 1)/255); PC = I; P = PC[0,3]; X = round(P*fact);
+      eval[0] ":begin(fact = ([w#1,h#1,d#1] - 1)/255); PC = I; P = PC[0,3]; X = round(P*fact);
                I(#2,X)+=PC[3,s-3]; ++i(#3,X); I"
       f. "*i?(I(#2)/=i;1):0"
       if im rm[-3,-1] # No missing data so far
@@ -11738,7 +11738,7 @@ quantize_area : check "${1=10}>0"
   e[^-1] "Quantize image$? by regions of areas greater than $1."
   if $1==1 return fi
   foreach {
-    if s>1 +f. "begin(A = resize([ 0,(s-1)/s ],s,3));I+A" norm. round. 0.01 else [0] fi
+    if s>1 +f. ":begin(A = resize([ 0,(s-1)/s ],s,3)); I + A" norm. round. 0.01 else [0] fi
     area. 0,0 <. $1
     do
       [0]
@@ -11878,9 +11878,9 @@ roundify : check $1>=0
 threshold : check "isexpr($1) && isbool(${2=0})"
   e[^-1] ${"arg0 !$2,Soft,Hard"}"-threshold image$? by $1."
   if $2  # Soft thresholding
-    f "begin(
+    f ":begin(
          str = ['$1'];
-         value = str[size(str)-1]==_'%'?im + (iM-im)*$1:$1
+         value = str[size(str) - 1]==_'%'?im + (iM - im)*$1:$1;
        );
        i>=value?i - value:
        i<=-value?i + value:0"
@@ -12722,7 +12722,7 @@ lab2xyz : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from Lab to XYZ, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   to_color
-  f "
+  f ":
     begin(
       const epsilon = 216/24389;
       const kappa = 24389/27;
@@ -13708,7 +13708,7 @@ pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3
 
   # Randomly modify keypoint colors.
   rgb2hsl. mirror. c sort. +,y mirror. c
-  +f. "begin(Lmax = 0);
+  +f. ":begin(Lmax = 0);
     H = i0; S = i1; L = i2;
     u<0.5?(
       do (
@@ -14330,7 +14330,7 @@ to_automode :
 
     # Check for useless color.
     if s==3||s==4 # RGB or RGBA
-      eval. "begin(is_gray = 1); is_gray && (i0!=i1 || i0!=i2)?(is_gray = 0);
+      eval. ":begin(is_gray = 1); is_gray && (i0!=i1 || i0!=i2)?(is_gray = 0);
              end(merge(is_gray,&&); set('is_gray',is_gray))"
       if $is_gray s c,-3 channels[0] 0 a c fi
     fi
@@ -14371,7 +14371,7 @@ xyz2lab : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from XYZ to Lab, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   to_color
-  f "
+  f ":
     begin(
       const epsilon = 216/24389;
       const kappa = 24389/27;
@@ -16858,7 +16858,7 @@ ilaplacian : check "${1=0}>=0" skip "${2=}"
       /[-3,-2] . rm.
       = 0 ifft rm.
     }
-    + '"begin(S = resize(["$ia"],s,0)); S"'
+    + '":begin(S = resize(["$ia"],s,0)); S"'
 
   else # Inversion with PDE-flow
     if $is_estimate
@@ -17184,7 +17184,7 @@ _inpaint_matchpatch :
 # _inpaint_warping2d : fill-in zero-valued vectors in absolute 2D warping field (works even when 'spectrum>2').
 _inpaint_warping2d :
   foreach {
-    100%,100%,100%,2,"> begin(const S = s#0; zero0 = vectorS(); zero1 = [0,0]; N = 0); I(#-1)==zero0?zero1:[++N,1]"
+    100%,100%,100%,2,">begin(const S = s#0; zero0 = vectorS(); zero1 = [0,0]; N = 0); I(#-1)==zero0?zero1:[++N,1]"
     s. c distance. 1 *. -1
     watershed.. . rm.
 
@@ -17502,8 +17502,8 @@ percentile : check ${"is_image_arg $1"}" && inrange(${2=0},0,100) && inrange(${3
   discard. 0 code={t} rm[-2,-1]
 
   # Apply filter.
-  f "
-    begin( N = vector"$N"() );
+  f "*
+    begin(N = vector"$N"());
     const boundary = 1;
     const sS = size(N) - 1;
     const s0 = round(sS*"$vmin"%);
@@ -19866,7 +19866,7 @@ close_binary :
     " => e_normals
 
     # Smooth edgel normals.
-    f[e_normals] $_edgel_lib"
+    f[e_normals] *$_edgel_lib"
       const boundary = 1;
       i<-1?-2:(
         ppos = npos = pos = [ x,y,c ];
@@ -19883,7 +19883,7 @@ close_binary :
       )"
 
     # Estimate edgel curvatures.
-    +f[e_normals] $_edgel_lib"
+    +f[e_normals] *$_edgel_lib"
       const boundary = 1;
       i<-1?-2:(
         pos = [ x,y,c ];
@@ -19898,7 +19898,7 @@ close_binary :
     => e_curvatures
 
     # Smooth edgel curvatures.
-    +f[e_curvatures] $_edgel_lib"
+    +f[e_curvatures] *$_edgel_lib"
       const boundary = 1;
       i<-1?-2:(
         ppos = npos = pos = [ x,y,c ];
@@ -28964,7 +28964,7 @@ stylize :
         # Smart upscale of displacement field.
         +. 1 r. ...,...,1,100%,4 -. 1
         do
-          f. "begin(const boundary = 1; nx = ny = vectors(); nx[0] = ny[1] = 1);
+          f. "*begin(const boundary = 1; nx = ny = vectors(); nx[0] = ny[1] = 1);
               i>=0?I:(
                 j(-1)>=0?J(-1) + nx:
                 j(0,-1)>=0?J(0,-1) + ny:
