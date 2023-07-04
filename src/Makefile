@@ -178,7 +178,7 @@ endif
 #--------------------------------------------------------
 
 # Flags set to describe a 'prerelease' version.
-PRERELEASE = $(shell date +%y%m%d)
+PRERELEASE = $(shell date +%y%m%d%H)
 PRERELEASE_CFLAGS = -Dgmic_prerelease="\\\"$(PRERELEASE)\\\""
 
 # Minimal set of flags mandatory to compile G'MIC.
