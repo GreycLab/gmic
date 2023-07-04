@@ -63,7 +63,7 @@
 #if cimg_OS==2
 #define gmic_uint64 __int64
 #else // #if cimg_OS==2
-#if cimg_use_cpp11==1 && (UINTPTR_MAX==0xffffffff || defined(__arm__) || defined(_M_ARM) || ((ULONG_MAX)==(UINT_MAX)))
+#if UINTPTR_MAX==0xffffffff || defined(__arm__) || defined(_M_ARM) || ((ULONG_MAX)==(UINT_MAX))
 #define gmic_uint64 unsigned long long
 #else
 #define gmic_uint64 unsigned long
