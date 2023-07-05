@@ -4153,6 +4153,7 @@ gmic& gmic::_gmic(const char *const commands_line,
                   CImgList<T>& images, CImgList<char>& images_names,
                   const char *const custom_commands, const bool include_stdlib,
                   float *const p_progress, bool *const p_is_abort) {
+
   static bool is_first_call = true;
   cimg_exception_mode = cimg::exception_mode();
   cimg::exception_mode(0);
@@ -4358,6 +4359,7 @@ gmic& gmic::_gmic(const char *const commands_line,
     print(images,0,"Abort G'MIC interpreter (caught exception).\n");
     throw;
   }
+
   return *this;
 }
 bool gmic::is_display_available = false;
