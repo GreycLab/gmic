@@ -4178,33 +4178,23 @@ gmic& gmic::_gmic(const char *const commands_line,
   setlocale(LC_NUMERIC,"C");
 
   delete[] commands;
-  delete[] commands_names;
-  delete[] commands_has_arguments;
-  delete[] _variables;
-  delete[] _variables_names;
-  delete[] _variables_lengths;
-
   commands = new CImgList<char>[gmic_comslots];
+  delete[] commands_names;
   commands_names = new CImgList<char>[gmic_comslots];
+  delete[] commands_has_arguments;
   commands_has_arguments = new CImgList<char>[gmic_comslots];
-  for (unsigned int l = 0; l<gmic_comslots; ++l) {
-    commands_names[l].assign();
-    commands[l].assign();
-    commands_has_arguments[l].assign();
-  }
-
+  delete[] _variables;
   _variables = new CImgList<char>[gmic_varslots];
+  delete[] _variables_names;
   _variables_names = new CImgList<char>[gmic_varslots];
+  delete[] _variables_lengths;
   _variables_lengths = new CImg<unsigned int>[gmic_varslots];
   variables = new CImgList<char>*[gmic_varslots];
   variables_names = new CImgList<char>*[gmic_varslots];
   variables_lengths = new CImg<unsigned int>*[gmic_varslots];
   for (unsigned int l = 0; l<gmic_varslots; ++l) {
-    _variables[l].assign();
     variables[l] = &_variables[l];
-    _variables_names[l].assign();
     variables_names[l] = &_variables_names[l];
-    _variables_lengths[l].assign();
     variables_lengths[l] = &_variables_lengths[l];
   }
 
