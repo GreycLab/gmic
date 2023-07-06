@@ -4204,7 +4204,6 @@ gmic& gmic::_gmic(const char *const commands_line,
   fordones.assign();
   foreachdones.assign();
   repeatdones.assign();
-  light3d.assign();
 
   if (is_display_available) {
     display_windows.assign(gmic_winslots);
@@ -4212,13 +4211,8 @@ gmic& gmic::_gmic(const char *const commands_line,
   } else display_windows.assign();
   status.assign();
 
-  light3d_x = light3d_y = 0;
-  light3d_z = -5e8f;
-  progress = p_progress?p_progress:&_progress;
-  *progress = -1;
-
-  reference_time = cimg::time();
-
+  light3d.assign(); light3d_x = light3d_y = 0; light3d_z = -5e8f;
+  progress = p_progress?p_progress:&_progress; *progress = -1;
   nb_dowhiles = nb_fordones = nb_foreachdones = nb_repeatdones = 0;
   nb_carriages_default = nb_carriages_stdout = 0;
   debug_filename = debug_line = ~0U;
@@ -4236,8 +4230,8 @@ gmic& gmic::_gmic(const char *const commands_line,
   is_abort = p_is_abort?p_is_abort:&_is_abort;
   *is_abort = false;
   is_abort_thread = false;
-  is_lbrace_command = false;
   starting_commands_line = commands_line;
+  reference_time = (gmic_uint64)-1;
 
   // Import standard library and custom commands.
   if (include_stdlib) add_commands(gmic::decompress_stdlib().data());
@@ -4358,7 +4352,6 @@ gmic& gmic::_gmic(const char *const commands_line,
     print(images,0,"Abort G'MIC interpreter (caught exception).\n");
     throw;
   }
-
   return *this;
 }
 bool gmic::is_display_available = false;
@@ -5269,15 +5262,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line,
   nb_carriages_default = nb_carriages_stdout = 0;
   debug_filename = ~0U;
   debug_line = ~0U;
-  is_change = is_debug_info = is_debug = is_quit = is_return = false;
+  is_change = is_debug_info = is_debug = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
   is_start = true;
-  is_abort_thread = false;
   *progress = -1;
   cimglist_for(commands_line,l) {
     const char *it = commands_line[l].data();
     it+=*it=='-';
     if (!std::strcmp("debug",it)) { is_debug = true; break; }
   }
+  if (reference_time==(gmic_uint64)-1) reference_time = cimg::time();
   return _run(commands_line,position,images,images_names,images,images_names,variables_sizes,0,0,0,push_new_run);
 }
 
