@@ -4172,6 +4172,7 @@ gmic& gmic::_gmic(const char *const commands_line,
 
   // Initialize instance attributes.
   setlocale(LC_NUMERIC,"C");
+  commands_files.assign();
   delete[] commands;
   commands = new CImgList<char>[gmic_comslots];
   delete[] commands_names;
@@ -4193,8 +4194,6 @@ gmic& gmic::_gmic(const char *const commands_line,
     variables_lengths[l] = &_variables_lengths[l];
   }
 
-  commands_files.assign();
-
   if (is_display_available) {
     display_windows.assign(gmic_winslots);
     cimg_forX(display_windows,l) display_windows[l] = new CImgDisplay;
@@ -4204,21 +4203,15 @@ gmic& gmic::_gmic(const char *const commands_line,
   light3d.assign(); light3d_x = light3d_y = 0; light3d_z = -5e8f;
   progress = p_progress?p_progress:&_progress; *progress = -1;
   nb_carriages_default = nb_carriages_stdout = 0;
-  debug_filename = debug_line = ~0U;
-
   verbosity = 0;
   network_timeout = 0;
 
   allow_main_ = false;
-  is_change = false;
-  is_debug = false;
+  is_debug = is_debug_info = false;
   is_running = false;
   is_start = true;
-  is_return = is_quit = false;
-  is_debug_info = false;
   is_abort = p_is_abort?p_is_abort:&_is_abort;
   *is_abort = false;
-  is_abort_thread = false;
   starting_commands_line = commands_line;
   reference_time = (gmic_uint64)-1;
 
@@ -4244,14 +4237,13 @@ gmic& gmic::_gmic(const char *const commands_line,
   const char *s_os = "unknown";
 #endif
   set_variable("_os",0,s_os);
-
   set_variable("_path_rc",0,gmic::path_rc());
   set_variable("_path_user",0,gmic::path_user());
+  set_variable("_version",0,cimg_str2(gmic_version));
+  set_variable("_pixeltype",0,cimg::type<gmic_pixel_type>::string());
 
   cimg_snprintf(str,str.width(),"%u",cimg::nb_cpus());
   set_variable("_cpus",0,str.data());
-
-  set_variable("_version",0,cimg_str2(gmic_version));
 
 #if cimg_OS==1
   cimg_snprintf(str,str.width(),"%u",(unsigned int)getpid());
@@ -4331,7 +4323,6 @@ gmic& gmic::_gmic(const char *const commands_line,
 #endif
     "";
   set_variable("_flags",0,s_flags + 1);
-  set_variable("_pixeltype",0,cimg::type<gmic_pixel_type>::string());
 
   // Launch G'MIC interpreter.
   const CImgList<char> items = commands_line?commands_line_to_CImgList(commands_line):CImgList<char>::empty();
@@ -5247,9 +5238,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line,
   foreachdones.assign(); nb_foreachdones = 0;
   repeatdones.assign(); nb_repeatdones = 0;
   nb_carriages_default = nb_carriages_stdout = 0;
+  debug_filename = ~0U; debug_line = ~0U;
   status.assign();
-  debug_filename = ~0U;
-  debug_line = ~0U;
   is_change = is_debug_info = is_debug = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
   is_start = true;
   *progress = -1;
