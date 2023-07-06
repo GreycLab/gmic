@@ -4153,25 +4153,20 @@ gmic& gmic::_gmic(const char *const commands_line,
                   CImgList<T>& images, CImgList<char>& images_names,
                   const char *const custom_commands, const bool include_stdlib,
                   float *const p_progress, bool *const p_is_abort) {
-
-  static bool is_first_call = true;
   cimg_exception_mode = cimg::exception_mode();
   cimg::exception_mode(0);
 
   // Initialize class attributes.
   cimg::mutex(22);
-  if (!builtin_commands_inds) {
+  if (!builtin_commands_inds) { // First call
     builtin_commands_inds.assign(128,2,1,1,-1);
     for (unsigned int i = 0; builtin_commands_names[i]; ++i) {
       const int c = *builtin_commands_names[i];
       if (builtin_commands_inds[c]<0) builtin_commands_inds[c] = (int)i;
       builtin_commands_inds(c,1) = (int)i;
     }
-  }
-  if (is_first_call) {
     try { is_display_available = (bool)CImgDisplay::screen_width(); } catch (CImgDisplayException&) { }
     cimg::srand();
-    is_first_call = false;
   }
   cimg::mutex(22,0);
 
@@ -5247,14 +5242,13 @@ gmic& gmic::_run(const CImgList<char>& commands_line,
   setlocale(LC_NUMERIC,"C");
   callstack.assign(1U);
   callstack[0].assign(2,1,1,1);
-  callstack[0][0] = '.';
-  callstack[0][1] = 0;
+  callstack[0][0] = '.'; callstack[0][1] = 0;
   dowhiles.assign(); nb_dowhiles = 0;
   fordones.assign(); nb_fordones = 0;
   foreachdones.assign(); nb_foreachdones = 0;
   repeatdones.assign(); nb_repeatdones = 0;
-  status.assign();
   nb_carriages_default = nb_carriages_stdout = 0;
+  status.assign();
   debug_filename = ~0U;
   debug_line = ~0U;
   is_change = is_debug_info = is_debug = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
