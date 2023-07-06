@@ -4203,17 +4203,13 @@ gmic& gmic::_gmic(const char *const commands_line,
   light3d.assign(); light3d_x = light3d_y = 0; light3d_z = -5e8f;
   progress = p_progress?p_progress:&_progress; *progress = -1;
   nb_carriages_default = nb_carriages_stdout = 0;
-  verbosity = 0;
+  reference_time = (gmic_uint64)-1;
   network_timeout = 0;
-
-  allow_main_ = false;
-  is_debug = is_debug_info = false;
-  is_running = false;
-  is_start = true;
+  verbosity = 0;
+  allow_main_ = is_debug = is_debug_info = is_running = false;
   is_abort = p_is_abort?p_is_abort:&_is_abort;
   *is_abort = false;
   starting_commands_line = commands_line;
-  reference_time = (gmic_uint64)-1;
 
   // Import standard library and custom commands.
   if (include_stdlib) add_commands(gmic::decompress_stdlib().data());
