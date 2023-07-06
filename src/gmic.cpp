@@ -4170,14 +4170,13 @@ gmic& gmic::_gmic(const char *const commands_line,
   }
   if (is_first_call) {
     try { is_display_available = (bool)CImgDisplay::screen_width(); } catch (CImgDisplayException&) { }
+    cimg::srand();
     is_first_call = false;
   }
   cimg::mutex(22,0);
 
   // Initialize instance attributes.
-  cimg::srand();
   setlocale(LC_NUMERIC,"C");
-
   delete[] commands;
   commands = new CImgList<char>[gmic_comslots];
   delete[] commands_names;
