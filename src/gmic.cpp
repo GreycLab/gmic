@@ -4203,7 +4203,6 @@ gmic& gmic::_gmic(const char *const commands_line,
 
   light3d.assign(); light3d_x = light3d_y = 0; light3d_z = -5e8f;
   progress = p_progress?p_progress:&_progress; *progress = -1;
-  nb_dowhiles = nb_fordones = nb_foreachdones = nb_repeatdones = 0;
   nb_carriages_default = nb_carriages_stdout = 0;
   debug_filename = debug_line = ~0U;
 
