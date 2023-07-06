@@ -4199,11 +4199,6 @@ gmic& gmic::_gmic(const char *const commands_line,
   }
 
   commands_files.assign();
-  callstack.assign();
-  dowhiles.assign();
-  fordones.assign();
-  foreachdones.assign();
-  repeatdones.assign();
 
   if (is_display_available) {
     display_windows.assign(gmic_winslots);
