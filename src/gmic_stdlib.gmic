@@ -15638,7 +15638,15 @@ slices : skip ${2=$1}
 +split_length : check "isint($1) && isint($2) && $2>0 && $1>=$2"
   e[^-1] "Split length $1 into a set of $2 strictly positive, random integers."
   1,$2,1,1,u *. {($1-$2)/is} round. +. 1
-  eval "is!=$1?do (off = int(u(h))%h; val = i[off] + $1 - is; val>0?(i[off] = val), val<=0)"
+  eval "
+    sum = is;
+    while (sum!=$1,
+      off = int(u(h))%h;
+      val = i[off];
+      delta = $1 - sum;
+      dval = sign(delta)*round(u(1,abs(delta)));
+      val + dval>0?(i[off]+=dval; sum+=dval);
+    )"
 
 #@cli split_tiles : M!=0,_N!=0,_is_homogeneous={ 0 | 1 }
 #@cli : Split selected images as a MxN array of tiles.
