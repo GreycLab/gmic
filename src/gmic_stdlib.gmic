@@ -15630,14 +15630,15 @@ slices : skip ${2=$1}
 #@cli : $ 1,20,1,1,"1,2,3,4" +split -,2,3 append[1--1] y
 #@cli : $ (1,2,2,3,3,3,4,4,4,4) +split x,0 append[1--1] y
 
-#@cli split_length : length>=0,N>0
+#@cli split_length : length>=0,N>0,_random_function
 #@cli : Split specified length into a set of 'N' strictly positive, random integers.
 #@cli : Return a '1xN' integer-valued image whose sum is 'length'.
 #@cli : 'N' must be less or equal than 'length'.
+#@cli : Default value: 'random_function=u'.
 #@cli : $ split_length 100,10
-+split_length : check "isint($1) && isint($2) && $2>0 && $1>=$2"
-  e[^-1] "Split length $1 into a set of $2 strictly positive, random integers."
-  1,$2,1,1,u *. {($1-$2)/is} round. +. 1
++split_length : check "isint($1) && isint($2) && $2>0 && $1>=$2 && isexpr(${3=u})"
+  e[^-1] "Split length $1 into a set of $2 strictly positive, random integers, with random function '$3'."
+  1,$2,1,1,abs($3) *. {($1-$2)/is} round. +. 1
   eval "
     sum = is;
     while (sum!=$1,
