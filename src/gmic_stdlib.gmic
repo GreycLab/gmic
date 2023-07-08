@@ -11784,6 +11784,30 @@ quantize_area : check "${1=10}>0"
 #@cli : Fill selected images with random values uniformly distributed in the specified range.
 #@cli : $ 400,400,1,3 rand -10,10 +blur 10 sign[-1]
 
+#@cli rand_sum : sum>0,_random_function
+#@cli : Fill selected images with strictly positive, random, integer values, that sums to 'sum'.
+#@cli : For each image, 'sum' must be greater or equal than 'width*height*depth*spectrum'.
+#@cli : Default value: 'random_function=u'.
+#@cli : $ 100 rand_sum. 10
+rand_sum : check "isint($1) && isexpr(${3=u})"
+  e[^-1] "Fill image$? with strictly positive, random, integer values that sums to $1, with random function '$3'."
+  foreach {
+    if whds>$1
+      error[0--4] "Command 'rand_sum': Image ["$>"] = ("{[w,h,d,s]}") has "{whds}" elements (should be <=$1)."
+    fi
+    f. "abs($3)" *. {($1-whds)/is} round. +. 1
+    eval "
+      sum = is;
+      while (sum!=$1,
+        off = int(u(whds))%whds;
+        val = i[off];
+        delta = $1 - sum;
+        absdeltap1 = abs(delta) + 1;
+        dval = sign(delta)*(int(u(1,absdeltap1))%absdeltap1);
+        val + dval>0?(i[off]+=dval; sum+=dval);
+      )"
+  }
+
 #@cli replace : source,target
 #@cli : Replace pixel values in selected images.
 #@cli : $ (1;2;3;4) +replace 2,3
@@ -15629,26 +15653,6 @@ slices : skip ${2=$1}
 #@cli : $ image.jpg split x,-128
 #@cli : $ 1,20,1,1,"1,2,3,4" +split -,2,3 append[1--1] y
 #@cli : $ (1,2,2,3,3,3,4,4,4,4) +split x,0 append[1--1] y
-
-#@cli split_length : length>=0,N>0,_random_function
-#@cli : Split specified length into a set of 'N' strictly positive, random integers.
-#@cli : Return a '1xN' integer-valued image whose sum is 'length'.
-#@cli : 'N' must be less or equal than 'length'.
-#@cli : Default value: 'random_function=u'.
-#@cli : $ split_length 100,10
-+split_length : check "isint($1) && isint($2) && $2>0 && $1>=$2 && isexpr(${3=u})"
-  e[^-1] "Split length $1 into a set of $2 strictly positive, random integers, with random function '$3'."
-  1,$2,1,1,abs($3) *. {($1-$2)/is} round. +. 1
-  eval "
-    sum = is;
-    while (sum!=$1,
-      off = int(u(h))%h;
-      val = i[off];
-      delta = $1 - sum;
-      absdeltap1 = abs(delta) + 1;
-      dval = sign(delta)*(int(u(1,absdeltap1))%absdeltap1);
-      val + dval>0?(i[off]+=dval; sum+=dval);
-    )"
 
 #@cli split_tiles : M!=0,_N!=0,_is_homogeneous={ 0 | 1 }
 #@cli : Split selected images as a MxN array of tiles.
