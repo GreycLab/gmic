@@ -15637,45 +15637,8 @@ slices : skip ${2=$1}
 #@cli : $ split_length 100,10
 +split_length : check "isint($1) && isint($2) && $2>0 && $1>=$2"
   e[^-1] "Split length $1 into a set of $2 strictly positive, random integers."
-  M,N=${1-2}
-  if $M==$N 1,$N,1,1,1 return fi
-
-  # Initialize split with (quasi-) uniform distribution.
-  $N eval "repeat($M, k, p = round(k*($N-1)/($M-1)); ++i[p])"
-  i.. 100%,1,1,1,"x" a[-2,-1] c
-
-  # Subdivide into two classes (length 1 and others).
-  1,1,1,2x2 eval... "i1==1?da_push(#-1,I):da_push(#-2,I);I" rm...
-
-  # Apply iterative perturbations.
-  eval "
-    repeat(4*$N,
-
-      # Select random interval.
-      siz = da_size(#-2);
-      r = round(u(siz))%siz;
-      R = I[#-2,r];
-
-      # Remove length in interval.
-      l = round(u(1,R[1] - 1)); # Length to remove
-      R[1]-=l;
-      R[1]>1?(I[#-2,r] = R; 0):(da_remove(#-2,r); da_push(#-1,R));
-
-      # Add length to a random interval.
-      r = round(u($N))%$N;
-      r<da_size(#-2)?( # Add to interval with length that was already >1
-        i(#-2,0,r,0,1)+=l;
-      ):( # Add to interval of length 1.
-        r-=da_size(#-2);
-        R = I[#-1,r];
-        R[1]+=l;
-        da_remove(#-1,r);
-        da_push(#-2,R);
-      );
-    );
-    da_freeze(#-2);
-    da_freeze(#-1)"
-  a[-2,-1] y sort. +,y channels. 1
+  1,$2,1,1,u *. {($1-$2)/is} round. +. 1
+  eval "is!=$1?do (off = int(u(h))%h; val = i[off] + $1 - is; val>0?(i[off] = val), val<=0)"
 
 #@cli split_tiles : M!=0,_N!=0,_is_homogeneous={ 0 | 1 }
 #@cli : Split selected images as a MxN array of tiles.
