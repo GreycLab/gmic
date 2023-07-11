@@ -23218,11 +23218,18 @@ _split3d :
   e[0--3] "Split 3D object$? into feature vectors."
   check3d foreach { nm={n}
     +z. 0,0,0,5 +z.. 0,6,0,7 nbv,nbp:=f2ui(crop())
-    indp:=8+3*$nbv +z... 0,8,0,{$indp-1} # Vertices
-    $nbp eval. ">begin(p = $indp); p+=i[#0,p] + 1; end(set('indc',p))" rm.
-    +z[0] 0,$indp,0,{$indc-1} # Primitives
-    $nbp eval. ">begin(p = $indc); i[#0,p]==-128?(p+=prod(crop(#0,0,++p,1,3))); p+=3; end(set('indo',p))" rm.
-    +z[0] 0,$indc,0,{$indo-1} +z[0] 0,$indo,0,100% rm[0]
+    indp:=8+3*$nbv
+    if $nbv +z... 0,8,0,{$indp-1} else 0 fi # Vertices
+    if $nbp
+      $nbp eval. ">begin(p = $indp); p+=i[#0,p] + 1; end(set('indc',p))" rm.
+      +z[0] 0,$indp,0,{$indc-1}
+      $nbp eval. ">begin(p = $indc); i[#0,p]==-128?(p+=prod(crop(#0,0,++p,1,3))); p+=3; end(set('indo',p))" rm.
+      +z[0] 0,$indc,0,{$indo-1}
+      +z[0] 0,$indo,0,100%
+    else
+      0 0 0
+    fi
+    rm[0]
     => $nm,${nm}_c1,${nm}_c2,${nm}_c3,${nm}_c4,${nm}_c5
   }
 
@@ -28377,15 +28384,21 @@ hardsketchbw : skip ${1=300},${2=50},${3=0.1},${4=20},${5=0}
       +norm >=. $4% 100%,100% noise. $2,2 ==. 1 *[-2,-1]
 
       # Retrieve points coordinates and corresponding tangents.
-      pointcloud3d. s3d. rm[-6--5,-3--1] r. 3,{h/3},1,1,-1 s. x rm. a[-2,-1] c
-      warp.. .,0,0,1 +-. .. +[-3,-2] s[-2,-1] c
+      pointcloud3d.
+      if i[-1,2]
+        s3d. rm[-6--5,-3--1] r. 3,{h/3},1,1,-1 s. x rm. a[-2,-1] c
+        warp.. .,0,0,1 +-. .. +[-3,-2] s[-2,-1] c
 
-      # Convert as a 3D object and render on white background.
-      i... 1,{h} 1,{h} a[-6--1] x
-      i.. ('CImg3d') i.. ({2*h},{h})
-      1,{h},1,1,2 1,{h},1,1,2*y ++. 1 a[-3--1] x
-      3,{h} 1,{h},1,1,$3 y[-6--1] a[-6--1] y
-      $w,$h,1,1,255 j3d. ..,0,0,0,1,1,0,0 rm.. => $nm
+        # Convert as a 3D object and render on white background.
+        i... 1,{h} 1,{h} a[-6--1] x
+        i.. ('CImg3d') i.. ({2*h},{h})
+        1,{h},1,1,2 1,{h},1,1,2*y ++. 1 a[-3--1] x
+        3,{h} 1,{h},1,1,$3 y[-6--1] a[-6--1] y
+        $w,$h,1,1,255 j3d. ..,0,0,0,1,1,0,0 rm..
+      else
+        rm $w,$h,1,1,255
+      fi
+      => $nm
     }
   fi
 
