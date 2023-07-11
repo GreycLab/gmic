@@ -140,7 +140,7 @@ if (NOT CUSTOM_CFLAGS)
     if (${CMAKE_BUILD_TYPE_LOWER} STREQUAL "debug")
         list(PREPEND GMIC_CXX_COMPILE_FLAGS -Og)
     else()
-        list(PREPEND GMIC_CXX_COMPILE_FLAGS -Ofast)
+        list(PREPEND GMIC_CXX_COMPILE_FLAGS -O3)
     endif()
 endif()
 
