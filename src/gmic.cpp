@@ -2772,7 +2772,9 @@ gmic& gmic::assign() {
 }
 
 gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
-  assign();
+  CImgList<gmic_pixel_type> images;
+  CImgList<char> images_names;
+  _gmic(0,images,images_names,0,false,0,0);
   for (unsigned int i = 0; i<gmic_comslots; ++i) {
     commands[i].assign(gmic_instance.commands[i],true);
     commands_names[i].assign(gmic_instance.commands_names[i],true);
@@ -3155,7 +3157,7 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
     if (is_subst) *(++ptrd) = 1;  // Item has to be substituted
     CImg<char>(item.data(),(unsigned int)(ptrd - item.data() + 1)).move_to(items);
   }
-  if (is_debug) {
+  if (is_debug && !is_start) {
     debug("Decompose command line into %u items: ",items.size());
     cimglist_for(items,l) {
       if (items(l,0)==1) {
@@ -3671,18 +3673,6 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
           move_to(commands[hash][pos]);
       } else commands[hash][pos].append(body,'x'); // Insert code without debug info
     }
-  }
-
-  if (is_debug) {
-    CImg<unsigned int> hdist(gmic_comslots);
-    cimg_forX(hdist,i) hdist[i] = commands[i].size();
-    const CImg<double> st = hdist.get_stats();
-    cimg_snprintf(s_body,s_body.width(),
-                  "Distribution of command hashes: [ %s ], min = %u, max = %u, mean = %g, std = %g.",
-                  hdist.value_string().data(),(unsigned int)st[0],(unsigned int)st[1],st[2],
-                  std::sqrt(st[3]));
-    cimg::strellipsize(s_body,512,false);
-    debug("%s",s_body.data());
   }
   cimg::mutex(23,0);
   return *this;
@@ -5287,14 +5277,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line,
   nb_carriages_default = nb_carriages_stdout = 0;
   debug_filename = ~0U; debug_line = ~0U;
   status.assign();
-  is_change = is_debug_info = is_debug = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
+  is_change = is_debug_info = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
   is_start = true;
   *progress = -1;
-  cimglist_for(commands_line,l) {
-    const char *it = commands_line[l].data();
-    it+=*it=='-';
-    if (!std::strcmp("debug",it)) { is_debug = true; break; }
-  }
   if (reference_time==(gmic_uint64)-1) reference_time = cimg::time();
   return _run(commands_line,position,images,images_names,images,images_names,variables_sizes,0,0,0,push_new_run);
 }
