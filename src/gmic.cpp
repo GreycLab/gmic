@@ -10758,54 +10758,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             // Prepare thread structures.
             cimg_forY(_gmic_threads,l) {
               gmic &gmic_instance = _gmic_threads[l].gmic_instance;
-              for (unsigned int i = 0; i<gmic_comslots; ++i) {
-                gmic_instance.commands[i].assign(commands[i],true);
-                gmic_instance.commands_names[i].assign(commands_names[i],true);
-                gmic_instance.commands_has_arguments[i].assign(commands_has_arguments[i],true);
-              }
-              for (unsigned int i = 0; i<gmic_varslots; ++i) {
-                if (i>=6*gmic_varslots/7) { // Share inter-thread global variables
-                  gmic_instance.variables[i] = variables[i];
-                  gmic_instance.variables_names[i] = variables_names[i];
-                  gmic_instance.variables_lengths[i] = variables_lengths[i];
-                } else {
-                  if (i>=gmic_varslots/2) { // Make a copy of single-thread global variables
-                    gmic_instance._variables[i].assign(_variables[i]);
-                    gmic_instance._variables_names[i].assign(_variables_names[i]);
-                    gmic_instance._variables_lengths[i].assign(_variables_lengths[i]);
-                    _gmic_threads[l].variables_sizes[i] = variables_sizes[i];
-                  } else _gmic_threads[l].variables_sizes[i] = 0;
-                  gmic_instance.variables[i] = &gmic_instance._variables[i];
-                  gmic_instance.variables_names[i] = &gmic_instance._variables_names[i];
-                  gmic_instance.variables_lengths[i] = &gmic_instance._variables_lengths[i];
+
+              gmic_instance.assign(*this);
+              for (unsigned int i = 0; i<gmic_varslots; ++i)
+                if (i<6*gmic_varslots/7) {
+                  if (i>=gmic_varslots/2) _gmic_threads[l].variables_sizes[i] = variables_sizes[i];
+                  else _gmic_threads[l].variables_sizes[i] = 0;
                 }
-              }
-              gmic_instance.callstack.assign(callstack);
-              gmic_instance.commands_files.assign(commands_files,true);
               gmic_use_title;
               cimg_snprintf(title,_title.width(),"*thread%d",l);
               CImg<char>::string(title).move_to(gmic_instance.callstack);
-              gmic_instance.light3d.assign(light3d);
-              gmic_instance.status.assign(status);
-              gmic_instance.debug_filename = debug_filename;
-              gmic_instance.debug_line = debug_line;
-              gmic_instance.light3d_x = light3d_x;
-              gmic_instance.light3d_y = light3d_y;
-              gmic_instance.light3d_z = light3d_z;
-              gmic_instance._progress = 0;
-              gmic_instance.progress = &gmic_instance._progress;
-              gmic_instance.is_change = is_change;
-              gmic_instance.is_debug = is_debug;
-              gmic_instance.is_start = false;
-              gmic_instance.is_quit = false;
-              gmic_instance.is_return = false;
-              gmic_instance.verbosity = verbosity;
-              gmic_instance._is_abort = _is_abort;
-              gmic_instance.is_abort = is_abort;
-              gmic_instance.is_abort_thread = false;
-              gmic_instance.nb_carriages_default = nb_carriages_default;
-              gmic_instance.nb_carriages_stdout = nb_carriages_stdout;
-              gmic_instance.reference_time = reference_time;
               _gmic_threads[l].images = &images;
               _gmic_threads[l].images_names = &images_names;
               _gmic_threads[l].parent_images = &parent_images;
