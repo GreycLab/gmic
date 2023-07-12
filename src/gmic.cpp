@@ -2772,6 +2772,10 @@ gmic& gmic::assign() {
 }
 
 gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
+  assign(gmic_instance);
+}
+
+gmic &gmic::assign(const gmic &gmic_instance) {
   CImgList<gmic_pixel_type> images;
   CImgList<char> images_names;
   _gmic(0,images,images_names,0,false,0,0);
@@ -2823,6 +2827,7 @@ gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
   nb_carriages_default = gmic_instance.nb_carriages_default;
   nb_carriages_stdout = gmic_instance.nb_carriages_stdout;
   reference_time = gmic_instance.reference_time;
+  return *this;
 }
 
 template<typename T>
