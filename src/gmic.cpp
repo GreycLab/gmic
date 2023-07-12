@@ -2775,11 +2775,14 @@ gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
   CImgList<gmic_pixel_type> images;
   CImgList<char> images_names;
   _gmic(0,images,images_names,0,false,0,0);
+  cimg::mutex(23);
   for (unsigned int i = 0; i<gmic_comslots; ++i) {
     commands[i].assign(gmic_instance.commands[i],true);
     commands_names[i].assign(gmic_instance.commands_names[i],true);
     commands_has_arguments[i].assign(gmic_instance.commands_has_arguments[i],true);
   }
+  cimg::mutex(23,0);
+  cimg::mutex(30);
   for (unsigned int i = 0; i<gmic_varslots; ++i) {
     if (i>=6*gmic_varslots/7) { // Share inter-thread global variables
       variables[i] = gmic_instance.variables[i];
@@ -2796,6 +2799,7 @@ gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
       variables_lengths[i] = &_variables_lengths[i];
     }
   }
+  cimg::mutex(30,0);
   callstack.assign(gmic_instance.callstack);
   commands_files.assign(gmic_instance.commands_files,true);
   light3d.assign(gmic_instance.light3d);
