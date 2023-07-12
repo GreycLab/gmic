@@ -2455,8 +2455,6 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   const unsigned int *const variables_sizes = (const unsigned int*)gr[5];
   const CImg<unsigned int> *const command_selection = (const CImg<unsigned int>*)gr[6];
 
-  std::fprintf(stderr,"\nIS_PARALLEL_RUN = %d\n",(int)is_parallel_run);
-
   gmic *const p_gmic_instance = is_parallel_run?new gmic(gmic_instance):&gmic_instance;
   CImg<char> is_error;
   char sep;
