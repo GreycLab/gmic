@@ -2441,7 +2441,7 @@ double gmic::mp_name(const unsigned int ind, double *const out_str, const unsign
 
 // This method is not thread-safe. Ensure it's never run in parallel!
 template<typename T>
-double gmic::mp_run(char *const str,
+double gmic::mp_run(char *const str, const bool is_parallel_run,
                     void *const p_list, const T& pixel_type) {
   cimg::unused(pixel_type);
   const CImg<void*> gr = current_run("Function 'run()'",p_list);
@@ -2455,24 +2455,29 @@ double gmic::mp_run(char *const str,
   const unsigned int *const variables_sizes = (const unsigned int*)gr[5];
   const CImg<unsigned int> *const command_selection = (const CImg<unsigned int>*)gr[6];
 
+  std::fprintf(stderr,"\nIS_PARALLEL_RUN = %d\n",(int)is_parallel_run);
+
+  gmic *const p_gmic_instance = is_parallel_run?new gmic(gmic_instance):&gmic_instance;
   CImg<char> is_error;
   char sep;
-  if (gmic_instance.is_debug_info && gmic_instance.debug_line!=~0U) {
+  if (p_gmic_instance->is_debug_info && p_gmic_instance->debug_line!=~0U) {
     CImg<char> title(32);
-    cimg_snprintf(title,title.width(),"*expr#%u",gmic_instance.debug_line);
-    CImg<char>::string(title).move_to(gmic_instance.callstack);
-  } else CImg<char>::string("*expr").move_to(gmic_instance.callstack);
+    cimg_snprintf(title,title.width(),"*expr#%u",p_gmic_instance->debug_line);
+    CImg<char>::string(title).move_to(p_gmic_instance->callstack);
+  } else CImg<char>::string("*expr").move_to(p_gmic_instance->callstack);
   unsigned int pos = 0;
   try {
-    gmic_instance._run(gmic_instance.commands_line_to_CImgList(gmic::strreplace_fw(str)),pos,images,images_names,
-                       parent_images,parent_images_names,variables_sizes,0,0,command_selection,false);
+    p_gmic_instance->_run(p_gmic_instance->commands_line_to_CImgList(gmic::strreplace_fw(str)),pos,images,images_names,
+                          parent_images,parent_images_names,variables_sizes,0,0,command_selection,false);
   } catch (gmic_exception &e) {
     CImg<char>::string(e.what()).move_to(is_error);
   }
-  gmic_instance.callstack.remove();
-  if (is_error || !gmic_instance.status || !*gmic_instance.status ||
-      cimg_sscanf(gmic_instance.status,"%lf%c",&res,&sep)!=1)
+  p_gmic_instance->callstack.remove();
+  if (is_error || !p_gmic_instance->status || !*p_gmic_instance->status ||
+      cimg_sscanf(p_gmic_instance->status,"%lf%c",&res,&sep)!=1)
     res = cimg::type<double>::nan();
+
+  if (is_parallel_run) delete p_gmic_instance;
   if (is_error)
     throw CImgArgumentException("[" cimg_appname "_math_parser] CImg<%s>: Function 'run()': %s",
                                 cimg::type<T>::string(),is_error.data());
@@ -2766,6 +2771,54 @@ gmic& gmic::assign() {
   CImgList<gmic_pixel_type> images;
   CImgList<char> images_names;
   return _gmic(0,images,images_names,0,true,0,0);
+}
+
+gmic::gmic(const gmic &gmic_instance):gmic_new_attr {
+  assign();
+  for (unsigned int i = 0; i<gmic_comslots; ++i) {
+    commands[i].assign(gmic_instance.commands[i],true);
+    commands_names[i].assign(gmic_instance.commands_names[i],true);
+    commands_has_arguments[i].assign(gmic_instance.commands_has_arguments[i],true);
+  }
+  for (unsigned int i = 0; i<gmic_varslots; ++i) {
+    if (i>=6*gmic_varslots/7) { // Share inter-thread global variables
+      variables[i] = gmic_instance.variables[i];
+      variables_names[i] = gmic_instance.variables_names[i];
+      variables_lengths[i] = gmic_instance.variables_lengths[i];
+    } else {
+      if (i>=gmic_varslots/2) { // Make a copy of single-thread global variables
+        _variables[i].assign(gmic_instance._variables[i]);
+        _variables_names[i].assign(gmic_instance._variables_names[i]);
+        _variables_lengths[i].assign(gmic_instance._variables_lengths[i]);
+      }
+      variables[i] = &_variables[i];
+      variables_names[i] = &_variables_names[i];
+      variables_lengths[i] = &_variables_lengths[i];
+    }
+  }
+  callstack.assign(gmic_instance.callstack);
+  commands_files.assign(gmic_instance.commands_files,true);
+  light3d.assign(gmic_instance.light3d);
+  status.assign(gmic_instance.status);
+  debug_filename = gmic_instance.debug_filename;
+  debug_line = gmic_instance.debug_line;
+  light3d_x = gmic_instance.light3d_x;
+  light3d_y = gmic_instance.light3d_y;
+  light3d_z = gmic_instance.light3d_z;
+  _progress = 0;
+  progress = &_progress;
+  is_change = gmic_instance.is_change;
+  is_debug = gmic_instance.is_debug;
+  is_start = false;
+  is_quit = false;
+  is_return = false;
+  verbosity = gmic_instance.verbosity;
+  _is_abort = gmic_instance._is_abort;
+  is_abort = gmic_instance.is_abort;
+  is_abort_thread = false;
+  nb_carriages_default = gmic_instance.nb_carriages_default;
+  nb_carriages_stdout = gmic_instance.nb_carriages_stdout;
+  reference_time = gmic_instance.reference_time;
 }
 
 template<typename T>

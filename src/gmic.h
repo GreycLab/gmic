@@ -246,9 +246,9 @@ inline double gmic_mp_name(const unsigned int ind, double *const out_str, const 
   return ::gmic_mp_name(ind,out_str,siz,&mp.imglist)
 
 template<typename T>
-inline double gmic_mp_run(char *const str, void *const p_list, const T& pixel_type);
-#define cimg_mp_func_run(str) \
-  return ::gmic_mp_run(str,&mp.imglist,(T)0)
+inline double gmic_mp_run(char *const str, const bool is_parallel_run, void *const p_list, const T& pixel_type);
+#define cimg_mp_func_run(str,is_parallel_run) \
+  return ::gmic_mp_run(str,is_parallel_run,&mp.imglist,(T)0)
 
 template<typename T>
 inline double gmic_mp_store(const double *const ptrs, const unsigned int siz,
@@ -295,6 +295,8 @@ struct gmic {
 
   // Constructors.
   gmic();
+
+  gmic(const gmic& gmic_instance);
 
   template<typename T>
   gmic(const char *const commands_line, const char *const custom_commands=0, const bool include_stdlib=true,
@@ -368,7 +370,7 @@ struct gmic {
   static double mp_set(const double *const ptrs, const unsigned int siz, const char *const str, void *const p_list);
   static double mp_name(const unsigned int ind, double *const out_str, const unsigned int siz, void *const p_list);
   template<typename T>
-  static double mp_run(char *const str, void *const p_list, const T& pixel_type);
+  static double mp_run(char *const str, const bool is_parallel_run, void *const p_list, const T& pixel_type);
   template<typename T>
   static double mp_store(const double *const ptrs, const unsigned int siz,
                          const unsigned int w, const unsigned int h, const unsigned int d, const unsigned int s,
@@ -573,9 +575,9 @@ inline double gmic_mp_name(const unsigned int ind, double *const out_str, const 
 }
 
 template<typename T>
-inline double gmic_mp_run(char *const str,
+inline double gmic_mp_run(char *const str, const bool is_parallel_run,
                           void *const p_list, const T& pixel_type) {
-  return gmic::mp_run(str,p_list,pixel_type);
+  return gmic::mp_run(str,is_parallel_run,p_list,pixel_type);
 }
 
 template<typename T>
