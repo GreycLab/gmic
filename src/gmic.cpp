@@ -12800,8 +12800,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 }
                 cimg_forY(selection,l) {
                   CImg<T> &img = images[selection[l]];
-                  g_img.assign(std::max(img.spectrum(),(int)nb_vals),1,1,1,(T)0).fill_from_values(color,true);
-                  gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,g_img,0,opacity,font,nb_vals),true);
+                  if (img || nb_vals) {
+                    g_img.assign(std::max(img.spectrum(),(int)nb_vals),1,1,1,(T)0).fill_from_values(color,true);
+                    gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,
+                                              g_img,0,opacity,font,nb_vals),true);
+                  } else {
+                    const T default_color = 0;
+                    gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,
+                                              &default_color,0,opacity,font,1),true);
+                  }
                 }
               }
             } else {
@@ -12811,15 +12818,22 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     x,sepx=='%'?"%":sepx=='~'?"~":"",
                     y,sepy=='%'?"%":sepy=='~'?"~":"",
                     gmic_selection.data(),
-                    argz,opacity,
+                    *argz?argz:"16",opacity,
                     *color?color:"default");
               if (!is_cond)
                 cimg_forY(selection,l) {
                   CImg<T> &img = images[selection[l]];
                   const unsigned int font_height = (unsigned int)cimg::round(sep=='%'?
                                                                              height*img.height()/100:height);
-                  g_img.assign(std::max(img.spectrum(),(int)nb_vals),1,1,1,(T)0).fill_from_values(color,true);
-                  gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,g_img,0,opacity,font_height,nb_vals),true);
+                  if (img || nb_vals) {
+                    g_img.assign(std::max(img.spectrum(),(int)nb_vals),1,1,1,(T)0).fill_from_values(color,true);
+                    gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,
+                                              g_img,0,opacity,font_height,nb_vals),true);
+                  } else {
+                    const T default_color = 0;
+                    gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,
+                                              &default_color,0,opacity,font_height,1),true);
+                  }
                 }
             }
           } else arg_error("text");
