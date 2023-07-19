@@ -3093,19 +3093,23 @@ _display_list :
   N=$!
   eval "
     xs = ys = ws = hs = vector$N();
-    x = 0;
+    sumw = maxh = 0;
     repeat (size(ws),k,
       w = w#k; h = h#k;
       Mwh = max(w,h);
       w/=Mwh;
       h/=Mwh;
       max(w/h,h/w)>4?(w = max(w,0.25); h = max(h,0.25));
-      xs[k] = x;
+      xs[k] = sumw;
       ws[k] = w;
       hs[k] = h;
-      x+=w;
+      sumw+=w;
+      maxh = max(maxh,h);
     );
-    const W = 0.95*min("{*,u}",1920);
+
+    M = max(sumw,maxh);
+    W = 0.75*min("{*,u}"*M/sumw,"{*,v}"*M/maxh,1920);
+
     fact = W/sum(ws);
     Mh = max(hs)*fact;
     repeat (size(ws),k,
