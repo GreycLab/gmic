@@ -3069,9 +3069,9 @@ void gmic::pop_callstack(const unsigned int callstack_size) {
   while (callstack.size()>callstack_size) {
     const char *const s = callstack.back();
     if (*s=='*') switch (s[1]) {
-      case 'r' : ++remaining_fr; --nb_repeatdones; break;
+      case 'r' : --nb_repeatdones; break;
       case 'd' : --nb_dowhiles; break;
-      case 'f' : ++remaining_fr; if (s[4]!='e') --nb_fordones; else --nb_foreachdones; break;
+      case 'f' : if (s[4]!='e') --nb_fordones; else --nb_foreachdones; break;
       }
     callstack.remove();
   }
@@ -5283,7 +5283,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line,
   fordones.assign(); nb_fordones = 0;
   foreachdones.assign(); nb_foreachdones = 0;
   repeatdones.assign(); nb_repeatdones = 0;
-  remaining_fr = nb_carriages_default = nb_carriages_stdout = 0;
+  nb_remaining_fr = nb_carriages_default = nb_carriages_stdout = 0;
   debug_filename = ~0U; debug_line = ~0U;
   status.assign();
   is_change = is_debug_info = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
@@ -5334,7 +5334,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   typedef typename cimg::superset<T,float>::type Tfloat;
   typedef typename cimg::superset<T,cimg_long>::type Tlong;
   typedef typename cimg::last<T,cimg_long>::type longT;
-  const unsigned int initial_callstack_size = callstack.size(), initial_debug_line = debug_line;
+  const unsigned int
+    initial_callstack_size = callstack.size(),
+    initial_debug_line = debug_line,
+    initial_nb_remaining_fr = nb_remaining_fr;
 
   CImgList<_gmic_parallel<T> > gmic_threads;
   CImgList<unsigned int> primitives;
@@ -8952,7 +8955,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                  command_selection,false);
           } catch (gmic_exception &e) {
             check_elif = false;
-            int nb_levels = 1 + remaining_fr;
+            int nb_levels = 1 + nb_remaining_fr;
+
+            std::fprintf(stderr,"\nnb_levels = %d\n",nb_levels);
+
             for (; nb_levels && position<commands_line.size(); ++position) {
               it = commands_line[position];
               if (*it==1)
@@ -15599,6 +15605,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   }
   cimg::mutex(24,0);
 
+  nb_remaining_fr = initial_nb_remaining_fr;
   return *this;
 }
 

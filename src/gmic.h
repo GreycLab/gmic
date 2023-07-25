@@ -505,7 +505,7 @@ struct gmic {
 
   float light3d_x, light3d_y, light3d_z, _progress, *progress;
   gmic_uint64 reference_time;
-  unsigned int nb_dowhiles, nb_fordones, nb_foreachdones, nb_repeatdones, remaining_fr,
+  unsigned int nb_dowhiles, nb_fordones, nb_foreachdones, nb_repeatdones, nb_remaining_fr,
     nb_carriages_default, nb_carriages_stdout, debug_filename, debug_line, cimg_exception_mode;
   int verbosity, network_timeout;
   bool allow_main_, is_change, is_debug, is_running, is_start, is_return, is_quit, is_debug_info,
