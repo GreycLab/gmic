@@ -3066,12 +3066,13 @@ CImg<char> gmic::callstack2string(const CImg<unsigned int>& callstack_selection,
 //-----------------------------------------------
 // Used to ensure that callstack stays coherent when errors occurs in '_run()'.
 void gmic::pop_callstack(const unsigned int callstack_size) {
+  nb_remaining_fr = 0;
   while (callstack.size()>callstack_size) {
     const char *const s = callstack.back();
     if (*s=='*') switch (s[1]) {
-      case 'r' : --nb_repeatdones; break;
+      case 'r' : ++nb_remaining_fr; --nb_repeatdones; break;
       case 'd' : --nb_dowhiles; break;
-      case 'f' : if (s[4]!='e') --nb_fordones; else --nb_foreachdones; break;
+      case 'f' : ++nb_remaining_fr; if (s[4]!='e') --nb_fordones; else --nb_foreachdones; break;
       }
     callstack.remove();
   }
@@ -5336,8 +5337,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   typedef typename cimg::last<T,cimg_long>::type longT;
   const unsigned int
     initial_callstack_size = callstack.size(),
-    initial_debug_line = debug_line,
-    initial_nb_remaining_fr = nb_remaining_fr;
+    initial_debug_line = debug_line;
 
   CImgList<_gmic_parallel<T> > gmic_threads;
   CImgList<unsigned int> primitives;
@@ -8956,9 +8956,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           } catch (gmic_exception &e) {
             check_elif = false;
             int nb_levels = 1 + nb_remaining_fr;
-
-            std::fprintf(stderr,"\nnb_levels = %d\n",nb_levels);
-
             for (; nb_levels && position<commands_line.size(); ++position) {
               it = commands_line[position];
               if (*it==1)
@@ -15604,8 +15601,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
     if (gr && gr[0]==this) { if (push_new_run) grl.remove(_k); else gr = prev_gr; break; }
   }
   cimg::mutex(24,0);
-
-  nb_remaining_fr = initial_nb_remaining_fr;
   return *this;
 }
 
