@@ -20511,6 +20511,25 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
     fi
   }
 
+#@cli spline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_opacity,_color1,...
+#@cli : Draw specified colored spline curve on selected images (cubic hermite spline).
+#@cli : Default values: 'opacity=1' and 'color1=0'.
+#@cli : $ image.jpg repeat 30 { spline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
+# {u(-600,600)},{u(-600,600)},0.6,255 }
+spline : skip ${9=1},${10=0}
+  e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, with opacity $9 and color (${10--1})."
+  foreach {
+    x0={if(${"is_percent $1"},$1*(w-1),$1)}
+    y0={if(${"is_percent $2"},$2*(h-1),$2)}
+    u0={if(${"is_percent $3"},$3*(w-1),$3)}
+    v0={if(${"is_percent $4"},$4*(h-1),$4)}
+    x1={if(${"is_percent $5"},$5*(w-1),$5)}
+    y1={if(${"is_percent $6"},$6*(h-1),$6)}
+    u1={if(${"is_percent $7"},$7*(w-1),$7)}
+    v1={if(${"is_percent $8"},$8*(h-1),$8)}
+    eval ${-math_lib}"spline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,[${10--1}])"
+  }
+
 #@cli thickline : x0[%],y0[%],x1[%],y1[%],_thickness,_opacity,_color1
 #@cli : Draw specified colored thick line on selected images.
 #@cli : Default values: 'thickness=2', 'opacity=1' and 'color1=0'.
@@ -20533,6 +20552,26 @@ thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
     "}
     polygon 4,$coords,${6--1}
   } fi
+
+#@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
+#@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
+#@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
+#@cli : $ image.jpg repeat 30 { spline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
+# {u(-600,600)},{u(-600,600)},0.6,255 }
+thickspline : skip ${9=3},${10=1},${11=0}
+  e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, "\
+   "with thickness $9, opacity $10 and color (${11--1})."
+  foreach {
+    x0={if(${"is_percent $1"},$1*(w-1),$1)}
+    y0={if(${"is_percent $2"},$2*(h-1),$2)}
+    u0={if(${"is_percent $3"},$3*(w-1),$3)}
+    v0={if(${"is_percent $4"},$4*(h-1),$4)}
+    x1={if(${"is_percent $5"},$5*(w-1),$5)}
+    y1={if(${"is_percent $6"},$6*(h-1),$6)}
+    u1={if(${"is_percent $7"},$7*(w-1),$7)}
+    v1={if(${"is_percent $8"},$8*(h-1),$8)}
+    eval ${-math_lib}"thickspline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,$10,[${11--1}])"
+  }
 
 #@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0 | 1 },_c0r,_c0i,_opacity : (+)
 #@cli : Draw mandelbrot/julia fractal on selected images.
@@ -20996,25 +21035,6 @@ _sierpinski :
                   Y==H - 1?2*W + H - 3 - X:
                   2*(W + H - 2) - Y);"
   if $3 $1,$2,1,2,$main"[ t%w, int(t/w) ]" else $1,$2,1,1,$main fi
-
-#@cli spline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_opacity,_color1,...
-#@cli : Draw specified colored spline curve on selected images (cubic hermite spline).
-#@cli : Default values: 'opacity=1' and 'color1=0'.
-#@cli : $ image.jpg repeat 30 { spline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
-# {u(-600,600)},{u(-600,600)},0.6,255 }
-spline : skip ${9=1},${10=0}
-  e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, with opacity $9 and color (${10--1})."
-  foreach {
-    x0={if(${"is_percent $1"},$1*(w-1),$1)}
-    y0={if(${"is_percent $2"},$2*(h-1),$2)}
-    u0={if(${"is_percent $3"},$3*(w-1),$3)}
-    v0={if(${"is_percent $4"},$4*(h-1),$4)}
-    x1={if(${"is_percent $5"},$5*(w-1),$5)}
-    y1={if(${"is_percent $6"},$6*(h-1),$6)}
-    u1={if(${"is_percent $7"},$7*(w-1),$7)}
-    v1={if(${"is_percent $8"},$8*(h-1),$8)}
-    eval ${-math_lib}"spline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,[${10--1}])"
-  }
 
 #@cli tetraedron_shade : x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3,R0,G0,B0,...,R1,G1,B1,...,R2,G2,B2,...,R3,G3,B3,...
 #@cli : Draw tetraedron with interpolated colors on selected (volumetric) images.
@@ -32137,6 +32157,30 @@ math_lib :
       _dP = abs(mul([3*_t^2,2*_t,1,0],_C,2));
       _dt = min(_dtmin,0.75/max(_dP));
       if (_P0!=_P, I(#ind,_P) = _ds_color + _omopacity*I(#ind,_P));
+      _P0 = _P;
+    );
+    nan;
+  );
+
+  thickspline(ind,P0,T0,P1,T1,thickness,opacity,color) = ( # Draw thick spline P0-P1 with tangents T0,T1 on image #ind
+    unref(_ds_color);
+    unref(_ds_mask);
+    _P0 = P0;
+    _P1 = P1;
+    _opacity = opacity;
+    _radius = thickness/2;
+    _ds_color = resize(color,s#ind)*=abs(_opacity);
+    _omopacity = 1 - max(_opacity,0);
+    _C = mul([ 2,-2,1,1,-3,3,-2,-1,0,0,1,0,1,0,0,0 ],[ _P0,P1,T0,T1 ],2);
+    _dt = _dtmin = 1/max(abs(_P1 - _P0));
+    _P0 = inf;
+    for (_t = 0, _t<=1, _t+=_dt,
+      _P = round(mul([_t^3,_t^2,_t,1],_C,2));
+      _dP = abs(mul([3*_t^2,2*_t,1,0],_C,2));
+      _dt = min(_dtmin,0.75/max(_dP));
+      if (_P0!=_P,
+        ellipse(#ind,_P[0],_P[1],_radius,_radius,0,_opacity,_ds_color);
+      );
       _P0 = _P;
     );
     nan;
