@@ -3204,8 +3204,8 @@ gmic& gmic::print(const char *format, ...) {
   else for (unsigned int i = 0; i<nb_carriages; ++i) std::fputc('\n',cimg::output());
   nb_carriages = 1;
   std::fprintf(cimg::output(),
-               "%s%s %s",
-               format?"[gmic]":"",
+               "%s%s%s",
+               format?"[gmic] ":"",
                format?callstack2string().data():"",
                message.data() + (is_cr?1:0));
   std::fflush(cimg::output());
