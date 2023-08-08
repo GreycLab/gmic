@@ -3183,14 +3183,18 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
 //-------------------
 gmic& gmic::print(const char *format, ...) {
   if (verbosity<1 && !is_debug) return *this;
-  va_list ap;
-  va_start(ap,format);
-  CImg<char> message(65536);
-  message[message.width() - 2] = 0;
-  cimg_vsnprintf(message,message.width(),format,ap);
-  strreplace_fw(message);
-  if (message[message.width() - 2]) cimg::strellipsize(message,message.width() - 2);
-  va_end(ap);
+  CImg<char> message;
+
+  if (format) {
+    va_list ap;
+    va_start(ap,format);
+    message.assign(16384);
+    message[message.width() - 2] = 0;
+    cimg_vsnprintf(message,message.width(),format,ap);
+    strreplace_fw(message);
+    if (message[message.width() - 2]) cimg::strellipsize(message,message.width() - 2);
+    va_end(ap);
+  } else message.assign(1,1,1,1,0);
 
   // Display message.
   cimg::mutex(29);
@@ -3200,8 +3204,10 @@ gmic& gmic::print(const char *format, ...) {
   else for (unsigned int i = 0; i<nb_carriages; ++i) std::fputc('\n',cimg::output());
   nb_carriages = 1;
   std::fprintf(cimg::output(),
-               "[gmic]%s %s",
-               callstack2string().data(),message.data() + (is_cr?1:0));
+               "%s%s %s",
+               format?"[gmic]":"",
+               format?callstack2string().data():"",
+               message.data() + (is_cr?1:0));
   std::fflush(cimg::output());
   cimg::mutex(29,0);
   return *this;
@@ -3944,7 +3950,7 @@ gmic& gmic::print(const CImgList<T>& list, const CImg<unsigned int> *const calls
   if (verbosity<1 && !is_debug) return *this;
   va_list ap;
   va_start(ap,format);
-  CImg<char> message(65536);
+  CImg<char> message(16384);
   message[message.width() - 2] = 0;
   cimg_vsnprintf(message,message.width(),format,ap);
   strreplace_fw(message);
@@ -4388,21 +4394,25 @@ bool gmic::is_display_available = false;
 template<typename T>
 gmic& gmic::print_images(const CImgList<T>& images, const CImgList<char>& images_names,
                          const CImg<unsigned int>& selection, const bool is_header) {
+  const bool
+    is_verbose = verbosity>=1 || is_debug,
+    is_verbose1 = verbosity>1 || is_debug;
+
   if (!images || !images_names || !selection) {
-    if (is_header) print(images,0,"Print image [].");
+    if (is_header && is_verbose1) print(images,0,"Print image [].");
     return *this;
   }
-  const bool is_verbose = verbosity>=1 || is_debug;
+
   CImg<char> title(256);
   if (is_header) {
     CImg<char> gmic_selection, gmic_names;
-    if (is_verbose) {
+    if (is_verbose1) {
       selection2string(selection,images_names,1,gmic_selection);
       selection2string(selection,images_names,2,gmic_names);
-    }
-    cimg::strellipsize(gmic_names,80,false);
-    print(images,0,"Print image%s = '%s'.\n",
-          gmic_selection.data(),gmic_names.data());
+      cimg::strellipsize(gmic_names,80,false);
+      print(images,0,"Print image%s = '%s'.\n",
+            gmic_selection.data(),gmic_names.data());
+    } else if (is_verbose) print(0);
   }
 
   if (is_verbose) {
