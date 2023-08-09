@@ -4377,7 +4377,7 @@ gmic& gmic::_gmic(const char *const commands_line,
     "";
   set_variable("_flags",0,s_flags + 1);
 
-  // Launch G'MIC interpreter.
+  // Call G'MIC interpreter.
   const CImgList<char> items = commands_line?commands_line_to_CImgList(commands_line):CImgList<char>::empty();
   try {
     _run(items,images,images_names,true);
@@ -5419,7 +5419,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
     if (is_debug) {
       if (is_start) {
-        print(images,0,"Start G'MIC interpreter (debug mode, version %s).\n",cimg_str2(gmic_version));
+        print(images,0,"Start G'MIC interpreter (v.%u.%u.%u, debug mode).\n",
+              gmic_version/100,(gmic_version/10)%10,gmic_version%10);
         debug(images,"Initial command line: '%s'.",starting_commands_line);
         commands_line_to_CImgList(starting_commands_line); // Do it twice, when debug enabled
       }
@@ -5431,7 +5432,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
     // Begin command line parsing.
     const int starting_verbosity = verbosity;
-    if (!commands_line && is_start) { print(images,0,"Start G'MIC interpreter."); is_start = false; }
+    if (!commands_line && is_start) {
+      print(images,0,"Start G'MIC interpreter (v.%u.%u.%u).",
+            gmic_version/100,(gmic_version/10)%10,gmic_version%10);
+      is_start = false;
+    }
 
     while (position<commands_line.size() && !is_quit && !is_return) {
       const bool
@@ -5791,7 +5796,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
       // Display starting message.
       if (is_start) {
-        print(images,0,"Start G'MIC interpreter.");
+        print(images,0,"Start G'MIC interpreter (v.%u.%u.%u).",
+              gmic_version/100,(gmic_version/10)%10,gmic_version%10);
         is_start = false;
       }
 
