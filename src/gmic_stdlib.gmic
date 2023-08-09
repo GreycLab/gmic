@@ -15729,6 +15729,19 @@ upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=
     fi
   }
 
+#@cli volumetric2d : _x[%],_y[%],_z[%],_separator_size>=0
+#@cli : Convert selected 3D volumetric images into a 2D representation.
+#@cli : Default values: 'x=y=z=50%' and 'separator_size=0'.
+#@cli : $ image.jpg resize2dx 64 animate noise,0,100,50 cut 0,255 append z volumetric2d 50%,50%,50%,1
+volumetric2d : skip ${1=50%},${2=50%},${3=50%} check "isint(${4=0}) && $4>=0"
+  e[^-1] "Convert 3D volumetric image$? into a 2D representation, with coordinates (${1-3}) and separator size $4."
+  foreach { nm={n}
+    +slices. $3
+    if $4 1,$4 else 0 fi +rows... $2 permute. xzyc a[-3--1] y
+    if $4 $4 else 0 fi +columns... $1 permute. zyxc a[-3--1] x
+    rm.. => $nm
+  }
+
 #---------------------------------
 #
 #@cli :: Filtering
