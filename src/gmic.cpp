@@ -4276,55 +4276,6 @@ gmic& gmic::_gmic(const char *const commands_line,
 }
 bool gmic::is_display_available = false;
 
-// Print info on selected images.
-//--------------------------------
-template<typename T>
-gmic& gmic::print_images(const CImgList<T>& images, const CImgList<char>& images_names,
-                         const CImg<unsigned int>& selection, const bool is_header) {
-  const bool
-    is_verbose = verbosity>=1 || is_debug,
-    is_verbose1 = verbosity>1 || is_debug;
-
-  if (!images || !images_names || !selection) {
-    if (is_header && is_verbose1) print(images,0,"Print image [].");
-    return *this;
-  }
-
-  CImg<char> title(256);
-  if (is_header) {
-    CImg<char> gmic_selection, gmic_names;
-    if (is_verbose1) {
-      selection2string(selection,images_names,1,gmic_selection);
-      selection2string(selection,images_names,2,gmic_names);
-      cimg::strellipsize(gmic_names,80,false);
-      print(images,0,"Print image%s = '%s'.\n",
-            gmic_selection.data(),gmic_names.data());
-    } else if (is_verbose) print(0);
-  }
-
-  if (is_verbose) {
-    cimg_forY(selection,l) {
-      const unsigned int uind = selection[l];
-      const CImg<T>& img = images[uind];
-      const int o_verbosity = verbosity;
-      const bool o_is_debug = is_debug;
-      bool is_valid = true;
-      verbosity = 0;
-      is_debug = false;
-
-      try { gmic_check(img); } catch (gmic_exception&) { is_valid = false; }
-      is_debug = o_is_debug;
-      verbosity = o_verbosity;
-      cimg_snprintf(title,title.width(),"[%u] = '%s'",
-                    uind,images_names[uind].data());
-      cimg::strellipsize(title,80,false);
-      img.gmic_print(title,is_debug,is_valid);
-    }
-    nb_carriages_default = 0;
-  }
-  return *this;
-}
-
 // Display plots of selected images.
 //----------------------------------
 template<typename T>
@@ -4344,7 +4295,7 @@ gmic& gmic::display_plots(const CImgList<T>& images, const CImgList<char>& image
     cimg::unused(plot_type,vertex_type,xmin,xmax,ymin,ymax,exit_on_anykey);
     print(images,0,"Plot image%s (console output only, no display %s).\n",
           gmic_selection.data(),cimg_display?"available":"support");
-    print_images(images,images_names,selection,false);
+//    print_images(images,images_names,selection,false);
     return *this;
   }
 
@@ -10628,18 +10579,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           continue;
         }
 
-        // Print.
-        if (!std::strcmp("print",command)) {
-          const int _verbosity = ++verbosity;
-          std::FILE *_file = 0;
-          if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); }
-          print_images(images,images_names,selection);
-          if (is_get) { verbosity = _verbosity; cimg::output(_file); }
-          --verbosity;
-          is_change = false;
-          continue;
-        }
-
         // Power.
         gmic_arithmetic_command("pow",
                                 pow,
@@ -15236,19 +15175,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
     if (verbosity>0 && is_change && !is_quit && !is_return && callstack.size()==1 && images) {
       const CImg<char> host = get_variable("_host");
       if (host && !std::strcmp(host,"cli")) {
+        CImgList<char> ncommands_line;
+        unsigned int nposition = 0;
+        CImg<char>::string("").move_to(callstack); // Anonymous scope
         if (is_display_available) {
           gmic_display_window(0).assign();
-          CImgList<char> ncommands_line;
           CImg<char>::string("display").move_to(ncommands_line);
-          unsigned int nposition = 0;
-          CImg<char>::string("").move_to(callstack); // Anonymous scope
-          _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
-          callstack.remove();
-        } else {
-          CImg<unsigned int> seq(1,images.width());
-          cimg_forY(seq,y) seq[y] = y;
-          print_images(images,images_names,seq,true);
-        }
+        } else
+          CImg<char>::string("print").move_to(ncommands_line);
+        _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
+        callstack.remove();
       }
       is_change = false;
     }

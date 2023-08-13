@@ -7950,12 +7950,79 @@ _parse_gui_strings :
 #   e[^-1] "Input random portrait image of size $1x$1."
 #   i jpg:"https://thispersondoesnotexist.com/image" r2dx. $1 => portrait
 
-#@cli p : eq. to 'print'. : (+)
+#@cli p : eq. to 'print'.
+p :
+  _gmic_s0="$?" _gmic_s1=$[] v + _print ""
 
-#@cli print : (+)
-#@cli : Output information on selected images, on the standard error (stderr).
-#@cli : (eq. to 'p').
-#@cli : When invoked with a '+' prefix (i.e. '+print'), the command output its message on stdout rather than stderr.
++p :
+  _gmic_s0="$?" _gmic_s1=$[] v + _print +
+
+#@cli print
+#@cli : Print information on selected images, on the standard error ('stderr').
+#@cli : (eq. to 'np').
+#@cli : When invoked with a '+' prefix (i.e. '+print'), the command outputs on 'stdout' rather than on 'stderr'.
+print :
+  _gmic_s0="$?" _gmic_s1=$[] v + _$0 ""
+
++print :
+  _gmic_s0="$?" _gmic_s1=$[] v + _$0 +
+
+_print : skip "${1=},${2=1}"
+  if !$!
+    if $2 e[0--4] "Print image []." fi
+    return
+  fi
+  nb_images=$!
+
+  # Print log message.
+  ($_gmic_s1:y) => image_indices
+  if $2
+    if $nb_images<=6 $nb_images,1,1,1,x sel={^} rm. is_ellipsized=0
+    else sel=0,1,2,{$nb_images-[3,2,1]} is_ellipsized=1
+    fi
+    log_title,sep=
+    repeat narg($sel) {
+      l_ind:=arg0($>,$sel)
+      basename {$l_ind,n}
+      log_title.=$sep${}
+      if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
+    }
+    e[0--4] "Print image"$_gmic_s0" = '"$log_title"'."
+  fi
+
+  # Print information for each image.
+  use_vt100 b,m,n=$_vt100_b,$_vt100_m,$_vt100_n
+  repeat $nb_images {
+    ind={image_indices,i[$>]}
+    if {$>,!w}
+      s_size="(0,0,0,0) [0b of "$_pixeltype"]."
+      s_data="()."
+      is_stats=0
+    else
+      s_buffer_size=${"strbuffer "{$>,whds*${-size_value}}}
+      s_size=({$>,[w,h,d,s]})" ["$s_buffer_size" of "$_pixeltype"]."
+      s_data=({$>,`"whds<=24?v2s(crop(),-1):(
+                      vals = vale = vector12();
+                      copy(vals,i[0],12); copy(vale,i[whds-12],12);
+                      string(#256,v2s(vals,-1),', ... ,',v2s(vale,-1));
+                    )"`}).
+      im,iM,ia,id,xm,ym,zm,cm,xM,yM,zM,cM={$>,_[im,iM,ia,id,xm,ym,zm,cm,xM,yM,zM,cM]}
+      s_stats="  "\
+              ${_vt100_b}"min"$_vt100_n" = "$im", "\
+              ${_vt100_b}"max"$_vt100_n" = "$iM", "\
+              ${_vt100_b}"mean"$_vt100_n" = "$ia", "\
+              ${_vt100_b}"std"$_vt100_n" = "$id", "\
+              ${_vt100_b}"coords_min"$_vt100_n" = ("$xm,$ym,$zm,$cm"), "\
+              ${_vt100_b}"coords_max"$_vt100_n" = ("$xM,$yM,$zM,$cM")."
+      is_stats=1
+    fi
+    $1e $m$b"["$ind"] = "'{$>,n}'$n:\n\
+        $b"  size"$n" = "$s_size\n\
+        $b"  data"$n" = "$s_data
+    if $is_stats $1e $s_stats fi
+  }
+  rm[$nb_images--1]
+  is_change 0
 
 #@cli random_pattern : _width>0,_height>0,_min_detail_level>=0
 #@cli : Insert a new RGB image of specified size at the end of the image list, rendered with a random pattern.
