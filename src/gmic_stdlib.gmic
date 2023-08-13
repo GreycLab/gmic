@@ -2417,14 +2417,14 @@ _display :
       }
 
       # Manage image zoom, using right mouse button (drag).
+      canvas_zoom_max={$selected,max(w/$canvas_width,h/$canvas_height)*max($canvas_width,$canvas_height)/8}
       if $is_drag1==2" && "$is_clicked1==2 # Zoom starts
         amount:="
           dx = $drag_end_x1 - $drag_start_x1;
           dy = $drag_end_y1 - $drag_start_y1;
           sign(dx)*norm(dx,dy)/200"
         if !narg($canvas_zoom_x) canvas_zoom_x,canvas_zoom_y=$canvas_mouse_x,$canvas_mouse_y fi
-        n_canvas_zoom:=$amount<0" || "($amount>0" && "max($canvas_dx,$canvas_dy)>8)?\
-                       max($canvas_zoom*(1+$amount),0.5):$canvas_zoom
+        n_canvas_zoom:=cut($canvas_zoom*(1+$amount),0.5,$canvas_zoom_max)
         if $n_canvas_zoom!=$canvas_zoom
           xc:=lerp($canvas_x0,$canvas_x1,$canvas_zoom_x/$canvas_width)
           yc:=lerp($canvas_y0,$canvas_y1,$canvas_zoom_y/$canvas_height)
@@ -2485,8 +2485,7 @@ _display :
       if $mouse_area==2
         if {*,o} # Image zoom, with mouse wheel
           amount:={*,-o}/10
-          n_canvas_zoom:=$amount<0" || "($amount>0" && "max($canvas_dx,$canvas_dy)>8)?\
-                         max($canvas_zoom*(1+$amount),0.5):$canvas_zoom
+          n_canvas_zoom:=cut($canvas_zoom*(1+$amount),0.5,$canvas_zoom_max)
           if $n_canvas_zoom!=$canvas_zoom
             xc:=lerp($canvas_x0,$canvas_x1,$canvas_mouse_x/$canvas_width)
             yc:=lerp($canvas_y0,$canvas_y1,$canvas_mouse_y/$canvas_height)
