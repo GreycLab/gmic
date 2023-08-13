@@ -2482,7 +2482,7 @@ const char *gmic::builtin_commands_names[] = {
   "acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh","autocrop",
   "bilateral","blur","boxfilter","break",
   "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
-  "debug","delete","denoise","deriche","dijkstra","dilate","discard","displacement","display","distance","div3d","done",
+  "debug","delete","denoise","deriche","dijkstra","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","eikonal","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
   "graph","guided",
@@ -2493,7 +2493,7 @@ const char *gmic::builtin_commands_names[] = {
   "mandelbrot","matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
-  "parallel","pass","permute","plasma","plot","point","polygon","print","progress",
+  "parallel","pass","permute","plasma","plot","point","polygon","progress",
   "quit",
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
   "screen","select","serialize","shared","shift","sign","sinc","sinh","skip",
@@ -15188,9 +15188,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         CImg<char>::string("").move_to(callstack); // Anonymous scope
         if (is_display_available) {
           gmic_display_window(0).assign();
-          CImg<char>::string("display").move_to(ncommands_line);
+          CImg<char>::string("d").move_to(ncommands_line);
         } else
-          CImg<char>::string("print").move_to(ncommands_line);
+          CImg<char>::string("p").move_to(ncommands_line);
         _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
         callstack.remove();
       }
