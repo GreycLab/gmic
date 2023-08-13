@@ -5247,8 +5247,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
       if (!item1 && (item0=='{' || item0=='}')) // Left/right braces
         is_builtin_command = true;
       else if (!is_builtin_command && item0 && _gmic_eok(1)) { switch (item0) { // Command has length 1
-        case 'a': case 'b' : case 'c' : case 'd' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
-        case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'p' : case 'q' : case 'r' : case 's' : case 't' :
+        case 'a': case 'b' : case 'c' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
+        case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
         case '-': case '/' : case '<' : case '=' : case '>' : case '^' : case '|' :
           is_builtin_command = true; break;
@@ -5562,8 +5562,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           0,0,0,0,0,"mod","and",0,0,0,"mul","add",0,"sub",0,"div",0,0,0,0,0,0,0,0,0,0,0,0, // 32-59
           "lt","set","gt",0, // 60-63
           0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,"pow",0, // 64-95
-          0,"append","blur","cut","display","echo","fill",0,0,"input","image","keep", // 96-107
-          "local","command","normalize","output","print","quit","resize","split","text","status", // 108-117
+          0,"append","blur","cut",0,"echo","fill",0,0,"input","image","keep", // 96-107
+          "local","command","normalize","output",0,"quit","resize","split","text","status", // 108-117
           "verbose","window","exec","unroll","crop",0,"or","done",0,0 // 118-127
         };
 
@@ -5571,10 +5571,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           const bool
             is_mquvx = command0=='m' || command0=='q' || command0=='u' || command0=='v' || command0=='x' ||
                        command0=='}',
-            is_deiowx = command0=='d' || command0=='e' || command0=='i' || command0=='o' || command0=='w' ||
-                        command0=='x';
+            is_eiowx = command0=='e' || command0=='i' || command0=='o' || command0=='w' || command0=='x';
           if ((unsigned int)command0<128 && onechar_shortcuts[(unsigned int)command0] &&
-              !(is_mquvx && (is_get || is_selection)) && !(is_deiowx && is_get)) {
+              !(is_mquvx && (is_get || is_selection)) && !(is_eiowx && is_get)) {
             if (is_mquvx) {
               CImg<char>::string(onechar_shortcuts[(unsigned int)command0]).move_to(_item);
               *command = 0;
