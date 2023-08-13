@@ -1813,24 +1813,882 @@ csv2ts : skip "${1=fr}"
 #@cli delete : filename1[,filename2,...] : (+)
 #@cli : Delete specified filenames on disk. Multiple filenames must be separated by commas.
 
-#@cli d : eq. to 'display'. : (+)
+#@cli d : eq. to 'display'.
+d :
+  _gmic_s0="$?" _gmic_s1=$[] v + _display
 
-#@cli display : _X[%]>=0,_Y[%]>=0,_Z[%]>=0,_exit_on_anykey={ 0 | 1 } : (+)
-#@cli : Display selected images in an interactive viewer (use the instant display window [0] if opened).
-#@cli : (eq. to 'd').\n
-#@cli : Arguments 'X','Y','Z' determine the initial selection view, for 3D volumetric images.
-#@cli : Default value: 'X=Y=Z=0' and 'exit_on_anykey=0'.
-#@cli : $$ https://gmic.eu/oldtutorial/_display
+#@cli display
+#@cli : Display selected images in an interactive window.
+display :
+  _gmic_s0="$?" _gmic_s1=$[] v + _display
+
+_display :
+  if !$! e[0--4] "Display image []." return fi
+  check_display "display"
+  nb_images=$!
+
+  # Initialize global state variables.
+  normalization_mode:=narg($_display_normalization_mode)?0$_display_normalization_mode:-1
+  alpha_mode:=narg($_display_alpha_mode)?0$_display_alpha_mode:0
+  thumb_height_factor,thumb_min_ratio=0.15,0.45
+  thumb_is_hidden:=$nb_images==1
+
+  # Generate window and log titles and print log message.
+  ($_gmic_s1:y) => image_indices
+  if $nb_images<=6 $nb_images,1,1,1,x sel={^} rm. is_ellipsized=0
+  else sel=0,1,2,{$nb_images-[3,2,1]} is_ellipsized=1
+  fi
+  log_title,window_title,sep=
+  repeat narg($sel) {
+    l_ind:=arg0($>,$sel)
+    g_ind={image_indices,$l_ind}
+    basename {$l_ind,n}
+    log_title.=$sep${}
+    window_title.=$sep[$g_ind]" "${}
+    if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
+  }
+  if $nb_images>1 window_title.=" (#"$nb_images")"
+  else window_title.=" ("{0,[w,h,d,s]}")"
+  fi
+  e[0--3] "Display image"$_gmic_s0" = '"$log_title"'."
+  p[^-1]
+
+  # Initialize display window.
+  window_previous_normalization,windows_previous_fullscreen=
+  if {*}
+    window_width,window_height={*,d,e}
+    window_previous_normalization,windows_previous_fullscreen={*,n,f}
+    if $normalization_mode<0 normalization_mode={*,n}?2:0 fi
+    w[] $window_width,$window_height,0,$window_title
+  else
+    window_width,window_height=${"$0_default_window_size[0-"{$nb_images-1}"] "$thumb_height_factor,$thumb_min_ratio}
+    if $normalization_mode<0 normalization_mode=2 fi
+    w[] $window_width,$window_height,0,$window_title
+  fi
+  window_nonfullscreen_width,window_nonfullscreen_height={*,w,h}
+  is_fullscreen,mouse_x,mouse_y,mouse_area={*,f,x,y},0
+  previous_mouse_x,previous_mouse_y,previous_mouse_area=-1,-1,0
+  is_clicked0,is_clicked1,is_clicked2,is_released0,is_released1,is_released2,is_drag0,is_drag1,is_drag2=0
+  window_wait_mode=0
+
+  # Initialize other viewer variables.
+  thumb_x=
+  mouseover=-1
+  selected=0
+
+  canvas_xcenter,canvas_ycenter,canvas_zoom=0.5,0.5,1
+  canvas_label_alignment=0
+  canvas_is_grid=1
+  canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
+  canvas_mouse_x,canvas_mouse_y=-1
+  0 => canvas_checkerboard
+
+  # Enter user interaction loop.
+  for {*}" && "!{*,ESC} {
+    window_width,window_height={*,w,h}
+
+    # Generate thumbnail navigation view.
+    if $thumb_is_hidden
+      thumb_height,thumb_height2=0
+
+    else
+      thumb_height:=max(64,round($window_height*$thumb_height_factor))
+
+      if $thumb_base
+        thumb_height={thumb_base,h}
+      else
+        rmn thumb_coords,thumb_label
+
+        # Compute thumbnail coordinates and sizes.
+        1,$nb_images,1,2,"
+          w = w#y; h = h#y; d = d#y;
+          d>1?(w+=d + 2; h+=d + 2);
+          Mwh = max(w,h);
+          Mwh?[ max($thumb_min_ratio,w/Mwh),
+                max($thumb_min_ratio,h/Mwh) ]:
+              [ 0.5,0.5 ]"
+        sh. 100% /.. {iM} rm. *. $thumb_height round.
+        +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0+2; res"
+        rv[-2,-1] a[-2,-1] c => thumb_coords
+
+        # Render thumbnail navigation bar.
+        sum_w={thumb_coords,i(0,h-1,0,0)+i(0,h-1,0,2)}
+        {max($sum_w,$window_width)},$thumb_height,1,3 100%,1,1,1,-1
+        repeat $nb_images {
+          x0,y0,w,h={thumb_coords,I[$>]}
+          line. $x0,0,{$x0+$w+1},0,1,$>
+          [$>]
+          if !w
+            font_size:=cut($thumb_height/8,16,32)
+            rm. $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
+          else
+            is_alpha:=$alpha_mode" && "(s==2||s==4)
+            if !$is_alpha" && "s>3 channels. 0,2 fi
+            if d>1 volumetric2d. 50%,50%,50%,2 fi
+            if w>$w" || "h>$h r. $w,$h fi
+            if $normalization_mode
+              if !narg(${is_infnan$>}) is_infnan$>:=${$0_is_infnan.} fi
+              if $normalization_mode==1 # Channel by channel normalization
+                l. { s c if ${is_infnan$>} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
+              else # Global normalization
+                if ${is_infnan$>} $0_normalize_infnan. else n. 0,255 fi
+              fi
+            else and. 255
+            fi
+            r. $w,$h
+            if $is_alpha
+              to_rgba.
+              if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
+              else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
+              fi
+              ja. .. rm..
+            elif s==1 r. 100%,100%,1,3
+            elif s==2 r. 100%,100%,1,3,0
+            fi
+          fi
+          j... .,$x0,$y0 rm.
+        }
+        => thumb_base,thumb_label
+        rmn thumb_view
+      fi
+      thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
+      if !narg($thumb_x) thumb_x={thumb_base,-16/w} fi
+      thumb_x_px={thumb_base,cut($thumb_x*w,-16,$thumb_x_px_max)}
+
+      if !0$thumb_view
+        +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1}
+        x0,y0,w,h={thumb_coords,I[$selected]}
+        x0-=$thumb_x_px
+        font_size:=cut($thumb_height/6,16,32)
+        rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},1,0xFFFFFFFF,255
+        rectangle. {[$x0,$y0]+1},{[$x0,$y0]+[$w,$h]-2},1,0xFFFFFFFF,255
+        rectangle. {[$x0,$y0]+2},{[$x0,$y0]+[$w,$h]-3},1,0xFFFFFFFF,0
+        to. "#"{image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
+        if $mouseover>=0
+          x0,y0,w,h={thumb_coords,I[$mouseover]}
+          x0-=$thumb_x_px
+          rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.25,200
+          if $mouseover!=$selected
+            rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0x33333333,0
+            rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0xCCCCCCCC,255
+            to. "#"{image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
+          fi
+        fi
+
+        # Add left/right shading in thumb view.
+        if $thumb_x_px>0
+          +z. 0,31
+          32,1,1,1,"lerp(max(0.25,1 - $thumb_x_px/32),1,x/w)" *[-2,-1]
+          j.. .,0 rm.
+        fi
+        if {thumb_base,$thumb_x_px+$window_width<w}
+          x0:=w-32
+          +z. $x0,100%
+          32,1,1,1,"lerp(1,max(0.25,1 - (w#$thumb_base - $window_width - $thumb_x_px)/32),x/w)" *[-2,-1]
+          j.. .,$x0 rm.
+        fi
+        => thumb_view
+        rmn window_view
+      fi
+
+      thumb_height2:=$thumb_height+2
+    fi
+
+    # Generate canvas view.
+    if !0$canvas_base
+      rmn canvas_label_title,canvas_label_coords
+
+      # For 3D volumetric images.
+      if {$selected,d>1}
+        $window_width,{$window_height-$thumb_height2},1,3 => canvas_base
+        [$selected]
+        if s>3 channels. 0,2 fi
+        volumetric2d. 50%,50%,50%,2
+        r2din. {canvas_base,[w,h]},1
+        if $normalization_mode
+          if !narg(${is_infnan$selected}) is_infnan$selected:=${$0_is_infnan[$selected]} fi
+          if $normalization_mode==1 # Channel by channel normalization
+            l. { s c if ${is_infnan$selected} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
+          else # Global normalization
+            if ${is_infnan$selected} $0_normalize_infnan. else n. 0,255 fi
+          fi
+        else and. 255
+        fi
+        if s==1 r. 100%,100%,1,3
+        elif s==2 r. 100%,100%,1,3,0
+        fi
+        j[canvas_base] .,0.5~,0.5~ rm.
+
+      # For 2D images.
+      else
+        canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
+
+        # Render checkerboard background.
+        if {canvas_checkerboard,[w,h]!=[$canvas_width,$canvas_height]}
+          rm[canvas_checkerboard]
+          24,24,1,1,64 +f. 96 a[-2,-1] x +mirror. x a[-2,-1] y
+          r. $canvas_width,$canvas_height,1,3,0,2
+          => canvas_checkerboard
+        fi
+
+        # Render canvas base image.
+        if {$selected,!w} # Empty image
+          [canvas_checkerboard]
+
+        else
+          is_alpha={$selected,$alpha_mode" && "(s==2||s==4)}
+          canvas_x0,canvas_y0,canvas_x1,canvas_y1,canvas_dx,canvas_dy={$selected,"
+            const x = $canvas_xcenter*w;
+            const y = $canvas_ycenter*h;
+            const wc = $canvas_width;
+            const hc = $canvas_height;
+            const f = 0.5*max(w/wc,h/hc)/$canvas_zoom;
+            [ x - f*wc, y - f*hc, x + f*wc, y + f*hc, 2*f*wc, 2*f*hc ]"}
+
+          ix0,iy0:=round([$canvas_x0,$canvas_y0],1,-1) # Crop coordinates
+          ix1,iy1:=round([$canvas_x1,$canvas_y1],1,1)
+          ix0,ix1:=cut([$ix0,$ix1],0,w#$selected-1)
+          iy0,iy1:=cut([$iy0,$iy1],0,h#$selected-1)
+          dix,diy:=$ix1-$ix0+1,$iy1-$iy0+1 # Dimension of cropped image
+
+          p0:=round(($ix0-$canvas_x0)/$canvas_dx*$canvas_width,1,1)
+          q0:=round(($iy0-$canvas_y0)/$canvas_dy*$canvas_height,1,1)
+          p1:=round(($ix1+1-$canvas_x0)/$canvas_dx*$canvas_width,1,1)
+          q1:=round(($iy1+1-$canvas_y0)/$canvas_dy*$canvas_height,1,1)
+          dp,dq:=max(2,$p1-$p0),max(2,$q1-$q0) # Dimension of resized image
+
+          if $dix>=$dp" && "$diy>=$dq
+            # When image is larger than canvas: downsize before crop.
+            fact:=max($canvas_width/$canvas_dx,$canvas_height/$canvas_dy)*100
+            sh[$selected] 0,{$selected,$is_alpha?s-1:min(2,s-1)} +r. $fact%,$fact% rm..
+            z. {[round([$ix0*w/w#$selected,$iy0*h/h#$selected],1,-1),\
+                 round([$ix1*w/w#$selected,$iy1*h/h#$selected],1,1)]}
+          else
+            +z[$selected] $ix0,$iy0,0,0,$ix1,$iy1,0,{$selected,$is_alpha?s-1:min(2,s-1)}
+          fi
+
+          if $normalization_mode
+            if !narg(${is_infnan$selected}) is_infnan$selected:=${$0_is_infnan[$selected]} fi
+            if $normalization_mode==1 # Channel by channel normalization
+              l. { s c if ${is_infnan$selected} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
+            else # Global normalization
+              if ${is_infnan$selected} $0_normalize_infnan. else n. 0,255 fi
+            fi
+          else and. 255
+          fi
+          r. $dp,$dq
+
+          if $is_alpha
+            to_rgba.
+            if $alpha_mode==1 +ja[canvas_checkerboard] .,$p0,$q0 rm..
+            else $dp,$dq,1,3,{arg($alpha_mode-1,0,128,255)} ja. ..,0,0 rm.. +j[canvas_checkerboard] .,$p0,$q0 rm..
+            fi
+          else
+            if s==1 r. 100%,100%,1,3
+            elif s==2 r. 100%,100%,1,3,0
+            fi
+            +j[canvas_checkerboard] .,$p0,$q0 rm..
+          fi
+        fi
+        => canvas_base
+
+        # Draw pixel grid.
+        if $canvas_is_grid" && "{$selected,w}
+          dx,dy:=$canvas_width/$canvas_dx,$canvas_height/$canvas_dy
+          dl:=max($dx,$dy)
+          if $dl>8 # Draw pixel outline
+            opacity:=lerp(0,0.5,min(($dl-8)/10,1)^2)
+            $canvas_width,1,1,1,">
+              begin(
+                pu = -1;
+                const Y0 = max(0,-$canvas_y0/$canvas_dy*$canvas_height);
+                const Y1 = min($canvas_height - 1,(h#$selected - $canvas_y0)/$canvas_dy*$canvas_height);
+              );
+              u = round(lerp($canvas_x0,$canvas_x1,x/w),1,-1);
+              u!=pu && inrange(u,0,w#$selected)?(
+                polygon(#$canvas_base,2,x,Y0,x,Y1,$opacity,0);
+              );
+              pu = u;
+            " rm.
+            1,$canvas_height,1,1,">
+              begin(
+                pv = -1;
+                const X0 = max(0,-$canvas_x0/$canvas_dx*$canvas_width);
+                const X1 = min($canvas_width - 1,(w#$selected - $canvas_x0)/$canvas_dx*$canvas_width);
+              );
+              v = round(lerp($canvas_y0,$canvas_y1,y/h),1,-1);
+              v!=pv && inrange(v,0,h#$selected)?(
+                polygon(#$canvas_base,2,X0,y,X1,y,$opacity,0);
+              );
+              pv = v;
+            " rm.
+          fi
+        fi
+      fi
+      rmn canvas_view
+    fi
+
+    font_size={canvas_base,cut(round(h/32),16,32)}
+
+    # Generate label for image title.
+    if !0$canvas_label_title
+      if $nb_images>1
+        basename {$selected,n} basename=${}
+        0 t. "["{image_indices,i[$selected]}"] "$basename" ("{``{$selected,[w,h,d,s]}}")",\
+         0,0,$font_size,1,255
+      else
+        0
+      fi
+      => canvas_label_title
+      rmn canvas_label
+    fi
+
+    # Generate label for image coordinates.
+    if !0$canvas_label_coords" && "{$selected,w}
+      0
+      if narg($canvas_crop_x0)
+        x0,y0,x1,y1=$canvas_crop_x0,$canvas_crop_y0,$canvas_crop_x1,$canvas_crop_y1
+        angle={_rad2deg(atan2($y1-$y0,$x1-$x0))%360}
+        if $x0>$x1 x0,x1=$x1,$x0 fi
+        if $y0>$y1 y0,y1=$y1,$y0 fi
+        dx,dy:=$x1-$x0,$y1-$y0
+        label="Box ( "$x0","$y0" ) - ( "$x1","$y1" )"\n\
+              "Size = ( "{$dx+1}","{$dy+1}" ), Length = "{_norm($dx,$dy)}\n\
+              "Angle = "$angle"\260"
+      else
+        x,y:=round(lerp($canvas_x0,$canvas_x1,$canvas_mouse_x/$canvas_width),1,-1),\
+             round(lerp($canvas_y0,$canvas_y1,$canvas_mouse_y/$canvas_height),1,-1)
+        if {$selected,inrange($x,0,w,1,0)" && "inrange($y,0,h,1,0)}
+          s_value={`"val = I(#$selected,$x,$y);
+                 size(val)<=6?v2s(val,-1):(
+                   vals = vale = vector3();
+                   copy(vals,val,3); copy(vale,val[size(val)-3],3);
+                   string(#256,v2s(vals,-1),', ... ,',v2s(vale,-1));
+                 )"`}
+          s_hex=
+          if {$selected,"s>4?0:(val = I($x,$y); min(isint(val) & inrange(val,0,255)))"}
+            s_hex=" = \#"{$selected,`"
+              to_hex(x) = (ref(x,_x); _x<10?_'0'+_x:_'A'+_x-10);
+              res = vector(#2*s);
+              off = 0; repeat (s,k, val = i($x,$y,0,k); res[off++] = to_hex(val>>4); res[off++] = to_hex(val&15));
+              res"`}
+          fi
+          label="Point ( "$x","$y" ) = [ "$s_value" ]"$s_hex
+        fi
+      fi
+      t. {``$label},0,0,$font_size,1,255
+      => canvas_label_coords
+      rmn canvas_label
+    fi
+
+    # Generate label for notification.
+    if !0$canvas_label_notification" && "['$notification']!=0
+      0 t. $notification,0,0,$font_size,1,255
+      r. {[w,h]+20},1,1,0,0,0.5,0.5
+      +n. 150,255 r.. 100%,100%,1,3 a[-2,-1] c
+      => canvas_label_notification
+      notification_opacity,notification=3,
+    fi
+
+    # Render canvas label.
+    if !0$canvas_label
+      0
+      if $canvas_label_title a. [canvas_label_title],y fi
+      if $canvas_label_coords a. [canvas_label_coords],y fi
+      r. {[w,h]+10},1,1,0,0,0.5,0.5
+      +n. 150,255 r.. 100%,100%,1,3 a[-2,-1] c
+      => canvas_label
+      rmn canvas_view
+    fi
+
+    if !0$canvas_view
+      [canvas_base] => canvas_view
+
+      # For 3D volumetric images.
+      if {$selected,d>1}
+
+      # For 2D images.
+      elif {$selected,!w}
+        cursor[0] 1
+
+      else
+
+        # Draw cursor.
+        cx,cy=$canvas_mouse_x,$canvas_mouse_y
+        if $cy<0" || "\
+           !inrange(lerp($canvas_x0,$canvas_x1,$cx/$canvas_width),0,w#$selected,1,0)" || "\
+           !inrange(lerp($canvas_y0,$canvas_y1,$cy/$canvas_height),0,h#$selected,1,0)
+          cx,cy=-1
+        fi
+        if $cx>=0
+          cursor[0] 0
+          line[canvas_view] $cx,0,$cx,100%,0.65,0xFF00FF00,255
+          line[canvas_view] $cx,0,$cx,100%,0.65,0x000FF00FF,0
+          line[canvas_view] 0,$cy,100%,$cy,0.65,0xFF00FF00,255
+          line[canvas_view] 0,$cy,100%,$cy,0.65,0x00FF00FF,0
+
+          dx,dy:=$canvas_width/$canvas_dx,$canvas_height/$canvas_dy
+          dl:=max($dx,$dy)
+          if $dl>8 # Draw pixel outline
+            opacity:=lerp(0,1,min(($dl-8)/10,1))
+            icx,icy:=round(lerp($canvas_x0,$canvas_x1,$cx/$canvas_width),1,-1),\
+                     round(lerp($canvas_y0,$canvas_y1,$cy/$canvas_height),1,-1)
+            ccx,ccy:=($icx-$canvas_x0)/$canvas_dx*$canvas_width,\
+                     ($icy-$canvas_y0)/$canvas_dy*$canvas_height
+            nccx,nccy:=$ccx+$dx,$ccy+$dy
+            ccx,ccy,nccx,nccy:=round([$ccx,$ccy],1,1),round([$nccx,$nccy],1,1)-1
+            if $canvas_is_grid ccx+=1 ccy+=1 fi
+            rectangle[canvas_view] $ccx,$ccy,$nccx,$nccy,$opacity,0x33333333,0
+            rectangle[canvas_view] $ccx,$ccy,$nccx,$nccy,$opacity,0xCCCCCCCC,255
+          fi
+        else
+          cursor[0] 1
+        fi
+
+        # Draw crop rectangle.
+        if narg($canvas_crop_x0)
+          x0:=($canvas_crop_x0-$canvas_x0)/$canvas_dx*$canvas_width
+          y0:=($canvas_crop_y0-$canvas_y0)/$canvas_dy*$canvas_height
+          x1:=($canvas_crop_x1-$canvas_x0)/$canvas_dx*$canvas_width
+          y1:=($canvas_crop_y1-$canvas_y0)/$canvas_dy*$canvas_height
+          if $x0>$x1 x0,x1=$x1,$x0 fi
+          if $y0>$y1 y0,y1=$y1,$y0 fi
+          x0,y0,x1,y1:=round([$x0,$y0,$x1,$y1],1,1)
+          x1+=$canvas_width/$canvas_dx-1
+          y1+=$canvas_height/$canvas_dy-1
+          if $is_canvas_is_grid x0+=1 x1+=1 fi
+          rectangle[canvas_view] $x0,$y0,$x1,$y1,0.25,0
+          rectangle[canvas_view] $x0,$y0,$x1,$y1,0.75,0x33333333,0
+          rectangle[canvas_view] $x0,$y0,$x1,$y1,0.75,0xCCCCCCCC,255
+          dx,dy:=0.5*[$canvas_width,$canvas_height]/[$canvas_dx,$canvas_dy]
+          x0,y0,x1,y1+=$dx,$dy,-$dx+1,-$dy+1
+          line[canvas_view] $x0,$y0,$x1,$y1,0.75,0xF0F0F0F0,0
+          line[canvas_view] $x0,$y0,$x1,$y1,0.75,0x0F0F0F0F,255
+        fi
+      fi
+
+      # Draw labels.
+      ja[canvas_view] [canvas_label],0,$canvas_label_alignment~
+      if $canvas_label_notification
+        ja[canvas_view] [canvas_label_notification],0,{!$canvas_label_alignment}~,0,0,{min(1,$notification_opacity)}
+        window_wait_mode=1
+      fi
+
+      rmn window_view
+    fi
+
+    # Render global view.
+    if !0$window_view
+      $window_width,$window_height,1,3 => window_view
+      if !$thumb_is_hidden
+        j[window_view] [thumb_view]
+      fi
+      j[window_view] [canvas_view],0,$thumb_height2
+      w[window_view]
+    fi
+
+    if $window_wait_mode wait 40 else wait fi
+
+    # Convert low-levels events to higher-level (buttons / drag).
+    is_CTRL:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+    previous_mouse_x,previous_mouse_y,previous_mouse_area=$mouse_x,$mouse_y,$mouse_area
+    mouse_x,mouse_y,mouse_button={*,x,y,b}
+    mouse_area:=$mouse_y<0?0:$mouse_y<$thumb_height?1:2
+    canvas_mouse_x,canvas_mouse_y=$mouse_x,{$mouse_y-$thumb_height2}
+
+    is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
+    repeat 3 {
+      if ${is_button$>}" && "$mouse_area" && "!${is_clicked$>} # Possible start of a drag
+        is_clicked$>,is_released$>,is_drag$>=$mouse_area,0,0 # At this point, cannot ensure drag has started
+        drag_start_x$>,drag_start_y$>,drag_end_x$>,drag_end_y$>=$mouse_x,$mouse_y,$mouse_x,$mouse_y
+      elif ${is_button$>}" && "$mouse_area" && "${is_clicked$>} # Possible update of a drag
+        drag_end_x$>,drag_end_y$>=$mouse_x,$mouse_y
+        if !${is_drag$>} # Determine if that is really a drag
+          is_drag$>:=norm(${drag_end_x$>}-${drag_start_x$>},${drag_end_y$>}-${drag_start_y$>})>5?$mouse_area:0
+        fi
+      elif !${is_button$>}" && "$mouse_area" && "${is_clicked$>} # Possible end of a drag
+        is_clicked$>,is_released$>=0,$mouse_area
+        drag_end_x$>,drag_end_y$>=$mouse_x,$mouse_y
+        # 'is_drag$>' is not reset to 0 to ease drag end detection (must be then zero-ed manually afterwards).
+      elif $mouse_area" && "!${is_clicked$>}
+        is_drag$>=0
+      fi
+    }
+    window_wait_mode:=$is_drag0||$is_drag1||$is_drag2||{*,o}||0$notification_opacity?1:0
+
+    # Manage thumbnail navigation events.
+    previous_selected=$selected
+    if !$thumb_is_hidden
+      if $is_drag0==1" && "$is_clicked0==1
+        n_thumb_x={thumb_base,cut($thumb_x-($drag_end_x0-$drag_start_x0)/w,-16/w,$thumb_x_px_max/w)}
+        if $n_thumb_x!=$thumb_x
+          thumb_x=$n_thumb_x
+          drag_start_x0=$drag_end_x0
+          rmn thumb_view
+        fi
+      elif $is_drag0==1" && "($is_released0" || "!$mouse_area)
+        is_drag0,is_released0=0
+      fi
+      if $mouse_area==1
+        x_ind:=$mouse_x+$thumb_x_px
+        if {thumb_label,inrange($x_ind,0,w-1)" && "i[$x_ind]>=0}
+          ind={thumb_label,i[$x_ind]}
+          if $ind!=$mouseover
+            mouseover=$ind
+            rmn thumb_view
+          fi
+          if !$is_drag0" && "$is_released0
+            if $selected!=$ind
+              selected=$ind
+              rmn thumb_view,canvas_base
+            fi
+          fi
+        fi
+      else
+        if $mouseover>=0 rmn thumb_view fi
+        mouseover=-1
+      fi
+    fi
+
+    if $nb_images>1
+      if (($mouse_area==1" || "$is_CTRL)" && "(\
+           {*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "\
+           {*,PAGEUP}" || "{*,PAGEDOWN}" || "{*,HOME}" || "{*,END}\
+         ))" || "{*,SPACE}" || "{*,BACKSPACE}
+        step:={*,ARROWLEFT}||{*,ARROWUP}||{*,BACKSPACE}?-1:\
+              {*,ARROWRIGHT}||{*,ARROWDOWN}||{*,SPACE}?1:\
+              {*,PAGEUP}?-max(2,round($nb_images/16)):\
+              {*,PAGEDOWN}?max(2,round($nb_images/16)):\
+              {*,HOME}?-$selected:\
+              {*,END}?$nb_images-1-$selected:0
+        if {*,BACKSPACE}" || "{*,SPACE} selected:=($selected+$step)%$nb_images
+        else  selected:=cut($selected+$step,0,$nb_images-1)
+        fi
+        rmn thumb_view,canvas_base
+      fi
+        if $mouse_area==1" && "{*,o}
+        step:={*,-o}*max(1,round($nb_images/32))
+        selected:=cut($selected+$step,0,$nb_images-1)
+        rmn thumb_view,canvas_base
+      fi
+
+      # Ensure that a newly selected thumbnail is fully visible.
+      if $selected!=$previous_selected
+        x0,w={thumb_coords,[i(0,$selected,0,0),i(0,$selected,0,2)]}
+        if $x0<$thumb_x_px
+          thumb_x={thumb_base,($x0-48)/w}
+        elif $x0+$w>=$thumb_x_px+$window_width
+          thumb_x={thumb_base,($x0+$w-$window_width+48)/w}
+        fi
+        if {$selected,w}" && "{$previous_selected,w}" && "\
+           [{$selected,[w,h,d]}]!=[{$previous_selected,[w,h,d]}] # Keep canvas coords if same resolution
+          canvas_xcenter,canvas_ycenter,canvas_zoom=0.5,0.5,1
+        fi
+      fi
+    fi
+
+    # Manage canvas events.
+
+    # For 3D volumetric images.
+    if {$selected,d>1}
+
+    # For 2D images.
+    elif {$selected,w}
+
+      # Manage image pan, using left or middle mouse button (drag).
+      repeat 2 {
+        but:=2*$>
+        if !$but" && "$is_CTRL continue fi
+        if ${is_drag$but}==2" && "${is_clicked$but}==2 # Pan starts
+          canvas_xcenter-=(${drag_end_x$but}-${drag_start_x$but})/$canvas_width*$canvas_dx/w#$selected
+          canvas_ycenter-=(${drag_end_y$but}-${drag_start_y$but})/$canvas_height*$canvas_dy/h#$selected
+          canvas_xcenter,canvas_ycenter:=cut([$canvas_xcenter,$canvas_ycenter],0,1)
+          drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
+          rmn canvas_base
+        elif ${is_drag$but}==2" && "(${is_released$but}" || "!$mouse_area) # Pan ends
+          is_drag0,is_released0,is_drag2,is_released2=0
+        fi
+      }
+
+      # Manage image zoom, using right mouse button (drag).
+      if $is_drag1==2" && "$is_clicked1==2 # Zoom starts
+        amount:="
+          dx = $drag_end_x1 - $drag_start_x1;
+          dy = $drag_end_y1 - $drag_start_y1;
+          sign(dx)*norm(dx,dy)/200"
+        if !narg($canvas_zoom_x) canvas_zoom_x,canvas_zoom_y=$canvas_mouse_x,$canvas_mouse_y fi
+        n_canvas_zoom:=$amount<0" || "($amount>0" && "max($canvas_dx,$canvas_dy)>8)?\
+                       max($canvas_zoom*(1+$amount),0.5):$canvas_zoom
+        if $n_canvas_zoom!=$canvas_zoom
+          xc:=lerp($canvas_x0,$canvas_x1,$canvas_zoom_x/$canvas_width)
+          yc:=lerp($canvas_y0,$canvas_y1,$canvas_zoom_y/$canvas_height)
+          ratio:=$canvas_zoom/$n_canvas_zoom
+          canvas_xcenter:=cut(lerp($xc,$canvas_xcenter*w#$selected,$ratio)/w#$selected,0,1)
+          canvas_ycenter:=cut(lerp($yc,$canvas_ycenter*h#$selected,$ratio)/h#$selected,0,1)
+          canvas_zoom=$n_canvas_zoom
+          rmn canvas_base
+        fi
+        drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
+      elif $is_drag1==2" && "($is_released1" || "!$mouse_area) # Zoom ends
+        canvas_zoom_x,canvas_zoom_y=
+        is_drag1,is_released1=0
+      fi
+
+      # Manage image crop, using left mouse button (drag).
+      if $is_CTRL" && "$mouse_x>=0
+        if !$is_drag0" && "$is_clicked0==2" && "[$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]
+          is_drag0=2 # Avoid drag latency
+        fi
+        if $is_drag0==2" && "$is_clicked0==2 # Crop starts
+          if !narg($canvas_crop_x0) x,y=$drag_start_x0,$drag_start_y0
+          else x,y=$drag_end_x0,$drag_end_y0
+          fi
+          cx,cy={$selected,[cut(round(lerp($canvas_x0,$canvas_x1,$x/$canvas_width),1,-1),0,w-1),\
+                            cut(round(lerp($canvas_y0,$canvas_y1,($y-$thumb_height2)/$canvas_height),1,-1),0,h-1)]}
+          if !narg($canvas_crop_x0)
+            canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=$cx,$cy,$cx,$cy
+            rmn canvas_view
+          elif [$cx,$cy]!=[$canvas_crop_x1,$canvas_crop_y1]
+            canvas_crop_x1,canvas_crop_y1=$cx,$cy
+            rmn canvas_base
+          fi
+        elif $is_drag0==2" && "($is_released0" || "!$mouse_area) # Crop ends
+          if $canvas_crop_x0>$canvas_crop_x1 canvas_crop_x0,canvas_crop_x1=$canvas_crop_x1,$canvas_crop_x0 fi
+          if $canvas_crop_y0>$canvas_crop_y1 canvas_crop_y0,canvas_crop_y1=$canvas_crop_y1,$canvas_crop_y0 fi
+          if max($canvas_crop_x1-$canvas_crop_x0,$canvas_crop_y1-$canvas_crop_y0)>8
+            canvas_xcenter,canvas_ycenter,canvas_zoom={$selected,"
+              const wc = $canvas_width;
+              const hc = $canvas_height;
+              const f = 0.5*max(w/wc,h/hc);
+              [ cut(0.5*($canvas_crop_x0 + $canvas_crop_x1)/w,0,1),
+                cut(0.5*($canvas_crop_y0 + $canvas_crop_y1)/h,0,1),
+                2*f*min(wc/max(8,$canvas_crop_x1 - $canvas_crop_x0),
+                        hc/max(8,$canvas_crop_y1 - $canvas_crop_y0)) ]"}
+            rmn canvas_base
+          fi
+          canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
+          is_drag0,is_released0=0
+          rmn canvas_view
+        fi
+      elif narg($canvas_crop_x0)
+        canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
+        is_drag0,is_released0=0
+        rmn canvas_view
+      fi
+
+      if $mouse_area==2
+        if {*,o} # Image zoom, with mouse wheel
+          amount:={*,-o}/10
+          n_canvas_zoom:=$amount<0" || "($amount>0" && "max($canvas_dx,$canvas_dy)>8)?\
+                         max($canvas_zoom*(1+$amount),0.5):$canvas_zoom
+          if $n_canvas_zoom!=$canvas_zoom
+            xc:=lerp($canvas_x0,$canvas_x1,$canvas_mouse_x/$canvas_width)
+            yc:=lerp($canvas_y0,$canvas_y1,$canvas_mouse_y/$canvas_height)
+            ratio:=$canvas_zoom/$n_canvas_zoom
+            canvas_xcenter:=cut(lerp($xc,$canvas_xcenter*w#$selected,$ratio)/w#$selected,0,1)
+            canvas_ycenter:=cut(lerp($yc,$canvas_ycenter*h#$selected,$ratio)/h#$selected,0,1)
+            canvas_zoom=$n_canvas_zoom
+            rmn canvas_base
+          fi
+        fi
+        if {*,-ENTER}" || "(!$is_drag0" && "$is_released0==2) # Reset view
+          canvas_xcenter,canvas_ycenter,canvas_zoom=0.5,0.5,1
+          rmn canvas_base
+        elif !$is_CTRL" && "{*,C} # Center view
+          canvas_xcenter,canvas_ycenter=0.5
+          rmn canvas_base
+        elif !$is_CTRL" && "{*,Z} # Set zoom factor to max
+          canvas_zoom={$selected,max(w/$canvas_width,h/$canvas_height)*max($canvas_width,$canvas_height)/8}
+          rmn canvas_base
+        elif !$is_CTRL" && "{*,HOME}
+          canvas_xcenter,canvas_ycenter:=w#$selected==1?0.5:0,h#$selected==1?0.5:0
+          rmn canvas_base
+        elif !$is_CTRL" && "{*,END}
+          canvas_xcenter,canvas_ycenter:=w#$selected==1?0.5:1,h#$selected==1?0.5:1
+          rmn canvas_base
+        elif !$is_CTRL" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "\
+                             {*,PAGEUP}" || "{*,PAGEDOWN})
+          step:=($canvas_dx+$canvas_dy)/20
+          canvas_xcenter:=step=$step/w#$selected;\
+                          cut($canvas_xcenter+({*,ARROWLEFT}?-step:{*,ARROWRIGHT}?step:0),0,1)
+          canvas_ycenter:=step=$step/h#$selected;\
+                          cut($canvas_ycenter+({*,ARROWUP}?-step:{*,ARROWDOWN}?step:\
+                                               {*,PAGEUP}?-4*step:{*,PAGEDOWN}?4*step:0),0,1)
+          rmn canvas_base
+        fi
+        if [$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]
+          rmn canvas_label_coords
+        fi
+
+      else
+        if $previous_mouse_area==2 rmn canvas_view fi # Will hide cursor
+      fi
+    fi
+
+    if (!$canvas_label_alignment" && "{canvas_label,$canvas_mouse_y<h" && "$canvas_mouse_x<w})" || "\
+       ($canvas_label_alignment" && "{canvas_label,$canvas_mouse_y>4*h})
+      canvas_label_alignment:=!$canvas_label_alignment
+      rmn canvas_view
+    fi
+
+    # Manage global window events.
+    if {*,r}
+      w[] -1,-1
+      rmn thumb_base,canvas_base
+    fi
+
+    if $is_CTRL
+      if {*,C} # CTRL+C: Decrease window size
+        is_fullscreen=0
+        w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
+        rmn thumb_base,canvas_base
+      elif {*,D} # CTRL+D: Increase window size
+        is_fullscreen=0
+        w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
+        rmn thumb_base,canvas_base
+      elif {*,-F} # CTRL+F: Toggle fullscreen mode
+        if $is_fullscreen
+          is_fullscreen=0
+          w[] $window_nonfullscreen_width,$window_nonfullscreen_height,0,0
+        else
+          is_fullscreen,window_nonfullscreen_width,window_nonfullscreen_height=1,{*,d,e}
+          w[] {*,u,v},0,1
+        fi
+        notification="Fullscreen mode: "${"arg0 "$is_fullscreen,"Off,On"}
+        rmn thumb_base,canvas_base,canvas_label_notification
+      elif {*,-M} # CTRL+M: Run 3D mesh viewer
+        d3d[$selected]
+        rmn thumb_base,canvas_base
+        wait -1
+      elif {*,-G} # CTRL+G: Toggle grid mode
+        canvas_is_grid:=!$canvas_is_grid
+        notification="Grid mode: "${"arg0 "$canvas_is_grid,"Off,On"}
+        rmn canvas_base,canvas_label_notification
+      elif {*,-A} # CTRL+A: Toggle alpha mode
+        alpha_mode:=($alpha_mode+1)%5
+        notification="Alpha mode: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
+        rmn thumb_base,canvas_base,canvas_label_notification
+      elif {*,-N} # CTRL+N: Switch normalization mode
+        normalization_mode:=($normalization_mode+1)%3
+        notification="Normalization mode: "${"arg0 "$normalization_mode,"Disabled,\"Channel by channel\",Global"}
+        rmn thumb_base,canvas_base,canvas_label_notification
+      elif {*,-S}" && "0$canvas_base # CTRL+S: Save snapshot
+        repeat 256 { filename gmic.png,$> filename=${} if !isfile('$filename') break fi }
+        notification="Save screenshot: "$filename
+        rmn canvas_label_notification
+        o[canvas_base] $filename
+      elif {*,-O} # CTRL+O: Save image instance
+        repeat 256 { filename gmic.gmz,$> filename=${} if !isfile('$filename') break fi }
+        notification="Save copy: "$filename
+        rmn canvas_label_notification
+        o[$selected] $filename
+      fi
+    fi
+    if $nb_images>1" && "{*,-TAB} # Hide/show thumbnails
+      thumb_is_hidden:=!$thumb_is_hidden
+      rmn canvas_base
+    fi
+    if $is_released0 is_released0=0 fi
+       skip {*,-o} # Flush mouse wheel
+
+    if $canvas_label_notification
+      notification_opacity-=0.1
+      if $notification_opacity<=0 rm[canvas_label_notification] notification_opacity=0 fi
+      window_wait_mode=1
+      rmn canvas_label
+    fi
+  }
+
+  # Reset image list and display window to their previous states.
+  if narg($window_previous_normalization)
+    w[] -1,-1,$window_previous_normalization,$window_previous_fullscreen
+  else
+    w[] 0
+  fi
+  k[0-{$nb_images-1}]
+  is_change 0
+
+# Return default window size for selected image list.
+# $1 : thumb_height_factor
+# $2 : thumb_min_ratio
+_display_default_window_size :
+  u {"const fmax = 0.65;
+      const u = min(1280,fmax*"{*,u}");
+      const v = min(1280,fmax*"{*,v}");
+      Mw = Mh = 0;
+      repeat (l,k,
+        w = max(1,w#k);
+        h = max(1,h#k);
+        d = max(1,d#k);
+        d>1?(w+=d + 2; h+=d + 2);
+        fact = min(u/w,v/h);
+        nw = round(fact*w);
+        nh = round(fact*h);
+        nw>Mw?(Mw = nw);
+        nh>Mh?(Mh = nh);
+      );
+      Mwh = max(Mw,Mh);
+      Mw = Mwh*max($2,Mw/Mwh);
+      Mh = Mwh*max($2,Mh/Mwh);
+      round([ Mw,Mh ])"}
+  if $!>1 window_height={round(($window_height+2)/(1-$1))} fi
+
+# Return 1 or 0 if one of the 3 first channels of the selected image contains 'inf' or 'NaN' values.
+_display_is_infnan :
+  if w sh 0,{min(s-1,2)} u {s=is;isinf(s)||isnan(s)} rm.
+  else u 0
+  fi
+
+# Return non-infnan min and max values of the selected image.
+_display_minmax_infnan :
+  eval. "
+    begin(
+      val_min = inf;
+      val_max = -inf
+    );
+    val = i;
+    !isinf(val)?(
+      val<val_min?(val_min = val);
+      val>val_max?(val_max = val)
+    );
+    end(
+      merge(val_min,min); merge(val_max,max);
+      set('{}',v2s([val_min,val_max]));
+    )"
+
+# Normalize selected image without considering inf and NaN values.
+_display_normalize_infnan :
+  val_min,val_max=${_display_minmax_infnan.}
+  f. "
+    const min = $val_min; const max = $val_max; const delta = max - min;
+    const epsilon = delta>0?delta:1;
+    const nmin = min - epsilon; const nmax = max + epsilon; const ndelta = nmax - nmin;
+    const nfact = 255/(ndelta>0?ndelta:1);
+    val = i;
+    isinf(val)?(val<0?0:255):isnan(val)?0:(val - nmin)*nfact"
 
 #@cli d0 : eq. to 'display0'.
 d0 :
-  _gmic_s="$?" v + _display2d 0,0
+  _gmic_s0="$?" _gmic_s1=$[]
+  prev_display_normalization_mode=$_display_normalization_mode
+  prev_display_alpha_mode=$_display_alpha_mode
+  _display_normalization_mode=0
+  _display_alpha_mode=1
+  v + _display
+  _display_normalization_mode=$prev_display_normalization_mode
+  _display_alpha_mode=$prev_display_alpha_mode
 
 #@cli display0
-#@cli : Display selected images without value normalization.
-#@cli : (eq. to 'd0').
+#@cli : Display selected images in an interactive window, without normalization and alpha mode activated.
 display0 :
-  _gmic_s="$?" v + _display2d 0,0
+  _gmic_s0="$?" _gmic_s1=$[]
+  prev_display_normalization_mode=$_display_normalization_mode
+  prev_display_alpha_mode=$_display_alpha_mode
+  _display_normalization_mode=0
+  _display_alpha_mode=1
+  v + _display
+  _display_normalization_mode=$prev_display_normalization_mode
+  _display_alpha_mode=$prev_display_alpha_mode
 
 #@cli d2d : eq. to 'display2d'.
 d2d :
