@@ -5171,7 +5171,7 @@ _parse_cli_images : l[] { check "isbool(${1=1})" is_arg=1 arg1=$1 onfail is_arg=
 
   foreach {
     nm={n} label=[$>]:" "'$nm'
-    if ${-is_3d} # 3D vector object
+    if ${-is_mesh3d} # 3D mesh
       label2="("{i[6]}" vert., "{i[7]}" prim.)"
       r3d 1,1,0,-80 r3d 0,1,0,80 snapshot3d {max($W,$H)}
     else # Regular 1D,2D or 3D image
@@ -9051,7 +9051,7 @@ update_gallery_html : check "isbool(${1=0})"
 # Generate a single image from a list of images, for the gallery.
 _gallery :
   foreach {
-    if ${-_is_3d}
+    if ${-_is_mesh3d}
       r3d 1,1,0,-80 r3d 0,1,0,30
       animate3d 20,0,5,0,1.5,0 s z +rv[1--2]
     else
@@ -21307,7 +21307,7 @@ animate3d : check "isint($1) && $1>0 && isnum(${2=0}) && isnum(${3=5}) && isnum(
   fi
   => anim3d_bg
   repeat {$!-1} { l[$>,-1] {
-    check ${-is_3d..} nm={0,n} bn={0,b}
+    check ${-is_mesh3d..} nm={0,n} bn={0,b}
     e "  * Object '"$bn"': 0/$1"
     c3d[0] n3d[0] *3d[0] {1,$5*min(w,h)/2}
     repeat $1 {
@@ -22585,7 +22585,7 @@ pointcloud3d :
 pose3d :
   e[^-1] "Apply 3D pose matrix [ $1,$2,$3,$4; $5,$6,$7,$8; $9,$10,$11,$12 ] to 3D object$?."
   foreach {
-    if ${-_is_3d}
+    if ${-_is_mesh3d}
       if "i[6] && i[7]"
         s3d r[2] 3,{2,h/3},1,1,-1 i[3] 1,{2,h},1,1,1 a[2,3] x
         i[3] ($1,$5,$9;$2,$6,$10;$3,$7,$11;$4,$8,$12) m*[2,3]
@@ -31771,13 +31771,13 @@ hex2img8 :
     s. x,2 f[-2,-1] 'if(i>=97,i-87,i-48)' *.. 16 +[-2,-1] mv. 0
   }
 
-#@cli is_3d
+#@cli is_mesh3d
 #@cli : Return 1 if all of the selected images are 3D objects, 0 otherwise.
-is_3d :
+is_mesh3d :
   u 1 l { check3d 1 onfail u 0 }
 
 # Faster version.
-_is_3d :
+_is_mesh3d :
   u {"h>6 && int(i[0])==67 && int(i[1])==73 && int(i[2])==109 && int(i[3])==103 && int(i[4])==51 && int(i[5])==100"}
 
 #@cli is_change : _value={ 0=false | 1=true }
