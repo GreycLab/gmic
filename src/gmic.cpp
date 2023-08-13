@@ -4299,7 +4299,7 @@ gmic& gmic::display_plots(CImgList<T>& images, CImgList<char>& images_names,
     CImgList<char> ncommands_line;
     unsigned int nposition = 0;
     CImg<char>::string("").move_to(callstack); // Anonymous scope
-    CImg<char>::string("_print_noheader").move_to(ncommands_line);
+    CImg<char>::string("_print_nolog").move_to(ncommands_line);
     _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
     callstack.remove();
     return *this;
