@@ -4294,7 +4294,7 @@ gmic& gmic::display_plots(CImgList<T>& images, CImgList<char>& images_names,
   // Check for available display.
   if (!is_display_available) {
     cimg::unused(plot_type,vertex_type,xmin,xmax,ymin,ymax,exit_on_anykey);
-    print(images,0,"Plot image%s (console output only, no display %s).\n",
+    print(images,0,"Plot image%s (console output only, no display %s).",
           gmic_selection.data(),cimg_display?"available":"support");
     CImgList<char> ncommands_line;
     unsigned int nposition = 0;
