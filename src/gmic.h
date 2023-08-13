@@ -463,7 +463,8 @@ struct gmic {
                        const gmic_image<unsigned int>& selection, unsigned int *const XYZ,
                        const bool exit_on_anykey);
   template<typename T>
-  gmic& display_plots(const gmic_list<T>& images, const gmic_list<char>& images_names,
+  gmic& display_plots(gmic_list<T>& images, gmic_list<char>& images_names,
+                      const unsigned int *const variables_sizes,
                       const gmic_image<unsigned int>& selection, const unsigned int plot_type,
                       const unsigned int vertex_type, const double xmin, const double xmax,
                       const double ymin, const double ymax, const bool exit_on_anykey);

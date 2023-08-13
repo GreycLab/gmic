@@ -4279,7 +4279,8 @@ bool gmic::is_display_available = false;
 // Display plots of selected images.
 //----------------------------------
 template<typename T>
-gmic& gmic::display_plots(const CImgList<T>& images, const CImgList<char>& images_names,
+gmic& gmic::display_plots(CImgList<T>& images, CImgList<char>& images_names,
+                          const unsigned int *const variables_sizes,
                           const CImg<unsigned int>& selection,
                           const unsigned int plot_type, const unsigned int vertex_type,
                           const double xmin, const double xmax,
@@ -4295,7 +4296,12 @@ gmic& gmic::display_plots(const CImgList<T>& images, const CImgList<char>& image
     cimg::unused(plot_type,vertex_type,xmin,xmax,ymin,ymax,exit_on_anykey);
     print(images,0,"Plot image%s (console output only, no display %s).\n",
           gmic_selection.data(),cimg_display?"available":"support");
-//    print_images(images,images_names,selection,false);
+    CImgList<char> ncommands_line;
+    unsigned int nposition = 0;
+    CImg<char>::string("").move_to(callstack); // Anonymous scope
+    CImg<char>::string("_print_noheader").move_to(ncommands_line);
+    _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
+    callstack.remove();
     return *this;
   }
 
@@ -10791,8 +10797,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             gmic_use_title;
             cimg_snprintf(title,_title.width(),"[Plot of '%s']",formula);
             CImg<char>::string(title).move_to(g_list_c);
-            display_plots(CImgList<T>(values,true),g_list_c,CImg<unsigned int>::vector(0),
+            g_list.assign(values,true);
+            display_plots(g_list,g_list_c,variables_sizes,CImg<unsigned int>::vector(0),
                           plot_type,vertex_type,xmin,xmax,ymin,ymax,exit_on_anykey);
+            g_list.assign();
             g_list_c.assign();
             ++position;
           } else {
@@ -10809,7 +10817,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                              &plot_type,&vertex_type,&xmin,&xmax,&ymin,&ymax,&exit_on_anykey,&end)==7) &&
                 plot_type<=3 && vertex_type<=7 && exit_on_anykey<=1) ++position;
             if (!plot_type && !vertex_type) plot_type = 1;
-            display_plots(images,images_names,selection,plot_type,vertex_type,
+            display_plots(images,images_names,variables_sizes,selection,plot_type,vertex_type,
                           xmin,xmax,ymin,ymax,exit_on_anykey);
           }
           is_change = false;
