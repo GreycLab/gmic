@@ -1940,11 +1940,16 @@ _display : skip ${1=},${3=}
         100%,1,1,1,-1 eval[thumb_coords] "copy(i[#-1,i0],y,i2 + (y<h-1?2:0),1,0)" => thumb_label
 
         # Render thumbnail navigation bar.
-        $0_render_thumbnails 0,{$nb_images-1},$normalization_mode,$alpha_mode
         rmn thumb_view
       fi
 
       if !0$thumb_view
+
+        # Make sure all visible thumbnails are rendered in 'thumb_base'.
+        indm,indM={thumb_label,[i[$thumb_x_px],(ind=i[$thumb_x_px+$window_width-1])?ind:$nb_images-1]}
+        $0_render_thumbnails $indm,$indM,$normalization_mode,$alpha_mode
+
+        # Decorate selected/mouse over thumbnail.
         +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1}
         x0,y0,w,h={thumb_coords,I[$selected]}
         x0-=$thumb_x_px
@@ -2668,23 +2673,23 @@ _display_normalize_infnan :
 _display_render_thumbnails :
   ind,indM,normalization_mode,alpha_mode=${1-4}
   for $ind<=$indM {
-    if {thumb_is_rendered,!i[$>]}
-      x0,y0,w,h={thumb_coords,I[$>]}
-      if {$>,!w} # Empty image
+    if {thumb_is_rendered,!i[$ind]}
+      x0,y0,w,h={thumb_coords,I[$ind]}
+      if {$ind,!w} # Empty image
         font_size={thumb_base,cut(h/8,16,32)
         $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
       else
-        [$>]
+        [$ind]
         is_alpha:=$alpha_mode" && "(s==2||s==4)
         if !$is_alpha" && "s>3 channels. 0,2 fi
         if d>1 volumetric2d. 50%,50%,50%,2 fi
         if w>$w" || "h>$h r. $w,$h fi
         if $normalization_mode
-          if {is_infnan,i[$>]<0} =[is_infnan] ${_display_is_infnan[$>]},0,$> fi
+          if {is_infnan,i[$ind]<0} =[is_infnan] ${_display_is_infnan[$ind]},0,$ind fi
           if $normalization_mode==1 # Channel by channel normalization
-            l. { s c if {is_infnan,i[$>]} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
+            l. { s c if {is_infnan,i[$ind]} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
           else # Global normalization
-            if {is_infnan,i[$>]} $0_normalize_infnan. else n. 0,255 fi
+            if {is_infnan,i[$ind]} $0_normalize_infnan. else n. 0,255 fi
           fi
         else and. 255
         fi
@@ -2700,7 +2705,7 @@ _display_render_thumbnails :
         fi
       fi
       j[thumb_base] .,$x0,$y0 rm.
-      =[thumb_is_rendered] 1,0,$>
+      =[thumb_is_rendered] 1,0,$ind
     fi
     ind+=1
   }
