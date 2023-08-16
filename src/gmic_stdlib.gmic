@@ -1915,7 +1915,7 @@ _display : skip ${1=},${3=}
         thumb_x_px={thumb_base,cut($thumb_x*w,-16,$thumb_x_px_max)}
         thumb_height={thumb_base,h}
       else
-        rmn thumb_coords,thumb_label
+        rmn thumb_coords,thumb_label,thumb_is_rendered
 
         # Compute thumbnail coordinates and sizes.
         thumb_height:=max(64,round($window_height*$thumb_height_factor))
@@ -1940,42 +1940,45 @@ _display : skip ${1=},${3=}
         100%,1,1,1,-1 eval[thumb_coords] "copy(i[#-1,i0],y,i2 + (y<h-1?2:0),1,0)" => thumb_label
 
         # Render thumbnail navigation bar.
-        ind,indM={thumb_label,[i[$thumb_x_px],i[$window_width-1]]}
+#        indm,indM={thumb_label,[i[$thumb_x_px],i[min($thumb_x_px_max,$window_width-1)]]}
+        indm,indM:=0,$nb_images-1
 
-        repeat $nb_images {
-#        for $ind<=$indM {
+        ind=$indm
+        for $ind<=$indM {
           x0,y0,w,h={thumb_coords,I[$>]}
-          if {$>,!w} # Empty image
-            font_size:=cut($thumb_height/8,16,32)
-            $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
-          else
-            [$>]
-            is_alpha:=$alpha_mode" && "(s==2||s==4)
-            if !$is_alpha" && "s>3 channels. 0,2 fi
-            if d>1 volumetric2d. 50%,50%,50%,2 fi
-            if w>$w" || "h>$h r. $w,$h fi
-            if $normalization_mode
-              if {is_infnan,i[$>]<0} =[is_infnan] ${$0_is_infnan[$>]},0,$> fi
-              if $normalization_mode==1 # Channel by channel normalization
-                l. { s c if {is_infnan,i[$>]} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
-              else # Global normalization
-                if {is_infnan,i[$>]} $0_normalize_infnan. else n. 0,255 fi
+          if {thumb_is_rendered,!i[$>]}
+            if {$>,!w} # Empty image
+              font_size:=cut($thumb_height/8,16,32)
+              $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
+            else
+              [$>]
+              is_alpha:=$alpha_mode" && "(s==2||s==4)
+              if !$is_alpha" && "s>3 channels. 0,2 fi
+              if d>1 volumetric2d. 50%,50%,50%,2 fi
+              if w>$w" || "h>$h r. $w,$h fi
+              if $normalization_mode
+                if {is_infnan,i[$>]<0} =[is_infnan] ${$0_is_infnan[$>]},0,$> fi
+                if $normalization_mode==1 # Channel by channel normalization
+                  l. { s c if {is_infnan,i[$>]} foreach { $0_normalize_infnan } a c else foreach { n 0,255 } fi a c }
+                else # Global normalization
+                  if {is_infnan,i[$>]} $0_normalize_infnan. else n. 0,255 fi
+                fi
+              else and. 255
               fi
-            else and. 255
-            fi
-            r. $w,$h
-            if $is_alpha
-              to_rgba.
-              if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-              else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
+              r. $w,$h
+              if $is_alpha
+                to_rgba.
+                if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
+                else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
+                fi
+                ja. .. rm..
+              elif s==1 r. 100%,100%,1,3
+              elif s==2 r. 100%,100%,1,3,0
               fi
-              ja. .. rm..
-            elif s==1 r. 100%,100%,1,3
-            elif s==2 r. 100%,100%,1,3,0
             fi
+            j[thumb_base] .,$x0,$y0 rm.
+            =[thumb_is_rendered] 1,0,$>
           fi
-          j[thumb_base] .,$x0,$y0 rm.
-          =[thumb_is_rendered] 1,0,$>
           ind+=1
         }
         rmn thumb_view
