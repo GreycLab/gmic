@@ -1857,7 +1857,7 @@ _display : skip ${1=},${3=}
   log_title,window_title,sep=
   repeat narg($sel) {
     l_ind:=arg0($>,$sel)
-    g_ind={$image_indices,i[$l_ind]}
+    g_ind={image_indices,i[$l_ind]}
     basename {$l_ind,n}
     log_title.=$sep${}
     window_title.=$sep[$g_ind]" "${}
@@ -1867,7 +1867,7 @@ _display : skip ${1=},${3=}
   else window_title.=" ("{0,[w,h,d,s]}")"
   fi
   if $2 e[0--4] "Display image"$_gmic_s0" = '"$log_title"'." fi
-  v + _print[0-{$nb_images-1}] $1,0,${3--1} v -
+  v + if $^>0 _print[0-{$nb_images-1}] $1,0,${3--1} fi v -
 
   # Initialize display window.
   window_previous_normalization,windows_previous_fullscreen=
@@ -1910,14 +1910,10 @@ _display : skip ${1=},${3=}
       thumb_height,thumb_height2=0
 
     else
-      thumb_height:=max(64,round($window_height*$thumb_height_factor))
+      thumb_height:=0$thumb_base?h#$thumb_base:max(64,round($window_height*$thumb_height_factor))
 
-      if $thumb_base
-        thumb_height={thumb_base,h}
-      else
-        rmn thumb_coords,thumb_label
-
-        # Compute thumbnail coordinates and sizes.
+      # Compute thumbnail coordinates and sizes.
+      if !0$thumb_coords
         1,$nb_images,1,2,"
           w = w#y; h = h#y; d = d#y;
           d>1?(w+=d + 2; h+=d + 2);
@@ -1928,18 +1924,27 @@ _display : skip ${1=},${3=}
         sh. 100% /.. {iM} rm. *. $thumb_height round.
         +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0+2; res"
         rv[-2,-1] a[-2,-1] c => thumb_coords
+        1,$nb_images,1,1,0 => thumb_is_rendered
+      fi
 
-        # Render thumbnail navigation bar.
-        sum_w={thumb_coords,i(0,h-1,0,0)+i(0,h-1,0,2)}
-        {max($sum_w,$window_width)},$thumb_height,1,3 100%,1,1,1,-1
+      thumb_base_width:=0$thumb_base?w#$thumb_base:max({thumb_coords,i(0,h-1,0,0)+i(0,h-1,0,2)},$window_width)
+      thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
+      if !narg($thumb_x) thumb_x:=-16/$thumb_base_width fi
+      thumb_x_px:=cut($thumb_x*$thumb_base_width,-16,$thumb_x_px_max)
+
+      # Render thumbnail navigation bar.
+      if !0$thumb_base
+        $thumb_base_width,$thumb_height,1,3 100%,1,1,1,-1 => thumb_base,thumb_label
+        sum_w=0
+  #       for $sum_w<$window_width {
         repeat $nb_images {
           x0,y0,w,h={thumb_coords,I[$>]}
-          line. $x0,0,{$x0+$w+1},0,1,$>
-          [$>]
-          if !w
+          line[thumb_label] $x0,0,{$x0+$w+1},0,1,$>
+          if {$>,!w} # Empty image
             font_size:=cut($thumb_height/8,16,32)
-            rm. $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
+            $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
           else
+            [$>]
             is_alpha:=$alpha_mode" && "(s==2||s==4)
             if !$is_alpha" && "s>3 channels. 0,2 fi
             if d>1 volumetric2d. 50%,50%,50%,2 fi
@@ -1964,14 +1969,11 @@ _display : skip ${1=},${3=}
             elif s==2 r. 100%,100%,1,3,0
             fi
           fi
-          j... .,$x0,$y0 rm.
+          j[thumb_base] .,$x0,$y0 sum_w+=w rm.
+          =[thumb_is_rendered] 1,0,$>
         }
-        => thumb_base,thumb_label
         rmn thumb_view
       fi
-      thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
-      if !narg($thumb_x) thumb_x={thumb_base,-16/w} fi
-      thumb_x_px={thumb_base,cut($thumb_x*w,-16,$thumb_x_px_max)}
 
       if !0$thumb_view
         +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1}
@@ -1981,7 +1983,7 @@ _display : skip ${1=},${3=}
         rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},1,0xFFFFFFFF,255
         rectangle. {[$x0,$y0]+1},{[$x0,$y0]+[$w,$h]-2},1,0xFFFFFFFF,255
         rectangle. {[$x0,$y0]+2},{[$x0,$y0]+[$w,$h]-3},1,0xFFFFFFFF,0
-        to. "#"{$image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
+        to. "#"{image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
         if $mouseover>=0
           x0,y0,w,h={thumb_coords,I[$mouseover]}
           x0-=$thumb_x_px
@@ -1989,7 +1991,7 @@ _display : skip ${1=},${3=}
           if $mouseover!=$selected
             rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0x33333333,0
             rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0xCCCCCCCC,255
-            to. "#"{$image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
+            to. "#"{image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
           fi
         fi
 
@@ -2135,7 +2137,7 @@ _display : skip ${1=},${3=}
     if !0$canvas_label_title
       if $nb_images>1
         basename {$selected,n} basename=${}
-        0 t. "["{$image_indices,i[$selected]}"] "$basename" ("{``{$selected,[w,h,d,s]}}")",\
+        0 t. "["{image_indices,i[$selected]}"] "$basename" ("{``{$selected,[w,h,d,s]}}")",\
          0,0,$font_size,1,255
       else
         0
