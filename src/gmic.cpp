@@ -2515,7 +2515,7 @@ const char *gmic::builtin_commands_names[] = {
 
   // Commands of length 1.
   "%","&","*","+","-","/","<","=",">",
-  "a","b","c","d","e","f","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",
+  "a","b","c","e","f","i","j","k","l","m","n","o","q","r","s","t","u","v","w","x","y","z",
   "y","z","^","{","|","}"
 };
 
@@ -15187,7 +15187,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         CImg<char>::string("").move_to(callstack); // Anonymous scope
         if (is_display_available) {
           gmic_display_window(0).assign();
-          CImg<char>::string("d").move_to(ncommands_line);
+          CImg<char>::string("default_display").move_to(ncommands_line);
         } else
           CImg<char>::string("p").move_to(ncommands_line);
         _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
