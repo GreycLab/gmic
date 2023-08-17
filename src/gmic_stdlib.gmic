@@ -1895,6 +1895,7 @@ _display : skip ${1=},${3=}
 
   # Initialize other viewer variables.
   thumb_x=
+  thumb_ind0,thumb_ind1=-1
   mouseover=-1
   selected=0
 
@@ -1943,16 +1944,17 @@ _display : skip ${1=},${3=}
 
         # Compute associated thumb label for each column.
         100%,1,1,1,-1 eval[thumb_coords] "copy(i[#-1,i0],y,i2 + (y<h-1?2:0),1,0)" => thumb_label
-
-        # Render thumbnail navigation bar.
         rmn thumb_view
       fi
 
       if !0$thumb_view
 
         # Make sure all visible thumbnails are rendered in 'thumb_base'.
-        indm,indM={thumb_label,[i[$thumb_x_px],(ind=i[$thumb_x_px+$window_width-1,1])>=0?ind:$nb_images-1]}
-        $0_render_thumbnails $indm,$indM,$normalization_mode,$alpha_mode
+        ind0,ind1={thumb_label,[i[$thumb_x_px],(ind=i[$thumb_x_px+$window_width-1,1])>=0?ind:$nb_images-1]}
+        if [$ind0,$ind1]!=[$thumb_ind0,$thumb_ind1]
+          $0_render_thumbnails $ind0,$ind1,$normalization_mode,$alpha_mode
+          thumb_ind0,thumb_ind1=$ind0,$ind1
+        fi
 
         # Decorate selected/mouse over thumbnail.
         +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1}
@@ -2679,8 +2681,8 @@ _display_normalize_infnan :
 # $3: Normalization mode.
 # $4: Alpha mode.
 _display_render_thumbnails :
-  ind,indM,normalization_mode,alpha_mode=${1-4}
-  for $ind<=$indM {
+  ind,ind_max,normalization_mode,alpha_mode=${1-4}
+  for $ind<=$ind_max {
     if {thumb_is_rendered,!i[$ind]}
       x0,y0,w,h={thumb_coords,I[$ind]}
       if {$ind,!w} # Empty image
@@ -2719,7 +2721,6 @@ _display_render_thumbnails :
     fi
     ind+=1
   }
-
 
 #@cli d0 : eq. to 'display0'.
 d0 :
