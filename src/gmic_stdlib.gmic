@@ -2098,8 +2098,7 @@ _display : skip ${1=},${3=}
         else
           +z[$selected] $ix0,$iy0,$plane,0,$ix1,$iy1,$plane,{$selected,$is_alpha?s-1:min(2,s-1)}
         fi
-
-        if $normalization_mode
+        if $normalization_mode # Normalize image
           if {is_infnan,i[$selected]<0} =[is_infnan] ${$0_is_infnan[$selected]},0,$selected fi
           if $normalization_mode==1 # Channel by channel normalization
             if {is_infnan,i[$selected]} l. { s c foreach { $0_normalize_infnan } a c }
@@ -2111,6 +2110,13 @@ _display : skip ${1=},${3=}
         else and. 255
         fi
         r. $dp,$dq
+
+        dx,dy,dl:=dx=$canvas_xy_width/$canvas_xy_dx;dy=$canvas_xy_height/$canvas_xy_dy;[dx,dy,max(dx,dy)]
+        if $canvas_is_grid" && "{$selected,w}" && "max($dx,$dy)>8 # Draw grid
+          opacity:=lerp(0,0.5,min(($dl-8)/10,1)^2)
+          $dix,1,1,1,1 r. $dp,1,1,1,4 eval. "i?polygon(#-2,2,x,0,x,$dq-1,$opacity,0)" rm.
+          1,$diy,1,1,1 r. 1,$dq,1,1,4 eval. "i?polygon(#-2,2,0,y,$dp-1,y,$opacity,0)" rm.
+        fi
 
         if $is_alpha
           to_rgba.
@@ -2124,35 +2130,6 @@ _display : skip ${1=},${3=}
           +j[canvas_checkerboard] .,$p0,$q0 rm..
         fi
         => canvas_base
-
-        # Draw pixel grid.
-        if $canvas_is_grid" && "{$selected,w}
-          dx,dy:=$canvas_xy_width/$canvas_xy_dx,$canvas_xy_height/$canvas_xy_dy
-          dl:=max($dx,$dy)
-          if $dl>8 # Draw pixel outline
-            opacity:=lerp(0,0.5,min(($dl-8)/10,1)^2)
-            $canvas_xy_width,1,1,1,">
-              begin(
-                pu = -1;
-                const Y0 = max(0,-$canvas_xy_y0/$canvas_xy_dy*$canvas_xy_height);
-                const Y1 = min($canvas_xy_height - 1,(h#$selected - $canvas_xy_y0)/$canvas_xy_dy*$canvas_xy_height);
-              );
-              u = round(lerp($canvas_xy_x0,$canvas_xy_x1,x/w),1,-1);
-              u!=pu && inrange(u,0,w#$selected)?(polygon(#$canvas_base,2,x,Y0,x,Y1,$opacity,0));
-              pu = u;
-            " rm.
-            1,$canvas_xy_height,1,1,">
-              begin(
-                pv = -1;
-                const X0 = max(0,-$canvas_xy_x0/$canvas_xy_dx*$canvas_xy_width);
-                const X1 = min($canvas_xy_width - 1,(w#$selected - $canvas_xy_x0)/$canvas_xy_dx*$canvas_xy_width);
-              );
-              v = round(lerp($canvas_xy_y0,$canvas_xy_y1,y/h),1,-1);
-              v!=pv && inrange(v,0,h#$selected)?(polygon(#$canvas_base,2,X0,y,X1,y,$opacity,0));
-              pv = v;
-            " rm.
-          fi
-        fi
 
         # Draw areas separator for volumetric images.
         if {$selected,d>1}
