@@ -2059,9 +2059,9 @@ _display : skip ${1=},${3=}
       if {$selected,!w} [canvas_checkerboard] => canvas_base
       else
         is_alpha={$selected,$alpha_mode" && "(s==2||s==4)}
-        canvas_x0,canvas_y0,canvas_z0,\
-        canvas_x1,canvas_y1,canvas_z1,\
-        canvas_dx,canvas_dy,canvas_dz={$selected,"
+        canvas_xy_x0,canvas_xy_y0,\
+        canvas_xy_x1,canvas_xy_y1,\
+        canvas_xy_dx,canvas_xy_dy={$selected,"
           const x = $canvas_center_x*w;
           const y = $canvas_center_y*h;
           const z = $canvas_center_z*d;
@@ -2069,24 +2069,24 @@ _display : skip ${1=},${3=}
           const hc = $canvas_height;
           const dc = $canvas_width_yz;
           const f = 0.5*max(w/wc,h/hc,d/dc)/$canvas_xy_zoom;
-          [ x - f*wc, y - f*hc, z - f*dc,
-            x + f*wc, y + f*hc, z + f*dc,
-            2*f*wc, 2*f*hc, 2*f*dc ]"}
+          [ x - f*wc, y - f*hc,
+            x + f*wc, y + f*hc,
+            2*f*wc, 2*f*hc ]"}
 
-        ix0,iy0,ix1,iy1:=round([$canvas_x0,$canvas_y0,$canvas_x1,$canvas_y1],1,-1) # Crop coordinates
+        ix0,iy0,ix1,iy1:=round([$canvas_xy_x0,$canvas_xy_y0,$canvas_xy_x1,$canvas_xy_y1],1,-1) # Crop coordinates
         ix0,ix1:=cut([$ix0,$ix1],0,w#$selected-1)
         iy0,iy1:=cut([$iy0,$iy1],0,h#$selected-1)
         dix,diy:=$ix1-$ix0+1,$iy1-$iy0+1 # Dimension of cropped image
 
-        p0:=round(($ix0-$canvas_x0)/$canvas_dx*$canvas_width,1,1)
-        q0:=round(($iy0-$canvas_y0)/$canvas_dy*$canvas_height,1,1)
-        p1:=round(($ix1+1-$canvas_x0)/$canvas_dx*$canvas_width,1,1)
-        q1:=round(($iy1+1-$canvas_y0)/$canvas_dy*$canvas_height,1,1)
+        p0:=round(($ix0-$canvas_xy_x0)/$canvas_xy_dx*$canvas_width,1,1)
+        q0:=round(($iy0-$canvas_xy_y0)/$canvas_xy_dy*$canvas_height,1,1)
+        p1:=round(($ix1+1-$canvas_xy_x0)/$canvas_xy_dx*$canvas_width,1,1)
+        q1:=round(($iy1+1-$canvas_xy_y0)/$canvas_xy_dy*$canvas_height,1,1)
         dp,dq:=max(2,$p1-$p0),max(2,$q1-$q0) # Dimension of resized image
 
         if $dix>=$dp" && "$diy>=$dq
           # When image is larger than portion displayed on canvas: downsize before crop.
-          fact:=max($canvas_width/$canvas_dx,$canvas_height/$canvas_dy)*100
+          fact:=max($canvas_width/$canvas_xy_dx,$canvas_height/$canvas_xy_dy)*100
           sh[$selected] 0,{$selected,$is_alpha?s-1:min(2,s-1)} +r. $fact%,$fact% rm..
           z. {[round([$ix0*w/w#$selected,$iy0*h/h#$selected],1,-1),\
                round([$ix1*w/w#$selected,$iy1*h/h#$selected],1,1)]}
@@ -2122,27 +2122,27 @@ _display : skip ${1=},${3=}
 
         # Draw pixel grid.
         if $canvas_is_grid" && "{$selected,w}
-          dx,dy:=$canvas_width/$canvas_dx,$canvas_height/$canvas_dy
+          dx,dy:=$canvas_width/$canvas_xy_dx,$canvas_height/$canvas_xy_dy
           dl:=max($dx,$dy)
           if $dl>8 # Draw pixel outline
             opacity:=lerp(0,0.5,min(($dl-8)/10,1)^2)
             $canvas_width,1,1,1,">
               begin(
                 pu = -1;
-                const Y0 = max(0,-$canvas_y0/$canvas_dy*$canvas_height);
-                const Y1 = min($canvas_height - 1,(h#$selected - $canvas_y0)/$canvas_dy*$canvas_height);
+                const Y0 = max(0,-$canvas_xy_y0/$canvas_xy_dy*$canvas_height);
+                const Y1 = min($canvas_height - 1,(h#$selected - $canvas_xy_y0)/$canvas_xy_dy*$canvas_height);
               );
-              u = round(lerp($canvas_x0,$canvas_x1,x/w),1,-1);
+              u = round(lerp($canvas_xy_x0,$canvas_xy_x1,x/w),1,-1);
               u!=pu && inrange(u,0,w#$selected)?(polygon(#$canvas_base,2,x,Y0,x,Y1,$opacity,0));
               pu = u;
             " rm.
             1,$canvas_height,1,1,">
               begin(
                 pv = -1;
-                const X0 = max(0,-$canvas_x0/$canvas_dx*$canvas_width);
-                const X1 = min($canvas_width - 1,(w#$selected - $canvas_x0)/$canvas_dx*$canvas_width);
+                const X0 = max(0,-$canvas_xy_x0/$canvas_xy_dx*$canvas_width);
+                const X1 = min($canvas_width - 1,(w#$selected - $canvas_xy_x0)/$canvas_xy_dx*$canvas_width);
               );
-              v = round(lerp($canvas_y0,$canvas_y1,y/h),1,-1);
+              v = round(lerp($canvas_xy_y0,$canvas_xy_y1,y/h),1,-1);
               v!=pv && inrange(v,0,h#$selected)?(polygon(#$canvas_base,2,X0,y,X1,y,$opacity,0));
               pv = v;
             " rm.
@@ -2179,8 +2179,8 @@ _display : skip ${1=},${3=}
         label="Box ( "$x0","$y0" ) - ( "$x1","$y1" ), Size = ( "{$dx+1}","{$dy+1}" )"\n\
               "Length = "{_norm($dx,$dy)}", Angle = "$angle"\260"
       else
-        x,y:=round(lerp($canvas_x0,$canvas_x1,$canvas_mouse_x/$canvas_width),1,-1),\
-             round(lerp($canvas_y0,$canvas_y1,$canvas_mouse_y/$canvas_height),1,-1)
+        x,y:=round(lerp($canvas_xy_x0,$canvas_xy_x1,$canvas_mouse_x/$canvas_width),1,-1),\
+             round(lerp($canvas_xy_y0,$canvas_xy_y1,$canvas_mouse_y/$canvas_height),1,-1)
         if {$selected,inrange($x,0,w,1,0)" && "inrange($y,0,h,1,0)}
           s_value={`"val = I(#$selected,$x,$y);
                      size(val)<=6?v2s(val,-1):(
@@ -2241,8 +2241,8 @@ _display : skip ${1=},${3=}
         # Draw cursor.
         cx,cy=$canvas_mouse_x,$canvas_mouse_y
         if $cy<0" || "\
-           !inrange(lerp($canvas_x0,$canvas_x1,$cx/$canvas_width),0,w#$selected,1,0)" || "\
-           !inrange(lerp($canvas_y0,$canvas_y1,$cy/$canvas_height),0,h#$selected,1,0)
+           !inrange(lerp($canvas_xy_x0,$canvas_xy_x1,$cx/$canvas_width),0,w#$selected,1,0)" || "\
+           !inrange(lerp($canvas_xy_y0,$canvas_xy_y1,$cy/$canvas_height),0,h#$selected,1,0)
           cx,cy=-1
         fi
         if $cx>=0
@@ -2252,14 +2252,14 @@ _display : skip ${1=},${3=}
           line[canvas_view] 0,$cy,100%,$cy,0.65,0xFF00FF00,255
           line[canvas_view] 0,$cy,100%,$cy,0.65,0x00FF00FF,0
 
-          dx,dy:=$canvas_width/$canvas_dx,$canvas_height/$canvas_dy
+          dx,dy:=$canvas_width/$canvas_xy_dx,$canvas_height/$canvas_xy_dy
           dl:=max($dx,$dy)
           if $dl>8 # Draw pixel outline
             opacity:=lerp(0,1,min(($dl-8)/10,1))
-            icx,icy:=round(lerp($canvas_x0,$canvas_x1,$cx/$canvas_width),1,-1),\
-                     round(lerp($canvas_y0,$canvas_y1,$cy/$canvas_height),1,-1)
-            ccx,ccy:=($icx-$canvas_x0)/$canvas_dx*$canvas_width,\
-                     ($icy-$canvas_y0)/$canvas_dy*$canvas_height
+            icx,icy:=round(lerp($canvas_xy_x0,$canvas_xy_x1,$cx/$canvas_width),1,-1),\
+                     round(lerp($canvas_xy_y0,$canvas_xy_y1,$cy/$canvas_height),1,-1)
+            ccx,ccy:=($icx-$canvas_xy_x0)/$canvas_xy_dx*$canvas_width,\
+                     ($icy-$canvas_xy_y0)/$canvas_xy_dy*$canvas_height
             nccx,nccy:=$ccx+$dx,$ccy+$dy
             ccx,ccy,nccx,nccy:=round([$ccx,$ccy],1,1),round([$nccx,$nccy],1,1)-1
             if $canvas_is_grid ccx+=1 ccy+=1 fi
@@ -2272,20 +2272,20 @@ _display : skip ${1=},${3=}
 
         # Draw crop rectangle.
         if narg($canvas_crop_x0)
-          x0:=($canvas_crop_x0-$canvas_x0)/$canvas_dx*$canvas_width
-          y0:=($canvas_crop_y0-$canvas_y0)/$canvas_dy*$canvas_height
-          x1:=($canvas_crop_x1-$canvas_x0)/$canvas_dx*$canvas_width
-          y1:=($canvas_crop_y1-$canvas_y0)/$canvas_dy*$canvas_height
+          x0:=($canvas_crop_x0-$canvas_xy_x0)/$canvas_xy_dx*$canvas_width
+          y0:=($canvas_crop_y0-$canvas_xy_y0)/$canvas_xy_dy*$canvas_height
+          x1:=($canvas_crop_x1-$canvas_xy_x0)/$canvas_xy_dx*$canvas_width
+          y1:=($canvas_crop_y1-$canvas_xy_y0)/$canvas_xy_dy*$canvas_height
           if $x0>$x1 x0,x1=$x1,$x0 fi
           if $y0>$y1 y0,y1=$y1,$y0 fi
           x0,y0,x1,y1:=round([$x0,$y0,$x1,$y1],1,1)
-          x1+=$canvas_width/$canvas_dx-1
-          y1+=$canvas_height/$canvas_dy-1
+          x1+=$canvas_width/$canvas_xy_dx-1
+          y1+=$canvas_height/$canvas_xy_dy-1
           if $is_canvas_is_grid x0+=1 x1+=1 fi
           rectangle[canvas_view] $x0,$y0,$x1,$y1,0.25,0
           rectangle[canvas_view] $x0,$y0,$x1,$y1,0.75,0x33333333,0
           rectangle[canvas_view] $x0,$y0,$x1,$y1,0.75,0xCCCCCCCC,255
-          dx,dy:=0.5*[$canvas_width,$canvas_height]/[$canvas_dx,$canvas_dy]
+          dx,dy:=0.5*[$canvas_width,$canvas_height]/[$canvas_xy_dx,$canvas_xy_dy]
           x0,y0,x1,y1+=$dx,$dy,-$dx+1,-$dy+1
           line[canvas_view] $x0,$y0,$x1,$y1,0.75,0xF0F0F0F0,0
           line[canvas_view] $x0,$y0,$x1,$y1,0.75,0x0F0F0F0F,255
@@ -2420,8 +2420,8 @@ _display : skip ${1=},${3=}
         but:=2*$>
         if !$but" && "$is_CTRL continue fi
         if isin($event_type0,0,1)" && "${is_drag$but}==2" && "${is_clicked$but}==2 # Pan starts
-          canvas_center_x-=(${drag_end_x$but}-${drag_start_x$but})/$canvas_width*$canvas_dx/w#$selected
-          canvas_center_y-=(${drag_end_y$but}-${drag_start_y$but})/$canvas_height*$canvas_dy/h#$selected
+          canvas_center_x-=(${drag_end_x$but}-${drag_start_x$but})/$canvas_width*$canvas_xy_dx/w#$selected
+          canvas_center_y-=(${drag_end_y$but}-${drag_start_y$but})/$canvas_height*$canvas_xy_dy/h#$selected
           canvas_center_x,canvas_center_y:=cut([$canvas_center_x,$canvas_center_y],0,1)
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           rmn canvas_base
@@ -2438,8 +2438,8 @@ _display : skip ${1=},${3=}
         fi
         if isin($event_type0,0,2)" && "$is_drag0==2" && "$is_clicked0==2 # Crop starts
           if !narg($canvas_crop_x0) x,y=$drag_start_x0,$drag_start_y0 else x,y=$drag_end_x0,$drag_end_y0 fi
-          cx,cy={$selected,[cut(round(lerp($canvas_x0,$canvas_x1,$x/$canvas_width),1,-1),0,w-1),\
-                            cut(round(lerp($canvas_y0,$canvas_y1,($y-$thumb_height2)/$canvas_height),1,-1),0,h-1)]}
+          cx,cy={$selected,[cut(round(lerp($canvas_xy_x0,$canvas_xy_x1,$x/$canvas_width),1,-1),0,w-1),\
+                           cut(round(lerp($canvas_xy_y0,$canvas_xy_y1,($y-$thumb_height2)/$canvas_height),1,-1),0,h-1)]}
           if !narg($canvas_crop_x0)
             canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=$cx,$cy,$cx,$cy
             rmn canvas_view
@@ -2504,8 +2504,8 @@ _display : skip ${1=},${3=}
         if !narg($canvas_zoom_x) canvas_zoom_x,canvas_zoom_y=$canvas_mouse_x,$canvas_mouse_y fi
         n_canvas_xy_zoom:=cut($canvas_xy_zoom*(1+$amount),0.5,$canvas_xy_zoom_max)
         if $n_canvas_xy_zoom!=$canvas_xy_zoom
-          xc:=lerp($canvas_x0,$canvas_x1,$canvas_zoom_x/$canvas_width)
-          yc:=lerp($canvas_y0,$canvas_y1,$canvas_zoom_y/$canvas_height)
+          xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$canvas_zoom_x/$canvas_width)
+          yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$canvas_zoom_y/$canvas_height)
           ratio:=$canvas_xy_zoom/$n_canvas_xy_zoom
           canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
           canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
@@ -2524,8 +2524,8 @@ _display : skip ${1=},${3=}
           amount:={*,PADADD}?0.25:{*,PADSUB}?-0.25:{*,-o}/10
           n_canvas_xy_zoom:=cut($canvas_xy_zoom*(1+$amount),0.5,$canvas_xy_zoom_max)
           if $n_canvas_xy_zoom!=$canvas_xy_zoom
-            xc:=lerp($canvas_x0,$canvas_x1,$canvas_mouse_x/$canvas_width)
-            yc:=lerp($canvas_y0,$canvas_y1,$canvas_mouse_y/$canvas_height)
+            xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$canvas_mouse_x/$canvas_width)
+            yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$canvas_mouse_y/$canvas_height)
             ratio:=$canvas_xy_zoom/$n_canvas_xy_zoom
             canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
             canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
@@ -2551,7 +2551,7 @@ _display : skip ${1=},${3=}
             canvas_center_x,canvas_center_y:=w#$selected==1?0.5:1,h#$selected==1?0.5:1
             rmn canvas_base
           elif {*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "{*,PAGEUP}" || "{*,PAGEDOWN}
-            step:=($canvas_dx+$canvas_dy)/20
+            step:=($canvas_xy_dx+$canvas_xy_dy)/20
             canvas_center_x:=step=$step/w#$selected;\
                             cut($canvas_center_x+({*,ARROWLEFT}?-step:{*,ARROWRIGHT}?step:0),0,1)
             canvas_center_y:=step=$step/h#$selected;\
