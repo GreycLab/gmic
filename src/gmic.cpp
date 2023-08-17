@@ -3066,40 +3066,6 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
   return items;
 }
 
-// Print log message.
-//-------------------
-gmic& gmic::print(const char *format, ...) {
-  if (verbosity<1 && !is_debug) return *this;
-  CImg<char> message;
-
-  if (format) {
-    va_list ap;
-    va_start(ap,format);
-    message.assign(16384);
-    message[message.width() - 2] = 0;
-    cimg_vsnprintf(message,message.width(),format,ap);
-    strreplace_fw(message);
-    if (message[message.width() - 2]) cimg::strellipsize(message,message.width() - 2);
-    va_end(ap);
-  } else message.assign(1,1,1,1,0);
-
-  // Display message.
-  cimg::mutex(29);
-  unsigned int &nb_carriages = cimg::output()==stdout?nb_carriages_stdout:nb_carriages_default;
-  const bool is_cr = *message=='\r';
-  if (is_cr) std::fputc('\r',cimg::output());
-  else for (unsigned int i = 0; i<nb_carriages; ++i) std::fputc('\n',cimg::output());
-  nb_carriages = 1;
-  std::fprintf(cimg::output(),
-               "%s%s%s",
-               format?"[gmic] ":"",
-               format?callstack2string().data():"",
-               message.data() + (is_cr?1:0));
-  std::fflush(cimg::output());
-  cimg::mutex(29,0);
-  return *this;
-}
-
 // Print error message, and quit interpreter.
 //-------------------------------------------
 gmic& gmic::error(const bool output_header, const char *const format, ...) {
@@ -3834,14 +3800,21 @@ CImg<char>& gmic::selection2string(const CImg<unsigned int>& selection,
 template<typename T>
 gmic& gmic::print(const CImgList<T>& list, const CImg<unsigned int> *const callstack_selection,
                   const char *format, ...) {
-  if (verbosity<1 && !is_debug) return *this;
+  if ((verbosity<1 && !is_debug) || !format) return *this;
+  CImg<char> message;
+  unsigned int siz = 16384;
   va_list ap;
-  va_start(ap,format);
-  CImg<char> message(16384);
-  message[message.width() - 2] = 0;
-  cimg_vsnprintf(message,message.width(),format,ap);
+  do {
+    va_start(ap,format);
+    message.assign(siz);
+    message[message.width() - 2] = 0;
+    cimg_vsnprintf(message,message.width(),format,ap);
+    if (message[message.width() - 2]) { // Buffer too short for the string: try with a larger buffer.
+      siz*=2;
+      if (siz>=1048576) { cimg::strellipsize(message,message.width() - 2); break; }
+    } else break;
+  } while (true);
   strreplace_fw(message);
-  if (message[message.width() - 2]) cimg::strellipsize(message,message.width() - 2);
   va_end(ap);
 
   // Display message.
