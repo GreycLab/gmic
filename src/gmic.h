@@ -423,7 +423,6 @@ struct gmic {
   void _gmic_substitute_args(const char *const argument, const char *const argument0, const char *const command,
                              const char *const item, const gmic_list<T>& images);
 
-  gmic& print(const char *format, ...);
   gmic& error(const bool output_header, const char *format, ...);
   gmic& debug(const char *format, ...);
 
