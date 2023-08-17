@@ -455,13 +455,6 @@ struct gmic {
   gmic& debug(const gmic_list<T>& list, const char *format, ...);
 
   template<typename T>
-  gmic& print_images(const gmic_list<T>& images, const gmic_list<char>& images_names,
-                     const gmic_image<unsigned int>& selection, const bool is_header=true);
-  template<typename T>
-  gmic& display_images(const gmic_list<T>& images, const gmic_list<char>& images_names,
-                       const gmic_image<unsigned int>& selection, unsigned int *const XYZ,
-                       const bool exit_on_anykey);
-  template<typename T>
   gmic& display_plots(gmic_list<T>& images, gmic_list<char>& images_names,
                       const unsigned int *const variables_sizes,
                       const gmic_image<unsigned int>& selection, const unsigned int plot_type,
