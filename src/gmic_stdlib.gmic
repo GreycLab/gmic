@@ -1949,10 +1949,48 @@ _display : skip ${1=},${3=}
 
       if !0$thumb_view
 
-        # Make sure all visible thumbnails are rendered in 'thumb_base'.
+        # Render visible thumbnails in 'thumb_base'.
         ind0,ind1={thumb_label,[i[$thumb_x_px],(ind=i[$thumb_x_px+$window_width-1,1])>=0?ind:$nb_images-1]}
         if [$ind0,$ind1]!=[$thumb_ind0,$thumb_ind1]
-          $0_render_thumbnails $ind0,$ind1,$normalization_mode,$alpha_mode
+          for $ind0<=$ind1 {
+            if {thumb_is_rendered,!i[$ind0]}
+              x0,y0,w,h={thumb_coords,I[$ind0]}
+              if {$ind0,!w} # Empty image
+                font_size={thumb_base,cut(h/8,16,32)
+                $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
+              else
+                [$ind0]
+                is_alpha:=$alpha_mode" && "(s==2||s==4)
+                if !$is_alpha" && "s>3 channels. 0,2 fi
+                if d>1 volumetric2d. 50%,50%,50%,2 fi
+                if w>$w" || "h>$h r. $w,$h fi
+                if $normalization_mode
+                  if {is_infnan,i[$ind0]<0} =[is_infnan] ${_display_is_infnan[$ind0]},0,$ind0 fi
+                  if $normalization_mode==1 # Channel by channel normalization
+                    if {is_infnan,i[$ind0]} l. { s c foreach { $0_normalize_infnan } a c }
+                    else l. { s c foreach { n 0,255 } a c }
+                    fi
+                  else # Global normalization
+                    if {is_infnan,i[$ind0]} $0_normalize_infnan. else n. 0,255 fi
+                  fi
+                else and. 255
+                fi
+                r. $w,$h
+                if $is_alpha
+                  to_rgba.
+                  if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
+                  else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
+                  fi
+                  ja. .. rm..
+                elif s==1 r. 100%,100%,1,3
+                elif s==2 r. 100%,100%,1,3,0
+                fi
+              fi
+              j[thumb_base] .,$x0,$y0 rm.
+              =[thumb_is_rendered] 1,0,$ind0
+            fi
+            ind0+=1
+          }
           thumb_ind0,thumb_ind1=$ind0,$ind1
         fi
 
@@ -2674,53 +2712,6 @@ _display_normalize_infnan :
     const nfact = 255/(ndelta>0?ndelta:1);
     val = i;
     isinf(val)?(val<0?0:255):isnan(val)?0:(val - nmin)*nfact"
-
-# Render set of thumbnails in thumb_base image.
-# $1: Min index of thumbnail to render.
-# $2: Max index of thumbnail to render.
-# $3: Normalization mode.
-# $4: Alpha mode.
-_display_render_thumbnails :
-  ind,ind_max,normalization_mode,alpha_mode=${1-4}
-  for $ind<=$ind_max {
-    if {thumb_is_rendered,!i[$ind]}
-      x0,y0,w,h={thumb_coords,I[$ind]}
-      if {$ind,!w} # Empty image
-        font_size={thumb_base,cut(h/8,16,32)
-        $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
-      else
-        [$ind]
-        is_alpha:=$alpha_mode" && "(s==2||s==4)
-        if !$is_alpha" && "s>3 channels. 0,2 fi
-        if d>1 volumetric2d. 50%,50%,50%,2 fi
-        if w>$w" || "h>$h r. $w,$h fi
-        if $normalization_mode
-          if {is_infnan,i[$ind]<0} =[is_infnan] ${_display_is_infnan[$ind]},0,$ind fi
-          if $normalization_mode==1 # Channel by channel normalization
-            if {is_infnan,i[$ind]} l. { s c foreach { $0_normalize_infnan } a c }
-            else l. { s c foreach { n 0,255 } a c }
-            fi
-          else # Global normalization
-            if {is_infnan,i[$ind]} $0_normalize_infnan. else n. 0,255 fi
-          fi
-        else and. 255
-        fi
-        r. $w,$h
-        if $is_alpha
-          to_rgba.
-          if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-          else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
-          fi
-          ja. .. rm..
-        elif s==1 r. 100%,100%,1,3
-        elif s==2 r. 100%,100%,1,3,0
-        fi
-      fi
-      j[thumb_base] .,$x0,$y0 rm.
-      =[thumb_is_rendered] 1,0,$ind
-    fi
-    ind+=1
-  }
 
 #@cli d0 : eq. to 'display0'.
 d0 :
