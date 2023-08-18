@@ -2391,12 +2391,16 @@ _display : skip ${1=},${3=}
 
     if $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$canvas_xy_width,$canvas_xy_height,$canvas_xy_dx,$canvas_xy_dy
+      area_mouse_x,area_mouse_y=$canvas_mouse_x,$canvas_mouse_y
     elif $mouse_area==3 # XZ
       area_width,area_height,area_dx,area_dy=$canvas_xz_width,$canvas_xz_height,$canvas_xz_dx,$canvas_xz_dz
+      area_mouse_x,area_mouse_y=$canvas_xy_mouse_x,{$canvas_mouse_y-$canvas_xy_height-2}
     elif $mouse_area==4 # ZY
       area_width,area_height,area_dx,area_dy=$canvas_zy_width,$canvas_zy_height,$canvas_zy_dz,$canvas_zy_dy
+      area_mouse_x,area_mouse_y={$canvas_mouse_x-$canvas_xy_width-2},$canvas_mouse_y
     else
       area_width,area_height,area_dx,area_dy=0
+      area_mouse_x,area_mouse_y=-1
     fi
 
     is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
@@ -2500,8 +2504,9 @@ _display : skip ${1=},${3=}
         but:=2*$>
         if !$but" && "$is_CTRL continue fi
         if isin($event_type0,0,1)" && "${is_drag$but}>=2" && "${is_clicked$but}>=2 # Pan starts
-          canvas_center_x-=(${drag_end_x$but}-${drag_start_x$but})/$area_width*$area_dx/w#$selected
-          canvas_center_y-=(${drag_end_y$but}-${drag_start_y$but})/$area_height*$area_dy/h#$selected
+          drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
+          canvas_center_x-=$drag_dx/$area_width*$area_dx/w#$selected
+          canvas_center_y-=$drag_dy/$area_height*$area_dy/h#$selected
           canvas_center_x,canvas_center_y:=cut([$canvas_center_x,$canvas_center_y],0,1)
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           rmn canvas_base
