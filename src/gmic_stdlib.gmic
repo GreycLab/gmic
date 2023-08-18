@@ -2383,11 +2383,12 @@ _display : skip ${1=},${3=}
       const y = $mouse_y;
       const ht = $thumb_height;
       const ht2 = ht + 2;
-      x<0?[0,-1,-1]:
-      y<ht?[1,-1,-1]:
-      x<$canvas_xy_width && y<ht2 + $canvas_xy_height?[2,x,y - ht2]:
-      x<$canvas_xy_width?[3,x,y - ht2 - $canvas_xy_height]:
-      y<ht2 + $canvas_xy_height?[4,x - $canvas_xy_width,y - ht2]:[0,-1,-1]"
+      x<0?[0,-1,-1]: # Mouse area = 0: cursor outside window
+      y<ht?[1,-1,-1]: # Mouse area = 1: cursor over thumbnail navigation bar
+      x<$canvas_xy_width && y<ht2 + $canvas_xy_height?[2,x,y - ht2]: # Mouse area = 2: cursor over XY-view
+      x<$canvas_xy_width?[3,x,y - ht2 - $canvas_xy_height]: # Mouse area = 3: cursor over XZ-view
+      y<ht2 + $canvas_xy_height?[4,x - $canvas_xy_width,y - ht2]: # Mouse area = 4: cursor over ZY-view
+      [0,-1,-1]"
 
     if $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$canvas_xy_width,$canvas_xy_height,$canvas_xy_dx,$canvas_xy_dy
@@ -2398,9 +2399,6 @@ _display : skip ${1=},${3=}
     elif $mouse_area==4 # ZY
       area_width,area_height,area_dx,area_dy=$canvas_zy_width,$canvas_zy_height,$canvas_zy_dz,$canvas_zy_dy
       area_mouse_x,area_mouse_y={$canvas_mouse_x-$canvas_xy_width-2},$canvas_mouse_y
-    else
-      area_width,area_height,area_dx,area_dy=0
-      area_mouse_x,area_mouse_y=-1
     fi
 
     is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
