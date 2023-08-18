@@ -2122,21 +2122,20 @@ _display : skip ${1=},${3=}
           q1:=round(($iy1+1-$can_y0)/$can_dy*$can_height,1,1)
           dp,dq:=max(2,$p1-$p0),max(2,$q1-$q0) # Dimension of resized image
 
-          if $dix>=$dp" && "$diy>=$dq # When image is larger than portion displayed on canvas: downsize before crop
+          if !$is_volumetric" && "$dix>=$dp" && "$diy>=$dq # When image is larger than portion displayed on canvas: downsize before crop
+            sh[$selected] 0,{$selected,$is_alpha?s-1:min(2,s-1)}
             fact:=max($can_width/$can_dx,$can_height/$can_dy)*100
-            sh[$selected] 0,{$selected,$is_alpha?s-1:min(2,s-1)} +r. $fact%,$fact% rm..
             if !$> # XY-view
-              z. {round($ix0*w/$w_sel,1,-1)},{round($iy0*h/$h_sel,1,-1)},$plane,\
-                 {round($ix1*w/$w_sel,1,1)},{round($iy1*h/$h_sel,1,1)},$plane
+              if $is_volumetric +slices. $plane fi
             elif $>==1 # XZ-view
-              z. {round($ix0*w/$w_sel,1,-1)},$plane,{round($iy0*h/$h_sel,1,-1)},\
-                 {round($ix1*w/$w_sel,1,1)},$plane,{round($iy1*h/$h_sel,1,1)}
-              permute. xzyc
+              +rows. $plane permute. xzyc
             else # ZY-view
-              z. $plane,{round($iy0*h/$h_sel,1,-1)},{round($ix0*w/$w_sel,1,-1)},\
-                 $plane,{round($iy1*h/$h_sel,1,1)},{round($ix1*w/$w_sel,1,1)}
-              permute. zyxc
+              +columns. $plane permute. zyxc
             fi
+            if $is_volumetric r. $fact%,$fact% else +r. $fact%,$fact% fi
+            rm..
+            z. {round($ix0*w/$w_sel,1,-1)},{round($iy0*h/$h_sel,1,-1)},\
+               {round($ix1*w/$w_sel,1,1)},{round($iy1*h/$h_sel,1,1)}
           else
             if !$> # XY-view
               +z[$selected] $ix0,$iy0,$plane,0,$ix1,$iy1,$plane,{$selected,$is_alpha?s-1:min(2,s-1)}
