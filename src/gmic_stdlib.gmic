@@ -2041,8 +2041,9 @@ _display : skip ${1=},${3=}
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
       if $is_volumetric
         canvas_xy_width,canvas_xy_height,canvas_xz_width,canvas_xz_height,canvas_zy_width,canvas_zy_height:="
-          w_xy = round($canvas_width/2) - 1;
-          h_xy = round($canvas_height/2) - 1;
+          w_xy = round(0.5*$canvas_width) - 1;
+          h_xy = round(0.5*$canvas_height) - 1;
+
           w_zy = $canvas_width - w_xy - 1;
           h_xz = $canvas_height - h_xy - 1;
           [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy ]"
@@ -2512,7 +2513,7 @@ _display : skip ${1=},${3=}
             canvas_center_z-=$drag_dx/$area_width*$area_dx/d#$selected
             canvas_center_y-=$drag_dy/$area_height*$area_dy/h#$selected
           fi
-          canvas_center_x,canvas_center_y,canvas_center_z:=cut([$canvas_center_x,$canvas_center_y,$canvas_center_z],0,1)
+          canvas_center_x,canvas_center_y,canvas_center_z:=cut([$canvas_center_x,$canvas_center_y,$canvas_center_z],0,0.99)
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           rmn canvas_base
           event_type0=1
@@ -2548,7 +2549,7 @@ _display : skip ${1=},${3=}
           elif $canvas_mouse_y>=$canvas_height-64
             ncanvas_center_y+={$selected,lerp(128,8,($canvas_height-$canvas_mouse_y)/64)/$canvas_zoom/h}
           fi
-          ncanvas_center_x,ncanvas_center_y:=cut([$ncanvas_center_x,$ncanvas_center_y],0,1)
+          ncanvas_center_x,ncanvas_center_y:=cut([$ncanvas_center_x,$ncanvas_center_y],0,0.99)
           if [$ncanvas_center_x,$ncanvas_center_y]!=[$canvas_center_x,$canvas_center_y]
             canvas_center_x,canvas_center_y=$ncanvas_center_x,$ncanvas_center_y
             is_scroll=1
@@ -2565,8 +2566,8 @@ _display : skip ${1=},${3=}
               const wc = $canvas_width;
               const hc = $canvas_height;
               const f = 0.5*max(w/wc,h/hc);
-              [ cut(0.5*($canvas_crop_x0 + $canvas_crop_x1)/w,0,1),
-                cut(0.5*($canvas_crop_y0 + $canvas_crop_y1)/h,0,1),
+              [ cut(0.5*($canvas_crop_x0 + $canvas_crop_x1)/w,0,0.99),
+                cut(0.5*($canvas_crop_y0 + $canvas_crop_y1)/h,0,0.99),
                 2*f*min(wc/max(8,$canvas_crop_x1 - $canvas_crop_x0),
                         hc/max(8,$canvas_crop_y1 - $canvas_crop_y0)) ]"}
             rmn canvas_base
@@ -2597,18 +2598,18 @@ _display : skip ${1=},${3=}
           if $is_drag1==2
             xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$zoom_focus_x/$area_width)
             yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$zoom_focus_y/$area_height)
-            canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
-            canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
+            canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,0.99)
+            canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,0.99)
           elif $is_drag1==3
             xc:=lerp($canvas_xz_x0,$canvas_xz_x1,$zoom_focus_x/$area_width)
             zc:=lerp($canvas_xz_z0,$canvas_xz_z1,$zoom_focus_y/$area_height)
-            canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
-            canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
+            canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,0.99)
+            canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,0.99)
           elif $is_drag1==4
             zc:=lerp($canvas_zy_z0,$canvas_zy_z1,$zoom_focus_x/$area_width)
             yc:=lerp($canvas_zy_y0,$canvas_zy_y1,$zoom_focus_y/$area_height)
-            canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
-            canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
+            canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,0.99)
+            canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,0.99)
           fi
           canvas_zoom=$n_canvas_zoom
           rmn canvas_base
@@ -2629,18 +2630,18 @@ _display : skip ${1=},${3=}
             if $mouse_area==2
               xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$area_mouse_x/$area_width)
               yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$area_mouse_y/$area_height)
-              canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
-              canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
+              canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,0.99)
+              canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,0.99)
             elif $mouse_area==3
               xc:=lerp($canvas_xz_x0,$canvas_xz_x1,$area_mouse_x/$area_width)
               zc:=lerp($canvas_xz_z0,$canvas_xz_z1,$area_mouse_y/$area_height)
-              canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
-              canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
+              canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,0.99)
+              canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,0.99)
             elif $mouse_area==4
               zc:=lerp($canvas_zy_z0,$canvas_zy_z1,$area_mouse_x/$area_width)
               yc:=lerp($canvas_zy_y0,$canvas_zy_y1,$area_mouse_y/$area_height)
-              canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
-              canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
+              canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,0.99)
+              canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,0.99)
             fi
             canvas_zoom=$n_canvas_zoom
             rmn canvas_base
@@ -2666,10 +2667,10 @@ _display : skip ${1=},${3=}
           elif {*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "{*,PAGEUP}" || "{*,PAGEDOWN}
             step:=($canvas_xy_dx+$canvas_xy_dy)/20
             canvas_center_x:=step=$step/w#$selected;\
-                            cut($canvas_center_x+({*,ARROWLEFT}?-step:{*,ARROWRIGHT}?step:0),0,1)
+                            cut($canvas_center_x+({*,ARROWLEFT}?-step:{*,ARROWRIGHT}?step:0),0,0.99)
             canvas_center_y:=step=$step/h#$selected;\
                             cut($canvas_center_y+({*,ARROWUP}?-step:{*,ARROWDOWN}?step:\
-                                                 {*,PAGEUP}?-4*step:{*,PAGEDOWN}?4*step:0),0,1)
+                                                 {*,PAGEUP}?-4*step:{*,PAGEDOWN}?4*step:0),0,0.99)
             rmn canvas_base
           fi
         fi
