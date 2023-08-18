@@ -1900,7 +1900,7 @@ _display : skip ${1=},${3=}
   selected=0
 
   canvas_center_x,canvas_center_y,canvas_center_z=0.5,0.5,0.5
-  canvas_xy_zoom,canvas_xz_zoom,canvas_zy_zoom=1,1,1
+  canvas_zoom=1
   canvas_label_alignment=0
   canvas_is_grid=1
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
@@ -2072,15 +2072,15 @@ _display : skip ${1=},${3=}
 
           const w_xy = $canvas_xy_width;
           const h_xy = $canvas_xy_height;
-          const f_xy = 0.5*max(w/w_xy,h/h_xy)/$canvas_xy_zoom;
+          const f_xy = 0.5*max(w/w_xy,h/h_xy)/$canvas_zoom;
 
           const w_xz = $canvas_xz_width;
           const h_xz = $canvas_xz_height;
-          const f_xz = 0.5*max(w/w_xz,h/h_xz)/$canvas_xz_zoom;
+          const f_xz = 0.5*max(w/w_xz,h/h_xz)/$canvas_zoom;
 
           const w_zy = $canvas_zy_width;
           const h_zy = $canvas_zy_height;
-          const f_zy = 0.5*max(w/w_zy,h/h_zy)/$canvas_zy_zoom;
+          const f_zy = 0.5*max(w/w_zy,h/h_zy)/$canvas_zoom;
 
           [ x - f_xy*w_xy, y - f_xy*h_xy, x + f_xy*w_xy, y + f_xy*h_xy,  2*f_xy*w_xy, 2*f_xy*h_xy,
             x - f_xz*w_xz, z - f_xz*h_xz, x + f_xz*w_xz, z + f_xz*h_xz,  2*f_xz*w_xz, 2*f_xz*h_xz,
@@ -2487,7 +2487,7 @@ _display : skip ${1=},${3=}
         fi
         if {$selected,w}" && "{$previous_selected,w}" && "\
            [{$selected,[w,h,d]}]!=[{$previous_selected,[w,h,d]}] # Keep canvas coords if same resolution
-          canvas_center_x,canvas_center_y,canvas_xy_zoom=0.5,0.5,1
+          canvas_center_x,canvas_center_y,canvas_zoom=0.5,0.5,1
         fi
       fi
     fi
@@ -2522,7 +2522,7 @@ _display : skip ${1=},${3=}
       }
 
       # Manage image crop, using CTRL+left mouse button (drag).
-      if $is_CTRL" && "$mouse_x>=0
+      if !$is_volumetric" && "$is_CTRL" && "$mouse_x>=0
         if !$is_drag0" && "$is_clicked0==2" && "[$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]
           is_drag0=2 # Avoid drag latency
         fi
@@ -2539,14 +2539,14 @@ _display : skip ${1=},${3=}
           fi
           ncanvas_center_x,ncanvas_center_y=$canvas_center_x,$canvas_center_y
           if $canvas_mouse_x<64
-            ncanvas_center_x-={$selected,lerp(128,8,$canvas_mouse_x/64)/$canvas_xy_zoom/w}
+            ncanvas_center_x-={$selected,lerp(128,8,$canvas_mouse_x/64)/$canvas_zoom/w}
           elif $canvas_mouse_x>=$canvas_width-64
-            ncanvas_center_x+={$selected,lerp(128,8,($canvas_width-$canvas_mouse_x)/64)/$canvas_xy_zoom/w}
+            ncanvas_center_x+={$selected,lerp(128,8,($canvas_width-$canvas_mouse_x)/64)/$canvas_zoom/w}
           fi
           if $canvas_mouse_y<64
-            ncanvas_center_y-={$selected,lerp(128,8,$canvas_mouse_y/64)/$canvas_xy_zoom/h}
+            ncanvas_center_y-={$selected,lerp(128,8,$canvas_mouse_y/64)/$canvas_zoom/h}
           elif $canvas_mouse_y>=$canvas_height-64
-            ncanvas_center_y+={$selected,lerp(128,8,($canvas_height-$canvas_mouse_y)/64)/$canvas_xy_zoom/h}
+            ncanvas_center_y+={$selected,lerp(128,8,($canvas_height-$canvas_mouse_y)/64)/$canvas_zoom/h}
           fi
           ncanvas_center_x,ncanvas_center_y:=cut([$ncanvas_center_x,$ncanvas_center_y],0,1)
           if [$ncanvas_center_x,$ncanvas_center_y]!=[$canvas_center_x,$canvas_center_y]
@@ -2561,7 +2561,7 @@ _display : skip ${1=},${3=}
           if $canvas_crop_x0>$canvas_crop_x1 canvas_crop_x0,canvas_crop_x1=$canvas_crop_x1,$canvas_crop_x0 fi
           if $canvas_crop_y0>$canvas_crop_y1 canvas_crop_y0,canvas_crop_y1=$canvas_crop_y1,$canvas_crop_y0 fi
           if max($canvas_crop_x1-$canvas_crop_x0,$canvas_crop_y1-$canvas_crop_y0)>8
-            canvas_center_x,canvas_center_y,canvas_xy_zoom={$selected,"
+            canvas_center_x,canvas_center_y,canvas_zoom={$selected,"
               const wc = $canvas_width;
               const hc = $canvas_height;
               const f = 0.5*max(w/wc,h/hc);
@@ -2583,8 +2583,8 @@ _display : skip ${1=},${3=}
       fi
 
       # Manage image zoom, using right mouse button (drag).
-      canvas_xy_zoom_max={$selected,max(w/$canvas_width,h/$canvas_height)*\
-                                    max($canvas_width,$canvas_height)/min(max(w,h),8)}
+      canvas_zoom_max={$selected,max(w/$canvas_width,h/$canvas_height)*\
+                                 max($canvas_width,$canvas_height)/min(max(w,h),8)}
 
       if $is_drag1==2" && "$is_clicked1==2 # Zoom starts
         amount:="
@@ -2592,14 +2592,14 @@ _display : skip ${1=},${3=}
           dy = $drag_end_y1 - $drag_start_y1;
           sign(dx)*norm(dx,dy)/200"
         if !narg($canvas_zoom_x) canvas_zoom_x,canvas_zoom_y=$canvas_mouse_x,$canvas_mouse_y fi
-        n_canvas_xy_zoom:=cut($canvas_xy_zoom*(1+$amount),0.5,$canvas_xy_zoom_max)
-        if $n_canvas_xy_zoom!=$canvas_xy_zoom
+        n_canvas_zoom:=cut($canvas_zoom*(1+$amount),0.5,$canvas_zoom_max)
+        if $n_canvas_zoom!=$canvas_zoom
           xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$canvas_zoom_x/$canvas_width)
           yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$canvas_zoom_y/$canvas_height)
-          ratio:=$canvas_xy_zoom/$n_canvas_xy_zoom
+          ratio:=$canvas_zoom/$n_canvas_zoom
           canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
           canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
-          canvas_xy_zoom=$n_canvas_xy_zoom
+          canvas_zoom=$n_canvas_zoom
           rmn canvas_base
         fi
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
@@ -2612,27 +2612,27 @@ _display : skip ${1=},${3=}
 
         if {*,o}" || "(!$is_CTRL" && "({*,PADSUB}" || "{*,PADADD})) # Image zoom, with mouse wheel
           amount:={*,PADADD}?0.25:{*,PADSUB}?-0.25:{*,-o}/10
-          n_canvas_xy_zoom:=cut($canvas_xy_zoom*(1+$amount),0.5,$canvas_xy_zoom_max)
-          if $n_canvas_xy_zoom!=$canvas_xy_zoom
+          n_canvas_zoom:=cut($canvas_zoom*(1+$amount),0.5,$canvas_zoom_max)
+          if $n_canvas_zoom!=$canvas_zoom
             xc:=lerp($canvas_xy_x0,$canvas_xy_x1,$canvas_mouse_x/$canvas_width)
             yc:=lerp($canvas_xy_y0,$canvas_xy_y1,$canvas_mouse_y/$canvas_height)
-            ratio:=$canvas_xy_zoom/$n_canvas_xy_zoom
+            ratio:=$canvas_zoom/$n_canvas_zoom
             canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
             canvas_center_y:=cut(lerp($yc,$canvas_center_y*h#$selected,$ratio)/h#$selected,0,1)
-            canvas_xy_zoom=$n_canvas_xy_zoom
+            canvas_zoom=$n_canvas_zoom
             rmn canvas_base
           fi
         fi
 
         if !$is_CTRL
           if {*,-ENTER}" || "(!$is_drag0" && "$is_released0==2) # Reset view
-            canvas_center_x,canvas_center_y,canvas_xy_zoom=0.5,0.5,1
+            canvas_center_x,canvas_center_y,canvas_zoom=0.5,0.5,1
             rmn canvas_base
           elif {*,-C} # Center view
             canvas_center_x,canvas_center_y=0.5
             rmn canvas_base
         elif {*,-Z} # Set zoom factor to max/2
-            canvas_xy_zoom:=$canvas_xy_zoom_max/2
+            canvas_zoom:=$canvas_zoom_max/2
             rmn canvas_base
           elif {*,-HOME}
             canvas_center_x,canvas_center_y:=w#$selected==1?0.5:0,h#$selected==1?0.5:0
