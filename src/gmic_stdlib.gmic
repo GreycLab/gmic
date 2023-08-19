@@ -2249,10 +2249,10 @@ _display : skip ${1=},${3=}
           $mouse_area==3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_xz_width),
                            cut($canvas_center_y*h,0,h - 1),
                            lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_xz_height) ]:
-                         [ cut($canvas_center_x*w,0,w - 1),
+          $mouse_area==4?[ cut($canvas_center_x*w,0,w - 1),
                            lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_zy_height),
-                           lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ],
-            1,-1)"}
+                           lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ]:
+                         [ -1,-1,-1 ],1,-1)"}
         if {$selected,inrange($x,0,w,1,0)" && "inrange($y,0,h,1,0)" && "inrange($z,0,d,1,0)}
           s_value={`"val = I(#$selected,$x,$y,$z);
                      size(val)<=6?v2s(val,-1):(
@@ -2318,13 +2318,13 @@ _display : skip ${1=},${3=}
           $mouse_area==3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_width), # XZ
                            cut($canvas_center_y*h,0,h - 1),
                            lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_height) ]:
-                         [ cut($canvas_center_x*w,0,w - 1),
+          $mouse_area==4?[ cut($canvas_center_x*w,0,w - 1),
                            lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height), # ZY
-                           lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width) ],
-                        1,-1)"}
+                           lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width) ]:
+                         [ -1,-1,-1 ],1,-1)"}
+        is_cursor_over_image={$selected,inrange($ix,0,w-1)" && "inrange($iy,0,h-1)" && "inrange($iz,0,d-1)}
 
-        if {$selected,!inrange($ix,0,w-1)" || "!inrange($iy,0,h-1)" || "!inrange($iz,0,d-1)" || "\
-                      !$canvas_axis_mode" || "($canvas_axis_mode==1" && "$is_volumetric)}
+        if {$selected,!$is_cursor_over_image" || "!$canvas_axis_mode" || "($canvas_axis_mode==1" && "$is_volumetric)}
           cursor[0] 1
 
         else
@@ -2368,13 +2368,13 @@ _display : skip ${1=},${3=}
           fi
         fi
 
-        if $mouse_area>=2
+        if $is_cursor_over_image" && "$mouse_area>=2
           repeat $is_volumetric?3:1 {
             dx,dy:=$>==0?[$area_xy_width/$area_xy_dx,$area_xy_height/$area_xy_dy]:\
                     $>==1?[$area_xz_width/$area_xz_dx,$area_xz_height/$area_xz_dz]:\
                          [$area_zy_width/$area_zy_dz,$area_zy_height/$area_zy_dy]
             dl:=max($dx,$dy)
-            if $dl>8 # Draw pixel outline
+            if $dl>8 # Draw outline of pixel/voxel under cursor if zoomed enough
               opacity:=lerp(0,1,min(($dl-8)/10,1))
               cx,cy:=$>==0?[($ix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
                             ($iy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
