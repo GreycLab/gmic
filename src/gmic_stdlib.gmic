@@ -1940,7 +1940,7 @@ _display : skip ${1=},${3=}
                 max($thumb_min_ratio,h/Mwh) ]:
               [ 0.5,0.5 ]"
         sh. 100% /.. {iM} rm. *. $thumb_height round.
-        +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0+2; res"
+        +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0 + 2; res"
         rv[-2,-1] a[-2,-1] c => thumb_coords
         1,$nb_images,1,1,0 => thumb_is_rendered
 
@@ -2708,7 +2708,19 @@ _display : skip ${1=},${3=}
         fi
 
         if !$is_CTRL
-          if {*,-ENTER}" || "(!$is_drag0" && "$is_released0>=2) # Reset view
+          if (!$is_drag0" && "$is_released0>=2) # Center to current point
+            canvas_center_x,canvas_center_y,canvas_center_z={$selected,"
+              $mouse_area==2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_width)/w,
+                               lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_height)/h,
+                               $canvas_center_z ]:
+              $mouse_area==3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_width)/w,
+                               $canvas_center_y,
+                               lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_height)/d ]:
+                             [ $canvas_center_x,
+                               lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height)/h,
+                               lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)/d ]"}
+            rmn canvas_base
+          elif {*,-ENTER} # Reset view
             canvas_center_x,canvas_center_y,canvas_center_z,canvas_zoom=0.5,0.5,0.5,1
             rmn canvas_base
           elif {*,-C} # Center view
