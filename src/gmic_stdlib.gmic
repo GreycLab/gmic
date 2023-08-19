@@ -2002,38 +2002,35 @@ _display : skip ${1=},${3=}
         fi
 
         # Decorate selected/mouse over thumbnail.
-        +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1}
+        +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1} => thumb_view
         x0,y0,w,h={thumb_coords,I[$selected]}
         x0-=$thumb_x_px
         font_size:=cut($thumb_height/6,16,32)
-        rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},1,0xFFFFFFFF,255
-        rectangle. {[$x0,$y0]+1},{[$x0,$y0]+[$w,$h]-2},1,0xFFFFFFFF,255
-        rectangle. {[$x0,$y0]+2},{[$x0,$y0]+[$w,$h]-3},1,0xFFFFFFFF,0
-        to. "#"{image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
+        rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},1,0xFFFFFFFF,255
+        rectangle[thumb_view] {[$x0,$y0]+1},{[$x0,$y0]+[$w,$h]-2},1,0xFFFFFFFF,255
+        rectangle[thumb_view] {[$x0,$y0]+2},{[$x0,$y0]+[$w,$h]-3},1,0xFFFFFFFF,0
+        to[thumb_view] "#"{image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
         if $mouseover>=0
           x0,y0,w,h={thumb_coords,I[$mouseover]}
           x0-=$thumb_x_px
-          rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.25,200
+          rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.25,200
           if $mouseover!=$selected
-            rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0x33333333,0
-            rectangle. $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0xCCCCCCCC,255
-            to. "#"{image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
+            rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0x33333333,0
+            rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0xCCCCCCCC,255
+            to[thumb_view] "#"{image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
           fi
         fi
 
         # Add left/right shading in thumb view.
         if $thumb_x_px>0
-          +z. 0,31
-          32,1,1,1,"lerp(max(0.25,1 - $thumb_x_px/32),1,x/w)" *[-2,-1]
-          j.. .,0 rm.
+          if !0$thumb_shade_left (255,0) r. 33,1,1,1,3 r. 100%,$thumb_height channels. -3,0 => thumb_shade_left fi
+          ja[thumb_view] [thumb_shade_left],0,0,0,0,{min(1,$thumb_x_px/32)}
         fi
         if {thumb_base,$thumb_x_px+$window_width<w}
-          x0:=w-32
-          +z. $x0,100%
-          32,1,1,1,"lerp(1,max(0.25,1 - (w#$thumb_base - $window_width - $thumb_x_px)/32),x/w)" *[-2,-1]
-          j.. .,$x0 rm.
+          if !0$thumb_shade_right (0,255) r. 33,1,1,1,3 r. 100%,$thumb_height channels. -3,0 => thumb_shade_right fi
+          ja[thumb_view] [thumb_shade_right],1~,0,0,0,{min(1,(w#$thumb_base-$window_width-$thumb_x_px)/32)}
         fi
-        => thumb_view
+
         rmn window_view
       fi
 
