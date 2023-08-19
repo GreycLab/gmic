@@ -1850,7 +1850,9 @@ _display : skip ${1=},${3=}
   # Initialize global state variables.
   normalization_mode:=narg($_display_normalization_mode)?0$_display_normalization_mode:-1
   alpha_mode:=narg($_display_alpha_mode)?0$_display_alpha_mode:0
-  axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
+  canvas_axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
+  canvas_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
+
   thumb_height_factor=0.125
   thumb_min_ratio=0.45
   thumb_is_hidden:=$nb_images==1
@@ -1903,7 +1905,6 @@ _display : skip ${1=},${3=}
   canvas_center_x,canvas_center_y,canvas_center_z=0.5,0.5,0.5
   canvas_zoom=1
   canvas_label_alignment=0
-  canvas_is_grid=1
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
   canvas_mouse_x,canvas_mouse_y=-1
 
@@ -2326,7 +2327,7 @@ _display : skip ${1=},${3=}
                         1,-1)"}
 
         if {$selected,!inrange($ix,0,w-1)" || "!inrange($iy,0,h-1)" || "!inrange($iz,0,d-1)" || "\
-                      !$axis_mode" || "($axis_mode==1" && "$is_volumetric)}
+                      !$canvas_axis_mode" || "($canvas_axis_mode==1" && "$is_volumetric)}
           cursor[0] 1
 
         else
@@ -2792,23 +2793,23 @@ _display : skip ${1=},${3=}
           is_fullscreen,window_nonfullscreen_width,window_nonfullscreen_height=1,{*,d,e}
           w[] {*,u,v},0,1
         fi
-        notification="Fullscreen mode: "${"arg0 "$is_fullscreen,"Off,On"}
+        notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
         rmn thumb_base,canvas_base,canvas_label_notification
       elif {*,-G} # CTRL+G: Toggle grid mode
         canvas_is_grid:=!$canvas_is_grid
-        notification="Grid mode: "${"arg0 "$canvas_is_grid,"Off,On"}
+        notification="Grid: "${"arg0 "$canvas_is_grid,"Off,On"}
         rmn canvas_base,canvas_label_notification
       elif {*,-A} # CTRL+A: Toggle alpha mode
         alpha_mode:=($alpha_mode+1)%5
-        notification="Alpha mode: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
+        notification="Alpha: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
         rmn thumb_base,canvas_base,canvas_label_notification
       elif {*,-X} # CTRL+X: Toggle axis mode
-        axis_mode:=a=($axis_mode+1)%3;$is_volumetric?(a?2:0):(a==1)
-        notification="Axis mode: "${"arg0 "$axis_mode,"Off,\"On (2D only)\",On"}
+        canvas_axis_mode:=a=($canvas_axis_mode+1)%3;$is_volumetric?(a?2:0):(a==1)
+        notification="Axis: "${"arg0 "$canvas_axis_mode,"Off,\"On (2D only)\",On"}
         rmn canvas_view,canvas_label_notification
       elif {*,-N} # CTRL+N: Switch normalization mode
         normalization_mode:=($normalization_mode+1)%3
-        notification="Normalization mode: "${"arg0 "$normalization_mode,"Disabled,\"Channel by channel\",Global"}
+        notification="Normalization: "${"arg0 "$normalization_mode,"Disabled,\"Channel by channel\",Global"}
         rmn thumb_base,canvas_base,canvas_label_notification
       elif {*,-S}" && "0$canvas_base # CTRL+S: Save snapshot
         repeat 256 { filename gmic.png,$> filename=${} if !isfile('$filename') break fi }
