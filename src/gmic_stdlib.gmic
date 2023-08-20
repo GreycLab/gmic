@@ -2046,11 +2046,11 @@ _display : skip ${1=},${3=}
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
       if $is_volumetric
         suf={$selected,w}_{$selected,h}_{$selected,d}
-        area_ratio_w,area_ratio_h=area_ratio_w_$suf,area_ratio_h_$suf
-        if !narg(${$area_ratio_w}) $area_ratio_w,$area_ratio_h={$selected,[min(0.95,w/(w+d)),min(0.95,h/(h+d))]} fi
+        area_cross_x,area_cross_y=area_cross_x_$suf,area_cross_y_$suf
+        if !narg(${$area_cross_x}) $area_cross_x,$area_cross_y={$selected,[min(0.95,w/(w+d)),min(0.95,h/(h+d))]} fi
         area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height:="
-          const w_ratio = "${$area_ratio_w}";
-          const h_ratio = "${$area_ratio_h}";
+          const w_ratio = "${$area_cross_x}";
+          const h_ratio = "${$area_cross_y}";
           w_xy = round(w_ratio*$canvas_width) - 1;
           h_xy = round(h_ratio*$canvas_height) - 1;
           w_zy = $canvas_width - w_xy - 1;
@@ -2470,7 +2470,8 @@ _display : skip ${1=},${3=}
       x<$area_xy_width && y<ht2 + $area_xy_height?[2,x,y - ht2]: # Mouse area = 2: cursor over XY-view
       x<$area_xy_width?[3,x,y - ht2]: # Mouse area = 3: cursor over XZ-view
       y<ht2 + $area_xy_height?[4,x,y - ht2]: # Mouse area = 4: cursor over ZY-view
-      [0,-1,-1]"
+      [5,x,y - ht2] # Mouse area = 5: lower-right area
+      "
 
     if $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$area_xy_width,$area_xy_height,$area_xy_dx,$area_xy_dy
@@ -2585,7 +2586,7 @@ _display : skip ${1=},${3=}
       repeat 2 {
         but:=2*$>
         if !$but" && "$is_CTRL continue fi
-        if isin($event_type0,0,1)" && "${is_drag$but}>=2" && "${is_clicked$but}>=2 # Pan starts
+        if isin($event_type0,0,1)" && "inrange(${is_drag$but},2,4)" && "inrange(${is_clicked$but},2,4) # Pan starts
           drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
           ar=${is_drag$but}
           if $ar==2
@@ -2603,15 +2604,12 @@ _display : skip ${1=},${3=}
           rmn canvas_base
           event_type0=1
         elif $event_type0==1" && "${is_drag$but}==2" && "${is_released$but} # Pan ends
-          is_drag0,is_released0,is_drag2,is_released2=0
+          event_type0,is_drag0,is_released0,is_drag2,is_released2=0
         fi
       }
 
       # Manage image crop, using CTRL+left mouse button (drag).
       if !$is_volumetric" && "$is_CTRL" && "$mouse_x>=0
-        if !$is_drag0" && "$is_clicked0>=2" && "[$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]
-          is_drag0=2 # Avoid drag latency
-        fi
         if isin($event_type0,0,2)" && "$is_drag0==2" && "$is_clicked0==2 # Crop starts
           if !narg($canvas_crop_x0) x,y=$drag_start_x0,$drag_start_y0 else x,y=$drag_end_x0,$drag_end_y0 fi
           cx,cy={$selected,[cut(round(lerp($area_xy_x0,$area_xy_x1,$x/$canvas_width),1,-1),0,w-1),\
@@ -2671,7 +2669,7 @@ _display : skip ${1=},${3=}
       # Manage image zoom, using right mouse button (drag).
       canvas_zoom_max={$selected,max(w/$canvas_width,h/$canvas_height)*\
                                  max($canvas_width,$canvas_height)/min(max(w,h),8)}
-      if $is_drag1>=2" && "$is_clicked1>=2 # Zoom starts
+      if inrange($is_drag1,2,4)" && "inrange($is_clicked1,2,4) # Zoom starts
         amount:="
           dx = $drag_end_x1 - $drag_start_x1;
           dy = $drag_end_y1 - $drag_start_y1;
@@ -2702,15 +2700,28 @@ _display : skip ${1=},${3=}
           rmn canvas_base
         fi
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
-      elif $is_drag1==2" && "$is_released1 # Zoom ends
+      elif inrange($is_drag1,2,5)" && "$is_released1 # Zoom ends
         zoom_focus_x,zoom_focus_y=
         is_drag1,is_released1=0
       fi
 
+      # Volumetric images: manage area ratio change, using left mouse button (drag area corner button).
+      if $is_volumetric
+        if $is_drag0==5" && "$is_clicked0==5" && "(\
+             $event_type0==3" || "\
+             norm($canvas_mouse_x-${$area_cross_x}*$canvas_width,$canvas_mouse_y-${$area_cross_y}*$canvas_height)<24)
+          $area_cross_x,$area_cross_y:=$canvas_mouse_x/$canvas_width,$canvas_mouse_y/$canvas_height
+          drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
+          event_type0=3
+          rmn canvas_base
+        elif $event_type0==3" && "$is_drag0==5" && "$is_released1 # Drag ends
+          is_drag0,is_released0=0
+        fi
+      fi
+
       if $mouse_area>=2
 
-
-        if {*,o}" || "({*,PADSUB}" || "{*,PADADD})
+        if $mouse_area<5" && "({*,o}" || "({*,PADSUB}" || "{*,PADADD}))
           if $is_CTRL" && "$is_volumetric # Pan volumetric image along orthogonal axis
             amount:={*,PADADD}?1:{*,PADSUB}?-1:{*,-o}
             canvas_center_x,canvas_center_y,canvas_center_z={$selected,"
@@ -2721,9 +2732,7 @@ _display : skip ${1=},${3=}
               cut(
                 $mouse_area==2?[ cx,cy,cz + amount/d ]:
                 $mouse_area==3?[ cx,cy + amount/d,cz ]:
-                               [ cx + amount/w,cy,cz ],
-                0,1);
-            "}
+                               [ cx + amount/w,cy,cz ],0,1)"}
             rmn canvas_base
 
           else # Zoom image
@@ -2742,7 +2751,7 @@ _display : skip ${1=},${3=}
                   zc:=lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_height)
                   canvas_center_x:=cut(lerp($xc,$canvas_center_x*w#$selected,$ratio)/w#$selected,0,1)
                   canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
-                elif $mouse_area==4
+                else
                   zc:=lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)
                   yc:=lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height)
                   canvas_center_z:=cut(lerp($zc,$canvas_center_z*d#$selected,$ratio)/d#$selected,0,1)
@@ -2756,7 +2765,7 @@ _display : skip ${1=},${3=}
         fi
 
         if !$is_CTRL
-          if (!$is_drag0" && "$is_released0>=2) # Center to current point
+          if (!$is_drag0" && "inrange($is_released0,2,4)) # Center to current point
             canvas_center_x,canvas_center_y,canvas_center_z={$selected,"
               $mouse_area==2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_width)/w,
                                lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_height)/h,
@@ -2783,7 +2792,8 @@ _display : skip ${1=},${3=}
           elif {*,-END}" || "{*,-E}
             canvas_center_x,canvas_center_y,canvas_center_z={$selected,1-0.5/[w,h,d]}
             rmn canvas_base
-          elif {*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "{*,PAGEUP}" || "{*,PAGEDOWN}
+          elif $mouse_area<5" && "\
+               ({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "{*,PAGEUP}" || "{*,PAGEDOWN})
             step:=$is_volumetric?1:($area_xy_dx+$area_xy_dy)/20
             dx,dy:={*,ARROWLEFT}?-$step:{*,ARROWRIGHT}?$step:0,\
                    {*,ARROWUP}?-$step:{*,ARROWDOWN}?$step:{*,PAGEUP}?-4*$step:{*,PAGEDOWN}?4*$step:0
