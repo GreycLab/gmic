@@ -1902,6 +1902,7 @@ _display : skip ${1=},${3=}
   selected=0
 
   view_center_x,view_center_y,view_center_z,view_zoom,view_base_channel=0.5,0.5,0.5,1,0
+
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
   canvas_mouse_x,canvas_mouse_y=-1
   canvas_cross_x,canvas_cross_y=
@@ -1935,9 +1936,7 @@ _display : skip ${1=},${3=}
           w = w#y; h = h#y; d = d#y;
           d>1?(w+=d + 2; h+=d + 2);
           Mwh = max(w,h);
-          Mwh?[ max($thumb_min_ratio,w/Mwh),
-                max($thumb_min_ratio,h/Mwh) ]:
-              [ 0.5,0.5 ]"
+          Mwh?[ max($thumb_min_ratio,w/Mwh), max($thumb_min_ratio,h/Mwh) ]:[ 0.5,0.5 ]"
         sh. 100% /.. {iM} rm. *. $thumb_height round.
         +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0 + 2; res"
         rv[-2,-1] a[-2,-1] c => thumb_coords
@@ -2041,7 +2040,6 @@ _display : skip ${1=},${3=}
 
     # Generate canvas view.
     if !0$canvas_base
-      rmn canvas_label_info,canvas_label_coords
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
 
       if $is_volumetric
@@ -2107,7 +2105,7 @@ _display : skip ${1=},${3=}
             x - f*w_xz, z - f*h_xz, x + f*w_xz, z + f*h_xz,  2*f*w_xz, 2*f*h_xz,
             z - f*w_zy, y - f*h_zy, z + f*w_zy, y + f*h_zy,  2*f*w_zy, 2*f*h_zy ]"}
 
-        # Draw XY, XZ and YZ views.
+        # Generate and draw XY, XZ and YZ views.
         if $is_volumetric
           if !0$canvas_volumetric_background" || "\
              {0$canvas_volumetric_background,[w,h]!=[$canvas_width,$canvas_height]}
@@ -2525,7 +2523,6 @@ _display : skip ${1=},${3=}
 
     if $mouse_area==1 # Thumbnail navigation bar
       canvas_label_alignment=0
-      rmn canvas_label_coords
     elif $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$area_xy_width,$area_xy_height,$area_xy_dx,$area_xy_dy
       area_mouse_x,area_mouse_y=$canvas_mouse_x,$canvas_mouse_y
@@ -2875,12 +2872,12 @@ _display : skip ${1=},${3=}
           fi
         fi
 
-        if [$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]
+        if [$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]" && "$mouse_area>=2
           rmn canvas_label_coords
         fi
 
-      else
-        if $previous_mouse_area>=2 rmn canvas_view fi # Will hide cursor
+      elif $previous_mouse_area>=2
+        rmn canvas_label_coords,canvas_view
       fi
 
     fi
@@ -2894,13 +2891,13 @@ _display : skip ${1=},${3=}
     # Manage global window events.
     if {*,r}
       w[] -1,-1
-      rmn thumb_base,canvas_base
+      rmn thumb_base,canvas_base,canvas_label_info,canvas_label_coords
     fi
 
     if {*,-M} # M: Run 3D mesh viewer
       if ${is_mesh3d[$selected]}
         d3d[$selected]
-        rmn thumb_base,canvas_base
+        rmn thumb_base,canvas_base,canvas_label_info,canvas_label_coords
         wait -1
       fi
     elif {*,-ENTER} # Reset view
@@ -2912,11 +2909,11 @@ _display : skip ${1=},${3=}
       if {*,C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
-        rmn thumb_base,canvas_base
+        rmn thumb_base,canvas_base,canvas_label_info,canvas_label_coords
       elif {*,D} # CTRL+D: Increase window size
         is_fullscreen=0
         w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
-        rmn thumb_base,canvas_base
+        rmn thumb_base,canvas_base,canvas_label_info,canvas_label_coords
       elif {*,-F} # CTRL+F: Toggle fullscreen mode
         if $is_fullscreen
           is_fullscreen=0
@@ -2926,7 +2923,7 @@ _display : skip ${1=},${3=}
           w[] {*,u,v},0,1
         fi
         notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
-        rmn thumb_base,canvas_base,canvas_label_notification
+        rmn thumb_base,canvas_base,canvas_label_info,canvas_label_coords,canvas_label_notification
       elif {*,-G} # CTRL+G: Toggle grid mode
         canvas_is_grid:=!$canvas_is_grid
         notification="Grid: "${"arg0 "$canvas_is_grid,"Off,On"}
