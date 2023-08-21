@@ -1852,6 +1852,7 @@ _display : skip ${1=},${3=}
   alpha_mode:=narg($_display_alpha_mode)?0$_display_alpha_mode:0
   canvas_axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
   canvas_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
+  canvas_is_label:=narg($_display_is_label)?0$_display_is_label:1
 
   thumb_height_factor=0.15
   thumb_min_ratio=0.45
@@ -1902,14 +1903,14 @@ _display : skip ${1=},${3=}
   mouseover=-1
   selected=0
 
-  view_center_x,view_center_y,view_center_z,view_zoom,view_cross_x,view_cross_y=0.5,0.5,0.5,1,,
+  view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
   canvas_mouse_x,canvas_mouse_y=-1
+  canvas_cross_x,canvas_cross_y=
   canvas_label_alignment=1
 
   area_width,area_height=0
   area_mouse_x,area_mouse_y=-1
-
 
   1,$nb_images,1,1,-1 => is_infnan
   0 => canvas_checkerboard
@@ -2045,19 +2046,19 @@ _display : skip ${1=},${3=}
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
 
       if $is_volumetric
-        if !narg($view_cross_x)
+        if !narg($canvas_cross_x)
           whd={$selected,`string(w,'_',h,'_',d)`}
-          if narg(${view_cross_x_$whd}) view_cross_x,view_cross_y=${view_cross_x_$whd},${view_cross_y_$whd}
-          else view_cross_x,view_cross_y={$selected,[min(0.95,w/(w+d)),min(0.95,h/(h+d))]}
+          if narg(${canvas_cross_x_$whd}) canvas_cross_x,canvas_cross_y=${canvas_cross_x_$whd},${canvas_cross_y_$whd}
+          else canvas_cross_x,canvas_cross_y={$selected,[min(0.95,w/(w+d)),min(0.95,h/(h+d))]}
           fi
         fi
-        view_cross_x,view_cross_y:="[
-          cut("$view_cross_x",16/$canvas_width,($canvas_width-17)/$canvas_width),
-          cut("$view_cross_y",16/$canvas_height,($canvas_height-17)/$canvas_height)
+        canvas_cross_x,canvas_cross_y:="[
+          cut("$canvas_cross_x",16/$canvas_width,($canvas_width-17)/$canvas_width),
+          cut("$canvas_cross_y",16/$canvas_height,($canvas_height-17)/$canvas_height)
         ]"
         area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height:="
-          const w_ratio = "$view_cross_x";
-          const h_ratio = "$view_cross_y";
+          const w_ratio = "$canvas_cross_x";
+          const h_ratio = "$canvas_cross_y";
           w_xy = round(w_ratio*$canvas_width) - 1;
           h_xy = round(h_ratio*$canvas_height) - 1;
           w_zy = $canvas_width - w_xy - 1;
@@ -2245,7 +2246,7 @@ _display : skip ${1=},${3=}
           fi
           sh[canvas_cross_button] 100%
           j[canvas_base] [canvas_cross_button],\
-            {canvas_cross_button,round([$view_cross_x*$canvas_width-w/2,$view_cross_y*$canvas_height-h/2])},\
+            {canvas_cross_button,round([$canvas_cross_x*$canvas_width-w/2,$canvas_cross_y*$canvas_height-h/2])},\
             0,0,0.5,.,255 rm.
         fi
 
@@ -2604,10 +2605,10 @@ _display : skip ${1=},${3=}
         # Remember view properties for each different image resolution.
         if [{$selected,[w,h,d]}]!=[{$previous_selected,[w,h,d]}]
           whd={$previous_selected,`string(w,'_',h,'_',d)`}
-          view_coords_$whd=$view_center_x,$view_center_y,$view_center_z,$view_zoom,$view_cross_x,$view_cross_y
+          view_coords_$whd=$view_center_x,$view_center_y,$view_center_z,$view_zoom,$canvas_cross_x,$canvas_cross_y
           whd={$selected,`string(w,'_',h,'_',d)`}
-          if narg(${view_coords_$whd}) view_center_x,view_center_y,view_center_z,view_zoom,view_cross_x,view_cross_y=${view_coords_$whd}
-          else view_center_x,view_center_y,view_center_z,view_zoom,view_cross_x,view_cross_y=0.5,0.5,0.5,1,,
+          if narg(${view_coords_$whd}) view_center_x,view_center_y,view_center_z,view_zoom,canvas_cross_x,canvas_cross_y=${view_coords_$whd}
+          else view_center_x,view_center_y,view_center_z,view_zoom,canvas_cross_x,canvas_cross_y=0.5,0.5,0.5,1,,
           fi
         fi
         rmn canvas_volumetric_background,canvas_base
@@ -2741,9 +2742,9 @@ _display : skip ${1=},${3=}
       if $is_volumetric
         if $is_drag0>=2" && "$is_clicked0>=2" && "$canvas_mouse_x>=0" && "(\
              $event_type0==3" || "\
-             norm($canvas_mouse_x-$view_cross_x*$canvas_width,\
-                  $canvas_mouse_y-$view_cross_y*$canvas_height)<24)
-          view_cross_x,view_cross_y:=cut($canvas_mouse_x/$canvas_width,0,1),\
+             norm($canvas_mouse_x-$canvas_cross_x*$canvas_width,\
+                  $canvas_mouse_y-$canvas_cross_y*$canvas_height)<24)
+          canvas_cross_x,canvas_cross_y:=cut($canvas_mouse_x/$canvas_width,0,1),\
                                      cut($canvas_mouse_y/$canvas_height,0,1)
           drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
           event_type0=3
@@ -2817,7 +2818,7 @@ _display : skip ${1=},${3=}
                                lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)/d ]"}
             rmn canvas_base
           elif {*,-X} # Reset area cross
-            view_cross_x,view_cross_y=
+            canvas_cross_x,canvas_cross_y=
             rmn canvas_volumetric_background,canvas_base
           elif {*,-C} # Center view
             view_center_x,view_center_y,view_center_z=0.5
@@ -2904,6 +2905,10 @@ _display : skip ${1=},${3=}
         canvas_is_grid:=!$canvas_is_grid
         notification="Grid: "${"arg0 "$canvas_is_grid,"Off,On"}
         rmn canvas_base,canvas_label_notification
+      elif {*,-T} # CTRL+L: Toggle label mode
+        canvas_is_label:=!$canvas_is_label
+        notification="Label: "${"arg0 "$canvas_is_label,"Off,On"}
+        rmn canvas_base,canvas_label_notification
       elif {*,-A} # CTRL+A: Toggle alpha mode
         alpha_mode:=($alpha_mode+1)%5
         notification="Alpha: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
@@ -2923,12 +2928,12 @@ _display : skip ${1=},${3=}
         o[canvas_base] $filename
       elif {*,O}" || "{*,L} # CTRL+O & CTRL+L: Save copy of image/list
         repeat 256 { filename gmic.gmz,$> filename=${} if !isfile('$filename') break fi }
-        if {*,-O}
-          notification="Saved image copy: "$filename
-          o[$selected] $filename
-        else
-          notification="Saved list copy: "$filename
+        if {*,-L}
           o[^$nb_images--1] $filename
+          notification="Saved list copy: "$filename
+        else
+          o[$selected] $filename
+          notification="Saved image copy: "$filename
         fi
         rmn canvas_label_notification
       fi
