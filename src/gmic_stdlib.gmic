@@ -2850,8 +2850,15 @@ _display : skip ${1=},${3=}
           elif {*,-END}" || "{*,-E}
             view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
             rmn canvas_base
-          elif $mouse_area<5" && "\
-               ({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "{*,PAGEUP}" || "{*,PAGEDOWN})
+          elif {*,PAGEUP}" || "{*,PAGEDOWN}
+            n_view_base_channel={$selected,cut($view_base_channel+({*,PAGEUP}?1:-1),0,s-3)}
+            if $n_view_base_channel!=$view_base_channel
+              view_base_channel=$n_view_base_channel
+              notification="Base channel: "$view_base_channel
+              rmn canvas_base,canvas_label_notification
+              skip {*,-PAGEUP},{*,-PAGEDOWN}
+            fi
+          elif $mouse_area<5" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN})
             step:=$is_volumetric" || "$view_zoom>=$zoom_max/4?1:($area_xy_dx+$area_xy_dy)/20
             dx,dy:={*,ARROWLEFT}?-$step:{*,ARROWRIGHT}?$step:0,\
                    {*,ARROWUP}?-$step:{*,ARROWDOWN}?$step:{*,PAGEUP}?-4*$step:{*,PAGEDOWN}?4*$step:0
