@@ -1900,7 +1900,7 @@ _display : skip ${1=},${3=}
   # Initialize other viewer variables.
   thumb_ind0,thumb_ind1=-1
   thumb_x=
-  mouseover=-1
+  mouse_over=-1
   selected=0
 
   view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
@@ -2011,15 +2011,16 @@ _display : skip ${1=},${3=}
         rectangle[thumb_view] {[$x0,$y0]+1},{[$x0,$y0]+[$w,$h]-2},1,0xFFFFFFFF,255
         rectangle[thumb_view] {[$x0,$y0]+2},{[$x0,$y0]+[$w,$h]-3},1,0xFFFFFFFF,0
         to[thumb_view] "#"{image_indices,i[$selected]},{[$x0,$y0]+1},$font_size,2
-        if $mouseover>=0
-          x0,y0,w,h={thumb_coords,I[$mouseover]}
+        if $mouse_over>=0
+          x0,y0,w,h={thumb_coords,I[$mouse_over]}
           x0-=$thumb_x_px
           rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.25,200
-          if $mouseover!=$selected
+          if $mouse_over!=$selected
             rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0x33333333,0
             rectangle[thumb_view] $x0,$y0,{[$x0,$y0]+[$w,$h]-1},0.75,0xCCCCCCCC,255
-            to[thumb_view] "#"{image_indices,i[$mouseover]},{[$x0,$y0]+1},$font_size,1,0.75
+            to[thumb_view] "#"{image_indices,i[$mouse_over]},{[$x0,$y0]+1},$font_size,1,0.75
           fi
+          rmn canvas_label_info
         fi
 
         # Add left/right shading in thumb view.
@@ -2042,7 +2043,7 @@ _display : skip ${1=},${3=}
 
     # Generate canvas view.
     if !0$canvas_base
-      rmn canvas_label_title,canvas_label_coords
+      rmn canvas_label_info,canvas_label_coords
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
 
       if $is_volumetric
@@ -2257,15 +2258,19 @@ _display : skip ${1=},${3=}
     font_size={canvas_base,cut(round(h/40),16,32)}
 
     # Generate label for image title.
-    if !0$canvas_label_title
+    if !0$canvas_label_info
+      0
       if $nb_images>1
-        basename {$selected,n} basename=${}
-        0 t. "["{image_indices,i[$selected]}"] "$basename" ("{``{$selected,[w,h,d,s]}}")",\
-         0,0,$font_size,1,255
-      else
-        0
+        str=
+        if $mouse_over>=0" && "$mouse_over!=$selected
+          str.="Thumb \#"{image_indices,i[$mouse_over]}": "${basename\ {$mouse_over,n}}\
+               " ("{``{$mouse_over,[w,h,d,s]}}")\n"
+        fi
+        str.="Image \#"{image_indices,i[$selected]}": "${basename\ {$selected,n}}\
+             " ("{``{$selected,[w,h,d,s]}}")"
+        t. {``$str},0,0,$font_size,1,255
       fi
-      => canvas_label_title
+      => canvas_label_info
       rmn canvas_label
     fi
 
@@ -2331,7 +2336,7 @@ _display : skip ${1=},${3=}
     if !0$canvas_label
       0
       if $canvas_is_label
-        if $canvas_label_title a. [canvas_label_title],y fi
+        if $canvas_label_info a. [canvas_label_info],y fi
         if $canvas_label_coords a. [canvas_label_coords],y fi
       fi
       if w
@@ -2480,8 +2485,7 @@ _display : skip ${1=},${3=}
       ja[canvas_view] [canvas_label],0,$canvas_label_alignment~
       if $canvas_label_notification
         sh[canvas_label_notification] 100%
-        j[canvas_view] [canvas_label_notification],0,{!$canvas_label_alignment}~,0,0,\
-                       {min(1,$notification_opacity)},.,255
+        j[canvas_view] [canvas_label_notification],1~,0,0,0,{min(1,$notification_opacity)},.,255
         rm.
         window_wait_mode=1
       fi
@@ -2520,6 +2524,7 @@ _display : skip ${1=},${3=}
 
     if $mouse_area==1 # Thumbnail navigation bar
       canvas_label_alignment=0
+      rmn canvas_label_coords
     elif $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$area_xy_width,$area_xy_height,$area_xy_dx,$area_xy_dy
       area_mouse_x,area_mouse_y=$canvas_mouse_x,$canvas_mouse_y
@@ -2529,6 +2534,10 @@ _display : skip ${1=},${3=}
     elif $mouse_area==4 # ZY
       area_width,area_height,area_dx,area_dy=$area_zy_width,$area_zy_height,$area_zy_dz,$area_zy_dy
       area_mouse_x,area_mouse_y={$canvas_mouse_x-$area_xy_width-2},$canvas_mouse_y
+    fi
+    if $mouse_area>=2" && "$mouse_over>=0
+      mouse_over=-1
+      rmn canvas_label_info
     fi
 
     is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
@@ -2564,14 +2573,14 @@ _display : skip ${1=},${3=}
         x_ind:=$mouse_x+$thumb_x_px
         if {thumb_label,inrange($x_ind,0,w-1)" && "i[$x_ind]>=0}
           ind={thumb_label,i[$x_ind]}
-          if $ind!=$mouseover mouseover=$ind rmn thumb_view fi
+          if $ind!=$mouse_over mouse_over=$ind rmn thumb_view fi
           if !$is_drag0" && "$is_released0
             if $selected!=$ind selected=$ind rmn thumb_view fi
           fi
         fi
       else
-        if $mouseover>=0 rmn thumb_view fi
-        mouseover=-1
+        if $mouse_over>=0 rmn thumb_view fi
+        mouse_over=-1
       fi
     fi
 
@@ -2864,9 +2873,8 @@ _display : skip ${1=},${3=}
 
     fi
 
-    if {canvas_label,$canvas_mouse_x<w" && "(\
-      (!$canvas_label_alignment" && "inrange($canvas_mouse_y,0,3*h))" || "\
-      ($canvas_label_alignment" && "$canvas_mouse_y>$canvas_height-3*h))}
+    if {canvas_label,($canvas_mouse_x<w" && "!$canvas_label_alignment" && "inrange($canvas_mouse_y,0,3*h))" || "\
+                     ($canvas_label_alignment" && "$canvas_mouse_y>5*h)}
       canvas_label_alignment:=!$canvas_label_alignment
       rmn canvas_view
     fi
