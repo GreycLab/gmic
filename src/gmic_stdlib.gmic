@@ -2332,7 +2332,7 @@ _display : skip ${1=},${3=}
       else
 
         # Draw cursor.
-        ix,iy,iz={$selected,"round(
+        ix,iy,iz={$selected,"
           $mouse_area==2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_width), # XY
                            lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_height),
                            cut($canvas_center_z*d,0,d - 1) ]:
@@ -2342,51 +2342,49 @@ _display : skip ${1=},${3=}
           $mouse_area==4?[ cut($canvas_center_x*w,0,w - 1),
                            lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height), # ZY
                            lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width) ]:
-                         [ -1,-1,-1 ],1,-1)"}
-        is_cursor_over_image={$selected,inrange($ix,0,w-1)" && "inrange($iy,0,h-1)" && "inrange($iz,0,d-1)}
+                         [ -1,-1,-1 ]"}
+        rix,riy,riz:=round([$ix,$iy,$iz],1,-1);
+        is_cursor_over_image={$selected,inrange($rix,0,w-1)" && "inrange($riy,0,h-1)" && "inrange($riz,0,d-1)}
 
         if {$selected,!$is_cursor_over_image" || "!$canvas_axis_mode" || "($canvas_axis_mode==1" && "$is_volumetric)}
           cursor[0] 1
 
         else
           cursor[0] 0
-          wa1,ha1,wxy2,hxy2:=$area_width-1,$area_height-1,$area_xy_width+2,$area_xy_height+2
-          if $mouse_area==2
-            line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0xFF00FF00,255
-            line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0x00FF00FF,0
-            line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0xFF00FF00,255
-            line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0x00FF00FF,0
-            if $is_volumetric
-              line[canvas_view] $canvas_mouse_x,$hxy2,$canvas_mouse_x,100%,0.65,0xFF00FF00,255
-              line[canvas_view] $canvas_mouse_x,$hxy2,$canvas_mouse_x,100%,0.65,0x00FF00FF,0
-              line[canvas_view] $wxy2,$canvas_mouse_y,100%,$canvas_mouse_y,0.65,0xFF00FF00,255
-              line[canvas_view] $wxy2,$canvas_mouse_y,100%,$canvas_mouse_y,0.65,0x00FF00FF,0
+          wxy2,hxy2:=[$area_xy_width,$area_xy_height]+2
+          repeat $is_volumetric?3:1 {
+            cx,cy:=$>==0?[($ix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                          ($iy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+                   $>==1?[($ix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
+                          ($iz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
+                         [($iz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
+                          ($iy-$area_zy_y0)/$area_zy_dy*$area_zy_height]
+            if !$>
+              w1,h1:=[$area_xy_width,$area_xy_height]-1
+              line[canvas_view] 0,$cy,$w1,$cy,0.65,0x00FF00FF,0
+              line[canvas_view] 0,$cy,$w1,$cy,0.65,0xFF00FF00,255
+              line[canvas_view] $cx,0,$cx,$h1,0.65,0x00FF00FF,0
+              line[canvas_view] $cx,0,$cx,$h1,0.65,0xFF00FF00,255
+            elif $>==1
+              w1,h1:=[$area_xz_width,$area_xz_height]-1
+              cy+=$hxy2
+              if $cy>=$hxy2
+                line[canvas_view] 0,$cy,$w1,$cy,0.65,0x00FF00FF,0
+                line[canvas_view] 0,$cy,$w1,$cy,0.65,0xFF00FF00,255
+              fi
+              line[canvas_view] $cx,$hxy2,$cx,100%,0.65,0x00FF00FF,0
+              line[canvas_view] $cx,$hxy2,$cx,100%,0.65,0xFF00FF00,255
+            elif $>==2
+              w1,h1:=[$area_zy_width,$area_zy_height]-1
+              cx+=$wxy2
+              line[canvas_view] $wxy2,$cy,100%,$cy,0.65,0x00FF00FF,0
+              line[canvas_view] $wxy2,$cy,100%,$cy,0.65,0xFF00FF00,255
+              if $cx>=$wxy2
+                line[canvas_view] $cx,0,$cx,$h1,0.65,0x00FF00FF,0
+                line[canvas_view] $cx,0,$cx,$h1,0.65,0xFF00FF00,255
+              fi
             fi
-          elif $mouse_area==3
-            line[canvas_view] $canvas_mouse_x,$hxy2,$canvas_mouse_x,100%,0.65,0xFF00FF00,255
-            line[canvas_view] $canvas_mouse_x,$hxy2,$canvas_mouse_x,100%,0.65,0x00FF00FF,0
-            line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0xFF00FF00,255
-            line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0x00FF00FF,0
-            if $is_volumetric
-              z:=$canvas_mouse_y-$hxy2+$wxy2
-              line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0xFF00FF00,255
-              line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0x00FF00FF,0
-              line[canvas_view] $z,0,$z,$ha1,0.65,0xFF00FF00,255
-              line[canvas_view] $z,0,$z,$ha1,0.65,0x00FF00FF,0
-            fi
-          else
-            line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0xFF00FF00,255
-            line[canvas_view] $canvas_mouse_x,0,$canvas_mouse_x,$ha1,0.65,0x00FF00FF,0
-            line[canvas_view] $wxy2,$canvas_mouse_y,100%,$canvas_mouse_y,0.65,0xFF00FF00,255
-            line[canvas_view] $wxy2,$canvas_mouse_y,100%,$canvas_mouse_y,0.65,0x00FF00FF,0
-            if $is_volumetric
-              z:=$canvas_mouse_x-$wxy2+$hxy2
-              line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0xFF00FF00,255
-              line[canvas_view] 0,$canvas_mouse_y,$wa1,$canvas_mouse_y,0.65,0x00FF00FF,0
-              line[canvas_view] 0,$z,$wa1,$z,0.65,0xFF00FF00,255
-              line[canvas_view] 0,$z,$wa1,$z,0.65,0x00FF00FF,0
-            fi
-          fi
+          }
         fi
 
         if $is_cursor_over_image" && "$mouse_area>=2
@@ -2397,12 +2395,12 @@ _display : skip ${1=},${3=}
             dl:=max($dx,$dy)
             if $dl>8 # Draw outline of pixel/voxel under cursor if zoomed enough
               opacity:=lerp(0,1,min(($dl-8)/10,1))
-              cx,cy:=$>==0?[($ix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
-                            ($iy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
-                     $>==1?[($ix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
-                            ($iz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
-                           [($iz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
-                            ($iy-$area_zy_y0)/$area_zy_dy*$area_zy_height]
+              cx,cy:=$>==0?[($rix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                            ($riy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+                     $>==1?[($rix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
+                            ($riz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
+                           [($riz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
+                            ($riy-$area_zy_y0)/$area_zy_dy*$area_zy_height]
               ncx,ncy:=$cx+$dx,$cy+$dy
               cx,cy,ncx,ncy:=round([$cx,$cy],1,1),round([$ncx,$ncy],1,1)-1
               if $canvas_is_grid cx+=1 cy+=1 fi
