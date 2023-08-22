@@ -1868,8 +1868,9 @@ _display : skip ${1=},${3=}
     l_ind:=arg0($>,$sel)
     g_ind={image_indices,i[$l_ind]}
     basename {``{$l_ind,n}}
-    log_title.=$sep${}
-    window_title.=$sep[$g_ind]" "${}
+    basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
+    log_title.=$sep$basename
+    window_title.=$sep[$g_ind]" "$basename
     if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
   }
   if $nb_images>1 window_title.=" (#"$nb_images")" else window_title.=" ("{0,[w,h,d,s]}")" fi
@@ -2270,11 +2271,11 @@ _display : skip ${1=},${3=}
       if $nb_images>1
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
           basename {``{$thumb_mouse_over,n}}
-          basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-6],[['(...)'],0]); b"`}
+          basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
           str.="Thumb \#"{image_indices,i[$thumb_mouse_over]}": "$basename" ("{``{$thumb_mouse_over,[w,h,d,s]}}")\n"
         fi
         basename {``{$selected,n}}
-        basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-6],[['(...)'],0]); b"`}
+        basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
         str.="Image \#"{image_indices,i[$selected]}": "$basename" ("{``{$selected,[w,h,d,s]}}")"
         t. {``$str},0,0,$font_size,1,255
       fi
@@ -8395,7 +8396,8 @@ _print : skip ${1=},${3=}
     repeat narg($sel) {
       l_ind:=arg0($>,$sel)
       basename {$l_ind,n}
-      log_title.=$sep${}
+      basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
+      log_title.=$sep$basename
       if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
     }
     e[0--4] "Print image"$_gmic_s0" = '"$log_title"'."
@@ -8427,7 +8429,8 @@ _print : skip ${1=},${3=}
               ${_vt100_b}"coords_max"$_vt100_n" = ("$xM,$yM,$zM,$cM")."
       is_stats=1
     fi
-    $1e $m$b"["$ind"] = "'{$>,n}'$n:\n\
+    name={`"b = ['"{``{$>,n}}"']; size(b)>64?copy(b[64-3],[['...'],0]); b"`}
+    $1e $m$b"["$ind"] = "'$name'$n:\n\
         $b"  size"$n" = "$s_size\n\
         $b"  data"$n" = "$s_data
     if $is_stats $1e $s_stats fi
