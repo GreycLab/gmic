@@ -1823,9 +1823,27 @@ d :
 #@cli : Display selected images in an interactive window.
 #@cli : (eq. to 'd').
 #@cli : When invoked with a '+' prefix (i.e. '+display'), the command outputs on 'stdout' rather than on 'stderr'.
-#@cli : \n- Viewer controls:
-#@cli : 'A': Switch alpha mode - 'C': Center view - 'ENTER': Reset view - 'G': Toggle grid - 'H': Go upper-left - 'E': Go lower-right - 'M': Run 3D mesh viewer - 'N': Switch normalization mode - 'R': Rotate image by 90° - 'ENTER': Reset view.
-
+#@cli : If display window \#0 is opened, it is used as the default window for the display.
+#@cli : \nAvailable controls are shown below \
+# ('LMB' = Left mouse button, 'RMB' = Right mouse button, 'MMB' = Middle mouse button and 'MW' = Mouse wheel).
+#@cli : \n- **Controls for thumbnail navigation:**
+#@cli : 'TAB': Hide/show thumbnails - 'LMB': Select thumbnail or shift thumbnail bar - \
+# 'ARROWS','SPACE','BACKSPACE','B','C','HOME','END': Navigate and select thumbnails \
+# (add 'CTRL' if mouse pointer is over image view).
+#@cli : \n- **Controls for image view:**
+#@cli : 'LMB' or 'MMB': Image pan - 'RMB' or 'MW': Image zoom - 'ARROWS','HOME','END': Shift view - \
+# 'A': Switch alpha mode - 'C': Center view - 'ENTER': Reset view - 'G': Toggle grid - 'H': Go upper-left - \
+# 'E': Go lower-right - 'M': Run 3D mesh viewer - 'N': Switch normalization mode - \
+# 'P': Print current image pixel on 'stdout' - 'PAGEUP' or 'PAGEDOWN': Shift base channel - \
+# 'R': Rotate image by 90 deg. - 'Z': Switch zoom factor.
+#@cli : \n- **Controls for 2D images only:**
+#@cli : 'CTRL+LMB': Image crop (2D only).
+#@cli : \n- **Controls for 3D volumetric images only:**
+#@cli : 'CTRL+MW': Pan along orthogonal axis - 'X': Reset area cross position.
+#@cli : \n- **Controls for window size, decoration and data I/O:**
+#@cli : 'CTRL+C': Decrease window size - 'CTRL+D': Increase window size - 'CTRL+F': Toggle fullscreen mode - \
+# 'CTRL+I': Toggle info mode - 'CTRL+O': Save copy of image as .gmz - 'CTRL+L': Save copy of image list as .gmz - \
+# 'CTRL+S': Save screenshot - 'CTRL+X': Toggle axis mode.
 display :
   _gmic_s="$?" v + _$0 "",1,$[]
 
@@ -2533,10 +2551,7 @@ _display : skip ${1=},${3=}
       y<ht2 + $area_xy_height?[4,x,y - ht2]: # Mouse area = 4: cursor over ZY-view
       [5,x,y - ht2] # Mouse area = 5: lower-right area
       "
-
-    if $mouse_area==1 # Thumbnail navigation bar
-      canvas_label_alignment=0
-    elif $mouse_area==2 # XY
+    if $mouse_area==2 # XY
       area_width,area_height,area_dx,area_dy=$area_xy_width,$area_xy_height,$area_xy_dx,$area_xy_dy
       area_mouse_x,area_mouse_y=$canvas_mouse_x,$canvas_mouse_y
     elif $mouse_area==3 # XZ
@@ -2552,7 +2567,7 @@ _display : skip ${1=},${3=}
     fi
 
     is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
-    repeat 3 {
+    repeat 3 { # Detect mouse drag for each button
       if ${is_button$>}" && "$mouse_area" && "!${is_clicked$>} # Possible start of a drag
         is_clicked$>,is_released$>,is_drag$>=$mouse_area,0,0 # At this point, cannot ensure drag has started
         drag_start_x$>,drag_start_y$>,drag_end_x$>,drag_end_y$>=$mouse_x,$mouse_y,$mouse_x,$mouse_y
@@ -2581,6 +2596,7 @@ _display : skip ${1=},${3=}
         is_drag0,is_released0=0
       fi
       if $mouse_area==1
+        canvas_label_alignment=0
         x_ind:=$mouse_x+$thumb_x_px
         if {thumb_label,inrange($x_ind,0,w-1)" && "i[$x_ind]>=0}
           ind={thumb_label,i[$x_ind]}
@@ -2607,14 +2623,20 @@ _display : skip ${1=},${3=}
               {*,-HOME}?-$selected:\
               {*,-END}?$nb_images-1-$selected:0
         if {*,-BACKSPACE}" || "{*,-SPACE}" || "{*,-B} selected:=($selected+$step)%$nb_images
-        else  selected:=cut($selected+$step,0,$nb_images-1)
+        else selected:=cut($selected+$step,0,$nb_images-1)
         fi
         rmn thumb_view
       fi
-        if $mouse_area==1" && "{*,o}
-        step:={*,-o}*max(1,round($nb_images/32))
-        selected:=cut($selected+$step,0,$nb_images-1)
-        rmn thumb_view
+
+      if $mouse_area==1
+        if {*,o}
+          step:={*,-o}*max(1,round($nb_images/32))
+          selected:=cut($selected+$step,0,$nb_images-1)
+          rmn thumb_view
+        elif {*,-C} # C: Center thumbnail view
+          selected:=floor($nb_images/2)
+          rmn thumb_view
+        fi
       fi
 
       # Ensure that a newly selected thumbnail is fully visible.
@@ -2847,12 +2869,17 @@ _display : skip ${1=},${3=}
                                lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height)/h,
                                lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)/d ]"}
             rmn canvas_base
+          elif {*,-C} # C: Center view
+            view_center_x,view_center_y,view_center_z=0.5
+            rmn canvas_base
           elif {*,-HOME}
             view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
             rmn canvas_base
           elif {*,-END}
             view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
             rmn canvas_base
+          elif {*,-P}" && "['$view_coords']!=0 # Print current pixel value on stdout
+            +e "Command 'display': I(#"$selected,$view_coords") = [ "{$selected,I($view_coords)}" ]"
           elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$alpha_mode
             n_view_base_channel={$selected,cut($view_base_channel+({*,-PAGEUP}?1:{*,-PAGEDOWN}?-1:0),0,s-3)}
             if $n_view_base_channel!=$view_base_channel
@@ -2860,11 +2887,10 @@ _display : skip ${1=},${3=}
               notification="Base channel: "$view_base_channel
               rmn canvas_base,canvas_label_notification
             fi
-          elif $mouse_area<5" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN}" || "\
-                                   {*,PAGEUP}" || "{*,PAGEDOWN})
+          elif $mouse_area<5" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN})
             step:=$is_volumetric" || "$view_zoom>=$zoom_max/4?1:($area_xy_dx+$area_xy_dy)/20
             dx,dy:={*,ARROWLEFT}?-$step:{*,ARROWRIGHT}?$step:0,\
-                   {*,ARROWUP}?-$step:{*,ARROWDOWN}?$step:{*,PAGEUP}?-3*$step:{*,PAGEDOWN}?3*$step:0
+                   {*,ARROWUP}?-$step:{*,ARROWDOWN}?$step:0
             if $mouse_area==2 dx,dy,dz={$selected,[$dx/w,$dy/h,0]}
             elif $mouse_area==3 dx,dy,dz={$selected,[$dx/w,0,$dy/d]}
             else dx,dy,dz={$selected,[0,$dy/h,$dx/d]}
@@ -2902,9 +2928,6 @@ _display : skip ${1=},${3=}
       alpha_mode:=($alpha_mode+1)%5
       notification="Alpha: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
       rmn thumb_base,canvas_base,canvas_label_notification
-    elif {*,-C} # C: Center view
-      view_center_x,view_center_y,view_center_z=0.5
-      rmn canvas_base
     elif {*,-ENTER} # ENTER: Reset view
       view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
       rmn canvas_base
@@ -2929,18 +2952,16 @@ _display : skip ${1=},${3=}
       notification="Normalization: "${"arg0 "$normalization_mode,\
                                       "Disabled,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
       rmn thumb_base,canvas_base,canvas_label_notification
-    elif {*,-P}" && "['$view_coords']!=0 # Print current pixel value on stdout
-      +e "Command 'display': I(#"$selected,$view_coords") = [ "{$selected,I($view_coords)}" ]"
     elif {*,-R} # Rotate view
       if !narg(${rotate_$selected}) rotate_$selected=0 fi
       rotate_$selected:=(${rotate_$selected}+1)%4
       rotate[$selected] 90
       notification="Angle: "${"arg0 "${rotate_$selected},"0,90,180,270"}\260
       rmn canvas_base,canvas_label_info,canvas_label_notification
-    elif {*,-X} # Reset area cross position
+    elif {*,-X}" && "$is_volumetric # Reset area cross position
       canvas_cross_x,canvas_cross_y=
       rmn canvas_base
-    elif {*,-Z} # Change zoom factor (1,2,4, and max)
+    elif {*,-Z} # Switch zoom factor (1,2,4, and max)
       view_zoom_mode:=($view_zoom_mode+1)%6
       n_view_zoom:=cut(!$view_zoom_mode?1:$view_zoom_mode==1?2:$view_zoom_mode==2?4:\
                        $view_zoom_mode==3?$zoom_max/4:$view_zoom_mode==4?$zoom_max/2:$zoom_max,0,$zoom_max)
@@ -2982,7 +3003,7 @@ _display : skip ${1=},${3=}
           notification="Saved image copy: "$filename
         fi
         rmn canvas_label_notification
-      elif {*,-S}" && "0$canvas_base # CTRL+S: Save snapshot
+      elif {*,-S}" && "0$canvas_base # CTRL+S: Save screenshot
         repeat 256 { filename gmic.png,$> filename=${} if !isfile('$filename') break fi }
         notification="Save screenshot: "$filename
         rmn canvas_label_notification
