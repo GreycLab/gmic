@@ -1781,7 +1781,7 @@ d :
 # 'A': Switch alpha mode - 'C': Center view - 'ENTER': Reset view - 'G': Toggle grid - 'H': Go upper-left - \
 # 'E': Go lower-right - 'M': Run 3D mesh viewer - 'N': Switch normalization mode - \
 # 'P': Print current image pixel on 'stdout' - 'PAGEUP' or 'PAGEDOWN': Shift base channel - \
-# 'R': Rotate image by 90 deg. - 'Z': Switch zoom factor.
+# 'R': Rotate image by 90 deg. - 'Z': Switch zoom factor - '0'-'9': Set zoom factor.
 #@cli : \n- **2D images only:**
 #@cli : 'CTRL+LMB': Image crop (2D only).
 #@cli : \n- **3D volumetric images only:**
@@ -1870,7 +1870,7 @@ _display : skip ${1=},${3=}
   selected=0
 
   view_center_x,view_center_y,view_center_z,view_zoom,view_base_channel=0.5,0.5,0.5,1,0
-  view_zoom_mode=3
+  view_zoom_mode=0
 
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
   canvas_mouse_x,canvas_mouse_y=-1
@@ -2571,7 +2571,7 @@ _display : skip ${1=},${3=}
         if {*,-BACKSPACE}" || "{*,-SPACE}" || "{*,-B} selected:=($selected+$step)%$nb_images
         else selected:=cut($selected+$step,0,$nb_images-1)
         fi
-        rmn thumb_view
+        rmn thumb_view,canvas_label_info
       elif ($mouse_area==1" || "$is_CTRL)" && "\
            ({*,0}" || "{*,1}" || "{*,2}" || "{*,3}" || "{*,4}" || "\
             {*,5}" || "{*,6}" || "{*,7}" || "{*,8}" || "{*,9}" || "\
@@ -2579,7 +2579,8 @@ _display : skip ${1=},${3=}
             {*,PAD5}" || "{*,PAD6}" || "{*,PAD7}" || "{*,PAD8}" || "{*,PAD9})
         ind=-1 repeat 10 { if {*,$>}" || "{*,PAD$>} ind=$> break fi }
         if inrange($ind,0,$nb_images,1,0)" && "$selected!=$ind
-          selected=$ind rmn thumb_view,canvas_label_info
+          selected=$ind
+          rmn thumb_view,canvas_label_info
           skip {*,-PAD$ind},{*,-$ind}
         fi
       fi
@@ -2827,6 +2828,17 @@ _display : skip ${1=},${3=}
                                lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height)/h,
                                lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)/d ]"}
             rmn canvas_base
+          elif ({*,0}" || "{*,1}" || "{*,2}" || "{*,3}" || "{*,4}" || "\
+                {*,5}" || "{*,6}" || "{*,7}" || "{*,8}" || "{*,9}" || "\
+                {*,PAD0}" || "{*,PAD1}" || "{*,PAD2}" || "{*,PAD3}" || "{*,PAD4}" || "\
+                {*,PAD5}" || "{*,PAD6}" || "{*,PAD7}" || "{*,PAD8}" || "{*,PAD9})
+            ind=-1 repeat 10 { if {*,$>}" || "{*,PAD$>} ind=$> break fi }
+            if $ind>=0
+              n_view_zoom:=cut($ind?$zoom_1_1*$ind:$zoom_max,$zoom_min,$zoom_max)
+              if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
+              if $ind notification="Zoom: "$ind:1 else notification="Zoom: Max" fi
+              rmn canvas_label_notification
+            fi
           elif {*,-C} # C: Center view
             view_center_x,view_center_y,view_center_z=0.5
             rmn canvas_base
@@ -2921,12 +2933,11 @@ _display : skip ${1=},${3=}
       canvas_cross_x,canvas_cross_y=
       rmn canvas_base
       skip {*,-X}
-    elif {*,-Z} # Switch zoom factor (1:1,2:1,4:1,x1,x2,x4,max/4,max/2,max)
-      view_zoom_mode:=($view_zoom_mode+1)%9
-      n_view_zoom:=cut(arg0($view_zoom_mode,$zoom_1_1,2*$zoom_1_1,4*$zoom_1_1,1,2,4,\
-                                            $zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
+    elif {*,-Z} # Switch zoom factor (x1,x2,x4,max/4,max/2,max)
+      view_zoom_mode:=($view_zoom_mode+1)%6
+      n_view_zoom:=cut(arg0($view_zoom_mode,1,2,4,$zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
       if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
-      notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/4,Max/2,Max"}
+      notification="Zoom: "${"arg0 "$view_zoom_mode,"x1,x2,x4,Max/4,Max/2,Max"}
       rmn canvas_label_notification
     fi
 
