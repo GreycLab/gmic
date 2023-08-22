@@ -2536,7 +2536,7 @@ _display : skip ${1=},${3=}
     if $window_wait_mode wait 40 else wait fi
 
     # Convert low-levels events to higher-level (buttons / drag).
-    is_CTRL:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+    is_CTRL,is_SHIFT:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,SHIFTLEFT}" || "{*,SHIFTRIGHT}
     previous_mouse_x,previous_mouse_y,previous_mouse_area=$mouse_x,$mouse_y,$mouse_area
     mouse_x,mouse_y,mouse_button={*,x,y,b}
     mouse_area,canvas_mouse_x,canvas_mouse_y:="
@@ -2888,9 +2888,10 @@ _display : skip ${1=},${3=}
               rmn canvas_base,canvas_label_notification
             fi
           elif $mouse_area<5" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN})
-            step:=$is_volumetric" || "$view_zoom>=$zoom_max/4?1:($area_xy_dx+$area_xy_dy)/20
+            step:=$is_volumetric" || "$view_zoom>=$zoom_max/4?1:($area_xy_dx+$area_xy_dy)/40
             dx,dy:={*,ARROWLEFT}?-$step:{*,ARROWRIGHT}?$step:0,\
                    {*,ARROWUP}?-$step:{*,ARROWDOWN}?$step:0
+            if $is_SHIFT dx,dy*=4 fi
             if $mouse_area==2 dx,dy,dz={$selected,[$dx/w,$dy/h,0]}
             elif $mouse_area==3 dx,dy,dz={$selected,[$dx/w,0,$dy/d]}
             else dx,dy,dz={$selected,[0,$dy/h,$dx/d]}
