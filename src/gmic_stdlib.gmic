@@ -2905,51 +2905,53 @@ _display : skip ${1=},${3=}
       rmn thumb_base,canvas_base,canvas_label_info
     fi
 
-    if {*,-A}" && "{$selected,(s==2||s==4)} # A: Switch alpha mode
-      alpha_mode:=($alpha_mode+1)%5
-      notification="Alpha: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
-      rmn thumb_base,canvas_base,canvas_label_notification
-    elif {*,-ENTER} # ENTER: Reset view
-      view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
-      if {is_rotated,i[$selected]} rotate[$selected] {is_rotated,-90*i[$selected]} =[is_rotated] 0,0,$selected fi
-      rmn canvas_base
-    elif {*,-G} # G: Toggle grid
-      canvas_is_grid:=!$canvas_is_grid
-      notification="Grid: "${"arg0 "$canvas_is_grid,"Off,On"}
-      rmn canvas_base,canvas_label_notification
-    elif {*,-H} # H: Go upper-left
-      view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
-      rmn canvas_base
-    elif {*,-E} # E: Go lower-right
-      view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
-      rmn canvas_base
-    elif {*,-M} # M: Run 3D mesh viewer
-      if ${is_mesh3d[$selected]}
-        d3d[$selected]
-        rmn thumb_base,canvas_base,canvas_label_info
-        wait -1
+    if {$selected,w}
+      if {*,-A}" && "{$selected,(s==2||s==4)} # A: Switch alpha mode
+        alpha_mode:=($alpha_mode+1)%5
+        notification="Alpha: "${"arg0 "$alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
+        rmn thumb_base,canvas_base,canvas_label_notification
+      elif {*,-ENTER} # ENTER: Reset view
+        view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
+        if {is_rotated,i[$selected]} rotate[$selected] {is_rotated,-90*i[$selected]} =[is_rotated] 0,0,$selected fi
+        rmn canvas_base
+      elif {*,-G} # G: Toggle grid
+        canvas_is_grid:=!$canvas_is_grid
+        notification="Grid: "${"arg0 "$canvas_is_grid,"Off,On"}
+        rmn canvas_base,canvas_label_notification
+      elif {*,-H} # H: Go upper-left
+        view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
+        rmn canvas_base
+      elif {*,-E} # E: Go lower-right
+        view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
+        rmn canvas_base
+      elif {*,-M} # M: Run 3D mesh viewer
+        if ${is_mesh3d[$selected]}
+          d3d[$selected]
+          rmn thumb_base,canvas_base,canvas_label_info
+          wait -1
+        fi
+      elif {*,-N} # N: Switch normalization mode
+        normalization_mode:=($normalization_mode+1)%4
+        notification="Normalization: "${"arg0 "$normalization_mode,\
+                                        "Disabled,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
+        rmn thumb_base,canvas_base,canvas_label_notification
+      elif {*,-R} # Rotate view
+        =[is_rotated] {is_rotated,(i[$selected]+1)%4},0,$selected
+        rotate[$selected] 90
+        notification="Angle: "{is_rotated,90*i[$selected]}\260
+        rmn canvas_base,canvas_label_info,canvas_label_notification
+      elif {*,X}" && "$is_volumetric # Reset area cross position
+        canvas_cross_x,canvas_cross_y=
+        rmn canvas_base
+        skip {*,-X}
+      elif {*,-Z} # Switch zoom factor (1:1,2:1,4:1,x1,x2,x4,max/8,max/4,max/2,max)
+        view_zoom_mode:=($view_zoom_mode+1)%10
+        n_view_zoom:=cut(arg0($view_zoom_mode,$zoom_1_1,2*$zoom_1_1,4*$zoom_1_1,\
+                              1,2,4,$zoom_max/8,$zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
+        if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
+        notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
+        rmn canvas_label_notification
       fi
-    elif {*,-N} # N: Switch normalization mode
-      normalization_mode:=($normalization_mode+1)%4
-      notification="Normalization: "${"arg0 "$normalization_mode,\
-                                      "Disabled,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
-      rmn thumb_base,canvas_base,canvas_label_notification
-    elif {*,-R} # Rotate view
-      =[is_rotated] {is_rotated,(i[$selected]+1)%4},0,$selected
-      rotate[$selected] 90
-      notification="Angle: "{is_rotated,90*i[$selected]}\260
-      rmn canvas_base,canvas_label_info,canvas_label_notification
-    elif {*,X}" && "$is_volumetric # Reset area cross position
-      canvas_cross_x,canvas_cross_y=
-      rmn canvas_base
-      skip {*,-X}
-    elif {*,-Z} # Switch zoom factor (1:1,2:1,4:1,x1,x2,x4,max/8,max/4,max/2,max)
-      view_zoom_mode:=($view_zoom_mode+1)%10
-      n_view_zoom:=cut(arg0($view_zoom_mode,$zoom_1_1,2*$zoom_1_1,4*$zoom_1_1,\
-                            1,2,4,$zoom_max/8,$zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
-      if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
-      notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
-      rmn canvas_label_notification
     fi
 
     if $is_CTRL
