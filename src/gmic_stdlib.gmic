@@ -2267,7 +2267,19 @@ _display : skip ${1=},${3=}
         if $x0>$x1 x0,x1=$x1,$x0 fi
         if $y0>$y1 y0,y1=$y1,$y0 fi
         dx,dy:=$x1-$x0,$y1-$y0
-        str="Box ( "$x0","$y0" ) - ( "$x1","$y1" ), Size = ( "{$dx+1}","{$dy+1}" )"\n\
+
+        if {is_rotated,i[$selected]}
+          view_xy0={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
+            ang = i[$selected]; ang==1?[ $y0, w1 - $x0 ]:ang==2?[ w1 - $x0, h1 - $y0 ]:[ h1 - $y0, $x0 ]"}
+          view_xy1={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
+            ang = i[$selected]; ang==1?[ $y1, w1 - $x1 ]:ang==2?[ w1 - $x1, h1 - $y1 ]:[ h1 - $y1, $x1 ]"}
+          view_dxy={is_rotated,(i[$selected]%2?[$dy,$dx]:[$dx,$dy])+1}
+        else
+          view_xy0=$x0,$y0
+          view_xy1=$x1,$y1
+          view_dxy:=[$dx,$dy]+1
+        fi
+        str="Box ( "$view_xy0" ) - ( "$view_xy1" ), Size = ( "$view_dxy" )"\n\
             "Length = "{_norm($dx,$dy)}", Angle = "{_rad2deg(atan2($y1-$y0,$x1-$x0))%360}"\260"
       else
         x,y,z={$selected,"round(
