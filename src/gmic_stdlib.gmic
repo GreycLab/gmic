@@ -1906,7 +1906,10 @@ _display : skip ${1=},${3=}
           w = w#y; h = h#y; d = d#y;
           d>1?(w+=d + 2; h+=d + 2);
           Mwh = max(w,h);
-          Mwh?[ max($thumb_min_ratio,w/Mwh), max($thumb_min_ratio,h/Mwh) ]:[ 0.5,0.5 ]"
+          wt = Mwh?max($thumb_min_ratio,w/Mwh):0.5;
+          ht = Mwh?max($thumb_min_ratio,h/Mwh):0.5;
+          i[#$is_rotated,y]%2?swap(wt,ht);
+          [ wt,ht ]"
         sh. 100% /.. {iM} rm. *. $thumb_height round.
         +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0 + 2; res"
         rv[-2,-1] a[-2,-1] c => thumb_coords
@@ -1938,6 +1941,7 @@ _display : skip ${1=},${3=}
                 sh[$ind0] 0,{$ind0,$is_alpha?s-1:min(2,s-1)}
                 if d>1 +volumetric2d. 50%,50%,50%,2 rm.. fi
                 if w>$w" || "h>$h +r. $w,$h else . fi rm..
+                if {is_rotated,i[$ind0]} rotate. {is_rotated,-90*i[$ind0]} fi
                 if !$normalization_mode # Normalize image values
                   and. 255
                 elif $normalization_mode==1
