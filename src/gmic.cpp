@@ -15160,7 +15160,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         CImg<char>::string("").move_to(callstack); // Anonymous scope
         if (is_display_available) {
           gmic_display_window(0).assign();
-          CImg<char>::string("default_display").move_to(ncommands_line);
+          CImg<char>::string("d").move_to(ncommands_line);
         } else
           CImg<char>::string("p").move_to(ncommands_line);
         _run(ncommands_line,nposition,images,images_names,images,images_names,variables_sizes,0,0,0,false);
