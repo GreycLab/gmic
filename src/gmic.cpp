@@ -7467,7 +7467,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         if (!is_get && !std::strcmp("for",item)) {
           gmic_substitute_args(false);
           is_cond = check_cond(argument,images,"for");
-          const bool is_first = !nb_fordones || fordones(0U,nb_fordones - 1)!=position_item;
+          const bool is_first = !nb_fordones || fordones(0U,nb_fordones - 1)!=position_item ||
+            fordones(3U,nb_fordones - 1)!=callstack.size();
           if (is_very_verbose)
             print(0,"%s %s -> condition '%s' %s.",
                   !is_first?"Go back to":is_cond?"Start":"Skip",
@@ -7498,11 +7499,12 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               cimg_snprintf(argx,_argx.width(),"*for#%u",debug_line);
               CImg<char>::string(argx).move_to(callstack);
             } else CImg<char>::string("*for").move_to(callstack);
-            if (nb_fordones>=fordones._height) fordones.resize(3,std::max(2*fordones._height,8U),1,1,0);
+            if (nb_fordones>=fordones._height) fordones.resize(4,std::max(2*fordones._height,8U),1,1,0);
             unsigned int *const fd = fordones.data(0,nb_fordones++);
             fd[0] = position_item;
             fd[1] = 0;
             fd[2] = debug_line;
+            fd[3] = callstack.size();
           }
           is_lbrace_command = true;
           continue;
