@@ -1962,6 +1962,7 @@ _display : skip ${1=},${3=}
                 elif s==2 r. 100%,100%,1,3,0
                 fi
               fi
+              +store. thumb_$ind0
               j[thumb_base] .,$x0,$y0 rm.
               =[thumb_is_rendered] 1,0,$ind0
             fi
@@ -1969,6 +1970,21 @@ _display : skip ${1=},${3=}
           }
           thumb_ind0,thumb_ind1=$ind0,$ind1
         fi
+
+        # WIP : Alternative rendering, only from thumb_coords.
+        $window_width,$thumb_height,1,3,x+y
+        ind0,ind1={thumb_coords,"
+          const x = $thumb_x_px;
+          for (ind0 = 0, x>i[#$thumb_coords,ind0], ++ind0);
+          for (ind1 = $nb_images - 1, x + $window_width<=i[#$thumb_coords,ind1], --ind1);
+          [ max(0,--ind0), min($nb_images - 1,ind1) ]"}
+        repeat $ind1-$ind0+1 {
+          x,y={thumb_coords,I[$ind0][0,2]}
+          ${thumb_$ind0} j.. .,{$x-$thumb_x_px},$y rm.
+          ind0+=1
+        }
+#        w2.
+        rm.
 
         # Decorate selected/mouse over thumbnail.
         +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1} => thumb_view
