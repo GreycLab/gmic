@@ -1971,15 +1971,17 @@ _display : skip ${1=},${3=}
           thumb_ind0,thumb_ind1=$ind0,$ind1
         fi
 
-        # WIP : Alternative rendering, only from thumb_coords.
-        $window_width,$thumb_height,1,3,x+y
+        # WIP : Alternative rendering, only from 'thumb_coords'.
+        $window_width,$thumb_height,1,3
         ind0,ind1={thumb_coords,"
-          const x = $thumb_x_px;
-          for (ind0 = 0, x>i[#$thumb_coords,ind0], ++ind0);
+          const x0 = $thumb_x_px;
+          for (ind0 = 0, i[#$thumb_coords,ind0]<x0 && ind0<h, ++ind0);
           ind0 = max(0,--ind0);
-          for (ind1 = $nb_images - 1, x + $window_width<=i[#$thumb_coords,ind1], --ind1);
-          ind1 = min($nb_images - 1,ind1);
+          const x1 = x0 + $window_width;
+          for (ind1 = ind0, i[#$thumb_coords,ind1]<x1 && ind1<h, ++ind1);
+          ind1 = min($nb_images - 1,--ind1);
           [ ind0, ind1 ]"}
+
         repeat $ind1-$ind0+1 {
           x,y={thumb_coords,I[$ind0][0,2]}
           ${thumb_$ind0} j.. .,{$x-$thumb_x_px},$y rm.
