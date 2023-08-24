@@ -419,12 +419,17 @@ struct gmic {
 
   gmic_list<char> commands_line_to_CImgList(const char *const commands_line);
 
-  template<typename T>
   void _gmic_substitute_args(const char *const argument, const char *const argument0, const char *const command,
-                             const char *const item, const gmic_list<T>& images);
+                             const char *const item);
 
-  gmic& error(const bool output_header, const char *format, ...);
+  gmic& print(const gmic_image<unsigned int> *const callstack_selection,
+              const char *format, ...);
+  gmic& warn(const gmic_image<unsigned int> *const callstack_selection, const bool force_visible,
+             const char *format, ...);
   gmic& debug(const char *format, ...);
+  gmic& error(const bool output_header, const char *format, ...);
+  gmic& error(const bool output_header, const gmic_image<unsigned int> *const callstack_selection,
+              const char *const command, const char *format, ...);
 
   template<typename T>
   gmic_image<char> substitute_item(const char *const source, gmic_list<T>& images, gmic_list<char>& images_names,
@@ -436,23 +441,7 @@ struct gmic {
   void wait_threads(void *const p_gmic_threads, const bool try_abort, const T& pixel_type);
 
   template<typename T>
-  gmic& print(const gmic_list<T>& list, const gmic_image<unsigned int> *const callstack_selection,
-              const char *format, ...);
-
-  template<typename T>
-  gmic& warn(const gmic_list<T>& list, const gmic_image<unsigned int> *const callstack_selection,
-             const bool force_visible, const char *format, ...);
-
-  template<typename T>
-  gmic& error(const bool output_header, const gmic_list<T>& list,
-              const gmic_image<unsigned int> *const callstack_selection,
-              const char *const command, const char *format, ...);
-
-  template<typename T>
   bool check_cond(const char *const expr, gmic_list<T>& images, const char *const command);
-
-  template<typename T>
-  gmic& debug(const gmic_list<T>& list, const char *format, ...);
 
   template<typename T>
   gmic& display_plots(gmic_list<T>& images, gmic_list<char>& images_names,
