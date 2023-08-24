@@ -1893,7 +1893,7 @@ _display : skip ${1=},${3=}
         thumb_x_px={thumb_base,cut($thumb_x*w,-16,$thumb_x_px_max)}
         thumb_height={thumb_base,h}
       else
-        rmn thumb_coords,thumb_label,thumb_is_rendered,thumb_shade_left,thumb_shade_right
+        rmn thumb_coords,thumb_label,thumb_shade_left,thumb_shade_right
 
         # Compute thumbnail coordinates and sizes.
         thumb_height:=max(48,round($window_height*$thumb_height_factor))
@@ -1908,20 +1908,17 @@ _display : skip ${1=},${3=}
         sh. 100% /.. {iM} rm. *. $thumb_height round.
         +f. ">begin(Sw = 0); res = [ Sw, round(($thumb_height - i1)/2) ]; Sw+=i0 + 2; res"
         rv[-2,-1] a[-2,-1] c => thumb_coords
-        1,$nb_images,1,1,0 => thumb_is_rendered
 
         {thumb_coords,max(i(0,h-1,0,0)+i(0,h-1,0,2),$window_width)},$thumb_height,1,3 => thumb_base
         thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
         if !narg($thumb_x) thumb_x={thumb_base,-16/w} fi
         thumb_x_px={thumb_base,cut($thumb_x*w,-16,$thumb_x_px_max)}
-
-        # Compute associated thumb label for each column.
-        100%,1,1,1,-1 eval[thumb_coords] "copy(i[#-1,i0],y,i2 + (y<h-1?2:0),1,0)" => thumb_label
         rmn thumb_view
       fi
 
       if !0$thumb_view
-        $window_width,$thumb_height,1,3 => thumb_view
+        rmn thumb_label
+        $window_width,$thumb_height,1,3 100%,1,1,1,-1 => thumb_view,thumb_label
 
         # Render visible thumbnails.
         ind0,ind1={thumb_coords,"
@@ -1935,7 +1932,7 @@ _display : skip ${1=},${3=}
 
         for $ind0<=$ind1 {
           x0,y0,w,h={thumb_coords,I[$ind0]}
-          if {thumb_is_rendered,!i[$ind0]}
+          if !narg(${thumb_render$ind0})
             if {$ind0,!w} # Empty image
               font_size:=cut($thumb_height/8,16,32)
               $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
@@ -1970,12 +1967,13 @@ _display : skip ${1=},${3=}
               elif s==2 r. 100%,100%,1,3,0
               fi
             fi
-            +store. thumb_$ind0
-            =[thumb_is_rendered] 1,0,$ind0
+            +store. thumb_render$ind0
           else
-            ${thumb_$ind0}
+            ${thumb_render$ind0}
           fi
-          j[thumb_view] .,{$x0-$thumb_x_px},$y0 rm.
+          x:=$x0-$thumb_x_px
+          line[thumb_label] {[$x,0,$x+w-1,0]},1,$ind0
+          j[thumb_view] .,$x,$y0 rm.
           ind0+=1
         }
         thumb_ind0,thumb_ind1=$ind0,$ind1
@@ -2571,9 +2569,8 @@ _display : skip ${1=},${3=}
       fi
       if $mouse_area==1
         canvas_label_alignment=0
-        x_ind:=$mouse_x+$thumb_x_px
-        if {thumb_label,inrange($x_ind,0,w-1)" && "i[$x_ind]>=0}
-          ind={thumb_label,i[$x_ind]}
+        ind={thumb_label,i[$mouse_x]}
+        if $ind>=0
           if $ind!=$thumb_mouse_over thumb_mouse_over=$ind rmn thumb_view,canvas_label_info fi
           if !$is_drag0" && "$is_released0
             if $selected!=$ind selected=$ind rmn thumb_view,canvas_label_info fi
