@@ -1921,58 +1921,9 @@ _display : skip ${1=},${3=}
       fi
 
       if !0$thumb_view
+        $window_width,$thumb_height,1,3 => thumb_view
 
-        # Render visible thumbnails in 'thumb_base'.
-        ind0,ind1={thumb_label,[i[$thumb_x_px],(ind=i[$thumb_x_px+$window_width-1,1])>=0?ind:$nb_images-1]}
-        if [$ind0,$ind1]!=[$thumb_ind0,$thumb_ind1]
-          for $ind0<=$ind1 {
-            if {thumb_is_rendered,!i[$ind0]}
-              x0,y0,w,h={thumb_coords,I[$ind0]}
-              if {$ind0,!w} # Empty image
-                font_size:=cut($thumb_height/8,16,32)
-                $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
-              else
-                is_alpha={$ind0,$alpha_mode" && "(s==2||s==4)}
-                sh[$ind0] 0,{$ind0,$is_alpha?s-1:min(2,s-1)}
-                if d>1 +volumetric2d. 50%,50%,50%,2 rm.. fi
-                if w>$w" || "h>$h +r. $w,$h else . fi rm..
-                if {is_rotated,i[$ind0]} rotate. {is_rotated,-90*i[$ind0]} fi
-                if !$normalization_mode # Normalize image values
-                  and. 255
-                elif $normalization_mode==1
-                  c. 0,255
-                else
-                  if {is_infnan,i[$ind0]<0} =[is_infnan] ${_display_is_infnan[$ind0]},0,$ind0 fi
-                  if $normalization_mode==2 # Channel-wise normalization
-                    if {is_infnan,i[$ind0]} l. { s c foreach { $0_normalize_infnan } a c }
-                    else l. { s c foreach { n 0,255 } a c }
-                    fi
-                  else # Global normalization
-                    if {is_infnan,i[$ind0]} $0_normalize_infnan. else n. 0,255 fi
-                  fi
-                fi
-                r. $w,$h
-                if $is_alpha
-                  to_rgba.
-                  if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-                  else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
-                  fi
-                  sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
-                elif s==1 r. 100%,100%,1,3
-                elif s==2 r. 100%,100%,1,3,0
-                fi
-              fi
-              +store. thumb_$ind0
-              j[thumb_base] .,$x0,$y0 rm.
-              =[thumb_is_rendered] 1,0,$ind0
-            fi
-            ind0+=1
-          }
-          thumb_ind0,thumb_ind1=$ind0,$ind1
-        fi
-
-        # WIP : Alternative rendering, only from 'thumb_coords'.
-        $window_width,$thumb_height,1,3
+        # Render visible thumbnails.
         ind0,ind1={thumb_coords,"
           const x0 = $thumb_x_px;
           for (ind0 = 0, i[#$thumb_coords,ind0]<x0 && ind0<h, ++ind0);
@@ -1982,16 +1933,54 @@ _display : skip ${1=},${3=}
           ind1 = min($nb_images - 1,--ind1);
           [ ind0, ind1 ]"}
 
-        repeat $ind1-$ind0+1 {
-          x,y={thumb_coords,I[$ind0][0,2]}
-          ${thumb_$ind0} j.. .,{$x-$thumb_x_px},$y rm.
+        for $ind0<=$ind1 {
+          x0,y0,w,h={thumb_coords,I[$ind0]}
+          if {thumb_is_rendered,!i[$ind0]}
+            if {$ind0,!w} # Empty image
+              font_size:=cut($thumb_height/8,16,32)
+              $w,$h,1,3,100 to. \330,0.42~,0.5~,$font_size,1,1,255
+            else
+              is_alpha={$ind0,$alpha_mode" && "(s==2||s==4)}
+              sh[$ind0] 0,{$ind0,$is_alpha?s-1:min(2,s-1)}
+              if d>1 +volumetric2d. 50%,50%,50%,2 rm.. fi
+              if w>$w" || "h>$h +r. $w,$h else . fi rm..
+              if {is_rotated,i[$ind0]} rotate. {is_rotated,-90*i[$ind0]} fi
+              if !$normalization_mode # Normalize image values
+                and. 255
+              elif $normalization_mode==1
+                c. 0,255
+              else
+                if {is_infnan,i[$ind0]<0} =[is_infnan] ${_display_is_infnan[$ind0]},0,$ind0 fi
+                if $normalization_mode==2 # Channel-wise normalization
+                  if {is_infnan,i[$ind0]} l. { s c foreach { $0_normalize_infnan } a c }
+                  else l. { s c foreach { n 0,255 } a c }
+                  fi
+                else # Global normalization
+                  if {is_infnan,i[$ind0]} $0_normalize_infnan. else n. 0,255 fi
+                fi
+              fi
+              r. $w,$h
+              if $is_alpha
+                to_rgba.
+                if $alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
+                else $w,$h,1,3,{arg($alpha_mode-1,0,128,255)}
+                fi
+                sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
+              elif s==1 r. 100%,100%,1,3
+              elif s==2 r. 100%,100%,1,3,0
+              fi
+            fi
+            +store. thumb_$ind0
+            =[thumb_is_rendered] 1,0,$ind0
+          else
+            ${thumb_$ind0}
+          fi
+          j[thumb_view] .,{$x0-$thumb_x_px},$y0 rm.
           ind0+=1
         }
-#        w2.
-        rm.
+        thumb_ind0,thumb_ind1=$ind0,$ind1
 
         # Decorate selected/mouse over thumbnail.
-        +z[thumb_base] $thumb_x_px,{$thumb_x_px+$window_width-1} => thumb_view
         x0,y0,w,h={thumb_coords,I[$selected]}
         x0-=$thumb_x_px
         font_size:=cut($thumb_height/6,16,32)
