@@ -2311,8 +2311,13 @@ _display : skip ${1=},${3=}
         fi
         basename {``{$selected,n}}
         basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
-        whds={$selected,i[#$is_rotated,$selected]%2?[h,w,d,s]:[w,h,d,s]}
-        str.="Image \#"{image_indices,i[$selected]}": "$basename" ("{``$whds}")"
+        if $is_view3d
+          str.="Image \#"{image_indices,i[$selected]}": "$basename" ("\
+               {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[6])}" primitives)"
+        else
+          whds={$selected,i[#$is_rotated,$selected]%2?[h,w,d,s]:[w,h,d,s]}
+          str.="Image \#"{image_indices,i[$selected]}": "$basename" ("{``$whds}")"
+        fi
         t. {``$str},0,0,$font_size,1,255
       fi
       => canvas_label_info
@@ -3062,6 +3067,15 @@ _display : skip ${1=},${3=}
         if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
         notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
         rmn canvas_label_notification
+      fi
+    fi
+
+    if $is_view3d
+      if {*,-F1} # F1: Switch 3D rendering mode
+        setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
+        notification="3D Rendering: "${"arg0 "$setting_3d_rendering_mode,\
+                                       "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
+        rmn area_3d_view,canvas_label_notification
       fi
     fi
 
