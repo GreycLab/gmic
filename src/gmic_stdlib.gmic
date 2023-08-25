@@ -1816,6 +1816,7 @@ _display : skip ${1=},${3=}
   canvas_axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
   canvas_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
   canvas_is_info:=narg($_display_is_info)?0$_display_is_info:1
+  canvas_is_mesh3d:=narg($_display_is_mesh3d)?0$_display_is_mesh3d:1
 
   thumb_height_factor=0.15
   thumb_min_ratio=0.45
@@ -2042,14 +2043,15 @@ _display : skip ${1=},${3=}
           cut("$canvas_cross_x",16/$canvas_width,($canvas_width-17)/$canvas_width),
           cut("$canvas_cross_y",16/$canvas_height,($canvas_height-17)/$canvas_height)
         ]"
-        area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height:="
+        area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height,\
+          area_3d_width,area_3d_height:="
           const w_ratio = "$canvas_cross_x";
           const h_ratio = "$canvas_cross_y";
           w_xy = round(w_ratio*$canvas_width) - 1;
           h_xy = round(h_ratio*$canvas_height) - 1;
           w_zy = $canvas_width - w_xy - 1;
           h_xz = $canvas_height - h_xy - 1;
-          [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy ]"
+          [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy,w_zy,h_xz ]"
       else
         area_xy_width,area_xy_height=$canvas_width,$canvas_height
         area_xz_width,area_xz_height,area_zy_width,area_zy_height=0
@@ -2234,25 +2236,26 @@ _display : skip ${1=},${3=}
           j[canvas_base] [canvas_cross_button],\
             {canvas_cross_button,round([$canvas_cross_x*$canvas_width-w/2,$canvas_cross_y*$canvas_height-h/2])},\
             0,0,0.5,.,255 rm.
-
-          # Generate 3D mesh object.
-          rmn canvas_mesh3d
-          if !narg($canvas_mesh3d)
-#            +projections3d[$selected] {$selected,floor([$view_center_x*w
-          fi
-
         fi
-
-
-
-
       fi
       rmn canvas_label_coords
     fi
 
-    font_size={canvas_base,cut(round(h/40),16,32)}
+    # Generate 3D mesh object.
+    if $canvas_is_mesh3d" && "!narg($canvas_mesh3d)
+      if $is_volumetric
+        +projections3d[$selected] {$selected,floor([$view_center_x*w,$view_center_y*h,$view_center_z*d])},1
+        c3d. n3d. *3d. {min($area_3d_width,$area_3d_height)}
+        => canvas_mesh3d
+      elif
+        ${is_mesh3d[$selected]} +c3d[$selected] n3d.
+        => canvas_mesh3d
+      else canvas_is_mesh3d=0
+      fi
+    fi
 
     # Generate label for image title.
+    font_size={canvas_base,cut(round(h/40),16,32)}
     if !0$canvas_label_info
       0 str=
       if $nb_images>1
@@ -2340,6 +2343,21 @@ _display : skip ${1=},${3=}
       t. {``$str},0,0,$font_size,1,255
       => canvas_label_coords
       rmn canvas_label
+    fi
+
+    # Generate 3D view.
+    if $canvas_is_mesh3d" && "!0$area_3d_view
+
+      if $is_volumetric
+        if !0$area_3d_background
+          3,2,1,1,"16,16,48,44,96,76" permute. cyzx r. $area_3d_width,$area_3d_height,1,3,3 round.
+          => area_3d_background
+        fi
+        +j3d[area_3d_background] [canvas_mesh3d],50%,50%
+        => area_3d_view
+        rmn canvas_view
+      fi
+
     fi
 
     # Generate label for notification.
@@ -2501,6 +2519,8 @@ _display : skip ${1=},${3=}
         fi
       fi
 
+      if $area_3d_view j[canvas_view] [area_3d_view],{[$area_xy_width,$area_xy_height]+2} fi
+
       # Draw labels.
       ja[canvas_view] [canvas_label],0,$canvas_label_alignment~
       if $canvas_label_notification
@@ -2509,6 +2529,7 @@ _display : skip ${1=},${3=}
         rm.
         window_wait_mode=1
       fi
+
       rmn window_view
     fi
 
@@ -2964,12 +2985,9 @@ _display : skip ${1=},${3=}
       elif {*,-E} # E: Go lower-right
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
         rmn canvas_base
-      elif {*,-M} # M: Run 3D mesh viewer
-        if ${is_mesh3d[$selected]}
-          d3d[$selected]
-          rmn thumb_coords,canvas_base,canvas_label_info
-          wait -1
-        fi
+      elif {*,-M} # M: Toggle 3D mesh view
+        canvas_is_mesh3d:=!$canvas_is_mesh3d
+        rmn canvas_view
       elif {*,-N} # N: Switch normalization mode
         normalization_mode:=($normalization_mode+1)%4
         notification="Normalization: "${"arg0 "$normalization_mode,\
