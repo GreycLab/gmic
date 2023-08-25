@@ -2256,10 +2256,11 @@ _display : skip ${1=},${3=}
     if $is_view3d" && "!0$area_3d_mesh
       if $is_volumetric
         +projections3d[$selected] {$selected,floor([$view_center_x*w,$view_center_y*h,$view_center_z*d])},1
-        c3d. n3d. *3d. {0.75*min($area_3d_width,$area_3d_height)}
+        c3d. n3d.
       else
         +c3d[$selected] n3d.
       fi
+      *3d. {0.75*min($area_3d_width,$area_3d_height)}
       => area_3d_mesh
       rmn area_3d_view
     fi
@@ -2355,18 +2356,16 @@ _display : skip ${1=},${3=}
       rmn canvas_label
     fi
 
-    # Generate 3D view.
+    # Render 3D view.
     if $is_view3d" && "!0$area_3d_view
       if {area_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
         rm[area_3d_background]
         3,2,1,1,"16,16,48,44,96,76" permute. cyzx r. $area_3d_width,$area_3d_height,1,3,3 round.
         => area_3d_background
       fi
-      if $is_volumetric
-        +j3d[area_3d_background] [area_3d_mesh],50%,50%
-        => area_3d_view
-        rmn canvas_view
-      fi
+      +j3d[area_3d_background] [area_3d_mesh],50%,50%
+      => area_3d_view
+      rmn canvas_view
     fi
 
     # Generate label for notification.
@@ -2528,8 +2527,9 @@ _display : skip ${1=},${3=}
         fi
       fi
 
+      # Draw 3D view.
       if $setting_is_view3d" && "0$area_3d_view
-        j[canvas_view] [area_3d_view],{[$area_xy_width,$area_xy_height]+2}
+        j[canvas_view] [area_3d_view],{[$area_xy_width,$area_xy_height]+($is_volumetric?2:0)}
       fi
 
       # Draw labels.
@@ -3002,6 +3002,7 @@ _display : skip ${1=},${3=}
         rmn canvas_base,area_3d_mesh
       elif {*,-M} # M: Toggle 3D mesh view
         setting_is_view3d:=!$setting_is_view3d
+        if {is_mesh3d,i[$selected]} rmn canvas_base fi
         rmn canvas_view
       elif {*,-N} # N: Switch normalization mode
         setting_normalization_mode:=($setting_normalization_mode+1)%4
