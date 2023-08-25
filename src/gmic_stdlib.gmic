@@ -1811,12 +1811,20 @@ _display : skip ${1=},${3=}
   nb_images=$!
 
   # Initialize setting variables.
+
+  # 'setting_normalization_mode' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global }.
   setting_normalization_mode:=narg($_display_normalization_mode)?0$_display_normalization_mode:-1
+  # 'setting_alpha_mode' can be { 0:off | 1:on | 2:over black | 3:over gray | 4:over white }.
   setting_alpha_mode:=narg($_display_alpha_mode)?0$_display_alpha_mode:0
+  # 'setting_axis_mode' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) }.
   setting_axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
+  # 'setting_view3d_mode' can be { 0:off | 1:on (3D mesh only) | 2:on (+3D volumetric images) }.
+  setting_view3d_mode:=narg($_display_view3d_mode)?0$_display_view3d_mode:0
+  # 'setting_is_grid' can be { 0:off | 1:on }.
   setting_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
+  # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?0$_display_is_info:1
-  setting_is_view3d:=narg($_display_is_view3d)?0$_display_is_view3d:0
+  # 'setting_thumb_height_factor' is a positive floating number (should be less than 0.5).
   setting_thumb_height_factor:=narg($_display_thumb_height_factor)?0$_display_thumb_height_factor:0.15
 
   thumb_min_ratio=0.45
@@ -1886,7 +1894,7 @@ _display : skip ${1=},${3=}
     window_width,window_height={*,w,h}
     is_volumetric={$selected,d>1}
     if {is_mesh3d,i[$selected]<0} =[is_mesh3d] ${is_mesh3d[$selected]},0,$selected fi
-    is_view3d={is_mesh3d,$setting_is_view3d" && "($is_volumetric" || "i[$selected])}
+    is_view3d={is_mesh3d,$setting_view3d_mode" && "(i[$selected]" || "($is_volumetric" && "$setting_view3d_mode==2))}
 
     # Rotate image if necessary.
     if {is_rotated,i[$selected]!=$view_is_rotated}
@@ -2541,7 +2549,7 @@ _display : skip ${1=},${3=}
       fi
 
       # Draw 3D view.
-      if $setting_is_view3d" && "0$area_3d_view
+      if $is_view3d" && "0$area_3d_view
         j[canvas_view] [area_3d_view],{[$area_xy_width,$area_xy_height]+($is_volumetric?2:0)}
       fi
 
@@ -3013,9 +3021,9 @@ _display : skip ${1=},${3=}
       elif {*,-E} # E: Go lower-right
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
         rmn canvas_base,area_3d_mesh
-      elif {*,-M} # M: Toggle 3D mesh view
-        setting_is_view3d:=!$setting_is_view3d
-        if {is_mesh3d,i[$selected]} rmn canvas_base fi
+      elif {*,-M} # M: Switch 3D mesh view mode
+        setting_view3d_mode:=($setting_view3d_mode+1)%3
+        if {is_mesh3d,$setting_view3d_mode" && "i[$selected]} rmn canvas_base fi
         rmn canvas_view
       elif {*,-N} # N: Switch normalization mode
         setting_normalization_mode:=($setting_normalization_mode+1)%4
