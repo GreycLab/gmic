@@ -1885,6 +1885,11 @@ _display : skip ${1=},${3=}
   for {*}" && "!{*,ESC} {
     window_width,window_height={*,w,h}
     is_volumetric={$selected,d>1}
+    if {is_mesh3d,i[$selected]<0}
+      if $is_volumetric cond=0 else cond=${is_mesh3d[$selected]} fi
+      =[is_mesh3d] $cond,0,$selected
+    fi
+    is_view3d={is_mesh3d,$setting_is_view3d" && "($is_volumetric" || "i[$selected])}
 
     # Rotate image if necessary.
     if {is_rotated,i[$selected]!=$view_is_rotated}
@@ -2032,7 +2037,7 @@ _display : skip ${1=},${3=}
         =[is_printed] 1,0,$selected
       fi
 
-      # Set size of the different XY,XZ,ZY areas.
+      # Set size of the different XY,XZ,ZY,3D areas.
       if $is_volumetric
         if !narg($canvas_cross_x)
           whd={$selected,`string(w,'_',h,'_',d)`}
@@ -2053,9 +2058,12 @@ _display : skip ${1=},${3=}
           w_zy = $canvas_width - w_xy - 1;
           h_xz = $canvas_height - h_xy - 1;
           [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy,w_zy,h_xz ]"
+      elif {is_mesh3d,$is_view3d" && "i[$selected]}
+        area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height=0
+        area_3d_width,area_3d_height=$canvas_width,$canvas_height
       else
         area_xy_width,area_xy_height=$canvas_width,$canvas_height
-        area_xz_width,area_xz_height,area_zy_width,area_zy_height=0
+        area_xz_width,area_xz_height,area_zy_width,area_zy_height,area_3d_width,area_3d_height=0
       fi
 
       # Render checkerboard background.
@@ -2068,6 +2076,8 @@ _display : skip ${1=},${3=}
 
       # Render canvas base image.
       if {$selected,!w} [canvas_checkerboard] => canvas_base
+      elif {is_mesh3d,$is_view3d" && "i[$selected]}
+        [canvas_checkerboard] => canvas_base
       else
         is_alpha={$selected,$setting_alpha_mode" && "(s==2||s==4)}
         view_base_channel={$selected,cut($view_base_channel,0,max(0,s-3))}
@@ -2243,12 +2253,6 @@ _display : skip ${1=},${3=}
     fi
 
     # Generate 3D mesh object.
-    if {is_mesh3d,i[$selected]<0}
-      if $is_volumetric cond=0 else cond=${is_mesh3d[$selected]} fi
-      =[is_mesh3d] $cond,0,$selected
-    fi
-    is_view3d={is_mesh3d,$setting_is_view3d" && "($is_volumetric" || "i[$selected])}
-
     if $is_view3d" && "!0$area_3d_mesh
       if $is_volumetric
         +projections3d[$selected] {$selected,floor([$view_center_x*w,$view_center_y*h,$view_center_z*d])},1
