@@ -1973,15 +1973,15 @@ _display : skip ${1=},${3=}
               # Generate 3D icon if necessary.
               if {is_mesh3d,i[$ind]<0} =[is_mesh3d] ${is_mesh3d[$ind]},0,$ind fi
               if {is_mesh3d,i[$ind]}
-                 if !0$thumb_icon3d
-                   box3d 35 col3d. 0,200,255 c3d. r3d. 1,1,1,45
-                   64,64,1,3,-1 j3d. ..,50%,50%,0,1,3,0 rm..
-                   +neq. -1 channels. 0 dilate. 3 *. 196
-                   f.. "I!=J(-1) || I!=J(1) || I!=J(0,-1) || I!=J(0,1)?[0,0,0]:I"
-                   to.. 3D,0.5~,0.5~,24,1,1,255
-                   a[-2,-1] c autocrop. r. 36,36,1,4,2
-                   => thumb_icon3d
-                 fi
+                if !0$thumb_icon3d
+                  box3d 35 col3d. 0,200,255 c3d. r3d. 1,1,1,45
+                  64,64,1,3,-1 j3d. ..,50%,50%,0,1,3,0 rm..
+                  +channels. 0 neq. -1 dilate. 3 *. 200
+                  f.. "I!=J(-1) || I!=J(1) || I!=J(0,-1) || I!=J(0,1)?[0,0,0]:I+1"
+                  to.. 3D,0.5~,0.5~,24,1,1,255
+                  a[-2,-1] c autocrop. r. 36,36,1,4,2
+                  => thumb_icon3d
+                fi
               fi
 
               is_alpha={$ind,$setting_alpha_mode" && "(s==2||s==4)}
@@ -2013,7 +2013,10 @@ _display : skip ${1=},${3=}
               elif s==1 r. 100%,100%,1,3
               elif s==2 r. 100%,100%,1,3,0
               fi
-              if {is_mesh3d,i[$ind]} sh[thumb_icon3d] 100% j.. [thumb_icon3d],0.5~,0.5~,0,0,1,.,255 rm. fi
+              if {is_mesh3d,i[$ind]}
+                sh[thumb_icon3d] 100%
+                j.. [thumb_icon3d],0.5~,{-2,h-h#$thumb_icon3d-5},0,0,1,.,255 rm.
+              fi
             fi
             +store. thumb_cache_$ind
             =[thumb_is_cached] 1,0,$ind
@@ -2293,7 +2296,7 @@ _display : skip ${1=},${3=}
       else
         +c3d[$selected] n3d.
       fi
-      *3d. {0.75*min($area_3d_width,$area_3d_height)}
+      *3d. {0.5*min($area_3d_width,$area_3d_height)}
       => area_3d_mesh
       rmn area_3d_view
     fi
