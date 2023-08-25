@@ -2301,19 +2301,28 @@ _display : skip ${1=},${3=}
     # Generate label for image title.
     font_size={canvas_base,cut(round(h/40),16,32)}
     if !0$canvas_label_info
-      0 str=
-      if $nb_images>1
+      0
+      basename {``{$selected,n}}
+      basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
+      str=
+      if $nb_images==1
+        str="["{image_indices,i[$l_ind]}"] "$basename" "
+        if $is_view3d
+          str.="("{$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
+        else
+          str.="("{$selected,[w,h,d,s]}")"
+        fi
+        w[] -1,-1,$str
+      else
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
           basename {``{$thumb_mouse_over,n}}
-          basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
+          basename_mo={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
           whds={$thumb_mouse_over,i[#$is_rotated,$thumb_mouse_over]%2?[h,w,d,s]:[w,h,d,s]}
-          str.="Thumb \#"{image_indices,i[$thumb_mouse_over]}": "$basename" ("{``$whds}")\n"
+          str.="Thumb \#"{image_indices,i[$thumb_mouse_over]}": "$basename_mo" ("{``$whds}")\n"
         fi
-        basename {``{$selected,n}}
-        basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
         if $is_view3d
           str.="Image \#"{image_indices,i[$selected]}": "$basename" ("\
-               {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[6])}" primitives)"
+               {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
         else
           whds={$selected,i[#$is_rotated,$selected]%2?[h,w,d,s]:[w,h,d,s]}
           str.="Image \#"{image_indices,i[$selected]}": "$basename" ("{``$whds}")"
@@ -3046,7 +3055,7 @@ _display : skip ${1=},${3=}
         notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
                                        "Off,\"On (mesh only)\",On"}
         if !$setting_view3d_mode rmn canvas_base fi
-        rmn canvas_view,canvas_label_notification
+        rmn canvas_view,canvas_label_info,canvas_label_notification
       elif {*,-N} # N: Switch normalization mode
         setting_normalization_mode:=($setting_normalization_mode+1)%4
         notification="Normalization: "${"arg0 "$setting_normalization_mode,\
