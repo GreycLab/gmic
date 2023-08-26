@@ -1896,16 +1896,16 @@ _display : skip ${1=},${3=}
   zoom_1_1=0
 
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
-  1,${nb_images}x4 => is_printed,is_infnan,is_rotated,is_mesh3d
-  f[is_infnan,is_mesh3d] -1
+  1,${nb_images}x4 => is_printed,is_infnan,is_rotated,is_3d_mesh
+  f[is_infnan,is_3d_mesh] -1
   0x2 => canvas_checkerboard,area_3d_background
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
     window_width,window_height={*,w,h}
     is_volumetric={$selected,d>1}
-    if {is_mesh3d,i[$selected]<0} =[is_mesh3d] ${is_mesh3d[$selected]},0,$selected fi
-    is_view3d={is_mesh3d,$setting_view3d_mode" && "(i[$selected]" || "($is_volumetric" && "$setting_view3d_mode==2))}
+    if {is_3d_mesh,i[$selected]<0} =[is_3d_mesh] ${is_mesh3d[$selected]},0,$selected fi
+    is_view3d={is_3d_mesh,$setting_view3d_mode" && "(i[$selected]" || "($is_volumetric" && "$setting_view3d_mode==2))}
 
     # Rotate image if necessary.
     if {is_rotated,i[$selected]!=$view_is_rotated}
@@ -1973,8 +1973,8 @@ _display : skip ${1=},${3=}
             else
 
               # Generate 3D icon if necessary.
-              if {is_mesh3d,i[$ind]<0} =[is_mesh3d] ${is_mesh3d[$ind]},0,$ind fi
-              if {is_mesh3d,i[$ind]}
+              if {is_3d_mesh,i[$ind]<0} =[is_3d_mesh] ${is_mesh3d[$ind]},0,$ind fi
+              if {is_3d_mesh,i[$ind]}
                 if !0$thumb_icon3d
                   box3d 35 col3d. 0,200,255 c3d. r3d. 1,1,1,45
                   64,64,1,3,-1 j3d. ..,50%,50%,0,1,3,0 rm..
@@ -2015,7 +2015,7 @@ _display : skip ${1=},${3=}
               elif s==1 r. 100%,100%,1,3
               elif s==2 r. 100%,100%,1,3,0
               fi
-              if {is_mesh3d,i[$ind]}
+              if {is_3d_mesh,i[$ind]}
                 sh[thumb_icon3d] 100%
                 j.. [thumb_icon3d],0.5~,{-2,h-h#$thumb_icon3d-5},0,0,1,.,255 rm.
               fi
@@ -2094,7 +2094,7 @@ _display : skip ${1=},${3=}
           w_zy = $canvas_width - w_xy - 1;
           h_xz = $canvas_height - h_xy - 1;
           [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy,w_zy,h_xz ]"
-      elif {is_mesh3d,$is_view3d" && "i[$selected]}
+      elif {is_3d_mesh,$is_view3d" && "i[$selected]}
         area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height=0
         area_3d_width,area_3d_height=$canvas_width,$canvas_height
       else
@@ -2112,7 +2112,7 @@ _display : skip ${1=},${3=}
 
       # Render canvas base image.
       if {$selected,!w} [canvas_checkerboard] => canvas_base
-      elif {is_mesh3d,$is_view3d" && "i[$selected]}
+      elif {is_3d_mesh,$is_view3d" && "i[$selected]}
         [canvas_checkerboard] => canvas_base
       else
         is_alpha={$selected,$setting_alpha_mode" && "(s==2||s==4)}
@@ -2304,7 +2304,7 @@ _display : skip ${1=},${3=}
       else
         +c3d[$selected] n3d.
       fi
-      *3d. {0.5*min($area_3d_width,$area_3d_height)}
+      *3d. {0.65*min($area_3d_width,$area_3d_height)}
       => area_3d_mesh
       rmn area_3d_view
     fi
@@ -2328,7 +2328,7 @@ _display : skip ${1=},${3=}
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
           basename {``{$thumb_mouse_over,n}}
           basename_mo={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
-          if {is_mesh3d,$is_view3d" && "i[$thumb_mouse_over]}
+          if {is_3d_mesh,$is_view3d" && "i[$thumb_mouse_over]}
             str.="Thumb \#"{image_indices,i[$thumb_mouse_over]}": "$basename_mo" ("\
                  {$thumb_mouse_over,f2ui(i[6])}" vertices, "{$thumb_mouse_over,f2ui(i[7])}" primitives)\n"
           else
@@ -3116,9 +3116,9 @@ _display : skip ${1=},${3=}
       rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
     fi
 
-    if {$selected,w" && "{*,-M}" && "(i[#$is_mesh3d,$selected]||$is_volumetric)} # M: Switch 3D mesh view mode
+    if {$selected,w" && "{*,-M}" && "(i[#$is_3d_mesh,$selected]||$is_volumetric)} # M: Switch 3D mesh view mode
       setting_view3d_mode:=$is_volumetric?($setting_view3d_mode!=2)*2:($setting_view3d_mode!=1)
-      if {is_mesh3d,$setting_view3d_mode" && "i[$selected]} rmn canvas_base fi
+      if {is_3d_mesh,$setting_view3d_mode" && "i[$selected]} rmn canvas_base fi
       notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
                                      "Off,\"On (mesh only)\",On"}
       if !$setting_view3d_mode rmn canvas_base fi
