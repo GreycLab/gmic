@@ -3034,20 +3034,6 @@ _display : skip ${1=},${3=}
         rmn canvas_label_coords
       fi
 
-    fi
-
-    if {canvas_label,($canvas_mouse_x<w" && "!$canvas_label_alignment" && "inrange($canvas_mouse_y,0,3*h))" || "\
-                     ($canvas_label_alignment" && "$canvas_mouse_y>5*h)}
-      canvas_label_alignment:=!$canvas_label_alignment
-      rmn canvas_view
-    fi
-
-    # Manage global window events.
-    if {*,r}
-      w[] -1,-1
-      rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
-    fi
-    if {$selected,w}
       if {*,-A} # A: Switch alpha mode
         setting_alpha_mode:=($setting_alpha_mode+1)%5
         notification="Alpha: "${"arg0 "$setting_alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
@@ -3065,13 +3051,6 @@ _display : skip ${1=},${3=}
       elif {*,-E} # E: Go lower-right
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
         rmn canvas_base,area_3d_mesh
-      elif {*,-M} # M: Switch 3D mesh view mode
-        setting_view3d_mode:=$is_volumetric?($setting_view3d_mode!=2)*2:($setting_view3d_mode!=1)
-        if {is_mesh3d,$setting_view3d_mode" && "i[$selected]} rmn canvas_base fi
-        notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
-                                       "Off,\"On (mesh only)\",On"}
-        if !$setting_view3d_mode rmn canvas_base fi
-        rmn canvas_view,canvas_label_info,canvas_label_notification
       elif {*,-N} # N: Switch normalization mode
         setting_normalization_mode:=($setting_normalization_mode+1)%4
         notification="Normalization: "${"arg0 "$setting_normalization_mode,\
@@ -3093,8 +3072,16 @@ _display : skip ${1=},${3=}
         notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
         rmn canvas_label_notification
       fi
+
     fi
 
+    if {canvas_label,($canvas_mouse_x<w" && "!$canvas_label_alignment" && "inrange($canvas_mouse_y,0,3*h))" || "\
+                     ($canvas_label_alignment" && "$canvas_mouse_y>5*h)}
+      canvas_label_alignment:=!$canvas_label_alignment
+      rmn canvas_view
+    fi
+
+    # Manage events for 3D mesh visualization.
     if $is_view3d
       if {*,-F1} # F1: Switch 3D rendering mode
         setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
@@ -3102,6 +3089,21 @@ _display : skip ${1=},${3=}
                                        "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
         rmn area_3d_view,canvas_label_notification
       fi
+    fi
+
+    # Manage global window events.
+    if {*,r}
+      w[] -1,-1
+      rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+    fi
+
+    if {$selected,w" && "{*,-M}} # M: Switch 3D mesh view mode
+      setting_view3d_mode:=$is_volumetric?($setting_view3d_mode!=2)*2:($setting_view3d_mode!=1)
+      if {is_mesh3d,$setting_view3d_mode" && "i[$selected]} rmn canvas_base fi
+      notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
+                                     "Off,\"On (mesh only)\",On"}
+      if !$setting_view3d_mode rmn canvas_base fi
+      rmn canvas_view,canvas_label_info,canvas_label_notification
     fi
 
     if $is_CTRL
