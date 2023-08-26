@@ -8611,6 +8611,9 @@ _print : skip ${1=},${3=}
   fi
   nb_images=$!
 
+  # Save original image names to prevent issues when names are the sames as the ones used in this command.
+  foreach { image_name$>={n} => img$> }
+
   # Print log message.
   (${3--1}:y) => image_indices
   if $2
@@ -8654,13 +8657,14 @@ _print : skip ${1=},${3=}
               ${_vt100_b}"coords_max"$_vt100_n" = ("$xM,$yM,$zM,$cM")."
       is_stats=1
     fi
-    name={`"b = ['"{``{$>,n}}"']; size(b)>64?copy(b[64-3],[['...'],0]); b"`}
+    name={`"b = ['"{``${image_name$>}}"']; size(b)>64?copy(b[64-3],[['...'],0]); b"`}
     $1e $m$b"["$ind"] = "'$name'$n:\n\
         $b"  size"$n" = "$s_size\n\
         $b"  data"$n" = "$s_data
     if $is_stats $1e $s_stats fi
   }
   rm[$nb_images--1]
+  foreach { => ${image_name$>} } # Set back original images names.
   is_change 0
 
 #@cli random_pattern : _width>0,_height>0,_min_detail_level>=0
