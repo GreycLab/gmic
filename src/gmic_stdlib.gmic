@@ -1812,6 +1812,9 @@ _display : skip ${1=},${3=}
   check_display "display"
   nb_images=$!
 
+  # Save original image names to prevent name conflicts with those used in this command.
+  foreach { image_name$>={n} => _display$> }
+
   # Initialize setting variables.
 
   # 'setting_normalization_mode' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global }.
@@ -1850,7 +1853,7 @@ _display : skip ${1=},${3=}
   repeat narg($sel) {
     l_ind:=arg0($>,$sel)
     g_ind={image_indices,i[$l_ind]}
-    basename {``{$l_ind,n}}
+    basename {``${image_name$l_ind}}
     basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
     log_title.=$sep$basename
     window_title.=$sep[$g_ind]" "$basename
@@ -2075,7 +2078,9 @@ _display : skip ${1=},${3=}
 
       # Print information about image on stderr/stdout (if not already done).
       if {is_printed,!i[$selected]}
+        =>[$selected] ${image_name$selected}
         v + _print[$selected] $1,0,$selected v -
+        =>[$selected] _display$selected
         =[is_printed] 1,0,$selected
       fi
 
@@ -2336,7 +2341,7 @@ _display : skip ${1=},${3=}
     font_size={canvas_base,cut(round(h/40),16,32)}
     if !0$canvas_label_info
       0
-      basename {``{$selected,n}}
+      basename {``${image_name$selected}}
       basename={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
       str=
       if $nb_images==1
@@ -2349,7 +2354,7 @@ _display : skip ${1=},${3=}
         w[] -1,-1,$str
       else
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
-          basename {``{$thumb_mouse_over,n}}
+          basename {``${image_name$thumb_mouse_over}}
           basename_mo={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
           if {is_mesh3d,$is_view3d" && "i[$thumb_mouse_over]}
             str.="Thumb \#"{image_indices,i[$thumb_mouse_over]}": "$basename_mo" ("\
@@ -3216,6 +3221,7 @@ _display : skip ${1=},${3=}
     w[] 0
   fi
   rm[$nb_images--1]
+  foreach { => ${image_name$>} } # Set back original images names
   is_change 0
 
 # Return default window size for selected image list.
@@ -8611,8 +8617,8 @@ _print : skip ${1=},${3=}
   fi
   nb_images=$!
 
-  # Save original image names to prevent issues when names are the sames as the ones used in this command.
-  foreach { image_name$>={n} => img$> }
+  # Save original image names to prevent name conflicts with those used in this command.
+  foreach { image_name$>={n} => _print$> }
 
   # Print log message.
   (${3--1}:y) => image_indices
@@ -8664,7 +8670,7 @@ _print : skip ${1=},${3=}
     if $is_stats $1e $s_stats fi
   }
   rm[$nb_images--1]
-  foreach { => ${image_name$>} } # Set back original images names.
+  foreach { => ${image_name$>} } # Set back original images names
   is_change 0
 
 #@cli random_pattern : _width>0,_height>0,_min_detail_level>=0
