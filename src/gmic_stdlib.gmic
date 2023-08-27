@@ -2330,9 +2330,10 @@ _display : skip ${1=},${3=}
         [area_3d_mesh] nbv={@6}
         if $nbv # Apply pose
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
-          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3)); copy(i[#-2,8+3*x],R*I)" rm.
+          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3); S = crop(#$area_3d_pose,3,0,1,3));
+            copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
-        +j3d[area_3d_background] .,{area_3d_pose,[$area_3d_width/2+i[3],$area_3d_height/2+i[7]]},0,1,\
+        +j3d[area_3d_background] .,50%,50%,0,1,\ # {area_3d_pose,[$area_3d_width/2+i[3],$area_3d_height/2+i[7]]},0,1,\
           {$is_volumetric?2:$setting_3d_rendering_mode},{$is_volumetric?1:$setting_3d_is_double_sided},\
           $setting_3d_is_zbuffer,$setting_3d_focale rm..
         => area_3d_view
@@ -3159,7 +3160,6 @@ _display : skip ${1=},${3=}
       repeat 2 {
         but:=2*$>
         if !$but" && "!$is_CTRL continue fi
-
         if isin($event_type0,0,5)" && "${is_drag$but}==5" && "${is_clicked$but}==5 # Pan starts
           drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
           eval "
