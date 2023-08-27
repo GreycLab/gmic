@@ -1789,7 +1789,7 @@ d :
 #@cli : 'CTRL+MW': Pan along orthogonal axis - 'X': Reset area cross position.
 #@cli : \n- **3D mesh only:**
 #@cli : 'LMB': Mesh rotation - 'CTRL+LMB' or 'MMB': Mesh pan - 'RMB': Mesh zoom -  \
-# 'F1': Switch rendering mode - 'F2': Toggle double sided mode - 'F3': Toggle z-buffer mode - 'F4': Switch focale.
+# 'R': Switch rendering mode - 'D': Toggle double sided mode - 'Z': Toggle z-buffer mode - 'F': Switch focale.
 #@cli : \n- **Window size, decoration and data I/O:**
 #@cli : 'CTRL+C': Decrease window size - 'CTRL+D': Increase window size - 'CTRL+F': Toggle fullscreen mode - \
 # 'CTRL+I': Toggle info mode - 'CTRL+O': Save copy of image as .gmz - 'CTRL+L': Save copy of image list as .gmz - \
@@ -2333,10 +2333,12 @@ _display : skip ${1=},${3=}
           eval. "begin(R = crop(#$area_3d_pose,0,0,3,3); S = crop(#$area_3d_pose,3,0,1,3));
             copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
-        +j3d[area_3d_background] .,50%,50%,0,1,\ # {area_3d_pose,[$area_3d_width/2+i[3],$area_3d_height/2+i[7]]},0,1,\
-          {$is_volumetric?2:$setting_3d_rendering_mode},{$is_volumetric?1:$setting_3d_is_double_sided},\
-          $setting_3d_is_zbuffer,$setting_3d_focale rm..
-        => area_3d_view
+        +j3d[area_3d_background] .,50%,50%,0,1,\
+          {$is_volumetric?[2,1,1,800]:[$setting_3d_rendering_mode,\
+                                       $setting_3d_is_double_sided,\
+                                       $setting_3d_is_zbuffer,\
+                                       $setting_3d_focale]}
+        rm.. => area_3d_view
         draw_3d_view_on_canvas_base=1
       fi
 
@@ -3197,30 +3199,32 @@ _display : skip ${1=},${3=}
         $0_rmn area_3d_view
       fi
 
-      if {*,-F1} # F1: Switch 3D rendering mode
-        setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
-        notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
-                                       "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
-        $0_rmn area_3d_view,canvas_label_notification
-      elif {*,-F2} # F2: Toggle 3D double sided mode
-        setting_3d_is_double_sided:=!$setting_3d_is_double_sided
-        notification="Double sided: "${"arg0 "$setting_3d_is_double_sided,Off,On}
-        $0_rmn area_3d_view,canvas_label_notification
-      elif {*,-F3} # F3: Toggle 3D zbuffer
-        setting_3d_is_zbuffer:=!$setting_3d_is_zbuffer
-        notification="Z-buffer: "${"arg0 "$setting_3d_is_zbuffer,Off,On}
-        $0_rmn area_3d_view,canvas_label_notification
-      elif {*,-F4} # F4: Change 3D focale
-        setting_3d_focale:="const f = $setting_3d_focale;
-          lof = [ 0,100,200,300,400,500,700,900,1200 ];
-          for (k = 0, k<size(lof) && lof[k]<=f, ++k);
-          lof[k%size(lof)]"
-        if $setting_3d_focale
-          notification="Focale: "$setting_3d_focale
-        else
-          notification="Parallel projection"
+      if !$is_volumetric
+        if {*,-R} # R: Switch 3D rendering mode
+          setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
+          notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
+                                         "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
+          $0_rmn area_3d_view,canvas_label_notification
+        elif !$is_CTRL" && "{*,-D} # D: Toggle 3D double sided mode
+          setting_3d_is_double_sided:=!$setting_3d_is_double_sided
+          notification="Double sided: "${"arg0 "$setting_3d_is_double_sided,Off,On}
+          $0_rmn area_3d_view,canvas_label_notification
+        elif {*,-Z} # Z: Toggle 3D zbuffer
+          setting_3d_is_zbuffer:=!$setting_3d_is_zbuffer
+          notification="Z-buffer: "${"arg0 "$setting_3d_is_zbuffer,Off,On}
+          $0_rmn area_3d_view,canvas_label_notification
+        elif !$is_CTRL" && "{*,-F} # F: Change 3D focale
+          setting_3d_focale:="const f = $setting_3d_focale;
+            lof = [ 0,100,200,300,400,500,700,900,1200 ];
+            for (k = 0, k<size(lof) && lof[k]<=f, ++k);
+            lof[k%size(lof)]"
+          if $setting_3d_focale
+            notification="Focale: "$setting_3d_focale
+          else
+            notification="Parallel projection"
+          fi
+          $0_rmn area_3d_view,canvas_label_notification
         fi
-        $0_rmn area_3d_view,canvas_label_notification
       fi
     fi
 
