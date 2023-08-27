@@ -2337,7 +2337,7 @@ _display : skip ${1=},${3=}
         [area_3d_mesh] nbv={@6}
         if $nbv # Apply pose to object
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
-          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3); S = crop(#$area_3d_pose,3,0,1,3));
+          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3); R*=$area_3d_zoom; S = crop(#$area_3d_pose,3,0,1,3));
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
         +j3d[area_3d_background] .,50%,50%,0,1,\
@@ -3201,23 +3201,18 @@ _display : skip ${1=},${3=}
 
       # 3D mesh zoom, using RMB (drag) or MW.
       if $is_drag1==5" && "$is_clicked1==5 # 3D zoom starts
-        eval "
+        amount:="
           const dx = $drag_end_x1 - $drag_start_x1;
           const dy = $drag_end_y1 - $drag_start_y1;
-          const amount = sign(dx)*norm(dx,dy)/10;
-          R = 1.05^amount*crop(#$area_3d_pose,0,0,3,3);
-          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1)"
+          sign(dx)*norm(dx,dy)/10"
+        area_3d_zoom*=1.05^$amount
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
         $0_rmn area_3d_view
       elif $is_drag1==5" && "$is_released0 # 3D zoom ends
         event_type0,is_drag0,is_released0,is_drag1,is_released2=0
       fi
       if {*,o}
-        eval "
-          const amount = "{*,-o}";
-          R = 1.05^amount*crop(#$area_3d_pose,0,0,3,3);
-          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1)"
-        drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
+        area_3d_zoom*=1.05^{*,-o}
         $0_rmn area_3d_view
       fi
       if !$is_volumetric
@@ -3235,7 +3230,7 @@ _display : skip ${1=},${3=}
           setting_3d_is_axes:=!$setting_3d_is_axes
           notification="Axes: "${"arg0 "$setting_3d_is_axes,Off,On}
           $0_rmn area_3d_view,canvas_label_notification
-        elif {*,-Z} # Z: Toggle 3D z-buffer
+        elif {*,-Z} # Z: Toggle z-buffer
           setting_3d_is_zbuffer:=!$setting_3d_is_zbuffer
           notification="Z-buffer: "${"arg0 "$setting_3d_is_zbuffer,Off,On}
           $0_rmn area_3d_view,canvas_label_notification
@@ -3281,6 +3276,7 @@ _display : skip ${1=},${3=}
       $0_rmn canvas_base
     elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
+        area_3d_zoom=1
         $0_rmn canvas_base,area_3d_mesh,area_3d_pose
     elif $is_CTRL
       if {*,-C} # CTRL+C: Decrease window size
