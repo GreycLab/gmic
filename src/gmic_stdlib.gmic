@@ -2307,11 +2307,9 @@ _display : skip ${1=},${3=}
         +projections3d[$selected] {$selected,floor([cut($view_center_x*w,0,w-1),\
                                                     cut($view_center_y*h,0,h-1),\
                                                     cut($view_center_z*d,0,d-1)])},1
-        c3d. n3d.
-        r3d. 0,1,0,10
-      else
-        +c3d[$selected] n3d.
+      else [$selected]
       fi
+      c3d. n3d.
       *3d. {0.65*min($area_3d_width,$area_3d_height)}
       => area_3d_mesh
       $0_rmn area_3d_view
@@ -3082,7 +3080,7 @@ _display : skip ${1=},${3=}
         $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
       elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-        $0_rmn canvas_base,area_3d_mesh
+        $0_rmn canvas_base,area_3d_mesh,area_3d_pose
       elif {*,-G} # G: Toggle grid
         setting_is_grid:=!$setting_is_grid
         notification="Grid: "${"arg0 "$setting_is_grid,"Off,On"}
@@ -3132,10 +3130,12 @@ _display : skip ${1=},${3=}
           const w2 = $area_3d_width/2;
           const h2 = $area_3d_height/2;
           const radius = 0.75*min(w2,h2);
-          const u0 = $drag_start_x0 - w2;
-          const v0 = $drag_start_y0 - h2;
-          const u1 = $drag_end_x0 - w2;
-          const v1 = $drag_end_y0 - h2;
+          const offx = $area_xy_width + ($is_volumetric?2:0);
+          const offy = $area_xy_height + ($is_volumetric?2:0);
+          const u0 = $drag_start_x0 - offx - w2;
+          const v0 = $drag_start_y0 - offy - h2;
+          const u1 = $drag_end_x0 - offx - w2;
+          const v1 = $drag_end_y0 - offy - h2;
           n0 = norm(u0,v0);
           nu0 = n0>radius?u0*radius/n0:u0;
           nv0 = n0>radius?v0*radius/n0:v0;
