@@ -3078,9 +3078,6 @@ _display : skip ${1=},${3=}
         setting_alpha_mode:=($setting_alpha_mode+1)%5
         notification="Alpha: "${"arg0 "$setting_alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
         $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
-      elif {*,-ENTER} # ENTER: Reset view
-        view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-        $0_rmn canvas_base,area_3d_mesh,area_3d_pose
       elif {*,-G} # G: Toggle grid
         setting_is_grid:=!$setting_is_grid
         notification="Grid: "${"arg0 "$setting_is_grid,"Off,On"}
@@ -3184,7 +3181,7 @@ _display : skip ${1=},${3=}
           const dx = $drag_end_x1 - $drag_start_x1;
           const dy = $drag_end_y1 - $drag_start_y1;
           const amount = sign(dx)*norm(dx,dy)/10;
-          R = 1.02^amount*crop(#$area_3d_pose,0,0,3,3);
+          R = 1.05^amount*crop(#$area_3d_pose,0,0,3,3);
           draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
         "
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
@@ -3249,7 +3246,10 @@ _display : skip ${1=},${3=}
       wait -1
     fi
 
-    if $is_CTRL
+    if {*,-ENTER} # ENTER: Reset view
+        view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
+        $0_rmn canvas_base,area_3d_mesh,area_3d_pose
+    elif $is_CTRL
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
