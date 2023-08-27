@@ -2328,9 +2328,9 @@ _display : skip ${1=},${3=}
       if !0$area_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => area_3d_pose fi
 
       [area_3d_mesh] nbv={@6}
-      if $nbv # Apply pose matrix
+      if $nbv # Apply pose
         +z. 0,8,0,{8+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
-        eval. "begin(
+        eval. ":begin(
             R = crop(#$area_3d_pose,0,0,3,3);
             S = crop(#$area_3d_pose,3,0,1,3);
           );
@@ -2672,7 +2672,7 @@ _display : skip ${1=},${3=}
       const x = $mouse_x;
       const y = $mouse_y;
       const ht = $thumb_height;
-      const ht2 = ht + 2;
+      const ht2 = $thumb_height2;
       x<0?[0,-1,-1]: # Mouse area = 0: cursor outside window
       y<ht?[1,-1,-1]: # Mouse area = 1: cursor over thumbnail navigation bar
       x<$area_xy_width && y<ht2 + $area_xy_height?[2,x,y - ht2]: # Mouse area = 2: cursor over XY-view
@@ -2693,6 +2693,9 @@ _display : skip ${1=},${3=}
     elif $is_area4 # ZY
       area_width,area_height,area_dx,area_dy=$area_zy_width,$area_zy_height,$area_zy_dz,$area_zy_dy
       area_mouse_x,area_mouse_y={$canvas_mouse_x-$area_xy_width-2},$canvas_mouse_y
+    elif $is_area5 # 3D
+      area_width,area_height=$area_3d_width,$area_3d_height
+      area_mouse_x,area_mouse_y={[$canvas_mouse_x-$area_xy_width,$canvas_mouse_y-$area_xy_height]-($is_volumetric?2:0)}
     fi
 
     is_button0,is_button1,is_button2:=($mouse_button&1),($mouse_button&2),($mouse_button&4)
@@ -2827,7 +2830,7 @@ _display : skip ${1=},${3=}
           h==1?[ 0.5,0.5 ]:[ min(0,1 - delta_y), max(1,delta_y) ],
           d==1?[ 0.5,0.5 ]:[ min(0,1 - delta_z), max(1,delta_z) ] ]"}
 
-      # Manage image pan, using left or middle mouse button (drag).
+      # Image pan, using LMB or MMB (drag).
       repeat 2 {
         but:=2*$>
         if !$but" && "$is_CTRL continue fi
@@ -2856,7 +2859,7 @@ _display : skip ${1=},${3=}
         fi
       }
 
-      # Manage image crop, using CTRL+left mouse button (drag).
+      # Rectangle selection, using CTRL+LMB (drag).
       if !$is_volumetric" && "$is_CTRL" && "$mouse_x>=0
         if isin($event_type0,0,2)" && "$is_drag0==2" && "$is_clicked0==2 # Crop starts
           if !narg($canvas_crop_x0) x,y=$drag_start_x0,$drag_start_y0 else x,y=$drag_end_x0,$drag_end_y0 fi
@@ -2911,7 +2914,7 @@ _display : skip ${1=},${3=}
         fi
       fi
 
-      # Manage image zoom, using right mouse button (drag).
+      # Image zoom, using RMB (drag).
       if inrange($is_drag1,2,4)" && "inrange($is_clicked1,2,4) # Zoom starts
         amount:="
           dx = $drag_end_x1 - $drag_start_x1;
@@ -2948,7 +2951,7 @@ _display : skip ${1=},${3=}
         is_drag1,is_released1=0
       fi
 
-      # Volumetric images: manage area ratio change, using left mouse button (drag cross button).
+      # Volumetric images: Area cross drag, with LMB.
       if $is_volumetric
         if $is_clicked0>=2" && "$canvas_mouse_x>=0" && "(\
              $event_type0==3" || "(!$event_type0" && "narg($canvas_cross_x)" && "\
@@ -3126,6 +3129,22 @@ _display : skip ${1=},${3=}
 
     # Manage events for 3D mesh visualization.
     if $is_view3d
+
+      # Object pan, using CTRL-LMB or MMB (drag).
+      repeat 2 {
+        but:=2*$>
+        if !$but" && "!$is_CTRL continue fi
+        if isin($event_type0,0,4)" && "${is_drag$but}==5" && "${is_clicked$but}==5 # Pan starts
+          drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
+          eval "i[#$area_3d_pose,3]+=3"
+          drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
+          $0_rmn area_3d_view
+          event_type0=4
+        elif $event_type0==4" && "${is_drag$but}==2" && "${is_released$but} # Pan ends
+          event_type0,is_drag0,is_released0,is_drag2,is_released2=0
+        fi
+      }
+
       if {*,-F1} # F1: Switch 3D rendering mode
         setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
         notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
