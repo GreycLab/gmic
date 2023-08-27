@@ -1842,7 +1842,7 @@ _display : skip ${1=},${3=}
   setting_3d_is_axes:=narg($_display_3d_is_axes)?0$_display_3d_is_axes:1
 
   thumb_height_factor=0.15
-  thumb_min_ratio=0.4
+  thumb_min_ratio=0.45
   thumb_is_visible:=$nb_images>1
 
   # Save original image names to prevent name conflicts with those used in this command.
@@ -1936,11 +1936,12 @@ _display : skip ${1=},${3=}
         thumb_height:=max(48,round($window_height*$thumb_height_factor))
         thumb_height2:=$thumb_height+2
         1,$nb_images,1,2,"
+          const ratio = $thumb_min_ratio;
           w = w#y; h = h#y; d = d#y;
           d>1?(w+=d + 2; h+=d + 2);
           Mwh = max(w,h);
-          wt = Mwh?max($thumb_min_ratio,w/Mwh):0.5;
-          ht = Mwh?max($thumb_min_ratio,h/Mwh):0.5;
+          wt = Mwh?max(ratio,w/Mwh):0.5;
+          ht = Mwh?max(ratio,h/Mwh):0.5;
           i[#$is_rotated,y]%2?swap(wt,ht);
           [ wt,ht ]"
         sh. 100% /.. {iM} rm. *. $thumb_height round.
@@ -1988,14 +1989,14 @@ _display : skip ${1=},${3=}
               # Generate 3D icon if necessary.
               if {is_mesh3d,i[$ind]<0} =[is_mesh3d] ${is_mesh3d[$ind]},0,$ind fi
               if {is_mesh3d,i[$ind]}
-                if !0$thumb_icon3d
+                if !0$thumb_3d_icon
                   box3d 35 col3d. 0,200,255 c3d. r3d. 1,1,1,45
                   64,64,1,3,-1 j3d. ..,50%,50%,0,1,3,0 rm..
                   +channels. 0 neq. -1 dilate. 3 *. 200
                   f.. "I!=J(-1) || I!=J(1) || I!=J(0,-1) || I!=J(0,1)?[0,0,0]:I+1"
                   to.. 3D,0.5~,0.5~,24,1,1,255
-                  a[-2,-1] c autocrop. r. 36,36,1,4,2
-                  => thumb_icon3d
+                  a[-2,-1] c autocrop. r. 42,42,1,4,2
+                  => thumb_3d_icon
                 fi
               fi
 
@@ -2029,8 +2030,8 @@ _display : skip ${1=},${3=}
               elif s==2 r. 100%,100%,1,3,0
               fi
               if {is_mesh3d,i[$ind]}
-                sh[thumb_icon3d] 100%
-                j.. [thumb_icon3d],0.5~,{-2,h-h#$thumb_icon3d-5},0,0,1,.,255 rm.
+                sh[thumb_3d_icon] 100%
+                j.. [thumb_3d_icon],0.5~,{-2,h-h#$thumb_3d_icon-10},0,0,1,.,255 rm.
               fi
             fi
             +store. thumb_cache_$ind
@@ -3269,11 +3270,12 @@ _display : skip ${1=},${3=}
       wait -1
     fi
 
-    if ($is_area234" || "$is_area5)" && "!$is_CTRL" && "{*,-C} # C: Center view
+    if ($is_area234" || "$is_area5)" && "!$is_CTRL" && "{*,C} # C: Center view
       view_center_x,view_center_y,view_center_z=0.5
       if $is_volumetric $0_rmn area_3d_mesh fi
       if 0$area_3d_pose 1,3 j[area_3d_pose] .,3 rm. $0_rmn area_3d_view fi
       $0_rmn canvas_base
+      skip {*,-C}
     elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
         area_3d_zoom=1
