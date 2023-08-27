@@ -1810,6 +1810,8 @@ _display : skip ${1=},${3=}
     return
   fi
   check_display "display"
+  m "$0_rmn : nmd 2,$""* rm[${}]"
+
   nb_images=$!
 
   # Initialize setting variables.
@@ -1944,7 +1946,7 @@ _display : skip ${1=},${3=}
         thumb_sumw={thumb_coords,max(i[h-1]+i(0,h-1,0,2),$window_width)}
         thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
         if !narg($thumb_x) thumb_x:=-16/$thumb_sumw fi
-        rmn thumb_is_cached
+        $0_rmn thumb_is_cached
       fi
 
       thumb_x_px:=cut($thumb_x*$thumb_sumw,-16,$thumb_x_px_max)
@@ -1952,11 +1954,11 @@ _display : skip ${1=},${3=}
       # Generate thumnail view.
       if !0$thumb_is_cached
         1,$nb_images => thumb_is_cached
-        rmn thumb_view
+        $0_rmn thumb_view
       fi
 
       if !0$thumb_view
-        rmn thumb_index_map
+        $0_rmn thumb_index_map
         $window_width,$thumb_height,1,3 100%,1,1,1,-1 => thumb_view,thumb_index_map
 
         # Retrieve index range of visible thumbnails.
@@ -2068,7 +2070,7 @@ _display : skip ${1=},${3=}
           j[thumb_view] [thumb_shade_right],1~,0,0,0,{min(1,($thumb_sumw-$window_width-$thumb_x_px)/32)},.,255 rm.
         fi
 
-        rmn window_view
+        $0_rmn window_view
       fi
     fi
 
@@ -2154,7 +2156,7 @@ _display : skip ${1=},${3=}
         if $is_volumetric
           if !0$canvas_volumetric_background" || "\
              {0$canvas_volumetric_background,[w,h]!=[$canvas_width,$canvas_height]}
-            rmn canvas_volumetric_background
+            $0_rmn canvas_volumetric_background
             +j[canvas_checkerboard] [canvas_checkerboard],{$area_xy_width+2},0
             j. [canvas_checkerboard],0,{$area_xy_height+2}
             rectangle. 0,$area_xy_height,100%,{$area_xy_height+1},1,0
@@ -2296,7 +2298,7 @@ _display : skip ${1=},${3=}
           if $is_view3d draw_3d_view_on_canvas_base=1 fi
         fi
       fi
-      rmn canvas_label_coords
+      $0_rmn canvas_label_coords
     fi
 
     # Generate 3D mesh object.
@@ -2312,7 +2314,7 @@ _display : skip ${1=},${3=}
       fi
       *3d. {0.65*min($area_3d_width,$area_3d_height)}
       => area_3d_mesh
-      rmn area_3d_view
+      $0_rmn area_3d_view
     fi
 
     # Render and draw 3D mesh object.
@@ -2332,12 +2334,12 @@ _display : skip ${1=},${3=}
 
     if $draw_3d_view_on_canvas_base" && "0$area_3d_view
       if $is_mesh3d # Small hack to avoid image copy
-        rmn canvas_base =>[area_3d_view] canvas_base 0 => area_3d_view
+        $0_rmn canvas_base =>[area_3d_view] canvas_base 0 => area_3d_view
       else
         j[canvas_base] [area_3d_view],{[$area_xy_width,$area_xy_height]+($is_volumetric?2:0)}
       fi
       draw_3d_view_on_canvas_base=0
-      rmn canvas_view
+      $0_rmn canvas_view
     fi
 
     # Generate label for image title.
@@ -2377,7 +2379,7 @@ _display : skip ${1=},${3=}
         t. {``$str},0,0,$font_size,1,255
       fi
       => canvas_label_info
-      rmn canvas_label
+      $0_rmn canvas_label
     fi
 
     # Generate label for image coordinates.
@@ -2447,7 +2449,7 @@ _display : skip ${1=},${3=}
       fi
       t. {``$str},0,0,$font_size,1,255
       => canvas_label_coords
-      rmn canvas_label
+      $0_rmn canvas_label
     fi
 
     # Generate label for notification.
@@ -2459,7 +2461,7 @@ _display : skip ${1=},${3=}
       a[-2,-1] c
       => canvas_label_notification
       notification_opacity,notification=3,
-      rmn window_view
+      $0_rmn window_view
     fi
 
     # Render canvas label.
@@ -2474,7 +2476,7 @@ _display : skip ${1=},${3=}
         +n. 150,255 r.. 100%,100%,1,3 a[-2,-1] c
       fi
       => canvas_label
-      rmn canvas_view
+      $0_rmn canvas_view
     fi
 
     if !0$canvas_view
@@ -2628,7 +2630,7 @@ _display : skip ${1=},${3=}
         j[canvas_view] [canvas_label],0,$canvas_label_alignment~,0,0,1,.,255 rm.
       fi
 
-      rmn window_view
+      $0_rmn window_view
     fi
 
     # Render global view.
@@ -2707,7 +2709,7 @@ _display : skip ${1=},${3=}
     if $thumb_is_visible
       if $is_drag0==1" && "$is_clicked0==1
         n_thumb_x:=cut($thumb_x-($drag_end_x0-$drag_start_x0)/$thumb_sumw,-16/$thumb_sumw,$thumb_x_px_max/$thumb_sumw)
-        if $n_thumb_x!=$thumb_x thumb_x=$n_thumb_x drag_start_x0=$drag_end_x0 rmn thumb_view fi
+        if $n_thumb_x!=$thumb_x thumb_x=$n_thumb_x drag_start_x0=$drag_end_x0 $0_rmn thumb_view fi
       elif $is_drag0==1" && "($is_released0" || "!$mouse_area)
         is_drag0,is_released0=0
       fi
@@ -2716,13 +2718,13 @@ _display : skip ${1=},${3=}
         canvas_label_alignment=0
         ind={thumb_index_map,i[$mouse_x]}
         if $ind>=0
-          if $ind!=$thumb_mouse_over thumb_mouse_over=$ind rmn thumb_view,canvas_label_info fi
+          if $ind!=$thumb_mouse_over thumb_mouse_over=$ind $0_rmn thumb_view,canvas_label_info fi
           if !$is_drag0" && "$is_released0
-            if $selected!=$ind selected=$ind rmn thumb_view,canvas_label_info fi
+            if $selected!=$ind selected=$ind $0_rmn thumb_view,canvas_label_info fi
           fi
         fi
       else
-        if $thumb_mouse_over>=0 rmn thumb_view,canvas_label_info fi
+        if $thumb_mouse_over>=0 $0_rmn thumb_view,canvas_label_info fi
         thumb_mouse_over=-1
       fi
     fi
@@ -2741,7 +2743,7 @@ _display : skip ${1=},${3=}
         if {*,-BACKSPACE}" || "{*,-SPACE}" || "{*,-B} selected:=($selected+$step)%$nb_images
         else selected:=cut($selected+$step,0,$nb_images-1)
         fi
-        rmn thumb_view,canvas_label_info
+        $0_rmn thumb_view,canvas_label_info
       elif ($is_area1" || "$is_CTRL)" && "\
            ({*,0}" || "{*,1}" || "{*,2}" || "{*,3}" || "{*,4}" || "\
             {*,5}" || "{*,6}" || "{*,7}" || "{*,8}" || "{*,9}" || "\
@@ -2750,7 +2752,7 @@ _display : skip ${1=},${3=}
         ind=-1 repeat 10 { if {*,$>}" || "{*,PAD$>} ind=$> break fi }
         if inrange($ind,0,$nb_images,1,0)" && "$selected!=$ind
           selected=$ind
-          rmn thumb_view,canvas_label_info
+          $0_rmn thumb_view,canvas_label_info
           skip {*,-PAD$ind},{*,-$ind}
         fi
       fi
@@ -2759,10 +2761,10 @@ _display : skip ${1=},${3=}
         if {*,o}
           step:={*,-o}*max(1,round($nb_images/32))
           selected:=cut($selected+$step,0,$nb_images-1)
-          rmn thumb_view,canvas_label_info
+          $0_rmn thumb_view,canvas_label_info
         elif !$is_CTRL" && "{*,C} # C: Center thumbnail view
           selected:=floor($nb_images/2)
-          rmn thumb_view,canvas_label_info
+          $0_rmn thumb_view,canvas_label_info
         fi
       fi
 
@@ -2793,7 +2795,7 @@ _display : skip ${1=},${3=}
               view_is_rotated,canvas_cross_x,canvas_cross_y=0.5,0.5,0.5,1,0,0,,
           fi
         fi
-        rmn canvas_volumetric_background,canvas_base,area_3d_mesh
+        $0_rmn canvas_volumetric_background,canvas_base,area_3d_mesh
       fi
     fi
 
@@ -2836,7 +2838,7 @@ _display : skip ${1=},${3=}
              cut($view_center_y,$pan_y_min,$pan_y_max),\
              cut($view_center_z,$pan_z_min,$pan_z_max)]
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
-          rmn canvas_base,area_3d_mesh
+          $0_rmn canvas_base,area_3d_mesh
           event_type0=1
         elif $event_type0==1" && "${is_drag$but}==2" && "${is_released$but} # Pan ends
           event_type0,is_drag0,is_released0,is_drag2,is_released2=0
@@ -2851,10 +2853,10 @@ _display : skip ${1=},${3=}
                             cut(floor(lerp($area_xy_y0,$area_xy_y1,($y-$thumb_height2)/$canvas_height)),0,h-1)]}
           if !narg($canvas_crop_x0)
             canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=$cx,$cy,$cx,$cy
-            rmn canvas_label_coords
+            $0_rmn canvas_label_coords
           elif [$cx,$cy]!=[$canvas_crop_x1,$canvas_crop_y1]
             canvas_crop_x1,canvas_crop_y1=$cx,$cy
-            rmn canvas_label_coords
+            $0_rmn canvas_label_coords
           fi
           n_view_center_x,n_view_center_y=$view_center_x,$view_center_y
           if $canvas_mouse_x<64
@@ -2873,7 +2875,7 @@ _display : skip ${1=},${3=}
           if [$n_view_center_x,$n_view_center_y]!=[$view_center_x,$view_center_y]
             view_center_x,view_center_y=$n_view_center_x,$n_view_center_y
             is_crop_scroll=1
-            rmn canvas_base
+            $0_rmn canvas_base
           else
             is_crop_scroll=0
           fi
@@ -2890,11 +2892,11 @@ _display : skip ${1=},${3=}
                 cut(0.5*($canvas_crop_y0 + $canvas_crop_y1)/h,0,1),
                 2*f*min(wc/max(8,$canvas_crop_x1 - $canvas_crop_x0),
                         hc/max(8,$canvas_crop_y1 - $canvas_crop_y0)) ]"}
-            rmn canvas_base
+            $0_rmn canvas_base
           fi
           canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
           event_type0,is_drag0,is_released0=0
-          rmn canvas_label_coords
+          $0_rmn canvas_label_coords
         fi
       fi
 
@@ -2927,7 +2929,7 @@ _display : skip ${1=},${3=}
             fi
           fi
           view_zoom=$n_view_zoom
-          rmn canvas_base
+          $0_rmn canvas_base
         fi
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
       elif inrange($is_drag1,2,5)" && "$is_released1 # Zoom ends
@@ -2946,7 +2948,7 @@ _display : skip ${1=},${3=}
                                          cut($canvas_mouse_y/$canvas_height,0,1)
           drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
           event_type0=3
-          rmn canvas_volumetric_background,canvas_base,area_3d_mesh
+          $0_rmn canvas_volumetric_background,canvas_base,area_3d_mesh
         elif $event_type0==3" && "$is_drag0>=2" && "$is_released1 # Drag ends
           event_type0,is_drag0,is_released0=0
         fi
@@ -2954,7 +2956,7 @@ _display : skip ${1=},${3=}
 
       if $event_type0" && "!$is_clicked0" && "!$is_released0" && "!$is_drag0
         event_type0=0
-        rmn canvas_view
+        $0_rmn canvas_view
       fi
 
       if $is_area234
@@ -2973,7 +2975,7 @@ _display : skip ${1=},${3=}
               [ cut(P[0],$pan_x_min,$pan_x_max),
                 cut(P[1],$pan_y_min,$pan_y_max),
                 cut(P[2],$pan_z_min,$pan_z_max) ]"}
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
 
           else # Zoom image
             amount:={*,PADADD}?0.25:{*,PADSUB}?-0.25:{*,-o}/10
@@ -2990,7 +2992,7 @@ _display : skip ${1=},${3=}
               view_center_y:=cut(lerp($yc,$view_center_y*h#$selected,$ratio)/h#$selected,$pan_y_min,$pan_y_max)
               view_center_z:=cut(lerp($zc,$view_center_z*d#$selected,$ratio)/d#$selected,$pan_z_min,$pan_z_max)
               view_zoom=$n_view_zoom
-              rmn canvas_base
+              $0_rmn canvas_base
             fi
           fi
         fi
@@ -3007,7 +3009,7 @@ _display : skip ${1=},${3=}
                         [ $view_center_x,
                           cut(lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_height)/h,$pan_y_min,$pan_y_max),
                           cut(lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width)/d,$pan_z_min,$pan_z_max) ]"}
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
           elif ({*,0}" || "{*,1}" || "{*,2}" || "{*,3}" || "{*,4}" || "\
                 {*,5}" || "{*,6}" || "{*,7}" || "{*,8}" || "{*,9}" || "\
                 {*,PAD0}" || "{*,PAD1}" || "{*,PAD2}" || "{*,PAD3}" || "{*,PAD4}" || "\
@@ -3017,20 +3019,20 @@ _display : skip ${1=},${3=}
               view_zoom_mode:=($ind-1)%10
               n_view_zoom:=cut(arg0($view_zoom_mode,$zoom_1_1,2*$zoom_1_1,4*$zoom_1_1,\
                                     1,2,4,$zoom_max/8,$zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
-              if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
+              if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom $0_rmn canvas_base fi
               notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
-              rmn canvas_label_notification
+              $0_rmn canvas_label_notification
               skip {*,-PAD$ind},{*,-$ind}
             fi
           elif {*,-C} # C: Center view
             view_center_x,view_center_y,view_center_z=0.5
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
           elif {*,-HOME}
             view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
           elif {*,-END}
             view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
           elif {*,-P}" && "['$view_xyz']!=0 # Print current pixel value on stdout
             +e "Command 'display': I(#"$selected,$view_xyz_disp") = [ "{$selected,I($view_xyz)}" ]"
           elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$setting_alpha_mode
@@ -3038,7 +3040,7 @@ _display : skip ${1=},${3=}
             if $n_view_base_channel!=$view_base_channel
               view_base_channel=$n_view_base_channel
               notification="Base channel: "$view_base_channel
-              rmn canvas_base,canvas_label_notification
+              $0_rmn canvas_base,canvas_label_notification
             fi
           elif $is_area234" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN})
             step:=$is_volumetric" || "$view_zoom>=$zoom_max/4?1:($area_xy_dx+$area_xy_dy)/40
@@ -3052,55 +3054,55 @@ _display : skip ${1=},${3=}
             view_center_x:=cut($view_center_x+$dx,$pan_x_min,$pan_x_max)
             view_center_y:=cut($view_center_y+$dy,$pan_y_min,$pan_y_max)
             view_center_z:=cut($view_center_z+$dz,$pan_z_min,$pan_z_max)
-            rmn canvas_base,area_3d_mesh
+            $0_rmn canvas_base,area_3d_mesh
           fi
         fi
 
         if [$mouse_x,$mouse_y]!=[$previous_mouse_x,$previous_mouse_y]" && "$is_area234
-          rmn canvas_label_coords
+          $0_rmn canvas_label_coords
         fi
 
       elif inrange($previous_mouse_area,2,4)
-        rmn canvas_label_coords
+        $0_rmn canvas_label_coords
       fi
 
       if {*,-A} # A: Switch alpha mode
         setting_alpha_mode:=($setting_alpha_mode+1)%5
         notification="Alpha: "${"arg0 "$setting_alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
-        rmn thumb_is_cached,canvas_base,canvas_label_notification
+        $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
       elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-        rmn canvas_base,area_3d_mesh
+        $0_rmn canvas_base,area_3d_mesh
       elif {*,-G} # G: Toggle grid
         setting_is_grid:=!$setting_is_grid
         notification="Grid: "${"arg0 "$setting_is_grid,"Off,On"}
-        rmn canvas_base,canvas_label_notification
+        $0_rmn canvas_base,canvas_label_notification
       elif {*,-H} # H: Go upper-left
         view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
-        rmn canvas_base,area_3d_mesh
+        $0_rmn canvas_base,area_3d_mesh
       elif {*,-E} # E: Go lower-right
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
-        rmn canvas_base,area_3d_mesh
+        $0_rmn canvas_base,area_3d_mesh
       elif {*,-N} # N: Switch normalization mode
         setting_normalization_mode:=($setting_normalization_mode+1)%4
         notification="Normalization: "${"arg0 "$setting_normalization_mode,\
                                         "Off,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
-        rmn thumb_is_cached,canvas_base,canvas_label_notification
+        $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
       elif {*,-R} # Rotate view
         view_is_rotated:=($view_is_rotated+1)%4
         notification="Angle: "{$view_is_rotated*90}\260
-        rmn canvas_base,canvas_label_info,canvas_label_notification,area_3d_mesh
+        $0_rmn canvas_base,canvas_label_info,canvas_label_notification,area_3d_mesh
       elif !$is_CTRL" && "{*,X}" && "$is_volumetric # Reset area cross position
         canvas_cross_x,canvas_cross_y=
-        rmn canvas_volumetric_background,canvas_base,area_3d_mesh
+        $0_rmn canvas_volumetric_background,canvas_base,area_3d_mesh
         skip {*,-X}
       elif {*,-Z} # Switch zoom factor (1:1,2:1,4:1,x1,x2,x4,max/8,max/4,max/2,max)
         view_zoom_mode:=($view_zoom_mode+1)%10
         n_view_zoom:=cut(arg0($view_zoom_mode,$zoom_1_1,2*$zoom_1_1,4*$zoom_1_1,\
                               1,2,4,$zoom_max/8,$zoom_max/4,$zoom_max/2,$zoom_max),$zoom_min,$zoom_max)
-        if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom rmn canvas_base fi
+        if $n_view_zoom!=$view_zoom view_zoom=$n_view_zoom $0_rmn canvas_base fi
         notification="Zoom: "${"arg0 "$view_zoom_mode,"1:1,2:1,4:1,x1,x2,x4,Max/8,Max/4,Max/2,Max"}
-        rmn canvas_label_notification
+        $0_rmn canvas_label_notification
       fi
 
     fi
@@ -3108,7 +3110,7 @@ _display : skip ${1=},${3=}
     if {canvas_label,($canvas_mouse_x<w" && "!$canvas_label_alignment" && "inrange($canvas_mouse_y,0,3*h))" || "\
                      ($canvas_label_alignment" && "$canvas_mouse_y>5*h)}
       canvas_label_alignment:=!$canvas_label_alignment
-      rmn canvas_view
+      $0_rmn canvas_view
     fi
 
     # Manage events for 3D mesh visualization.
@@ -3117,15 +3119,15 @@ _display : skip ${1=},${3=}
         setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
         notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
                                        "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
-        rmn area_3d_view,canvas_label_notification
+        $0_rmn area_3d_view,canvas_label_notification
       elif {*,-F2} # F2: Toggle 3D double sided mode
         setting_3d_is_double_sided:=!$setting_3d_is_double_sided
         notification="Double sided: "${"arg0 "$setting_3d_is_double_sided,Off,On}
-        rmn area_3d_view,canvas_label_notification
+        $0_rmn area_3d_view,canvas_label_notification
       elif {*,-F3} # F3: Toggle 3D zbuffer
         setting_3d_is_zbuffer:=!$setting_3d_is_zbuffer
         notification="Z-buffer: "${"arg0 "$setting_3d_is_zbuffer,Off,On}
-        rmn area_3d_view,canvas_label_notification
+        $0_rmn area_3d_view,canvas_label_notification
       elif {*,-F4} # F4: Change 3D focale
         setting_3d_focale:="const f = $setting_3d_focale;
           lof = [ 0,100,200,300,400,500,700,900,1200 ];
@@ -3136,26 +3138,26 @@ _display : skip ${1=},${3=}
         else
           notification="Parallel projection"
         fi
-        rmn area_3d_view,canvas_label_notification
+        $0_rmn area_3d_view,canvas_label_notification
       fi
     fi
 
     # Manage global window events.
     if {*,r}
       w[] -1,-1
-      rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+      $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
       setting_view3d_mode:=$is_volumetric?($setting_view3d_mode!=2)*2:($setting_view3d_mode!=1)
       if !$setting_view3d_mode" || "($setting_view3d_mode<2" && "$is_volumetric)" || "$is_mesh3d
-        rmn canvas_base,area_3d_view # Make sure 3D mesh disappear from the view
+        $0_rmn canvas_base,area_3d_view # Make sure 3D mesh disappear from the view
       elif $setting_view3d_mode>1" && "$is_volumetric
         draw_3d_view_on_canvas_base=1 # Force 3D mesh to be redrawn on canvas
       fi
       notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
                                      "Off,\"On (mesh only)\",On"}
-      rmn canvas_view,canvas_label_info,canvas_label_notification
+      $0_rmn canvas_view,canvas_label_info,canvas_label_notification
       wait -1
     fi
 
@@ -3163,11 +3165,11 @@ _display : skip ${1=},${3=}
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
-        rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
       elif {*,-D} # CTRL+D: Increase window size
         is_fullscreen=0
         w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
-        rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
       elif {*,-F} # CTRL+F: Toggle fullscreen mode
         if $is_fullscreen
           is_fullscreen=0
@@ -3177,11 +3179,11 @@ _display : skip ${1=},${3=}
           w[] {*,u,v},0,1
         fi
         notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
-        rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info,canvas_label_notification
+        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info,canvas_label_notification
       elif {*,-I} # CTRL+I: Toggle info mode
         setting_is_info:=!$setting_is_info
         notification="Information: "${"arg0 "$setting_is_info,"Off,On"}
-        rmn canvas_view,canvas_label_info,canvas_label_notification
+        $0_rmn canvas_view,canvas_label_info,canvas_label_notification
       elif {*,O}" || "{*,L} # CTRL+O & CTRL+L: Save copy of image/list
         repeat 256 { filename gmic.gmz,$> filename=${} if !isfile('$filename') break fi }
         if {*,-L}
@@ -3191,21 +3193,21 @@ _display : skip ${1=},${3=}
           o[$selected] $filename
           notification="Saved image copy: "$filename
         fi
-        rmn canvas_label_notification
+        $0_rmn canvas_label_notification
       elif {*,-S}" && "0$canvas_base # CTRL+S: Save screenshot
         repeat 256 { filename gmic.png,$> filename=${} if !isfile('$filename') break fi }
         notification="Save screenshot: "$filename
-        rmn canvas_label_notification
+        $0_rmn canvas_label_notification
         o[canvas_base] $filename
       elif {*,-X} # CTRL+X: Toggle axis mode
         setting_axis_mode:=a=($setting_axis_mode+1)%3;$is_volumetric?(a?2:0):(a==1)
         notification="Axis: "${"arg0 "$setting_axis_mode,"Off,\"On (2D only)\",On"}
-        rmn canvas_view,canvas_label_notification
+        $0_rmn canvas_view,canvas_label_notification
       fi
     fi
     if $nb_images>1" && "{*,-TAB} # Hide/show thumbnails
       thumb_is_visible:=!$thumb_is_visible
-      rmn thumb_coords,canvas_base,area_3d_mesh
+      $0_rmn thumb_coords,canvas_base,area_3d_mesh
     fi
     if $is_released0 is_released0=0 fi
 
@@ -3213,7 +3215,7 @@ _display : skip ${1=},${3=}
       notification_opacity-=0.1
       if $notification_opacity<=0 rm[canvas_label_notification] notification_opacity=0 fi
       window_wait_mode=1
-      if $notification_opacity<1 rmn window_view fi
+      if $notification_opacity<1 $0_rmn window_view fi
     fi
   }
 
@@ -3226,6 +3228,7 @@ _display : skip ${1=},${3=}
   fi
   rm[$nb_images--1]
   foreach { => ${image_name$>} } # Set back original images names
+  um "$0_rmn"
   is_change 0
 
 # Return default window size for selected image list.
