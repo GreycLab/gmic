@@ -3129,9 +3129,28 @@ _display : skip ${1=},${3=}
       # 3D mesh rotation, using LMB (drag).
       if !$is_CTRL" && "isin($event_type0,0,4)" && "$is_drag0==5" && "$is_clicked0==5 # 3D rotation starts
         eval "
-          R = mul(rot(0,1,0,8°),crop(#$area_3d_pose,0,0,3,3),3);
-          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
-        "
+          const w2 = $area_3d_width/2;
+          const h2 = $area_3d_height/2;
+          const radius = 0.75*min(w2,h2);
+          const u0 = $drag_start_x0 - w2;
+          const v0 = $drag_start_y0 - h2;
+          const u1 = $drag_end_x0 - w2;
+          const v1 = $drag_end_y0 - h2;
+          n0 = norm(u0,v0);
+          nu0 = n0>radius?u0*radius/n0:u0;
+          nv0 = n0>radius?v0*radius/n0:v0;
+          nw0 = sqrt(max(0,radius^2 - nu0^2 - nv0^2));
+          n1 = norm(u1,v1);
+          nu1 = n1>radius?u1*radius/n1:u1;
+          nv1 = n1>radius?v1*radius/n1:v1;
+          nw1 = sqrt(max(0,radius^2 - nu1^2 - nv1^2));
+          u = nv0*nw1 - nw0*nv1;
+          v = nw0*nu1 - nu0*nw1;
+          w = nv0*nu1 - nu0*nv1;
+          n = norm(u,v,w);
+          R = rot(u,v,w,-asin(n/radius^2));
+          R = mul(R,crop(#$area_3d_pose,0,0,3,3),3);
+          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1)"
         drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
         $0_rmn area_3d_view
         event_type0=4
