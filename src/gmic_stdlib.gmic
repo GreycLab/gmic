@@ -3130,26 +3130,51 @@ _display : skip ${1=},${3=}
     # Manage events for 3D mesh visualization.
     if $is_view3d
 
-      # Object pan, using CTRL-LMB or MMB (drag).
+      # 3D mesh rotation, using LMB (drag).
+      if !$is_CTRL" && "isin($event_type0,0,4)" && "$is_drag0==5" && "$is_clicked0==5 # Rotation starts
+        eval "
+          R = mul(rot(0,1,0,8°),crop(#$area_3d_pose,0,0,3,3),3);
+          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
+        "
+        drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
+        $0_rmn area_3d_view
+        event_type0=4
+      elif $event_type0==4" && "$is_drag0==5" && "$is_released0 # Rotation ends
+        event_type0,is_drag0,is_released0=0
+      fi
+
+      # 3D mesh pan, using CTRL-LMB or MMB (drag).
       repeat 2 {
         but:=2*$>
         if !$but" && "!$is_CTRL continue fi
-        if isin($event_type0,0,4)" && "${is_drag$but}==5" && "${is_clicked$but}==5 # Pan starts
+
+        if isin($event_type0,0,5)" && "${is_drag$but}==5" && "${is_clicked$but}==5 # Pan starts
           drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
           eval "
-            const dx = "${drag_end_x$but}-${drag_start_x$but}";
-            const dy = "${drag_end_y$but}-${drag_start_y$but}";
-            x = cut(i[#$area_3d_pose,3] + dx,-$area_3d_width/2,$area_3d_width/2);
-            y = cut(i[#$area_3d_pose,7] + dy,-$area_3d_height/2,$area_3d_height/2);
+            x = cut(i[#$area_3d_pose,3] + $drag_dx,-$area_3d_width/2,$area_3d_width/2);
+            y = cut(i[#$area_3d_pose,7] + $drag_dy,-$area_3d_height/2,$area_3d_height/2);
             i[#$area_3d_pose,3] = x;
             i[#$area_3d_pose,7] = y"
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           $0_rmn area_3d_view
-          event_type0=4
-        elif $event_type0==4" && "${is_drag$but}==2" && "${is_released$but} # Pan ends
+          event_type0=5
+        elif $event_type0==5" && "${is_drag$but}==5" && "${is_released$but} # Pan ends
           event_type0,is_drag0,is_released0,is_drag2,is_released2=0
         fi
       }
+
+      # 3D mesh zoom, using RMB (drag).
+      if $is_drag1==5" && "$is_clicked1==5 # Zoom starts
+        eval "
+          R = 1.02*crop(#$area_3d_pose,0,0,3,3);
+          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
+        "
+        drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
+        $0_rmn area_3d_view
+      elif $is_drag1==5" && "$is_released0 # 3D rotation ends
+        event_type0,is_drag0,is_released0,is_drag1,is_released2=0
+      fi
+
 
       if {*,-F1} # F1: Switch 3D rendering mode
         setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
@@ -3245,6 +3270,8 @@ _display : skip ${1=},${3=}
       thumb_is_visible:=!$thumb_is_visible
       $0_rmn thumb_coords,canvas_base,area_3d_mesh
     fi
+
+    if !$is_clicked0 event_type0=0 fi
     if $is_released0 is_released0=0 fi
 
     if $canvas_label_notification
