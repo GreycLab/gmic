@@ -3178,10 +3178,13 @@ _display : skip ${1=},${3=}
         fi
       }
 
-      # 3D mesh zoom, using RMB (drag).
+      # 3D mesh zoom, using RMB (drag) or MW.
       if $is_drag1==5" && "$is_clicked1==5 # 3D zoom starts
         eval "
-          R = 1.02*crop(#$area_3d_pose,0,0,3,3);
+          const dx = $drag_end_x1 - $drag_start_x1;
+          const dy = $drag_end_y1 - $drag_start_y1;
+          const amount = sign(dx)*norm(dx,dy)/10;
+          R = 1.02^amount*crop(#$area_3d_pose,0,0,3,3);
           draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
         "
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
@@ -3190,6 +3193,15 @@ _display : skip ${1=},${3=}
         event_type0,is_drag0,is_released0,is_drag1,is_released2=0
       fi
 
+      if {*,o}
+        eval "
+          const amount = "{*,-o}";
+          R = 1.05^amount*crop(#$area_3d_pose,0,0,3,3);
+          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1);
+        "
+        drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
+        $0_rmn area_3d_view
+      fi
 
       if {*,-F1} # F1: Switch 3D rendering mode
         setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
