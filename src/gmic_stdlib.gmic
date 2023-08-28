@@ -1934,9 +1934,8 @@ _display : skip ${1=},${3=}
     else
 
       # Generate thumbnail coordinates and sizes for current window resolution.
+      thumb_height:=max(48,round($window_height*$thumb_height_factor))
       if !0$thumb_coords
-        thumb_height:=max(48,round($window_height*$thumb_height_factor))
-        thumb_height2:=$thumb_height+2
         1,$nb_images,1,2,"begin(CImg3d = 'CImg3d');
           const ratio = $thumb_min_ratio;
           w = w#y; h = h#y; d = d#y; s = s#y;
@@ -1956,11 +1955,12 @@ _display : skip ${1=},${3=}
         $0_rmn thumb_is_cached
       fi
 
+      thumb_height2:=$thumb_height+2
       thumb_x_px:=cut($thumb_x*$thumb_sumw,-16,$thumb_x_px_max)
 
       # Generate thumnail view.
       if !0$thumb_is_cached
-        1,$nb_images => thumb_is_cached
+        1,$nb_images => thumb_is_cached # 0: not rendered | 1:rendered as image | 2:rendered as 3D mesh
         $0_rmn thumb_view
       fi
 
@@ -2373,14 +2373,13 @@ _display : skip ${1=},${3=}
         fi
 
         if $thumb_is_visible
-          if !0$thumb_is_rendered3d 1,$nb_images,1,1 => thumb_is_rendered3d fi
-          if {thumb_is_rendered3d,!i[$selected]" && "!$is_volumetric}
-            =[thumb_is_rendered3d] 1,0,$selected
+          if {thumb_is_cached,i[$selected]<2" && "!$is_volumetric}
             w,h={$thumb_coords,I[$selected][2,2]}
-            +r2din[area_3d_view] {max($w,$h)}
+            +r2din[area_3d_view] {M=max($w,$h);[M,M]}
             r. $w,$h,1,100%,0,0,0.5,0.5
             store. thumb_cache_$selected
             update_thumb_view,window_wait_mode=1
+            =[thumb_is_cached] 2,0,$selected
           fi
         fi
 
@@ -3300,7 +3299,7 @@ _display : skip ${1=},${3=}
     # Manage global window events.
     if {*,r}
       w[] -1,-1
-      $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
+      $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
@@ -3331,11 +3330,11 @@ _display : skip ${1=},${3=}
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
       elif {*,-D} # CTRL+D: Increase window size
         is_fullscreen=0
         w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
       elif {*,-F} # CTRL+F: Toggle fullscreen mode
         if $is_fullscreen
           is_fullscreen=0
@@ -3345,7 +3344,7 @@ _display : skip ${1=},${3=}
           w[] {*,u,v},0,1
         fi
         notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
-        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info,canvas_label_notification
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info,canvas_label_notification
       elif {*,-I} # CTRL+I: Toggle info mode
         setting_is_info:=!$setting_is_info
         notification="Information: "${"arg0 "$setting_is_info,"Off,On"}
@@ -3373,7 +3372,7 @@ _display : skip ${1=},${3=}
     fi
     if $nb_images>1" && "{*,-TAB} # Hide/show thumbnails
       thumb_is_visible:=!$thumb_is_visible
-      $0_rmn thumb_coords,canvas_base,area_3d_view
+      $0_rmn thumb_view,canvas_base,area_3d_view
     fi
 
     if !$is_clicked0 event_type0=0 fi
