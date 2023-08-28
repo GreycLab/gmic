@@ -1837,7 +1837,7 @@ _display : skip ${1=},${3=}
   setting_3d_is_zbuffer:=narg($_display_3d_is_zbuffer)?0$_display_3d_is_zbuffer:1
   # 'setting_3d_focale' can be { <0: perspecive projection w/o sprite zooming, 0: parallel projection |
   # >0: perspective projection }.
-  setting_3d_focale:=narg($_display_3d_focale)?0$_display_3d_focale:700
+  setting_3d_focale:=narg($_display_3d_focale)?0$_display_3d_focale:1.5
   # 'setting_3d_is_axes' can be { 0:off | 1:on }.
   setting_3d_is_axes:=narg($_display_3d_is_axes)?0$_display_3d_is_axes:1
 
@@ -2337,10 +2337,10 @@ _display : skip ${1=},${3=}
         [area_3d_mesh] nbv:=f2ui(i[6])
         if $nbv # Apply pose to object
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
+          fact:=0.65*min($area_3d_width,$area_3d_height)
           eval. "begin(
-                   const fact = 0.65*min($area_3d_width,$area_3d_height);
                    R = crop(#$area_3d_pose,0,0,3,3);
-                   R*=$area_3d_zoom*fact;
+                   R*=$area_3d_zoom*$fact;
                    S = crop(#$area_3d_pose,3,0,1,3)
                  );
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
@@ -2349,7 +2349,7 @@ _display : skip ${1=},${3=}
           {$is_volumetric?[2,1,1,800]:[$setting_3d_rendering_mode,\
                                        $setting_3d_is_double_sided,\
                                        $setting_3d_is_zbuffer,\
-                                       $setting_3d_focale]}
+                                       $fact*$setting_3d_focale]}
         rm.. => area_3d_view
 
         if $setting_3d_is_axes
@@ -3240,12 +3240,12 @@ _display : skip ${1=},${3=}
           notification="Z-buffer: "${"arg0 "$setting_3d_is_zbuffer,Off,On}
           $0_rmn area_3d_view,canvas_label_notification
         elif !$is_CTRL" && "{*,F} # F: Change 3D focale
-          setting_3d_focale:="const f = $setting_3d_focale;
-            lof = [ 0,100,200,300,400,500,700,900,1200 ];
+          setting_3d_focale:="_const f = $setting_3d_focale;
+            lof = [ 0,0.2,0.4,0.6,0.8,1,2,4,6,8,10 ];
             for (k = 0, k<size(lof) && lof[k]<=f, ++k);
             lof[k%size(lof)]"
           if $setting_3d_focale
-            notification="Focale: "$setting_3d_focale
+            notification="Focale: x"$setting_3d_focale
           else
             notification="Parallel projection"
           fi
