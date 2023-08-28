@@ -2320,7 +2320,6 @@ _display : skip ${1=},${3=}
         else [$selected]
         fi
         c3d. n3d.
-        *3d. {0.65*min($area_3d_width,$area_3d_height)}
         => area_3d_mesh
         $0_rmn area_3d_view
       fi
@@ -2338,7 +2337,12 @@ _display : skip ${1=},${3=}
         [area_3d_mesh] nbv={@6}
         if $nbv # Apply pose to object
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
-          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3); R*=$area_3d_zoom; S = crop(#$area_3d_pose,3,0,1,3));
+          eval. "begin(
+                   const fact = 0.65*min($area_3d_width,$area_3d_height);
+                   R = crop(#$area_3d_pose,0,0,3,3);
+                   R*=$area_3d_zoom*fact;
+                   S = crop(#$area_3d_pose,3,0,1,3)
+                 );
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
         +j3d[area_3d_background] .,50%,50%,0,1,\
@@ -3254,7 +3258,7 @@ _display : skip ${1=},${3=}
     # Manage global window events.
     if {*,r}
       w[] -1,-1
-      $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+      $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
@@ -3279,16 +3283,17 @@ _display : skip ${1=},${3=}
     elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
         area_3d_zoom=1
-        $0_rmn canvas_base,area_3d_mesh,area_3d_pose
+        if $is_volumetric $0_rmn $area_3d_mesh fi
+        $0_rmn canvas_base,area_3d_view,area_3d_pose
     elif $is_CTRL
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
       elif {*,-D} # CTRL+D: Increase window size
         is_fullscreen=0
         w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
       elif {*,-F} # CTRL+F: Toggle fullscreen mode
         if $is_fullscreen
           is_fullscreen=0
@@ -3298,7 +3303,7 @@ _display : skip ${1=},${3=}
           w[] {*,u,v},0,1
         fi
         notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
-        $0_rmn thumb_coords,canvas_base,area_3d_mesh,canvas_label_info,canvas_label_notification
+        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info,canvas_label_notification
       elif {*,-I} # CTRL+I: Toggle info mode
         setting_is_info:=!$setting_is_info
         notification="Information: "${"arg0 "$setting_is_info,"Off,On"}
