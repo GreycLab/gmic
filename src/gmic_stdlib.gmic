@@ -1905,6 +1905,7 @@ _display : skip ${1=},${3=}
 
   zoom_1_1=0
   draw_3d_view_on_canvas_base=0
+  update_thumb_view=0
 
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x4 => is_printed,is_infnan,is_rotated,is_mesh3d
@@ -1963,6 +1964,7 @@ _display : skip ${1=},${3=}
         $0_rmn thumb_view
       fi
 
+      if $update_thumb_view $0_rmn thumb_view update_thumb_view=0 fi
       if !0$thumb_view
         $0_rmn thumb_index_map
         $window_width,$thumb_height,1,3 100%,1,1,1,-1 => thumb_view,thumb_index_map
@@ -2368,6 +2370,16 @@ _display : skip ${1=},${3=}
             i[19]>0?copy(i[off + 3],col,3);
             i[25]>0?copy(i[off + 6],col,3)"
           j3d[area_3d_view] .,50,{area_3d_view,h-50},0,0.75,1,0,0,150 rm.
+        fi
+
+        if !0$thumb_is_rendered3d 1,$nb_images,1,1 => thumb_is_rendered3d fi
+        if {thumb_is_rendered3d,!i[$selected]" && "!$is_volumetric}
+          =[thumb_is_rendered3d] 1,0,$selected
+          w,h={$thumb_coords,I[$selected][2,2]}
+          +r2din[area_3d_view] {max($w,$h)}
+          r. $w,$h,1,100%,0,0,0.5,0.5
+          store. thumb_cache_$selected
+          update_thumb_view,window_wait_mode=1
         fi
 
         draw_3d_view_on_canvas_base=1
@@ -3286,7 +3298,7 @@ _display : skip ${1=},${3=}
     # Manage global window events.
     if {*,r}
       w[] -1,-1
-      $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
+      $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
@@ -3309,19 +3321,19 @@ _display : skip ${1=},${3=}
       $0_rmn canvas_base
       skip {*,-C}
     elif {*,-ENTER} # ENTER: Reset view
-        view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-        view_3d_zoom=1
-        if $is_volumetric $0_rmn $area_3d_mesh fi
-        $0_rmn canvas_base,area_3d_view,view_3d_pose
+      view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
+      view_3d_zoom=1
+      if $is_volumetric $0_rmn $area_3d_mesh fi
+      $0_rmn canvas_base,area_3d_view,view_3d_pose
     elif $is_CTRL
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
         w[] {round([max(128,0.87*$window_width),max(128,0.87*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
       elif {*,-D} # CTRL+D: Increase window size
         is_fullscreen=0
         w[] {round([min({*,u},1.15*$window_width),min({*,v},1.15*$window_height)])},0,0
-        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info
+        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info
       elif {*,-F} # CTRL+F: Toggle fullscreen mode
         if $is_fullscreen
           is_fullscreen=0
@@ -3331,7 +3343,7 @@ _display : skip ${1=},${3=}
           w[] {*,u,v},0,1
         fi
         notification="Fullscreen: "${"arg0 "$is_fullscreen,"Off,On"}
-        $0_rmn thumb_coords,canvas_base,area_3d_view,canvas_label_info,canvas_label_notification
+        $0_rmn thumb_coords,canvas_base,area_3d_view,thumb_is_rendered3d,canvas_label_info,canvas_label_notification
       elif {*,-I} # CTRL+I: Toggle info mode
         setting_is_info:=!$setting_is_info
         notification="Information: "${"arg0 "$setting_is_info,"Off,On"}
