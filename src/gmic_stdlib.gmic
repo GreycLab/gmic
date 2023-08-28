@@ -1905,7 +1905,6 @@ _display : skip ${1=},${3=}
 
   zoom_1_1=0
   draw_3d_view_on_canvas_base=0
-  area_3d_zoom=1
 
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x4 => is_printed,is_infnan,is_rotated,is_mesh3d
@@ -2332,16 +2331,16 @@ _display : skip ${1=},${3=}
           24,24,1,1,64 +f. 96 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2 round.
           => area_3d_background
         fi
-        if !0$area_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => area_3d_pose fi
+        if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
         [area_3d_mesh] nbv:=f2ui(i[6])
         if $nbv # Apply pose to object
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
-          fact:=0.65*min($area_3d_width,$area_3d_height)
+          fact:=min($area_3d_width,$area_3d_height)
           eval. "begin(
-                   R = crop(#$area_3d_pose,0,0,3,3);
-                   R*=$area_3d_zoom*$fact;
-                   S = crop(#$area_3d_pose,3,0,1,3)
+                   R = crop(#$view_3d_pose,0,0,3,3);
+                   S = crop(#$view_3d_pose,3,0,1,3);
+                   R*=$view_3d_zoom*$fact; S*=$fact;
                  );
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
@@ -2355,7 +2354,7 @@ _display : skip ${1=},${3=}
         if $setting_3d_is_axes
           [area_3d_axes] nbv={@6}
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx # Apply pose to axes
-          eval. "begin(R = crop(#$area_3d_pose,0,0,3,3));
+          eval. "begin(R = crop(#$view_3d_pose,0,0,3,3));
                  copy(i[#-2,8+3*x],R*I)" rm.
           eval " # Colorize axes depending on their Z-sign
             const off = "$area_3d_axes_offset";
@@ -3176,8 +3175,8 @@ _display : skip ${1=},${3=}
           w = nv0*nu1 - nu0*nv1;
           n = norm(u,v,w);
           R = rot(u,v,w,-asin(n/radius^2));
-          R = mul(R,crop(#$area_3d_pose,0,0,3,3),3);
-          draw(#$area_3d_pose,R,0,0,0,0,3,3,1,1)"
+          R = mul(R,crop(#$view_3d_pose,0,0,3,3),3);
+          draw(#$view_3d_pose,R,0,0,0,0,3,3,1,1)"
         drag_start_x0,drag_start_y0=$drag_end_x0,$drag_end_y0
         $0_rmn area_3d_view
         event_type0=4
@@ -3186,16 +3185,24 @@ _display : skip ${1=},${3=}
       fi
 
       # 3D mesh pan, using CTRL-LMB or MMB (drag).
+      pan_3d_x_min,pan_3d_x_max,pan_3d_y_min,pan_3d_y_max:="
+        const w = $area_3d_width;
+        const h = $area_3d_height;
+        const mwh = min(w,h);
+        0.75*[ -w/mwh,w/mwh,-h/mwh,h/mwh ]"
+
       repeat 2 {
         but:=2*$>
         if !$but" && "!$is_CTRL continue fi
         if isin($event_type0,0,5)" && "${is_drag$but}==5" && "${is_clicked$but}==5 # Pan starts
           drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
           eval "
-            x = cut(i[#$area_3d_pose,3] + $drag_dx,-$area_3d_width/2,$area_3d_width/2);
-            y = cut(i[#$area_3d_pose,7] + $drag_dy,-$area_3d_height/2,$area_3d_height/2);
-            i[#$area_3d_pose,3] = x;
-            i[#$area_3d_pose,7] = y"
+            const dx = $drag_dx/$area_3d_width;
+            const dy = $drag_dy/$area_3d_height;
+            x = cut(i[#$view_3d_pose,3] + dx,$pan_3d_x_min,$pan_3d_x_max);
+            y = cut(i[#$view_3d_pose,7] + dy,$pan_3d_y_min,$pan_3d_y_max);
+            i[#$view_3d_pose,3] = x;
+            i[#$view_3d_pose,7] = y"
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           $0_rmn area_3d_view
           event_type0=5
@@ -3210,16 +3217,32 @@ _display : skip ${1=},${3=}
           const dx = $drag_end_x1 - $drag_start_x1;
           const dy = $drag_end_y1 - $drag_start_y1;
           sign(dx)*norm(dx,dy)/10"
-        area_3d_zoom*=1.05^$amount
+        view_3d_zoom*=1.05^$amount
         drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
         $0_rmn area_3d_view
       elif $is_drag1==5" && "$is_released0 # 3D zoom ends
         event_type0,is_drag0,is_released0,is_drag1,is_released2=0
       fi
       if {*,o}
-        area_3d_zoom*=1.05^{*,-o}
+        view_3d_zoom*=1.05^{*,-o}
         $0_rmn area_3d_view
       fi
+
+      # 3D mesh pan with ARROW keys.
+      if $is_area5" && "({*,ARROWLEFT}" || "{*,ARROWRIGHT}" || "{*,ARROWUP}" || "{*,ARROWDOWN})
+        eval "
+          const stepx = ($pan_3d_x_max - $pan_3d_x_min)/30;
+          const stepy = ($pan_3d_y_max - $pan_3d_y_min)/30;
+          dx = "{*,-ARROWLEFT}"?-stepx:"{*,-ARROWRIGHT}"?stepx:0;
+          dy = "{*,-ARROWUP}"?-stepy:"{*,-ARROWDOWN}"?stepy:0;
+          $is_SHIFT?(dx*=2; dy*=2);
+          x = cut(i[#$view_3d_pose,3] + dx,$pan_3d_x_min,$pan_3d_x_max);
+          y = cut(i[#$view_3d_pose,7] + dy,$pan_3d_y_min,$pan_3d_y_max);
+          i[#$view_3d_pose,3] = x;
+          i[#$view_3d_pose,7] = y"
+        $0_rmn area_3d_view
+      fi
+
       if !$is_volumetric
         if {*,-R} # R: Switch 3D rendering mode
           setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
@@ -3277,14 +3300,14 @@ _display : skip ${1=},${3=}
     if ($is_area234" || "$is_area5)" && "!$is_CTRL" && "{*,C} # C: Center view
       view_center_x,view_center_y,view_center_z=0.5
       if $is_volumetric $0_rmn area_3d_mesh fi
-      if 0$area_3d_pose 1,3 j[area_3d_pose] .,3 rm. $0_rmn area_3d_view fi
+      if 0$view_3d_pose 1,3 j[view_3d_pose] .,3 rm. $0_rmn area_3d_view fi
       $0_rmn canvas_base
       skip {*,-C}
     elif {*,-ENTER} # ENTER: Reset view
         view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-        area_3d_zoom=1
+        view_3d_zoom=1
         if $is_volumetric $0_rmn $area_3d_mesh fi
-        $0_rmn canvas_base,area_3d_view,area_3d_pose
+        $0_rmn canvas_base,area_3d_view,view_3d_pose
     elif $is_CTRL
       if {*,-C} # CTRL+C: Decrease window size
         is_fullscreen=0
