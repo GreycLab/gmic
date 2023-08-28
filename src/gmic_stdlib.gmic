@@ -1828,9 +1828,12 @@ _display : skip ${1=},${3=}
   setting_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
   # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?0$_display_is_info:1
-  # 'setting_3d_rendering_mode' can be { -1:bounding-box | 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
+  # 'setting_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
   # 4:gouraud-shaded | 5=phong-shaded }.
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?0$_display_3d_rendering_mode:4
+  # 'setting_3d_motion_rendering_mode' can be { -1:bounding-box | 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
+  # 4:gouraud-shaded | 5=phong-shaded }.
+  setting_3d_motion_rendering_mode:=narg($_display_3d_rendering_mode)?0$_display_3d_rendering_mode:3
   # 'setting_3d_is_double_sided' can be { 0:off | 1:on }.
   setting_3d_is_double_sided:=narg($_display_3d_is_double_sided)?0$_display_3d_is_double_sided:0
   # 'setting_3d_is_zbuffer' can be { 0:off | 1:on }.
@@ -2328,7 +2331,7 @@ _display : skip ${1=},${3=}
         fi
         c3d. n3d.
         => area_3d_mesh
-        $0_rmn area_3d_view
+        $0_rmn area_3d_bounding_box,area_3d_view
       fi
 
       # Render and draw 3D mesh object.
@@ -2341,14 +2344,16 @@ _display : skip ${1=},${3=}
         fi
         if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
-        if $area_3d_is_motion" && "!$is_volumetric" && "$area_mouse_x>=0
+        is_3d_bounding_box:=$area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
+        if $is_3d_bounding_box
           if !0$area_3d_bounding_box +boundingbox3d[area_3d_mesh] => area_3d_bounding_box fi
           [area_3d_bounding_box]
-        else [area_3d_mesh]
+        else
+          [area_3d_mesh]
         fi
 
         nbv:=f2ui(i[6])
-        if $nbv # Apply pose to object
+        if $nbv # Apply pose to 3D mesh
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
           fact:=min($area_3d_width,$area_3d_height)
           eval. "begin(
@@ -2359,20 +2364,21 @@ _display : skip ${1=},${3=}
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
 
-        if $area_3d_is_motion" && "!$is_volumetric # Draw 3D bounding box
-          +j3d[area_3d_background] .,50%,50%,0,0.5,1,0,0,{$fact*$setting_3d_focale}
+        if $is_3d_bounding_box
+          +j3d[area_3d_background] .,50%,50%,0,0.5,1,0,0,{1.5*$fact}
         else
           +j3d[area_3d_background] .,50%,50%,0,1,\
-            {$is_volumetric?[2,1,1,$fact*1.5]:[$setting_3d_rendering_mode,\
+            {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?$setting_3d_motion_rendering_mode:\
+                                                                  $setting_3d_rendering_mode,\
                                                $setting_3d_is_double_sided,\
                                                $setting_3d_is_zbuffer,\
-                                               $fact*$setting_3d_focale]}
+                                               $setting_3d_focale*$fact]}
         fi
         rm.. => area_3d_view
 
         if $setting_3d_is_axes
           [area_3d_axes] nbv={@6}
-          +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx # Apply pose to axes
+          +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx # Apply pose to 3D axes
           eval. "begin(R = crop(#$view_3d_pose,0,0,3,3));
                  copy(i[#-2,8+3*x],R*I)" rm.
           eval " # Colorize axes depending on their Z-sign
@@ -3279,8 +3285,14 @@ _display : skip ${1=},${3=}
         if {*,-R} # R: Switch 3D rendering mode
           setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
           notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
-                                         "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
+                                      "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
           $0_rmn area_3d_view,canvas_label_notification
+        elif {*,-T} # T: Switch 3D motion rendering mode
+          setting_3d_motion_rendering_mode:=s=$setting_3d_motion_rendering_mode-1;inrange(s,-1,5)?s:5
+          notification="Motion rendering: "${"arg0 "$setting_3d_motion_rendering_mode+1,\
+                                             "\"Bounding Box\",Dots,Wireframe,Flat,Flat-shaded,\
+                                             Gouraud-shaded,Phong-shaded"}
+          $0_rmn canvas_label_notification
         elif !$is_CTRL" && "{*,D} # D: Toggle 3D double sided mode
           setting_3d_is_double_sided:=!$setting_3d_is_double_sided
           notification="Double sided: "${"arg0 "$setting_3d_is_double_sided,Off,On}
@@ -3313,7 +3325,6 @@ _display : skip ${1=},${3=}
         area_3d_is_motion=0
         $0_rmn area_3d_view
       fi
-
     fi
 
     # Manage global window events.
