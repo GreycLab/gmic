@@ -1915,7 +1915,9 @@ _display : skip ${1=},${3=}
   for {*}" && "!{*,ESC} {
     window_width,window_height={*,w,h}
     is_volumetric={$selected,d>1}
-    if {is_mesh3d,i[$selected]<0} =[is_mesh3d] ${is_mesh3d[$selected]},0,$selected fi
+    if {is_mesh3d,i[$selected]<0}
+      sh[$selected] if {is_rotated,i[$selected]} y. fi =[is_mesh3d] ${is_mesh3d.},0,$selected rm.
+    fi
     is_mesh3d={is_mesh3d,i[$selected]}
     is_view3d:=$setting_view3d_mode" && "($is_mesh3d" || "($is_volumetric" && "$setting_view3d_mode==2))
 
@@ -1986,7 +1988,9 @@ _display : skip ${1=},${3=}
             else
 
               # Generate 3D icon if necessary.
-              if {is_mesh3d,i[$ind]<0} =[is_mesh3d] ${is_mesh3d[$ind]},0,$ind fi
+              if {is_mesh3d,i[$ind]<0}
+                sh[$ind] if {is_rotated,i[$ind]} y. fi =[is_mesh3d] ${is_mesh3d.},0,$ind rm.
+              fi
               if {is_mesh3d,i[$ind]}
                 if !0$thumb_3d_icon
                   box3d 35 col3d. 0,200,255 c3d. r3d. 1,1,1,45
@@ -2316,7 +2320,7 @@ _display : skip ${1=},${3=}
           +projections3d[$selected] {$selected,floor([cut($view_center_x*w,0,w-1),\
                                                       cut($view_center_y*h,0,h-1),\
                                                       cut($view_center_z*d,0,d-1)])},1
-        else [$selected]
+        else [$selected] if {is_rotated,i[$selected]} rotate. {is_rotated,-90*i[$selected]} fi
         fi
         c3d. n3d.
         => area_3d_mesh
