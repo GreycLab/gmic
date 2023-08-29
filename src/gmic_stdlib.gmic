@@ -1835,6 +1835,8 @@ _display : skip ${1=},${3=}
   # 'setting_3d_motion_rendering_mode' can be { -1:bounding-box | 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
   # 4:gouraud-shaded | 5=phong-shaded }.
   setting_3d_motion_rendering_mode:=narg($_display_3d_motion_rendering_mode)?0$_display_3d_motion_rendering_mode:3
+  # 'setting_3d_motion_time_limit' is specified in ms. Above this time, motion rendering toggle to 'bounding-box' mode.
+  setting_3d_motion_time_limit:=narg($_display_3d_motion_time_limit)?0$_display_3d_motion_time_limit:300
   # 'setting_3d_is_double_sided' can be { 0:off | 1:on }.
   setting_3d_is_double_sided:=narg($_display_3d_is_double_sided)?0$_display_3d_is_double_sided:0
   # 'setting_3d_is_zbuffer' can be { 0:off | 1:on }.
@@ -1914,7 +1916,10 @@ _display : skip ${1=},${3=}
   update_thumb_view=0
   area_3d_is_motion=0
 
-  if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
+  if $nb_images>1
+    (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right
+    1,$nb_images => thumb_is_cached
+  fi
   1,${nb_images}x4 => is_printed,is_infnan,is_rotated,is_mesh3d
   f[is_infnan,is_mesh3d] -1
   0x2 => canvas_checkerboard,area_3d_background
@@ -1959,18 +1964,13 @@ _display : skip ${1=},${3=}
         thumb_sumw={thumb_coords,max(i[h-1]+i(0,h-1,0,2),$window_width)}
         thumb_x_px_max={thumb_coords,max(-16,i[h-1]+i(0,h-1,0,2)-$window_width+17)}
         if !narg($thumb_x) thumb_x:=-16/$thumb_sumw fi
-        $0_rmn thumb_is_cached
+        $0_flush_thumb_cache
       fi
 
       thumb_height2:=$thumb_height+2
       thumb_x_px:=cut($thumb_x*$thumb_sumw,-16,$thumb_x_px_max)
 
       # Generate thumnail view.
-      if !0$thumb_is_cached
-        1,$nb_images => thumb_is_cached # 0: not rendered | 1:rendered as image | 2:rendered as 3D mesh
-        $0_rmn thumb_view
-      fi
-
       if $update_thumb_view $0_rmn thumb_view update_thumb_view=0 fi
       if !0$thumb_view
         $0_rmn thumb_index_map
@@ -1990,7 +1990,7 @@ _display : skip ${1=},${3=}
         ind=$ind0 repeat $ind1-$ind0+1 {
           x,y,w,h={thumb_coords,I[$ind]}
           if {thumb_is_cached,i[$ind]}
-            ${thumb_cache_$ind}
+            ${thumb_cache_$ind} r. $w,$h,1,100%,2
           else
             if {$ind,!w} # Empty image
               font_size:=cut($thumb_height/8,16,32)
@@ -2320,7 +2320,7 @@ _display : skip ${1=},${3=}
 
     if $is_view3d
 
-      # Generate 3D mesh object and bounding box.
+      # Generate 3D mesh object and bounding-box.
       if $setting_3d_is_axes" && "!0$area_3d_axes
         axes3d 40,40,40,20,X,Y,Z,0 col3d. 0,255,0 l. { s3d a[0-3] y area_3d_axes_offset={0,h} a y }
         => area_3d_axes
@@ -2373,12 +2373,17 @@ _display : skip ${1=},${3=}
         if $is_bounding_box_only
           +j3d[area_3d_background] .,50%,50%,0,0.5,1,0,0,{1.5*$fact}
         else
+          time0=$|
           +j3d[area_3d_background] .,50%,50%,0,1,\
             {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?$setting_3d_motion_rendering_mode:\
                                                                   $setting_3d_rendering_mode,\
                                                                   $setting_3d_is_double_sided,\
                                                                   $setting_3d_is_zbuffer,\
                                                                   $setting_3d_focale*$fact]}
+          dtime:=$|-$time0
+          if $area_3d_is_motion" && "1000*$dtime>$setting_3d_motion_time_limit
+            setting_3d_motion_rendering_mode=-1
+          fi
         fi
         rm.. => area_3d_view
 
@@ -2396,15 +2401,13 @@ _display : skip ${1=},${3=}
           j3d[area_3d_view] .,50,{area_3d_view,h-50},0,0.75,1,0,0,150 rm.
         fi
 
-        if $thumb_is_visible
-          if {thumb_is_cached,i[$selected]<2" && "!$is_volumetric}
-            w,h={$thumb_coords,I[$selected][2,2]}
-            +rr2d[area_3d_view] $w,$h,1,2
-            r. $w,$h,1,100%,0,0,0.5,0.5
-            store. thumb_cache_$selected
-            update_thumb_view,window_wait_mode=1
-            =[thumb_is_cached] 2,0,$selected
-          fi
+        if {thumb_is_cached,$thumb_is_visible" && "i[$selected]<2" && "!$is_volumetric}
+          w,h,Mwh={$thumb_coords,wh=I[$selected][2,2];[wh,max(wh,256)]}
+          +rr2d[area_3d_view] $Mwh,$Mwh,1,2
+          r. $Mwh,$Mwh,1,100%,0,0,0.5,0.5
+          store. 1,thumb_cache_$selected
+          =[thumb_is_cached] 2,0,$selected
+          update_thumb_view,window_wait_mode=1
         fi
 
         draw_3d_view_on_canvas_base=1
@@ -3148,7 +3151,8 @@ _display : skip ${1=},${3=}
       if {*,-A} # A: Switch alpha mode
         setting_alpha_mode:=($setting_alpha_mode+1)%5
         notification="Alpha: "${"arg0 "$setting_alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
-        $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
+        $0_flush_thumb_cache
+        $0_rmn canvas_base,canvas_label_notification
       elif {*,-G} # G: Toggle grid
         setting_is_grid:=!$setting_is_grid
         notification="Grid: "${"arg0 "$setting_is_grid,"Off,On"}
@@ -3163,7 +3167,9 @@ _display : skip ${1=},${3=}
         setting_normalization_mode:=($setting_normalization_mode+1)%4
         notification="Normalization: "${"arg0 "$setting_normalization_mode,\
                                         "Off,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
-        $0_rmn thumb_is_cached,canvas_base,canvas_label_notification
+
+        $0_flush_thumb_cache
+        $0_rmn canvas_base,canvas_label_notification
       elif {*,-R} # Rotate view
         view_is_rotated:=($view_is_rotated+1)%4
         notification="Angle: "{$view_is_rotated*90}\260
@@ -3317,10 +3323,10 @@ _display : skip ${1=},${3=}
         elif {*,-T} # T: Switch 3D motion rendering mode
           setting_3d_motion_rendering_mode:=s=$setting_3d_motion_rendering_mode+1;inrange(s,-1,5)?s:-1
           notification="Motion rendering: "${"arg0 "$setting_3d_motion_rendering_mode+1,\
-                                             "\"Bounding Box\",Dots,Wireframe,Flat,Flat-shaded,\
+                                             "\"Bounding-box\",Dots,Wireframe,Flat,Flat-shaded,\
                                              Gouraud-shaded,Phong-shaded"}
           $0_rmn canvas_label_notification
-        elif {*,-X} # X: Toggle bounding box
+        elif {*,-X} # X: Toggle bounding-box
           setting_3d_is_bounding_box:=!$setting_3d_is_bounding_box
           notification="Bounding-box: "${"arg0 "$setting_3d_is_bounding_box,Off,On}
           $0_rmn area_3d_mesh,canvas_label_notification
@@ -3438,6 +3444,10 @@ _display : skip ${1=},${3=}
   foreach { => ${image_name$>} } # Set back original images names
   um "$0_rmn"
   is_change 0
+
+# Flush thumb cache: discard all images except 3D mesh rendering.
+_display_flush_thumb_cache :
+  ==[thumb_is_cached] 2 _display_rmn thumb_view
 
 # Return default window size for selected image list.
 # $1 : thumb_height_factor
@@ -3829,7 +3839,7 @@ _display3d :
           is_animate=0
           n=0 do filename gmic.mp4,$n n+=1 while isfile(['{/${}}'])
           filename_outvideo=${}
-        elif {*,-X} # Show/hide bounding box
+        elif {*,-X} # Show/hide bounding-box
           is_boundingbox={!$is_boundingbox}
           n0,n1="Off","On" notification="Bounding Box: "${n$is_boundingbox}
           rmn object3d
