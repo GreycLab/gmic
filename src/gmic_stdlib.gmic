@@ -1829,8 +1829,8 @@ _display : skip ${1=},${3=}
   # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?0$_display_is_info:1
 
-  # 'setting_3d_view' can be { 0:off | 1:on (3D mesh only) | 2:on (+3D volumetric images) }.
-  setting_3d_view:=narg($_display_3d_view)?0$_display_3d_view:1
+  # 'setting_3d_is_rendered' can be { 0:off | 1:on }.
+  setting_3d_is_rendered:=narg($_display_3d_is_rendered)?0$_display_3d_is_rendered:1
   # 'setting_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
   # 4:gouraud-shaded | 5=phong-shaded }.
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?0$_display_3d_rendering_mode:4
@@ -1938,7 +1938,7 @@ _display : skip ${1=},${3=}
       sh[$selected] if {is_rotated,i[$selected]} y. fi =[is_mesh3d] ${is_mesh3d.},0,$selected rm.
     fi
     is_mesh3d={is_mesh3d,i[$selected]}
-    is_view3d:=$setting_3d_view" && "($is_mesh3d" || "($is_volumetric" && "$setting_3d_view==2))
+    is_view3d:=$setting_3d_is_rendered" && "($is_volumetric" || "$is_mesh3d)
 
     # Rotate image if necessary.
     if {is_rotated,i[$selected]!=$view_is_rotated}
@@ -2135,7 +2135,7 @@ _display : skip ${1=},${3=}
           w_zy = $canvas_width - w_xy - 1;
           h_xz = $canvas_height - h_xy - 1;
           [ w_xy,h_xy,w_xy,h_xz,w_zy,h_xy,w_zy,h_xz ]"
-      elif $is_view3d" && "$is_mesh3d
+      elif $is_mesh3d" && "$is_view3d
         area_xy_width,area_xy_height,area_xz_width,area_xz_height,area_zy_width,area_zy_height=0
         area_3d_width,area_3d_height=$canvas_width,$canvas_height
       else
@@ -3376,16 +3376,9 @@ _display : skip ${1=},${3=}
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
-      setting_3d_view:=$is_volumetric?($setting_3d_view!=2)*2:($setting_3d_view<1)
-      if !$setting_3d_view" || "($setting_3d_view<2" && "$is_volumetric)" || "$is_mesh3d
-        $0_rmn canvas_base,area_3d_view # Make sure 3D mesh disappear from the view
-      elif $setting_3d_view>1" && "$is_volumetric
-        draw_3d_view_on_canvas_base=1 # Force 3D mesh to be redrawn on canvas
-      fi
-      notification="3D view mode: "${"arg0 "$setting_3d_view,\
-                                     "Off,\"On (mesh only)\",On"}
-      $0_rmn canvas_view,canvas_label_info,canvas_label_notification
-      wait -1
+      setting_3d_is_rendered:=!$setting_3d_is_rendered
+      notification="3D rendering: "${"arg0 "$setting_3d_is_rendered,Off,On}
+      $0_rmn canvas_base,canvas_view,area_3d_view,canvas_label_info,canvas_label_notification
     fi
 
     if ($is_area234" || "$is_area5)" && "!$is_CTRL" && "{*,C} # C: Center view
