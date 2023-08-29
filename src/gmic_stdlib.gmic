@@ -1914,6 +1914,7 @@ _display : skip ${1=},${3=}
   canvas_mouse_x,canvas_mouse_y=-1
   canvas_cross_x,canvas_cross_y=
   canvas_label_alignment=1
+  canvas_record_frame=-1
 
   area_width,area_height=0
   area_mouse_x,area_mouse_y=-1
@@ -1922,7 +1923,6 @@ _display : skip ${1=},${3=}
   draw_3d_view_on_canvas_base=0
   update_thumb_view=0
   area_3d_is_motion=0
-  area_3d_record_frame=-1
 
   if $nb_images>1
     (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right
@@ -2433,13 +2433,6 @@ _display : skip ${1=},${3=}
           update_thumb_view,window_no_wait=1
         fi
 
-        if $area_3d_record_frame>=0
-          area_3d_record_frame+=1
-          0 t. "Frame \#"$area_3d_record_frame,0,0,$font_size,1,255
-          +dilate. 3 !=. 0 r.. 100%,100%,1,3
-          j[area_3d_view] ..,{area_3d_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
-        fi
-
         draw_3d_view_on_canvas_base=1
       fi
 
@@ -2743,6 +2736,14 @@ _display : skip ${1=},${3=}
       if {canvas_label,w}
         sh[canvas_label] 100%
         j[canvas_view] [canvas_label],0,$canvas_label_alignment~,0,0,1,.,255 rm.
+      fi
+
+      # Record canvas frame.
+      if $canvas_record_frame>=0
+        0 t. "Frame \#"$canvas_record_frame,0,0,$font_size,1,255
+        +dilate. 3 !=. 0 r.. 100%,100%,1,3
+        j[canvas_view] ..,{canvas_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
+        canvas_record_frame+=1
       fi
 
       $0_rmn window_view
@@ -3330,17 +3331,7 @@ _display : skip ${1=},${3=}
         notification="Background: \#"$setting_3d_background
         $0_rmn area_3d_background,area_3d_view,canvas_label_notification
         0 => area_3d_background
-      elif $is_CTRL" && "{*,-V} # CTRL+V: Start/stop frame recording
-        if $area_3d_record_frame<0 # Start recording
-          notification="Start recording"
-          area_3d_record_frame=0
-        else # Stop recording
-          notification="Stop recording (\#"$area_3d_record_frame" frames)"
-          area_3d_record_frame=-1
-        fi
-        $0_rmn area_3d_view,canvas_label_notification
       fi
-
       if !$is_volumetric
         if {*,-A} # A: Toggle 3D axes
           setting_3d_is_axes:=!$setting_3d_is_axes
@@ -3480,6 +3471,15 @@ _display : skip ${1=},${3=}
         notification="Save screenshot: "$filename
         $0_rmn canvas_label_notification
         o[canvas_base] $filename
+      elif $is_CTRL" && "{*,-V} # CTRL+V: Start/stop frame recording
+        if $canvas_record_frame<0 # Start recording
+          notification="Start recording"
+          canvas_record_frame=0
+        else # Stop recording
+          notification="Stop recording (\#"$canvas_record_frame" frames)"
+          canvas_record_frame=-1
+        fi
+        $0_rmn area_3d_view,canvas_label_notification
       elif {*,-X} # CTRL+X: Toggle cursor mode
         setting_cursor:=a=($setting_cursor+1)%3;$is_volumetric?(a?2:0):(a==1)
         notification="Axis: "${"arg0 "$setting_cursor,"Off,\"On (2D only)\",On"}
