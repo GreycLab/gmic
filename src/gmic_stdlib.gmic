@@ -2380,6 +2380,8 @@ _display : skip ${1=},${3=}
           round.
           => area_3d_background
         fi
+        [area_3d_background] => area_3d_view
+
         if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
         is_bounding_box_only:=$area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
@@ -2390,8 +2392,9 @@ _display : skip ${1=},${3=}
         fi
         if $setting_3d_side_mode==2 rv3d. fi
 
+        # Apply pose to 3D mesh
         nbv:=f2ui(i[6])
-        if $nbv # Apply pose to 3D mesh
+        if $nbv
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx
           fact:=min($area_3d_width,$area_3d_height)
           eval. "begin(
@@ -2403,13 +2406,13 @@ _display : skip ${1=},${3=}
         fi
 
         if $is_bounding_box_only
-          +j3d[area_3d_background] .,50%,50%,0,0.5,1,0,0,{1.5*$fact}
+          j3d[area_3d_view] .,50%,50%,0,0.5,1,0,0,{1.5*$fact}
         else
           time0=$|
-          +j3d[area_3d_background] .,50%,50%,0,1,\
+          j3d[area_3d_view] .,50%,50%,0,1,\
             {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?min($setting_3d_motion_rendering_mode,\
-                                                                      $setting_3d_rendering_mode):\
-                                                                      $setting_3d_rendering_mode,\
+                                                                        $setting_3d_rendering_mode):\
+                                                                        $setting_3d_rendering_mode,\
                                                                       $setting_3d_side_mode==1,\
                                                                       $setting_3d_is_zbuffer,\
                                                                       $setting_3d_focale*$fact]}
@@ -2418,7 +2421,7 @@ _display : skip ${1=},${3=}
             setting_3d_motion_rendering_mode=-1
           fi
         fi
-        rm.. => area_3d_view
+        rm.
 
         if $setting_3d_is_axes" && "!$is_volumetric
           [area_3d_axes] nbv={@6}
