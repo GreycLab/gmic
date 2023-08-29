@@ -1838,8 +1838,8 @@ _display : skip ${1=},${3=}
   setting_3d_motion_rendering_mode:=narg($_display_3d_motion_rendering_mode)?0$_display_3d_motion_rendering_mode:3
   # 'setting_3d_motion_time_limit' is specified in ms. Above this time, motion rendering toggle to 'bounding-box' mode.
   setting_3d_motion_time_limit:=narg($_display_3d_motion_time_limit)?0$_display_3d_motion_time_limit:300
-  # 'setting_3d_is_double_sided' can be { 0:off | 1:on }.
-  setting_3d_is_double_sided:=narg($_display_3d_is_double_sided)?0$_display_3d_is_double_sided:0
+  # 'setting_3d_side_mode' can be { 0:single-sided | 1:double-sided | 2:single-sided (flipped) }.
+  setting_3d_side_mode:=narg($_display_3d_side_mode)?0$_display_3d_side_mode:0
   # 'setting_3d_is_zbuffer' can be { 0:off | 1:on }.
   setting_3d_is_zbuffer:=narg($_display_3d_is_zbuffer)?0$_display_3d_is_zbuffer:1
   # 'setting_3d_focale' can be { <0: perspecive projection w/o sprite zooming, 0: parallel projection |
@@ -2383,7 +2383,12 @@ _display : skip ${1=},${3=}
         if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
         is_bounding_box_only:=$area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
-        if $is_bounding_box_only [area_3d_bounding_box] else [area_3d_mesh] fi
+        if $is_bounding_box_only
+          [area_3d_bounding_box]
+        else
+          [area_3d_mesh]
+        fi
+        if $setting_3d_side_mode==2 rv3d. fi
 
         nbv:=f2ui(i[6])
         if $nbv # Apply pose to 3D mesh
@@ -2405,7 +2410,7 @@ _display : skip ${1=},${3=}
             {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?min($setting_3d_motion_rendering_mode,\
                                                                       $setting_3d_rendering_mode):\
                                                                       $setting_3d_rendering_mode,\
-                                                                      $setting_3d_is_double_sided,\
+                                                                      $setting_3d_side_mode==1,\
                                                                       $setting_3d_is_zbuffer,\
                                                                       $setting_3d_focale*$fact]}
           dtime:=$|-$time0
@@ -3368,9 +3373,10 @@ _display : skip ${1=},${3=}
           setting_3d_is_axes:=!$setting_3d_is_axes
           notification="Axes: "${"arg0 "$setting_3d_is_axes,Off,On}
           $0_rmn area_3d_view,canvas_label_notification
-        elif !$is_CTRL" && "{*,D} # D: Toggle 3D double sided mode
-          setting_3d_is_double_sided:=!$setting_3d_is_double_sided
-          notification="Double sided: "${"arg0 "$setting_3d_is_double_sided,Off,On}
+        elif !$is_CTRL" && "{*,D} # D: Switch 3D side mode
+          setting_3d_side_mode:={($setting_3d_side_mode+1)%3}
+          notification="3D side mode: "${"arg0 "$setting_3d_side_mode,\
+                                         "Single-sided,Double-sided,\"Single-sided (flipped)\""}
           $0_rmn area_3d_view,canvas_label_notification
           skip {*,-D}
         elif !$is_CTRL" && "{*,F} # F: Change 3D focale
