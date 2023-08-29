@@ -2588,6 +2588,10 @@ _display : skip ${1=},${3=}
       $0_rmn canvas_view
     fi
 
+    if $canvas_record_frame>=0
+      $0_rmn canvas_view
+    fi
+
     if !0$canvas_view
       [canvas_base] => canvas_view
 
@@ -2739,17 +2743,24 @@ _display : skip ${1=},${3=}
         j[canvas_view] [canvas_label],0,$canvas_label_alignment~,0,0,1,.,255 rm.
       fi
 
-      # Record canvas frame.
-      if $canvas_record_frame>=0
-        0 t. "Frame \#"$canvas_record_frame,0,0,$font_size,1,255
-        +dilate. 3 !=. 0 r.. 100%,100%,1,3
-        j[canvas_view] ..,{canvas_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
-        filename gmic_frame.jpg,$canvas_record_frame
-        o[canvas_base] ${},75
-        canvas_record_frame+=1
-      fi
-
       $0_rmn window_view
+    fi
+
+    # Record frames.
+    if $canvas_record_frame>=0
+      0 t. "Frame \#"$canvas_record_frame,0,0,$font_size,1,255
+      +dilate. 3 !=. 0 r.. 100%,100%,1,3
+      j[canvas_view] ..,{canvas_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
+      if $is_opencv
+        if {canvas_base,max([w,h]%2)} # One dimension is odd -> resize frame
+          +r[canvas_base] {[w,h]+([w,h]%2)},1,100%,0 o. gmic_record.mp4,20,0,1 rm.
+        else
+          o[canvas_base] gmic_record.mp4,20,0,1
+        fi
+      else filename gmic_record.jpg,$canvas_record_frame o[canvas_base] ${},75
+      fi
+      canvas_record_frame+=1
+      window_no_wait=1
     fi
 
     # Render global view.
@@ -3479,6 +3490,7 @@ _display : skip ${1=},${3=}
           notification="Start recording"
           canvas_record_frame=0
         else # Stop recording
+          if $is_opencv o[] gmic_record.mp4,20,0,0 fi # Close video stream
           notification="Stop recording (\#"$canvas_record_frame" frames)"
           canvas_record_frame=-1
         fi
