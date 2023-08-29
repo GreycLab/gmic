@@ -2355,11 +2355,8 @@ _display : skip ${1=},${3=}
         fi
         if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
-        if $area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
-          [area_3d_bounding_box]
-        else
-          [area_3d_mesh]
-        fi
+        is_bounding_box_only:=$area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
+        if $is_bounding_box_only [area_3d_bounding_box] else [area_3d_mesh] fi
 
         nbv:=f2ui(i[6])
         if $nbv # Apply pose to 3D mesh
@@ -2373,15 +2370,15 @@ _display : skip ${1=},${3=}
                  copy(i[#-2,8+3*x],(R*I)+=S)" rm.
         fi
 
-        if $is_3d_bounding_box
+        if $is_bounding_box_only
           +j3d[area_3d_background] .,50%,50%,0,0.5,1,0,0,{1.5*$fact}
         else
           +j3d[area_3d_background] .,50%,50%,0,1,\
             {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?$setting_3d_motion_rendering_mode:\
                                                                   $setting_3d_rendering_mode,\
-                                               $setting_3d_is_double_sided,\
-                                               $setting_3d_is_zbuffer,\
-                                               $setting_3d_focale*$fact]}
+                                                                  $setting_3d_is_double_sided,\
+                                                                  $setting_3d_is_zbuffer,\
+                                                                  $setting_3d_focale*$fact]}
         fi
         rm.. => area_3d_view
 
@@ -3318,7 +3315,7 @@ _display : skip ${1=},${3=}
                                       "Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded"}
           $0_rmn area_3d_view,canvas_label_notification
         elif {*,-T} # T: Switch 3D motion rendering mode
-          setting_3d_motion_rendering_mode:=s=$setting_3d_motion_rendering_mode-1;inrange(s,-1,5)?s:5
+          setting_3d_motion_rendering_mode:=s=$setting_3d_motion_rendering_mode+1;inrange(s,-1,5)?s:-1
           notification="Motion rendering: "${"arg0 "$setting_3d_motion_rendering_mode+1,\
                                              "\"Bounding Box\",Dots,Wireframe,Flat,Flat-shaded,\
                                              Gouraud-shaded,Phong-shaded"}
