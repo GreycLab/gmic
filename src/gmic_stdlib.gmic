@@ -1779,8 +1779,8 @@ d :
 # (add 'CTRL' if mouse pointer is over image view).
 #@cli : \n- **Image view:**
 #@cli : 'LMB' or 'MMB': Image pan - 'RMB' or 'MW': Image zoom - 'ARROWS' (opt. '+SHIFT'),'HOME','END': Shift view - \
-# 'A': Switch alpha mode - 'C': Center view - 'E': Go lower-right corner - 'ENTER': Reset view - 'G': Toggle grid - \
-# 'H': Go upper-left corner - 'M': Toggle 3D mesh viewer - 'N': Switch normalization mode - \
+# 'A': Switch alpha rendering - 'C': Center view - 'E': Go lower-right corner - 'ENTER': Reset view - 'G': Toggle grid - \
+# 'H': Go upper-left corner - 'M': Toggle 3D mesh viewer - 'N': Switch normalization - \
 # 'P': Print info about current image pixel on 'stdout' - 'PAGEUP' or 'PAGEDOWN': Increase/decrease base channel - \
 # 'R': Rotate image by 90 deg. - 'Z': Switch zoom factor - '0'-'9': Set zoom factor.
 #@cli : \n- **2D images only:**
@@ -1789,13 +1789,13 @@ d :
 #@cli : 'CTRL+MW': Pan along orthogonal axis - 'X': Reset area cross position.
 #@cli : \n- **3D mesh only:**
 #@cli : 'LMB': Mesh rotation - 'CTRL+LMB' or 'MMB': Mesh pan - 'RMB': Mesh zoom -  \
-# 'A': Toggle axes - 'D': Toggle double sided mode - 'F': Change focale - 'K': Switch background - \
+# 'A': Toggle axes - 'D': Toggle double sided - 'F': Change focale - 'K': Switch background - \
 # 'R': Switch rendering mode - 'T': Switch motion rendering mode - 'X': Toggle bounding-box - \
-# 'Z': Toggle z-buffer mode.
+# 'Z': Toggle z-buffer.
 #@cli : \n- **Window size, decoration and data I/O:**
-#@cli : 'CTRL+C': Decrease window size - 'CTRL+D': Increase window size - 'CTRL+F': Toggle fullscreen mode - \
-# 'CTRL+I': Toggle info mode - 'CTRL+O': Save copy of image as .gmz - 'CTRL+L': Save copy of image list as .gmz - \
-# 'CTRL+S': Save screenshot - 'CTRL+X': Toggle axis mode.
+#@cli : 'CTRL+C': Decrease window size - 'CTRL+D': Increase window size - 'CTRL+F': Toggle fullscreen - \
+# 'CTRL+I': Toggle info label - 'CTRL+O': Save copy of image as .gmz - 'CTRL+L': Save copy of image list as .gmz - \
+# 'CTRL+S': Save screenshot - 'CTRL+X': Toggle cursor.
 display :
   _gmic_s="$?" v + _$0 "",1,$[]
 
@@ -1818,18 +1818,19 @@ _display : skip ${1=},${3=}
 
   # Initialize setting variables.
 
-  # 'setting_normalization_mode' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global }.
-  setting_normalization_mode:=narg($_display_normalization_mode)?0$_display_normalization_mode:-1
-  # 'setting_alpha_mode' can be { 0:off | 1:on | 2:over black | 3:over gray | 4:over white }.
-  setting_alpha_mode:=narg($_display_alpha_mode)?0$_display_alpha_mode:0
-  # 'setting_axis_mode' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) }.
-  setting_axis_mode:=narg($_display_axis_mode)?0$_display_axis_mode:1
-  # 'setting_view3d_mode' can be { 0:off | 1:on (3D mesh only) | 2:on (+3D volumetric images) }.
-  setting_view3d_mode:=narg($_display_view3d_mode)?0$_display_view3d_mode:1
+  # 'setting_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global }.
+  setting_normalization:=narg($_display_normalization)?0$_display_normalization:-1
+  # 'setting_alpha' can be { 0:off | 1:on | 2:over black | 3:over gray | 4:over white }.
+  setting_alpha:=narg($_display_alpha)?0$_display_alpha:0
+  # 'setting_cursor' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) }.
+  setting_cursor:=narg($_display_cursor)?0$_display_cursor:1
   # 'setting_is_grid' can be { 0:off | 1:on }.
   setting_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
   # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?0$_display_is_info:1
+
+  # 'setting_3d_view' can be { 0:off | 1:on (3D mesh only) | 2:on (+3D volumetric images) }.
+  setting_3d_view:=narg($_display_3d_view)?0$_display_3d_view:1
   # 'setting_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
   # 4:gouraud-shaded | 5=phong-shaded }.
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?0$_display_3d_rendering_mode:4
@@ -1851,6 +1852,8 @@ _display : skip ${1=},${3=}
   setting_3d_is_bounding_box:=narg($_display_3d_is_bounding_box)?0$_display_3d_is_bounding_box:0
   # 'setting_3d_background' is an unsigned integer in range [0,12].
   setting_3d_background:=narg($_display_3d_background)?0$_display_3d_background:11
+  # 'setting_3d_is_animated' can be { 0:off | 1:on }.
+  setting_3d_is_animated=narg($_display_3d_is_animated)?0$_display_3d_is_animated:0
 
   thumb_height_factor=0.15
   thumb_min_ratio=0.45
@@ -1882,12 +1885,12 @@ _display : skip ${1=},${3=}
   if {*}
     window_width,window_height={*,d,e}
     window_previous_normalization,windows_previous_fullscreen={*,n,f}
-    if $setting_normalization_mode<0 setting_normalization_mode:={*,n}?3:0 fi
+    if $setting_normalization<0 setting_normalization:={*,n}?3:0 fi
     w[] $window_width,$window_height,0,$window_title
   else
     window_width,window_height=\
       ${"$0_default_window_size[0-"{$nb_images-1}"] "$thumb_height_factor,$thumb_min_ratio}
-    if $setting_normalization_mode<0 setting_normalization_mode=3 fi
+    if $setting_normalization<0 setting_normalization=3 fi
     w[] $window_width,$window_height,0,$window_title
   fi
   window_nonfullscreen_width,window_nonfullscreen_height={*,w,h}
@@ -1918,6 +1921,7 @@ _display : skip ${1=},${3=}
   draw_3d_view_on_canvas_base=0
   update_thumb_view=0
   area_3d_is_motion=0
+  is_3d_animated=0
 
   if $nb_images>1
     (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right
@@ -1934,7 +1938,7 @@ _display : skip ${1=},${3=}
       sh[$selected] if {is_rotated,i[$selected]} y. fi =[is_mesh3d] ${is_mesh3d.},0,$selected rm.
     fi
     is_mesh3d={is_mesh3d,i[$selected]}
-    is_view3d:=$setting_view3d_mode" && "($is_mesh3d" || "($is_volumetric" && "$setting_view3d_mode==2))
+    is_view3d:=$setting_3d_view" && "($is_mesh3d" || "($is_volumetric" && "$setting_3d_view==2))
 
     # Rotate image if necessary.
     if {is_rotated,i[$selected]!=$view_is_rotated}
@@ -2019,18 +2023,18 @@ _display : skip ${1=},${3=}
                 fi
               fi
 
-              is_alpha={$ind,$setting_alpha_mode" && "(s==2||s==4)}
+              is_alpha={$ind,$setting_alpha" && "(s==2||s==4)}
               sh[$ind] 0,{$ind,$is_alpha?s-1:min(2,s-1)}
               if d>1 +volumetric2d. 50%,50%,50%,2 rm.. fi
               if w>$w" || "h>$h +r. $w,$h else . fi rm..
               if {is_rotated,i[$ind]} rotate. {is_rotated,-90*i[$ind]} fi
-              if !$setting_normalization_mode # Normalize image values
+              if !$setting_normalization # Normalize image values
                 and. 255
-              elif $setting_normalization_mode==1
+              elif $setting_normalization==1
                 c. 0,255
               else
                 if {is_infnan,i[$ind]<0} =[is_infnan] ${_display_is_infnan[$ind]},0,$ind fi
-                if $setting_normalization_mode==2 # Channel-wise normalization
+                if $setting_normalization==2 # Channel-wise normalization
                   if {is_infnan,i[$ind]} l. { s c $0_normalize_infnan a c }
                   else l. { s c n 0,255 a c }
                   fi
@@ -2041,8 +2045,8 @@ _display : skip ${1=},${3=}
               r. $w,$h
               if $is_alpha
                 to_rgba.
-                if $setting_alpha_mode==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-                else $w,$h,1,3,{arg($setting_alpha_mode-1,0,128,255)}
+                if $setting_alpha==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
+                else $w,$h,1,3,{arg($setting_alpha-1,0,128,255)}
                 fi
                 sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               elif s==1 r. 100%,100%,1,3
@@ -2153,7 +2157,7 @@ _display : skip ${1=},${3=}
       elif $is_mesh3d" && "$is_view3d
         draw_3d_view_on_canvas_base=1
       else
-        is_alpha={$selected,$setting_alpha_mode" && "(s==2||s==4)}
+        is_alpha={$selected,$setting_alpha" && "(s==2||s==4)}
         view_base_channel={$selected,cut($view_base_channel,0,max(0,s-3))}
         cmin,cmax={$selected,$is_alpha?[0,s-1]:[$view_base_channel,min($view_base_channel+2,s-1)]}
 
@@ -2254,13 +2258,13 @@ _display : skip ${1=},${3=}
             fi
           fi
 
-          if !$setting_normalization_mode # Normalize image values
+          if !$setting_normalization # Normalize image values
             and. 255
-          elif $setting_normalization_mode==1
+          elif $setting_normalization==1
             c. 0,255
           else
             if {is_infnan,i[$selected]<0} =[is_infnan] ${$0_is_infnan[$selected]},0,$selected fi
-            if $setting_normalization_mode==2 # Channel-wise normalization
+            if $setting_normalization==2 # Channel-wise normalization
               if {is_infnan,i[$selected]} l. { s c $0_normalize_infnan a c }
               else l. { s c n 0,255 a c }
               fi
@@ -2290,10 +2294,10 @@ _display : skip ${1=},${3=}
 
           if $is_alpha
             to_rgba.
-            if $setting_alpha_mode==1
+            if $setting_alpha==1
               sh. 100% j[canvas_base] ..,{[$p0,$q0]+[$joffx,$joffy]},0,0,1,.,255 rm.
             else
-              $dp,$dq,1,3,{arg($setting_alpha_mode-1,0,128,255)}
+              $dp,$dq,1,3,{arg($setting_alpha-1,0,128,255)}
               sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               j[canvas_base] .,{[$p0,$q0]+[$joffx,$joffy]}
             fi
@@ -2598,7 +2602,7 @@ _display : skip ${1=},${3=}
         rix,riy,riz:=floor([$ix,$iy,$iz]);
         is_cursor_over_image={$selected,inrange($rix,0,w-1)" && "inrange($riy,0,h-1)" && "inrange($riz,0,d-1)}
 
-        if {$selected,!$is_cursor_over_image" || "!$setting_axis_mode" || "($setting_axis_mode==1" && "$is_volumetric)}
+        if {$selected,!$is_cursor_over_image" || "!$setting_cursor" || "($setting_cursor==1" && "$is_volumetric)}
           cursor[0] 1
 
         else
@@ -3132,7 +3136,7 @@ _display : skip ${1=},${3=}
             $0_rmn canvas_base,area_3d_mesh
           elif {*,-P}" && "['$view_xyz']!=0 # Print current pixel value on stdout
             +e "Command 'display': I(#"$selected,$view_xyz_disp") = [ "{$selected,I($view_xyz)}" ]"
-          elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$setting_alpha_mode
+          elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$setting_alpha
             n_view_base_channel={$selected,cut($view_base_channel+({*,-PAGEUP}?1:{*,-PAGEDOWN}?-1:0),0,s-3)}
             if $n_view_base_channel!=$view_base_channel
               view_base_channel=$n_view_base_channel
@@ -3164,8 +3168,8 @@ _display : skip ${1=},${3=}
       fi
 
       if {*,-A} # A: Switch alpha mode
-        setting_alpha_mode:=($setting_alpha_mode+1)%5
-        notification="Alpha: "${"arg0 "$setting_alpha_mode,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
+        setting_alpha:=($setting_alpha+1)%5
+        notification="Alpha: "${"arg0 "$setting_alpha,"Off,On,\"Over black\",\"Over gray\",\"Over white\""}
         $0_flush_thumb_cache
         $0_rmn canvas_base,canvas_label_notification
       elif {*,-G} # G: Toggle grid
@@ -3179,8 +3183,8 @@ _display : skip ${1=},${3=}
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
         $0_rmn canvas_base,area_3d_mesh
       elif {*,-N} # N: Switch normalization mode
-        setting_normalization_mode:=($setting_normalization_mode+1)%4
-        notification="Normalization: "${"arg0 "$setting_normalization_mode,\
+        setting_normalization:=($setting_normalization+1)%4
+        notification="Normalization: "${"arg0 "$setting_normalization,\
                                         "Off,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
 
         $0_flush_thumb_cache
@@ -3372,13 +3376,13 @@ _display : skip ${1=},${3=}
     fi
 
     if {$selected,w" && "{*,-M}" && "($is_mesh3d" || "$is_volumetric)} # M: Switch 3D mesh view mode
-      setting_view3d_mode:=$is_volumetric?($setting_view3d_mode!=2)*2:($setting_view3d_mode<1)
-      if !$setting_view3d_mode" || "($setting_view3d_mode<2" && "$is_volumetric)" || "$is_mesh3d
+      setting_3d_view:=$is_volumetric?($setting_3d_view!=2)*2:($setting_3d_view<1)
+      if !$setting_3d_view" || "($setting_3d_view<2" && "$is_volumetric)" || "$is_mesh3d
         $0_rmn canvas_base,area_3d_view # Make sure 3D mesh disappear from the view
-      elif $setting_view3d_mode>1" && "$is_volumetric
+      elif $setting_3d_view>1" && "$is_volumetric
         draw_3d_view_on_canvas_base=1 # Force 3D mesh to be redrawn on canvas
       fi
-      notification="3D view mode: "${"arg0 "$setting_view3d_mode,\
+      notification="3D view mode: "${"arg0 "$setting_3d_view,\
                                      "Off,\"On (mesh only)\",On"}
       $0_rmn canvas_view,canvas_label_info,canvas_label_notification
       wait -1
@@ -3433,9 +3437,9 @@ _display : skip ${1=},${3=}
         notification="Save screenshot: "$filename
         $0_rmn canvas_label_notification
         o[canvas_base] $filename
-      elif {*,-X} # CTRL+X: Toggle axis mode
-        setting_axis_mode:=a=($setting_axis_mode+1)%3;$is_volumetric?(a?2:0):(a==1)
-        notification="Axis: "${"arg0 "$setting_axis_mode,"Off,\"On (2D only)\",On"}
+      elif {*,-X} # CTRL+X: Toggle cursor mode
+        setting_cursor:=a=($setting_cursor+1)%3;$is_volumetric?(a?2:0):(a==1)
+        notification="Axis: "${"arg0 "$setting_cursor,"Off,\"On (2D only)\",On"}
         $0_rmn canvas_view,canvas_label_notification
       fi
     fi
@@ -3540,42 +3544,42 @@ _display_normalize_infnan :
 #@cli d0 : eq. to 'display0'.
 d0 :
   _gmic_s="$?"
-  prev_display_normalization_mode=$_display_normalization_mode
-  prev_display_alpha_mode=$_display_alpha_mode
-  _display_normalization_mode=0
-  _display_alpha_mode=1
+  prev_display_normalization=$_display_normalization
+  prev_display_alpha=$_display_alpha
+  _display_normalization=0
+  _display_alpha=1
   v + _display "",1,$[] v -
-  _display_normalization_mode=$prev_display_normalization_mode
-  _display_alpha_mode=$prev_display_alpha_mode
+  _display_normalization=$prev_display_normalization
+  _display_alpha=$prev_display_alpha
 
 +d0 :
-  prev_display_normalization_mode=$_display_normalization_mode
-  prev_display_alpha_mode=$_display_alpha_mode
-  _display_normalization_mode=0
-  _display_alpha_mode=1
+  prev_display_normalization=$_display_normalization
+  prev_display_alpha=$_display_alpha
+  _display_normalization=0
+  _display_alpha=1
   _gmic_s="$?" v + _display +,1,$[] v -
-  _display_normalization_mode=$prev_display_normalization_mode
-  _display_alpha_mode=$prev_display_alpha_mode
+  _display_normalization=$prev_display_normalization
+  _display_alpha=$prev_display_alpha
 
 #@cli display0
 #@cli : Display selected images in an interactive window, without normalization and alpha mode activated.
 display0 :
-  prev_display_normalization_mode=$_display_normalization_mode
-  prev_display_alpha_mode=$_display_alpha_mode
-  _display_normalization_mode=0
-  _display_alpha_mode=1
+  prev_display_normalization=$_display_normalization
+  prev_display_alpha=$_display_alpha
+  _display_normalization=0
+  _display_alpha=1
   _gmic_s="$?" v + _display "",1,$[] v -
-  _display_normalization_mode=$prev_display_normalization_mode
-  _display_alpha_mode=$prev_display_alpha_mode
+  _display_normalization=$prev_display_normalization
+  _display_alpha=$prev_display_alpha
 
 +display0 :
-  prev_display_normalization_mode=$_display_normalization_mode
-  prev_display_alpha_mode=$_display_alpha_mode
-  _display_normalization_mode=0
-  _display_alpha_mode=1
+  prev_display_normalization=$_display_normalization
+  prev_display_alpha=$_display_alpha
+  _display_normalization=0
+  _display_alpha=1
   _gmic_s="$?" v + _display +,1,$[] v -
-  _display_normalization_mode=$prev_display_normalization_mode
-  _display_alpha_mode=$prev_display_alpha_mode
+  _display_normalization=$prev_display_normalization
+  _display_alpha=$prev_display_alpha
 
 #@cli d3d : eq. to 'display3d'.
 d3d : skip "${1=},${2=0}"
