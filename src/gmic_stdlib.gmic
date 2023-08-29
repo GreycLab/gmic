@@ -1922,6 +1922,7 @@ _display : skip ${1=},${3=}
   draw_3d_view_on_canvas_base=0
   update_thumb_view=0
   area_3d_is_motion=0
+  area_3d_record_frame=-1
 
   if $nb_images>1
     (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right
@@ -2104,6 +2105,7 @@ _display : skip ${1=},${3=}
     # Generate canvas view.
     if !0$canvas_base
       canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
+      font_size:=cut(round($canvas_height/40),16,32)
 
       # Print information about image on stderr/stdout (if not already done).
       if {is_printed,!i[$selected]}
@@ -2431,6 +2433,13 @@ _display : skip ${1=},${3=}
           update_thumb_view,window_no_wait=1
         fi
 
+        if $area_3d_record_frame>=0
+          area_3d_record_frame+=1
+          0 t. "Frame \#"$area_3d_record_frame,0,0,$font_size,1,255
+          +dilate. 3 !=. 0 r.. 100%,100%,1,3
+          j[area_3d_view] ..,{area_3d_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
+        fi
+
         draw_3d_view_on_canvas_base=1
       fi
 
@@ -2446,7 +2455,6 @@ _display : skip ${1=},${3=}
     fi
 
     # Generate label for image title.
-    font_size={canvas_base,cut(round(h/40),16,32)}
     if !0$canvas_label_info
       0
       basename {``${image_name$selected}} ({'{/${}}'})
@@ -3322,6 +3330,15 @@ _display : skip ${1=},${3=}
         notification="Background: \#"$setting_3d_background
         $0_rmn area_3d_background,area_3d_view,canvas_label_notification
         0 => area_3d_background
+      elif $is_CTRL" && "{*,-V} # CTRL+V: Start/stop frame recording
+        if $area_3d_record_frame<0 # Start recording
+          notification="Start recording"
+          area_3d_record_frame=0
+        else # Stop recording
+          notification="Stop recording (\#"$area_3d_record_frame" frames)"
+          area_3d_record_frame=-1
+        fi
+        $0_rmn area_3d_view,canvas_label_notification
       fi
 
       if !$is_volumetric
