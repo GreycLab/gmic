@@ -2459,7 +2459,7 @@ _display : skip ${1=},${3=}
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       if $nb_images==1" && "!$is_fullscreen
         str="["{image_indices,i[$l_ind]}"] "$basename" "
-        if $is_view3d
+        if $is_mesh3d" && "$is_view3d
           str.="("{$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
         else
           str.="("{$selected,[w,h,d,s]}")"
@@ -2482,7 +2482,7 @@ _display : skip ${1=},${3=}
         if $nb_images>1
           str.="#"{image_indices,i[$selected]}": "
         fi
-        if $is_view3d
+        if $is_mesh3d" && "$is_view3d
           str.=$basename" ("\
                {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
         else
@@ -2616,7 +2616,8 @@ _display : skip ${1=},${3=}
                       lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width) ]:
                     [ -1,-1,-1 ]"}
         rix,riy,riz:=floor([$ix,$iy,$iz]);
-        is_cursor_over_image={$selected,inrange($rix,0,w-1)" && "inrange($riy,0,h-1)" && "inrange($riz,0,d-1)}
+        is_cursor_over_image={$selected,!$is_view3d" && "\
+                                        (inrange($rix,0,w-1)" && "inrange($riy,0,h-1)" && "inrange($riz,0,d-1))}
 
         if {$selected,!$is_cursor_over_image" || "!$setting_cursor" || "($setting_cursor==1" && "$is_volumetric)}
           cursor[0] 1
@@ -3346,9 +3347,21 @@ _display : skip ${1=},${3=}
 
       if {*,-K} # K: Switch 3D background
         setting_3d_background:={$setting_3d_background+1}%12
-        notification="Background: \#"$setting_3d_background
+        notification="3D background: \#"$setting_3d_background
         $0_rmn area_3d_background,area_3d_view,canvas_label_notification
         0 => area_3d_background
+      elif {*,-U} # U: Toggle 3D animation
+        setting_3d_is_animated:=!$setting_3d_is_animated
+        notification="3D animation: "${"arg0 "$setting_3d_is_animated,Off,On}
+        $0_rmn canvas_label_notification
+      elif {*,-J} # J: Switch 3D animation mode
+        setting_3d_animation_mode:=($setting_3d_animation_mode+1)%16
+        if $setting_3d_animation_mode<12 str={`_'X'+int($setting_3d_animation_mode/4)`}-axis
+        else str=XYZ-axes
+        fi
+        str.=" ("${"arg0 "{$setting_3d_animation_mode%4},slow,normal,fast,fast+}")"
+        notification="3D animation mode: "$str
+        $0_rmn canvas_label_notification
       fi
       if !$is_volumetric
         if {*,-A} # A: Toggle 3D axes
@@ -3372,19 +3385,6 @@ _display : skip ${1=},${3=}
           fi
           $0_rmn area_3d_view,canvas_label_notification
           skip {*,-F}
-
-        elif {*,-J} # J: Switch 3D animation mode
-          setting_3d_animation_mode:=($setting_3d_animation_mode+1)%16
-          if $setting_3d_animation_mode<12 str={`_'X'+int($setting_3d_animation_mode/4)`}-axis
-          else str=XYZ-axes
-          fi
-          str.=" ("${"arg0 "{$setting_3d_animation_mode%4},slow,normal,fast,fast+}")"
-          notification="Animation mode: "$str
-          $0_rmn canvas_label_notification
-        elif {*,-N} # N: Toggle 3D animation
-          setting_3d_is_animated:=!$setting_3d_is_animated
-          notification="Animation: "${"arg0 "$setting_3d_is_animated,Off,On}
-          $0_rmn canvas_label_notification
         elif {*,-R} # R: Switch 3D rendering mode
           setting_3d_rendering_mode:=($setting_3d_rendering_mode+1)%6
           notification="Rendering: "${"arg0 "$setting_3d_rendering_mode,\
