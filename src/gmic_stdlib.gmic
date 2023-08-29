@@ -1828,7 +1828,6 @@ _display : skip ${1=},${3=}
   setting_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
   # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?0$_display_is_info:1
-
   # 'setting_3d_is_rendered' can be { 0:off | 1:on }.
   setting_3d_is_rendered:=narg($_display_3d_is_rendered)?0$_display_3d_is_rendered:1
   # 'setting_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
@@ -2449,7 +2448,6 @@ _display : skip ${1=},${3=}
       0
       basename {``${image_name$selected}} ({'{/${}}'})
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
-      str=
       if $nb_images==1" && "!$is_fullscreen
         str="["{image_indices,i[$l_ind]}"] "$basename" "
         if $is_view3d
@@ -2459,23 +2457,28 @@ _display : skip ${1=},${3=}
         fi
         w[] -1,-1,$str
       else
+        str=
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
           basename {``${image_name$thumb_mouse_over}}
           basename_mo={`"b = ['"{``${}}"']; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
+          str.="#"{image_indices,i[$thumb_mouse_over]}": "
           if {is_mesh3d,$is_view3d" && "i[$thumb_mouse_over]}
-            str.="#"{image_indices,i[$thumb_mouse_over]}": "$basename_mo" ("\
+            str.=$basename_mo" ("\
                  {$thumb_mouse_over,f2ui(i[6])}" vertices, "{$thumb_mouse_over,f2ui(i[7])}" primitives)\n"
           else
             whds={$thumb_mouse_over,i[#$is_rotated,$thumb_mouse_over]%2?[h,w,d,s]:[w,h,d,s]}
-            str.="#"{image_indices,i[$thumb_mouse_over]}": "$basename_mo" ("{``$whds}")\n"
+            str.=$basename_mo" ("{``$whds}")\n"
           fi
         fi
+        if $nb_images>1
+          str.="#"{image_indices,i[$selected]}": "
+        fi
         if $is_view3d
-          str.="#"{image_indices,i[$selected]}": "$basename" ("\
+          str.=$basename" ("\
                {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
         else
           whds={$selected,i[#$is_rotated,$selected]%2?[h,w,d,s]:[w,h,d,s]}
-          str.="#"{image_indices,i[$selected]}": "$basename" ("{``$whds}")"
+          str.=$basename" ("{``$whds}")"
         fi
         t. {``$str},0,0,$font_size,1,255
       fi
