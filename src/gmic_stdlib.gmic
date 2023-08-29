@@ -2345,6 +2345,9 @@ _display : skip ${1=},${3=}
           +projections3d[$selected] {$selected,floor([cut($view_center_x*w,0,w-1),\
                                                       cut($view_center_y*h,0,h-1),\
                                                       cut($view_center_z*d,0,d-1)])},1
+          asiz={$selected,max(w,h,d)/3}
+          axes3d $asiz,$asiz,$asiz,16 o3d. 0.5 col3d. 255,128,0 +3d[-2,-1]
+
         else [$selected] if {is_rotated,i[$selected]} rotate. {is_rotated,-90*i[$selected]} fi
         fi
         c3d. n3d.
@@ -2400,10 +2403,10 @@ _display : skip ${1=},${3=}
           +j3d[area_3d_background] .,50%,50%,0,1,\
             {$is_volumetric?[2,1,1,1.5*$fact]:[$area_3d_is_motion?min($setting_3d_motion_rendering_mode,\
                                                                       $setting_3d_rendering_mode):\
-                                                                  $setting_3d_rendering_mode,\
-                                                                  $setting_3d_is_double_sided,\
-                                                                  $setting_3d_is_zbuffer,\
-                                                                  $setting_3d_focale*$fact]}
+                                                                      $setting_3d_rendering_mode,\
+                                                                      $setting_3d_is_double_sided,\
+                                                                      $setting_3d_is_zbuffer,\
+                                                                      $setting_3d_focale*$fact]}
           dtime:=$|-$time0
           if $area_3d_is_motion" && "1000*$dtime>$setting_3d_motion_time_limit
             setting_3d_motion_rendering_mode=-1
@@ -2411,7 +2414,7 @@ _display : skip ${1=},${3=}
         fi
         rm.. => area_3d_view
 
-        if $setting_3d_is_axes
+        if $setting_3d_is_axes" && "!$is_volumetric
           [area_3d_axes] nbv={@6}
           +z. 0,8,0,{7+3*$nbv} r. 3,$nbv,1,1,-1 permute. yzcx # Apply pose to 3D axes
           eval. "begin(R = crop(#$view_3d_pose,0,0,3,3));
