@@ -2350,11 +2350,15 @@ _display : skip ${1=},${3=}
       if !0$area_3d_view
         if {area_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
           rm[area_3d_background]
-          if !$setting_3d_background
-            3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx r. $area_3d_width,$area_3d_height,1,3,3
+          background,is_checkerboard:=int([$setting_3d_background>>1,$setting_3d_background&1])
+          if $background<3 {*,w,h},1,3,{arg(1+$background,0,128,255)}
+          elif $background==3 3,2,1,1,"16,16,48,44,96,76" permute. cyzx
+          elif $background==4 3,2,1,1,"0,0,0,0,64,96" permute. cyzx
+          else 3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx
+          fi
+          r. $area_3d_width,$area_3d_height,1,3,3
+          if $is_checkerboard
             24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2
-          elif $setting_3d_background==1
-            3,2,1,1,"0,0,0,32,64,255" permute. cyzx r. $area_3d_width,$area_3d_height,1,3,3
           fi
           round.
           => area_3d_background
@@ -3322,7 +3326,7 @@ _display : skip ${1=},${3=}
           $0_rmn area_3d_view,canvas_label_notification
           skip {*,-F}
         elif {*,-K} # K: Switch background
-          setting_3d_background:={$setting_3d_background+1}%2
+          setting_3d_background:={$setting_3d_background+1}%12
           notification="Background: \#"$setting_3d_background
           $0_rmn area_3d_background,area_3d_view,canvas_label_notification
           0 => area_3d_background
