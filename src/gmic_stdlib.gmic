@@ -2762,18 +2762,26 @@ _display : skip ${1=},${3=}
 
     # Record frames.
     if $canvas_record_frame>=0
+      if !$canvas_record_frame # First frame: determine filename
+        if $is_opencv
+          repeat 256 { filename_animation=${"filename gmic.mp4,"$>} if !isfile('$filename_animation') break fi }
+        else
+          repeat 256 {
+            filename_animation=${"filename gmic.jpg,"$>,0}
+            if !isfile('$filename_animation') filename_animation={"filename gmic.gmic",$>} break fi }
+        fi
+      fi
       0 t. "Frame \#"$canvas_record_frame,0,0,$font_size,1,255
       +dilate. 3 !=. 0 r.. 100%,100%,1,3
       j[canvas_view] ..,{canvas_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
       if $is_opencv
-        filename="gmic_display.mp4"
         if {canvas_base,max([w,h]%2)} # One dimension is odd -> resize frame
-          +r[canvas_base] {[w,h]+([w,h]%2)},1,100%,0 o. $filename,20,0,1 rm.
+          +r[canvas_base] {[w,h]+([w,h]%2)},1,100%,0 o. $filename_animation,20,0,1 rm.
         else
-          o[canvas_base] $filename.mp4,20,0,1
+          o[canvas_base] $filename_animation,20,0,1
         fi
       else
-        o[canvas_base] ${"filename gmic_display.jpg,"$canvas_record_frame},75
+        o[canvas_base] ${"filename "$filename_animation,$canvas_record_frame},75
       fi
       canvas_record_frame+=1
       window_no_wait=1
@@ -3490,7 +3498,7 @@ _display : skip ${1=},${3=}
         notification="Information: "${"arg0 "$setting_is_info,"Off,On"}
         $0_rmn canvas_view,canvas_label_info,canvas_label_notification
       elif {*,O}" || "{*,L} # CTRL+O & CTRL+L: Save copy of image/list
-        repeat 256 { filename gmic.gmz,$> filename=${} if !isfile('$filename') break fi }
+        repeat 256 { filename=${"filename gmic.gmz,"$>} if !isfile('$filename') break fi }
         if {*,-L}
           o[^$nb_images--1] $filename
           notification="Saved list copy: "$filename
@@ -3500,7 +3508,7 @@ _display : skip ${1=},${3=}
         fi
         $0_rmn canvas_label_notification
       elif {*,-S}" && "0$canvas_base # CTRL+S: Save screenshot
-        repeat 256 { filename gmic.png,$> filename=${} if !isfile('$filename') break fi }
+        repeat 256 { filename=${"filename gmic.png,"$>} if !isfile('$filename') break fi }
         notification="Save screenshot: "$filename
         $0_rmn canvas_label_notification
         o[canvas_base] $filename
