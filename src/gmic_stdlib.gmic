@@ -3364,11 +3364,17 @@ _display : skip ${1=},${3=}
         n_view_3d_zoom:=cut($view_3d_zoom*1.05^$amount,$zoom_3d_min,$zoom_3d_max)
         if $n_view_3d_zoom!=$view_3d_zoom
 
-          # eval "
-          #   const x = $area_mouse_x;
-          #   const y = $area_mouse_y;
-          #   print([x,y]);
-          # "
+          x,y:=" # Coordinates of current mouse cursor in object basis
+            const mwh = min($area_3d_width,$area_3d_height);
+            [ (($area_mouse_x - $area_3d_width/2)/mwh - i[#$view_3d_pose,3])/$view_3d_zoom,
+              (($area_mouse_y - $area_3d_height/2)/mwh - i[#$view_3d_pose,7])/$view_3d_zoom ]"
+
+          eval "
+            tx = i[#$view_3d_pose,3];
+            ty = i[#$view_3d_pose,7];
+            const dalpha = $view_3d_zoom - $n_view_3d_zoom;
+            i[#$view_3d_pose,3] = dalpha*$x + tx;
+            i[#$view_3d_pose,7] = dalpha*$y + ty"
 
           drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
           view_3d_zoom=$n_view_3d_zoom
