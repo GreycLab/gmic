@@ -3534,10 +3534,14 @@ _display : skip ${1=},${3=}
       elif {*,O}" || "{*,L} # CTRL+O & CTRL+L: Save copy of image/list
         repeat 256 { filename=${"filename gmic.gmz,"$>} if !isfile('$filename') break fi }
         if {*,-L}
+          foreach[^$nb_images--1] { => ${image_name$>} } # Set back original images names
           o[^$nb_images--1] $filename
+          foreach[^$nb_images--1] { => _display$> }
           notification="Saved list copy: "$filename
         elif {*,-O}
+          =>[$selected] ${image_name$selected}
           o[$selected] $filename
+          =>[$selected] _display$selected
           notification="Saved image copy: "$filename
         fi
         $0_rmn canvas_label_notification
