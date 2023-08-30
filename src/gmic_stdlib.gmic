@@ -1780,9 +1780,10 @@ d :
 #@cli : \n- **Image view:**
 #@cli : 'LMB' or 'MMB': Image pan - 'RMB' or 'MW': Image zoom - 'ARROWS' (opt. '+SHIFT'),'HOME','END': Shift view - \
 # 'A': Switch alpha rendering - 'C': Center view - 'E': Go to lower-right corner - 'ENTER': Reset view - \
-# 'G': Toggle grid - 'H': Go to upper-left corner - 'M': Toggle 3D view - 'N': Switch normalization - \
-# 'P': Print info about current image pixel on 'stdout' - 'PAGEUP' or 'PAGEDOWN': Raise/lower base channel - \
-# 'R': Rotate image - 'Z': Switch zoom factor - '0'-'9': Set zoom factor.
+# 'G': Toggle grid - 'H': Go to upper-left corner - 'K': Switch background - 'M': Toggle 3D view - \
+# 'N': Switch normalization - 'P': Print info about current image pixel on 'stdout' - \
+# 'PAGEUP' or 'PAGEDOWN': Raise/lower base channel - 'R': Rotate image - 'Z': Switch zoom factor - \
+# '0'-'9': Set zoom factor.
 #@cli : \n- **2D images only:**
 #@cli : 'CTRL+LMB': Image crop.
 #@cli : \n- **3D volumetric images only:**
@@ -1828,6 +1829,9 @@ _display : skip ${1=},${3=}
   setting_is_grid:=narg($_display_is_grid)?cut(int(0$_display_is_grid),0,1):1
   # 'setting_is_info' can be { 0:off | 1:on }.
   setting_is_info:=narg($_display_is_info)?cut(int(0$_display_is_info),0,1):1
+  # 'setting_background' can be in range [ 0,9 ].
+  setting_background:=narg($_display_background)?cut(int(0$_display_background),0,9):0
+
   # 'setting_3d_is_rendered' can be { 0:off | 1:on }.
   setting_3d_is_rendered:=narg($_display_3d_is_rendered)?cut(int(0$_display_3d_is_rendered),0,1):1
   # 'setting_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded |
@@ -1931,7 +1935,7 @@ _display : skip ${1=},${3=}
   fi
   1,${nb_images}x5 => is_printed,is_infnan,is_rotated,is_mesh3d,thumb_is_cached
   f[is_infnan,is_mesh3d] -1
-  0x2 => canvas_checkerboard,area_3d_background
+  0x2 => canvas_background,canvas_3d_background
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
@@ -2104,9 +2108,22 @@ _display : skip ${1=},${3=}
       fi
     fi
 
-    # Generate canvas view.
+    canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
+
+    # Render canvas background.
+    if {canvas_background,[w,h]!=[$canvas_width,$canvas_height]}
+      rm[canvas_background]
+      $canvas_width,$canvas_height,1,3,{arg0($setting_background>>1,0,64,128,192,255)}
+      if $setting_background&1
+        24,24,1,1,-12 +f. 12 a[-2,-1] x +mirror. x a[-2,-1] y
+        r. $canvas_width,$canvas_height,1,3,0,2 +[-2,-1] c. 0,255
+      fi
+      => canvas_background
+      $0_rmn canvas_base,canvas_volumetric_background
+    fi
+
+    # Generate canvas base.
     if !0$canvas_base
-      canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
       font_size:=cut(round($canvas_height/40),16,32)
 
       # Print information about image on stderr/stdout (if not already done).
@@ -2147,17 +2164,9 @@ _display : skip ${1=},${3=}
         area_xz_width,area_xz_height,area_zy_width,area_zy_height,area_3d_width,area_3d_height=0
       fi
 
-      # Render checkerboard background.
-      if {canvas_checkerboard,[w,h]!=[$canvas_width,$canvas_height]}
-        rm[canvas_checkerboard]
-        24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y
-        r. $canvas_width,$canvas_height,1,3,0,2
-        => canvas_checkerboard
-      fi
-
       # Render canvas base image.
       if {$selected,!w}
-        [canvas_checkerboard] => canvas_base
+        [canvas_background] => canvas_base
       elif $is_mesh3d" && "$is_view3d
         draw_3d_view_on_canvas_base=1
       else
@@ -2188,8 +2197,8 @@ _display : skip ${1=},${3=}
           if !0$canvas_volumetric_background" || "\
              {0$canvas_volumetric_background,[w,h]!=[$canvas_width,$canvas_height]}
             $0_rmn canvas_volumetric_background
-            +j[canvas_checkerboard] [canvas_checkerboard],{$area_xy_width+2},0
-            j. [canvas_checkerboard],0,{$area_xy_height+2}
+            +j[canvas_background] [canvas_background],{$area_xy_width+2},0
+            j. [canvas_background],0,{$area_xy_height+2}
             rectangle. 0,$area_xy_height,100%,{$area_xy_height+1},1,0
             rectangle. $area_xy_width,0,{$area_xy_width+1},100%,1,0
             rectangle. {[$area_xy_width,$area_xy_height]+2},100%,100%,0.25,0
@@ -2197,7 +2206,7 @@ _display : skip ${1=},${3=}
           fi
           [canvas_volumetric_background] => canvas_base
         else
-          [canvas_checkerboard] => canvas_base
+          [canvas_background] => canvas_base
         fi
 
         repeat $is_volumetric?3:1 {
@@ -2366,8 +2375,8 @@ _display : skip ${1=},${3=}
 
       # Render and draw 3D mesh object.
       if !0$area_3d_view
-        if {area_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
-          rm[area_3d_background]
+        if {canvas_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
+          rm[canvas_3d_background]
           background,is_checkerboard:=int([$setting_3d_background>>1,$setting_3d_background&1])
           if $background<3 {*,w,h},1,3,{arg(1+$background,0,128,255)}
           elif $background==3 3,2,1,1,"16,16,48,44,96,76" permute. cyzx
@@ -2379,9 +2388,9 @@ _display : skip ${1=},${3=}
             24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2
           fi
           round.
-          => area_3d_background
+          => canvas_3d_background
         fi
-        [area_3d_background] => area_3d_view
+        [canvas_3d_background] => area_3d_view
 
         if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
 
@@ -3183,12 +3192,19 @@ _display : skip ${1=},${3=}
               $0_rmn canvas_label_notification
               skip {*,-PAD$ind},{*,-$ind}
             fi
-          elif {*,-HOME}
-            view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
-            $0_rmn canvas_base,area_3d_mesh
           elif {*,-END}
             view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
             $0_rmn canvas_base,area_3d_mesh
+          elif {*,-HOME}
+            view_center_x,view_center_y,view_center_z={$selected,0.5/[w,h,d]}
+            $0_rmn canvas_base,area_3d_mesh
+          elif {*,-K} # K: Switch background
+            setting_background:={$setting_background+1}%10
+            str=${"arg0 "$setting_background>>1,"Black,\"Dark gray\",Gray,\"Light gray\",White"}
+            if $setting_background&1 str.=" checkerboard" fi
+            notification="Background: "$str
+            $0_rmn canvas_background,canvas_label_notification
+            0 => canvas_background
           elif {*,-P}" && "['$view_xyz']!=0 # Print current pixel value on stdout
             +e "Command 'display': I(#"$selected,$view_xyz_disp") = [ "{$selected,I($view_xyz)}" ]"
           elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$setting_alpha
@@ -3371,8 +3387,8 @@ _display : skip ${1=},${3=}
       if {*,-K} # K: Switch 3D background
         setting_3d_background:={$setting_3d_background+1}%12
         notification="3D background: \#"$setting_3d_background
-        $0_rmn area_3d_background,area_3d_view,canvas_label_notification
-        0 => area_3d_background
+        $0_rmn canvas_3d_background,area_3d_view,canvas_label_notification
+        0 => canvas_3d_background
       elif {*,-J} # J: Toggle 3D animation
         setting_3d_is_animated:=!$setting_3d_is_animated
         notification="3D animation: "${"arg0 "$setting_3d_is_animated,Off,On}
