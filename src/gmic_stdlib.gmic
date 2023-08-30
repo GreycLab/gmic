@@ -3330,7 +3330,7 @@ _display : skip ${1=},${3=}
         const w = $area_3d_width;
         const h = $area_3d_height;
         const mwh = min(w,h);
-        0.75*[ -w/mwh,w/mwh,-h/mwh,h/mwh ]"
+        $view_3d_zoom*[ -w/mwh,w/mwh,-h/mwh,h/mwh ]"
       repeat 2 {
         but:=2*$>
         if !$but" && "!$is_CTRL continue fi
@@ -3338,12 +3338,8 @@ _display : skip ${1=},${3=}
           drag_dx,drag_dy:=[${drag_end_x$but},${drag_end_y$but}]-[${drag_start_x$but},${drag_start_y$but}]
           eval "
             const mwh = min($area_3d_width,$area_3d_height);
-            const dx = $drag_dx/mwh;
-            const dy = $drag_dy/mwh;
-            x = cut(i[#$view_3d_pose,3] + dx,$pan_3d_x_min,$pan_3d_x_max);
-            y = cut(i[#$view_3d_pose,7] + dy,$pan_3d_y_min,$pan_3d_y_max);
-            i[#$view_3d_pose,3] = x;
-            i[#$view_3d_pose,7] = y"
+            i[#$view_3d_pose,3] = cut(i[#$view_3d_pose,3] + $drag_dx/mwh,$pan_3d_x_min,$pan_3d_x_max);
+            i[#$view_3d_pose,7] = cut(i[#$view_3d_pose,7] + $drag_dy/mwh,$pan_3d_y_min,$pan_3d_y_max)"
           drag_start_x$but,drag_start_y$but=${drag_end_x$but},${drag_end_y$but}
           area_3d_is_motion=1
           event_type0=5
@@ -3372,8 +3368,8 @@ _display : skip ${1=},${3=}
             x = (mx/mwh - tx)/$view_3d_zoom;
             y = (my/mwh - ty)/$view_3d_zoom;
             const dalpha = $view_3d_zoom - $n_view_3d_zoom;
-            i[#$view_3d_pose,3] = dalpha*x + tx;
-            i[#$view_3d_pose,7] = dalpha*y + ty"
+            i[#$view_3d_pose,3] = cut(dalpha*x + tx,$pan_3d_x_min,$pan_3d_x_max);
+            i[#$view_3d_pose,7] = cut(dalpha*y + ty,$pan_3d_x_min,$pan_3d_x_max)"
           drag_start_x1,drag_start_y1=$drag_end_x1,$drag_end_y1
           view_3d_zoom=$n_view_3d_zoom
           area_3d_is_motion=1
