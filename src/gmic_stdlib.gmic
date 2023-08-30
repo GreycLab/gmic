@@ -1819,11 +1819,11 @@ _display : skip ${1=},${3=}
   # Initialize setting variables.
 
   # 'setting_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global }.
-  setting_normalization:=narg($_display_normalization)?0$_display_normalization:-1
+  setting_normalization:=narg($_display_normalization)?cut(int(0$_display_normalization),-1,3):-1
   # 'setting_alpha' can be { 0:off | 1:on | 2:over black | 3:over gray | 4:over white }.
-  setting_alpha:=narg($_display_alpha)?0$_display_alpha:0
+  setting_alpha:=narg($_display_alpha)?cut(int(0$_display_alpha),0,4):0
   # 'setting_cursor' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) }.
-  setting_cursor:=narg($_display_cursor)?0$_display_cursor:1
+  setting_cursor:=narg($_display_cursor)?cut(int(0$_display_cursor),0,2):1
   # 'setting_is_grid' can be { 0:off | 1:on }.
   setting_is_grid:=narg($_display_is_grid)?0$_display_is_grid:1
   # 'setting_is_info' can be { 0:off | 1:on }.
@@ -2625,7 +2625,7 @@ _display : skip ${1=},${3=}
                       lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_width) ]:
                     [ -1,-1,-1 ]"}
         rix,riy,riz:=floor([$ix,$iy,$iz]);
-        is_cursor_over_image={$selected,!$is_view3d" && "\
+        is_cursor_over_image={$selected,(!$is_view3d" || "$is_volumetric)" && "\
                                         (inrange($rix,0,w-1)" && "inrange($riy,0,h-1)" && "inrange($riz,0,d-1))}
 
         if {$selected,!$is_cursor_over_image" || "!$setting_cursor" || "($setting_cursor==1" && "$is_volumetric)}
@@ -3526,7 +3526,7 @@ _display : skip ${1=},${3=}
         $0_rmn area_3d_view
       elif {*,-X} # CTRL+X: Toggle cursor mode
         setting_cursor:=a=($setting_cursor+1)%3;$is_volumetric?(a?2:0):(a==1)
-        notification="Axis: "${"arg0 "$setting_cursor,"Off,\"On (2D only)\",On"}
+        notification="Cursor: "${"arg0 "$setting_cursor,"Off,\"On (2D)\",\"On (3D)\""}
         $0_rmn canvas_view,canvas_label_notification
       fi
     fi
