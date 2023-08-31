@@ -1869,6 +1869,7 @@ _display : skip ${1=},${3=}
   thumb_height_factor=0.15
   thumb_min_ratio=0.45
   thumb_is_visible:=$nb_images>1
+  is_opencv:="find([' "$_flags"'],'opencv')>0"
 
   # Save original image names to prevent name conflicts with those used in this command.
   foreach { image_name$>={n} => _display$> }
@@ -1914,33 +1915,26 @@ _display : skip ${1=},${3=}
 
   # Initialize other viewer variables.
   thumb_mouse_over=-1
+  thumb_view_update=0
   thumb_x=
   selected=0
 
   view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
   view_zoom_mode,view_is_rotated,view_base_channel=3,0,0
 
-  canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
-  canvas_mouse_x,canvas_mouse_y=-1
-  canvas_cross_x,canvas_cross_y=
+  canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1,canvas_cross_x,canvas_cross_y=
+  canvas_mouse_x,canvas_mouse_y,canvas_record_window=-1
   canvas_label_alignment=1
-  canvas_record_window=-1
 
   area_width,area_height=0
   area_mouse_x,area_mouse_y=-1
 
-  zoom_1_1=0
-  draw_3d_view_on_canvas_base=0
-  update_thumb_view=0
-  area_3d_is_motion=0
-  is_opencv:="find([' "$_flags"'],'opencv')>0"
+  zoom_1_1,view_3d_draw_on_canvas,area_3d_is_motion=0
 
-  if $nb_images>1
-    (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right
-  fi
+  if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x5 => is_printed,is_infnan,is_rotated,is_mesh3d,thumb_is_cached
   f[is_infnan,is_mesh3d] -1
-  0x2 => canvas_background,canvas_3d_background
+  0 => canvas_background
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
@@ -1989,7 +1983,7 @@ _display : skip ${1=},${3=}
       thumb_x_px:=cut($thumb_x*$thumb_sumw,-16,$thumb_x_px_max)
 
       # Generate thumnail view.
-      if $update_thumb_view $0_rmn thumb_view update_thumb_view=0 fi
+      if $thumb_view_update $0_rmn thumb_view thumb_view_update=0 fi
       if !0$thumb_view
         $0_rmn thumb_index_map
         $window_width,$thumb_height,1,3 100%,1,1,1,-1 => thumb_view,thumb_index_map
@@ -2174,7 +2168,7 @@ _display : skip ${1=},${3=}
       if {$selected,!w}
         [canvas_background] => canvas_base
       elif $is_mesh3d" && "$is_view3d
-        draw_3d_view_on_canvas_base=1
+        view_3d_draw_on_canvas=1
       else
         is_alpha={$selected,$setting_alpha" && "(s==2||s==4)}
         view_base_channel={$selected,cut($view_base_channel,0,max(0,s-3))}
@@ -2341,7 +2335,7 @@ _display : skip ${1=},${3=}
           line[canvas_base] 0,$h2,$area_xy_width,$h2,0.5,0xAAAAAAAA,255
           line[canvas_base] $w2,0,$w2,$area_xy_height,0.5,0x55555555,0
           line[canvas_base] $w2,0,$w2,$area_xy_height,0.5,0xAAAAAAAA,255
-          if $is_view3d draw_3d_view_on_canvas_base=1 fi
+          if $is_view3d view_3d_draw_on_canvas=1 fi
         fi
       fi
 
@@ -2381,8 +2375,8 @@ _display : skip ${1=},${3=}
 
       # Render and draw 3D mesh object.
       if !0$area_3d_view
-        if {canvas_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
-          rm[canvas_3d_background]
+        if !0$canvas_3d_background" || "{0$canvas_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
+          $0_rmn canvas_3d_background
           background,is_checkerboard:=int([$setting_3d_background>>1,$setting_3d_background&1])
           if $background<3 {*,w,h},1,3,{arg(1+$background,0,128,255)}
           elif $background==3 3,2,1,1,"16,16,48,44,96,76" permute. cyzx
@@ -2460,19 +2454,19 @@ _display : skip ${1=},${3=}
           r. $Mwh,$Mwh,1,100%,0,0,0.5,0.5
           store. 1,thumb_cache_$selected
           =[thumb_is_cached] 2,0,$selected
-          update_thumb_view,window_no_wait=1
+          thumb_view_update,window_no_wait=1
         fi
 
-        draw_3d_view_on_canvas_base=1
+        view_3d_draw_on_canvas=1
       fi
 
-      if $draw_3d_view_on_canvas_base" && "0$area_3d_view
+      if $view_3d_draw_on_canvas" && "0$area_3d_view
         if $is_mesh3d # Small hack to avoid image copy
           $0_rmn canvas_base =>[area_3d_view] canvas_base 0 => area_3d_view
         else
           j[canvas_base] [area_3d_view],{[$area_xy_width,$area_xy_height]+($is_volumetric?2:0)}
         fi
-        draw_3d_view_on_canvas_base=0
+        view_3d_draw_on_canvas=0
         $0_rmn canvas_view
       fi
     fi
@@ -3403,7 +3397,6 @@ _display : skip ${1=},${3=}
         setting_3d_background:={$setting_3d_background+1}%12
         notification="3D background: \#"$setting_3d_background
         $0_rmn canvas_3d_background,area_3d_view,canvas_label_notification
-        0 => canvas_3d_background
       elif {*,-J} # J: Toggle 3D animation
         setting_3d_is_animated:=!$setting_3d_is_animated
         notification="3D animation: "${"arg0 "$setting_3d_is_animated,Off,On}
