@@ -30196,10 +30196,11 @@ euclidean2polar : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3}) && $4>
   e[^-1] "Apply euclidean to polar transform on image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    cx={if(${is_percent\ $1},$1*(w-1),$1)}
-    cy={if(${is_percent\ $2},$2*(h-1),$2)}
-    R={sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))}
-    f 'r=$R*(x/(w-1))^$3;a=y*2*pi/(h-1);i($cx+r*cos(a),$cy+r*sin(a),z,c,1,$4)'
+    cx,cy:=${is_percent\ $1}?$1*(w-1):$1,${is_percent\ $2}?$2*(h-1):$2
+    R:=sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))
+    f "r = $R*(x/(w-1))^$3;
+       a = y*2*pi/(h-1);
+       i($cx + r*cos(a),$cy + r*sin(a),z,c,1,$4)"
   }
 
 #@cli equirectangular2nadirzenith
@@ -30326,13 +30327,12 @@ polar2euclidean : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3}) && $4>
   e[^-1] "Apply polar to euclidean transform on image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    cx={if(${is_percent\ $1},$1*(w-1),$1)}
-    cy={if(${is_percent\ $2},$2*(h-1),$2)}
-    R={sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))}
-    f "X = sqrt((x-"$cx")^2+(y-"$cy")^2);
-       tmp = atan2((y-"$cy"),(x-"$cx"));
-       Y = if(tmp<0,tmp+2*pi,tmp);
-       i((X/"$R")^(1/$3)*(w-1),Y*(h-1)/(2*pi),z,c,1,$4)"
+    cx,cy:=${is_percent\ $1}?$1*(w-1):$1,${is_percent\ $2}?$2*(h-1):$2
+    R:=sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))
+    f "X = sqrt((x - "$cx")^2 + (y - "$cy")^2);
+       tmp = atan2(y - "$cy",x - "$cx");
+       Y = tmp<0?tmp + 2*pi:tmp;
+       i((X/"$R")^(1/$3)*(w - 1),Y*(h - 1)/(2*pi),z,c,1,$4)"
   }
 
 #@cli raindrops : _amplitude,_density>=0,_wavelength>=0,_merging_steps>=0
