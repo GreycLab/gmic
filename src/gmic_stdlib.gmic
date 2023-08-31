@@ -3524,11 +3524,13 @@ _display : skip ${1=},${3=}
       elif {*,O}" || "{*,L} # CTRL+O & CTRL+L: Save copy of image/list
         repeat 256 { filename=${"filename gmic.gmz,"$>} if !isfile('$filename') break fi }
         if {*,-L}
+          eval[is_rotated] "i?run('rotate[',y,'] ',-90*i)"
           foreach[^$nb_images--1] { => ${image_name$>} } # Set back original images names
           o[^$nb_images--1] $filename
           foreach[^$nb_images--1] { => _display$> }
           notification="Saved list copy: "$filename
         elif {*,-O}
+          eval "ang = i[#$is_rotated,$selected]; ang?run('rotate[',$selected,'] ',-90*ang)"
           =>[$selected] ${image_name$selected}
           o[$selected] $filename
           =>[$selected] _display$selected
@@ -3573,7 +3575,7 @@ _display : skip ${1=},${3=}
 
   # Reset image list and display window to their previous states.
   if $is_opencv" && "$canvas_record_window>=0 o[] $filename_animation,0,0,0 fi # Close recording stream
-  eval[is_rotated] "i?run('rotate[',y,'] ',-90*i)"
+  eval[is_rotated] "i?run('rotate[',y,'] ',-90*i)" # Rotate back image to their original angle
   if narg($window_previous_normalization)
     w[] -1,-1,$window_previous_normalization,$window_previous_fullscreen
   else
