@@ -1934,7 +1934,6 @@ _display : skip ${1=},${3=}
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x5 => is_printed,is_infnan,is_rotated,is_mesh3d,thumb_is_cached
   f[is_infnan,is_mesh3d] -1
-  0 => canvas_background
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
@@ -2110,8 +2109,8 @@ _display : skip ${1=},${3=}
     canvas_width,canvas_height=$window_width,{$window_height-$thumb_height2}
 
     # Render canvas background.
-    if {canvas_background,[w,h]!=[$canvas_width,$canvas_height]}
-      rm[canvas_background]
+    if !0$canvas_background" || "{0$canvas_background,[w,h]!=[$canvas_width,$canvas_height]}
+      $0_rmn canvas_background
       $canvas_width,$canvas_height,1,3,{arg0($setting_background>>1,0,64,128,192,255)}
       if $setting_background&1
         amp:=$setting_background==1?32:12
@@ -3204,7 +3203,6 @@ _display : skip ${1=},${3=}
             if $setting_background&1 str.=" checkerboard" fi
             notification="Background: "$str
             $0_rmn canvas_background,canvas_label_notification
-            0 => canvas_background
           elif {*,-P}" && "['$view_xyz']!=0 # Print current pixel value on stdout
             +e "Command 'display': I(#"$selected,$view_xyz_disp") = [ "{$selected,I($view_xyz)}" ]"
           elif ({*,PAGEUP}" || "{*,PAGEDOWN})" && "{$selected,s>3}" && "!$setting_alpha
