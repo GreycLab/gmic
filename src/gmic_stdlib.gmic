@@ -19655,21 +19655,23 @@ isophotes : skip ${1=64}
 
 #@cli label : _tolerance>=0,is_high_connectivity={ 0 | 1 },_is_L2_norm={ 0 | 1 } : (+)
 #@cli : Label connected components in selected images.
+#@cli : If 'is_L2_norm=1', tolerances are compared against L2-norm, otherwise L1-norm is used.
 #@cli : Default values: 'tolerance=0', 'is_high_connectivity=0' and 'is_L2_norm=1'.
 #@cli : $ image.jpg luminance threshold 60% label normalize 0,255 map 0
 #@cli : $ 400,400 set 1,50%,50% distance 1 mod 16 threshold 8 label mod 255 map 2
 #@cli : $$ https://gmic.eu/oldtutorial/_label
 
-#@cli label_fg : tolerance>=0,is_high_connectivity={ 0 | 1 }
+#@cli label_fg : tolerance>=0,is_high_connectivity={ 0 | 1 },_is_L2_norm={ 0 | 1 }
 #@cli : Label connected components for non-zero values (foreground) in selected images.
 #@cli : Similar to 'label' except that 0-valued pixels are not labeled.
+#@cli : If 'is_L2_norm=1', tolerances are compared against L2-norm, otherwise L1-norm is used.
 #@cli : Default value: 'is_high_connectivity=0'.
-label_fg : check "$1>=0" skip ${2=0}
-  e[^-1] "Label foreground connected components on image [1], with tolerance $1 and "\
+label_fg : check "$1>=0 && isbool(${2=0}) && isbool(${3=1})"
+  e[^-1] "Label foreground connected components on image [1], with tolerance $1 (L"{$3+1}"-norm) and "\
          ${arg0\ !$2,high,low}" connectivity."
   foreach {
-    if d>1 +z -1,-1,-1,100%,100%,100% label. $1,$2 z. 1,1,1,100%,100%,100%
-    else +z -1,-1,100%,100% label. $1,$2 z. 1,1,100%,100%
+    if d>1 +z -1,-1,-1,100%,100%,100% label. $1,$2,$3 z. 1,1,1,100%,100%,100%
+    else +z -1,-1,100%,100% label. $1,$2,$3 z. 1,1,100%,100%
     fi
     norm.. !=.. 0 * +histogram {1+iM} =. 0
     >. 0 cumulate. map.. . rm.
@@ -52709,16 +52711,21 @@ fx_light_patch :
   foreach { split_opacity ac[0] "light_patch $1,$2,$3",$4 a c }
 
 #@gui Light Rays : fx_lightrays, fx_lightrays(1)
-#@gui : Density = float(80,0,100)
+#@gui : Density = float(30,0,100)
 #@gui : Center (%) = point(50,50,0,1)
 #@gui : Length = float(1,0,1)
 #@gui : Attenuation = float(0.5,0,1)
 #@gui : Transparency = bool(0)
+#@gui : Color = color(255,255,255)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/03/01</i>.</small>")
-fx_lightrays :
-  lightrays $1,$2%,$3%,$4,$5
-  if $6 repeat $! { r[$>] 100%,100%,1,{{$>,s}+({$>,s}%2)} } fi
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/01</i>.</small>")
+fx_lightrays : skip ${6=255},${7=$6},${8=$6}
+  foreach {
+    lightrays $1,$2%,$3%,$4,$5
+    if $6 channels -3,0 sh. 0,2 fc. ${7-9} rm. # Render with transparency
+    else 100%,100%,1,3 fc. ${7-9} rv n. 0,1 *
+    fi
+  }
 
 #@gui Pop Shadows : fx_pop_shadows, fx_pop_shadows_preview(1)
 #@gui : Strength = float(0.75,0,1)
