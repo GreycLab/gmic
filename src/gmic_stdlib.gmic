@@ -29256,30 +29256,98 @@ drawing : skip ${1=200}
 #@cli : Drop shadow behind selected images.
 #@cli : Default values: 'offset_x=20', 'offset_y=offset_x', 'smoothness=5', 'curvature=0' and 'expand_size=1'.
 #@cli : $ image.jpg drop_shadow 10,20,5,0.5 expand_xy 20,0 display_rgba
-drop_shadow : check "${3=5}>=0 && ${4=0}>=0 && $4<=1" skip ${1=20},${2=$1},${5=1}
-  e[^-1] "Drop shadow behind image$?, with offsets ($1,$2), smoothness $3 and curvature $4."
-  to_a
+#@cli drop_shadow : _offset_x[%],_offset_y[%],_smoothness[%]>=0,curvature_x>=0,curvature_y>=0,_expand_size={ 0 | 1 },\
+# _output_separate_layers={ 0 | 1 }
+#@cli : Drop shadow behind selected images.
+#@cli : Default values: 'offset_x=20', 'offset_y=offset_x', 'smoothness=5', 'curvature_x=curvature_y=0', \
+# 'expand_size=1' and 'output_separate_layers=0'.
+#@cli : $ image.jpg drop_shadow 10,20,5,0.5 display_rgba
+drop_shadow : check "isexpr(${1=20}) && isexpr(${2=$1}) && ${3=5}>=0 && isnum(${4=0}) && isnum(${5=0}) && isbool(${6=1}) && "\
+                     "isbool(${7=0})"
+  s0,s1,t0,t1=original,expanded,single,separate
+  e[^-1] "Drop shadow behind image$?, with offsets ($1,$2), smoothness $3, curvatures ($4,$5) "${s$6}" size and "\
+         ${t$7}" layer output."
   foreach {
     nm={n}
-    dx={if(${is_percent\ $1},w*$1,$1)}
-    dy={if(${is_percent\ $2},h*$2,$2)}
-    sigma={if(${is_percent\ $3},min(w,h)*$3,$3)}
-    w,h,s={[w,h,s]} sh. 100% coords=${autocrop_coords.\ 0} rm. z $coords  # Crop part with opaque pixels.
-    r {w+abs($dx)},{h+abs($dy)},1,100%,0,0,{if($dx>0,0,1)},{if($dy>0,0,1)}
-    r. {w+4*$sigma},{h+4*$sigma},1,100%,0,0,0.5,0.5
-    +channels. 100%
-    if !$4 shift. $dx,$dy # Flat shadow.
-    else # Curved shadow.
-      (0;{pi}) ri. ..,3 sin. *. -$4 +. 1 *. $dx
-      (0,{pi}) ri. ..,3 sin. *. -$4 +. 1 *. $dy
-      a[-2,-1] c warp.. .,1,0,0 rm.
-    fi
-    b. $sigma,0
-    r. 100%,100%,1,2,0,0,0,0,0,1 mv. 0 blend alpha
-    +channels. 100% >=. 1 * autocrop 0
-    if !$5 $w,$h,1,$s j. ..,{arg(1,$coords)},{arg(2,$coords)} rm.. fi
-    => $nm
+    if s>4 error[0--3] "Command 'drop_shadow': Invalid input image (has "{s}" channels)." fi
+    to_a
+    smoothness:=${"is_percent $3"}?max(w,h)*$3:$3
+    offx,offy:=round([${"is_percent $1"}?$1*w:$1,${"is_percent $2"}?$2*h:$2])
+
+    # Expand canvas size, if requested.
+    if $6 r {round([w+abs($offx),h+abs($offy)]+3.5*$smoothness)},1,100%,0,0,{[$offx<0,$offy<0]} fi
+
+    # Extract crop coordinates of connected components.
+    +channels. 100% ge. 50% label_fg. 0,1
+    1,{iM},1,4,[inf,inf,-inf,-inf]
+    eval.. ">
+      ind = i;
+      ind?(
+        --ind;
+        x<i(#-1,0,ind,0,0)?(i(#-1,0,ind,0,0) = x);
+        y<i(#-1,0,ind,0,1)?(i(#-1,0,ind,0,1) = y);
+        x>i(#-1,0,ind,0,2)?(i(#-1,0,ind,0,2) = x);
+        y>i(#-1,0,ind,0,3)?(i(#-1,0,ind,0,3) = y);
+      )"
+    rm..
+
+    # Apply drop shadow on each component.
+    [0],[0]
+    repeat h#-2 {
+      x0,y0,x1,y1:=I[#-2,$>]
+      if $x1-$x0" && "$y1-$y0
+        +z[0] $x0,$y0,0,100%,$x1,$y1,0,100%
+
+        if $4" || "$5 # Curve shadow
+          w,h:=w,h
+          lx0,ly0,lx1,ly1:=0,0,$x1-$x0,$y1-$y0
+          r. {[w+abs($offx),w+abs($offy)]},1,100%,0,0,{[$offx>0,$offy>0]}
+          if $offx>0 lx0,x0-=$offx else lx1+=$offx fi
+          if $offy>0 ly0,y0-=$offy else ly1+=$offy fi
+          100%,100%,1,2,"
+            X = lerp($lx0,$lx1,x/(w-1));
+            Y = lerp($ly0,$ly1,y/(h-1));
+            ampx = sin(Y/($h - 1)*pi);
+            ampy = sin(x/($w - 1)*pi);
+            [ -$offx*abs($4)*($4>0?ampx:(1 - ampx)), -$offy*abs($5)*($5>0?ampy:(1 - ampy))]"
+          warp.. .,1,1,0 rm.
+        fi
+        j.. .,{[$x0+$offx,$y0+$offy]} rm.
+      fi
+    }
+    rm..
+
+    b. $smoothness,0
+    channels. -1,0
+    rv
+    if !$7 blend alpha fi
+    =>[^] $nm
   }
+
+# drop_shadow : check "${3=5}>=0 && ${4=0}>=0 && $4<=1" skip ${1=20},${2=$1},${5=1}
+#   e[^-1] "Drop shadow behind image$?, with offsets ($1,$2), smoothness $3 and curvature $4."
+#   to_a
+#   foreach {
+#     nm={n}
+#     dx={if(${is_percent\ $1},w*$1,$1)}
+#     dy={if(${is_percent\ $2},h*$2,$2)}
+#     sigma={if(${is_percent\ $3},min(w,h)*$3,$3)}
+#     w,h,s={[w,h,s]} sh. 100% coords=${autocrop_coords.\ 0} rm. z $coords  # Crop part with opaque pixels.
+#     r {w+abs($dx)},{h+abs($dy)},1,100%,0,0,{if($dx>0,0,1)},{if($dy>0,0,1)}
+#     r. {w+4*$sigma},{h+4*$sigma},1,100%,0,0,0.5,0.5
+#     +channels. 100%
+#     if !$4 shift. $dx,$dy # Flat shadow.
+#     else # Curved shadow.
+#       (0;{pi}) ri. ..,3 sin. *. -$4 +. 1 *. $dx
+#       (0,{pi}) ri. ..,3 sin. *. -$4 +. 1 *. $dy
+#       a[-2,-1] c warp.. .,1,0,0 rm.
+#     fi
+#     b. $sigma,0
+#     r. 100%,100%,1,2,0,0,0,0,0,1 mv. 0 blend alpha
+#     +channels. 100% >=. 1 * autocrop 0
+#     if !$5 $w,$h,1,$s j. ..,{arg(1,$coords)},{arg(2,$coords)} rm.. fi
+#     => $nm
+#   }
 
 #@cli ellipsionism : _R>0[%],_r>0[%],_smoothness>=0[%],_opacity,_outline>0,_density>0
 #@cli : Apply ellipsionism filter to selected images.
@@ -52165,18 +52233,21 @@ fx_contrast_swm :
   }
 
 #@gui Drop Shadow : fx_drop_shadow, fx_drop_shadow(1)
-#@gui : X-Shadow = float(3,-20,20)
-#@gui : Y-Shadow = float(3,-20,20)
+#@gui : X-Offset = float(3,-20,20)
+#@gui : Y-Offset = float(3,-20,20)
 #@gui : Smoothness = float(1.8,0,5)
-#@gui : Curvature = float(0,0,1)
-#@gui : Corner Brightness = float(0,0,1)
-#@gui : Angle = float(0,0,360)
-#@gui : Keep original size = bool(0)
+#@gui : X-Curvature = float(0,-1,1)
+#@gui : Y-curvature = float(0,-1,1)
+#@gui : Expand size = bool(1)
+#@gui : Color = color(0,0,0)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2012/14/11</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/02</i>.</small>")
 fx_drop_shadow :
-  * -1 + 255 vignette {255*$5},80,95 * -1 + 255
-  drop_shadow $1%,$2%,$3%,$4,{!$7} rotate $6,1,0
+  foreach {
+    drop_shadow $1%,$2%,$3%,$4,$5,$6,1
+    to_rgba.. sh.. 0,2 fc. ${7-9} rm.
+    blend alpha
+  }
 
 #@gui Drop Shadow 3D : fx_drop_shadow3d, fx_drop_shadow3d_preview(1)
 #@gui : X-Angle = float(0,-90,90)
