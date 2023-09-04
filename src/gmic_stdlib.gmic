@@ -4281,11 +4281,11 @@ display_voxels3d :
   _gmic_s="$?" v + _$0
 
 _display_voxels3d :
-  mode3d,moded3d,double3d=$_mode3d,$_moded3d,$_double3d
-  m3d 2 md3d 2 db3d 0
+  nb_images=$!
+  foreach { nm$>={n} }
   +foreach {
     w,h,d:=w,h,d
-    nm={n} bnm={b} l. { if ['{x}']!=0 bnm.=.{x} fi onfail bnm.=.{x} }
+    nm=${nm$>} bnm={b} l. { if ['{x}']!=0 bnm.=.{x} fi onfail bnm.=.{x} }
     asiz:=max(w,h,d)/5
     +norm1. !=. 0 nbv:=is rm. # Count voxels
     e[0--4] "Display image ["{arg(1+$>,$[])}"] = '"$nm"' ("${w}x${h}x${d}", "$nbv" voxels)."
@@ -4301,10 +4301,10 @@ _display_voxels3d :
     fi
     surfels3d $args +3d. 0.5,0.5,0.5 box3d $w,$h,$d p3d. 1 o3d. 0.25
     axes3d $asiz,$asiz,$asiz,16 o3d. 0.5 col3d. 255,128,0 +3d
-    _display_3d_rendering_mode=2
-    d rm
   }
-  _mode3d,_moded3d,_double3d=$mode3d,$moded3d,$double3d
+  foreach[$nb_images--1] { => ${nm$>} }
+  _display_3d_rendering_mode=2
+  _display[$nb_images--1] "",0,$[] rm[$nb_images--1]
   is_change 0
 
 #@cli dw : eq. to 'display_warp'.
