@@ -29295,8 +29295,8 @@ drop_shadow : check "isexpr(${1=20}) && isexpr(${2=$1}) && ${3=5}>=0 && isnum(${
     if $6
       s. c x0,y0,x1,y1:=im#-4,im#-3,iM#-2,iM#-1 a[-4--1] c
       nx0,ny0,nx1,ny1=$x0,$y0,$x1,$y1
-      nx0,nx1+="const S = $shiftx; S>0?[0,S]:[S,0]"
-      ny0,ny1+="const S = $shifty; S>0?[0,S]:[S,0]"
+      nx0,nx1+=$shiftx
+      ny0,ny1+=$shifty
       if $sigma>0 nx0,ny0,nx1,ny1+="const S = 3.5*$sigma; [-S,-S,S,S]" fi
       if $4 nx0,nx1+="const S = $shiftx*$4; S>0?[-S,0]:[0,-S]" fi
       if $5 ny0,ny1+="const S = $shifty*$5; S>0?[-S,0]:[0,-S]" fi
@@ -52225,22 +52225,26 @@ fx_contrast_swm :
     a c
   }
 
-#@gui Drop Shadow : fx_drop_shadow, fx_drop_shadow(1)
+#@gui Drop Shadow : fx_drop_shadow, fx_drop_shadow_preview(1)
 #@gui : X-Offset = float(3,-20,20)
 #@gui : Y-Offset = float(3,-20,20)
 #@gui : Smoothness = float(1.8,0,5)
-#@gui : X-Curvature = float(0,-1,1)
-#@gui : Y-curvature = float(0,-1,1)
-#@gui : Expand size = bool(1)
+#@gui : X-Curvature = float(0,-2,2)
+#@gui : Y-curvature = float(0,-2,2)
 #@gui : Color = color(0,0,0)
+#@gui : Expand size = bool(1)
+#@gui : Output as separate layers = _bool(1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/02</i>.</small>")
 fx_drop_shadow :
   foreach {
-    drop_shadow $1%,$2%,$3%,$4,$5,$6,1
-    to_rgba.. sh.. 0,2 fc. ${7-9} rm.
-    blend alpha
+    drop_shadow $1%,$2%,$3%,$4,$5,$9,1
+    to_rgba.. sh.. 0,2 fc. ${6-8} rm.
+    if $10 rv else blend alpha fi
   }
+
+fx_drop_shadow_preview :
+  fx_drop_shadow ${1-9},0
 
 #@gui Drop Shadow 3D : fx_drop_shadow3d, fx_drop_shadow3d_preview(1)
 #@gui : X-Angle = float(0,-90,90)
