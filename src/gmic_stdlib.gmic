@@ -15851,7 +15851,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
   # Manage automatic layout.
   if lowercase('"$1"')=='x'
     +l {
-      repeat $! { =>[$>] $> }
+      foreach { => $> }
       repeat $!-1 {
         if {-2,w>h}" && "w>h mode=V      # Both landscape.
         elif {-2,h>w}" && "h>w mode=H    # Both portrait.
@@ -16065,9 +16065,7 @@ resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
 #@cli : $ image.jpg +resize_pow2[-1] 0
 resize_pow2 : check "isint(${1=0}) && $1>=-1 && $1<=6" skip ${2=0},${3=0},${4=0},${5=0},${6=0}
   e[^-1] "Resize image$? so that each dimension is a power of 2."
-  repeat $! {
-    r[$>] {$>,2^(round(log2(w),1,1))},{$>,2^(round(log2(h),1,1))},{$>,2^(round(log2(d),1,1))},100%,${1-6}
-  }
+  foreach { r {2^(ceil(log2([w,h,d])))},100%,${1-6} }
 
 #@cli rr2d : eq. to 'resize_ratio2d'.
 rr2d :
@@ -16083,9 +16081,9 @@ resize_ratio2d :
 _resize_ratio2d : check "$1>0 && $2>0 && ${3=0}>=0 && $3<=2 && ${4=6}>=0 && $4<=6"
   e[0--3] "Resize 2D image"$_gmic_s" to $1x$2 with ratio-"${arg0\ $3,inside,outside,padded}\
            " mode and interpolation type $4."
-  repeat $! {
-    ratio={$>,if($3==1,max($1/w,$2/h),min($1/w,$2/h))}
-    r[$>] {$>,[max(1,round(w*$ratio)),max(1,round(h*$ratio))]},100%,100%,$4
+  foreach {
+    ratio:=$3==1?max($1/w,$2/h):min($1/w,$2/h)
+    r {[max(1,round(w*$ratio)),max(1,round(h*$ratio))]},100%,100%,$4
   }
   if $3==2 r $1,$2,100%,100%,0,0,0.5,0.5 fi
 
@@ -16601,33 +16599,33 @@ _seamcarve :
 #@cli : $ image.jpg shrink_x 30
 shrink_x : check "$1>=0"
   e[^-1] "Shrink image$? along the x-axis with size $1."
-  repeat $! { z[$>] $1,{$>,w-$1-1} }
+  foreach { z $1,{w-1-$1} }
 
 #@cli shrink_xy : size>=0
 #@cli : Shrink selected images along the xy-axes.
 #@cli : $ image.jpg shrink_xy 30
 shrink_xy : check "$1>=0"
   e[^-1] "Shrink image$? along the xy-axes with size $1."
-  repeat $! { z[$>] $1,$1,{$>,w-$1-1},{$>,h-$1-1} }
+  foreach { z $1,$1,{[w,h]-1-$1} }
 
 #@cli shrink_xyz : size>=0
 #@cli : Shrink selected images along the xyz-axes.
 shrink_xyz : check "$1>=0"
   e[^-1] "Shrink image$? along the xyz-axes with size $1."
-  repeat $! { z[$>] $1,$1,$1,{$>,w-$1-1},{$>,h-$1-1},{$>,d-$1-1} }
+  foreach { z $1,$1,$1,{[w,h,d]-1-$1} }
 
 #@cli shrink_y : size_y>=0
 #@cli : Shrink selected images along the y-axis.
 #@cli : $ image.jpg shrink_y 30
 shrink_y : check "$1>=0"
   e[^-1] "Shrink image$? along the y-axis with size $1."
-  repeat $! { z[$>] 0,$1,100%,{$>,h-$1-1} }
+  foreach { z 0,$1,100%,{h-1-$1} }
 
 #@cli shrink_z : size_z>=0
 #@cli : Shrink selected images along the z-axis.
 shrink_z : check "$1>=0"
   e[^-1] "Shrink image$? along the z-axis with size $1."
-  repeat $! { z[$>] 0,0,$1,100%,100%,{$>,d-$1-1} }
+  foreach { z 0,0,$1,100%,100%,{d-1-$1} }
 
 #@cli slices : z0[%],_z1[%]
 #@cli : Keep only specified slices of selected images.
