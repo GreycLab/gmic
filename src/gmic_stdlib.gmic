@@ -13635,10 +13635,10 @@ hsv82rgb :
   _hsx82rgb hsv2rgb
 
 _hsx82rgb :
- repeat $! {
-   sh[$>] 0 /. 0.708333 rm.
-   sh[$>] 1,2 /. 255 rm.
- }
+  foreach {
+    sh[0] 0 /. 0.708333 rm.
+    sh[0] 1,2 /. 255 rm.
+  }
 
 #@cli int2rgb
 #@cli : Convert color representation of selected images from INT24 to RGB.
@@ -13775,10 +13775,10 @@ lab2xyz : skip "${1=,}"
 lab82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from Lab8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
-  repeat $! {
-    sh[$>] 0 /. 2.55 rm.
-    sh[$>] 1 /. 0.85 -. 127 rm.
-    sh[$>] 2 /. 0.836 -. 149 rm.
+  foreach {
+    sh[0] 0 /. 2.55 rm.
+    sh[0] 1 /. 0.85 -. 127 rm.
+    sh[0] 2 /. 0.836 -. 149 rm.
   }
   lab2rgb $illu c 0,255
 
@@ -13803,10 +13803,10 @@ lch82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from Lch8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   pi,facth:=[pi,255/(2*pi)]
-  repeat $! {
-    sh[$>] 0 /. 2.55 rm.
-    sh[$>] 1 /. 1.1086 rm.
-    sh[$>] 2 /. $facth -. $pi rm.
+  foreach {
+    sh[0] 0 /. 2.55 rm.
+    sh[0] 1 /. 1.1086 rm.
+    sh[0] 2 /. $facth -. $pi rm.
   }
   lch2rgb $illu c 0,255
 
@@ -13856,13 +13856,15 @@ lightness :
     k.
 
     N0=5 # 5 first colors to be preserved.
-    s x repeat $! {
+    s x
+    repeat $! {
       if {$>,I==[0,0,0]} rv[$>,0] fi
       if {$>,I==[255,255,255]} rv[$>,1] fi
       if {$>,I==[255,0,0]} rv[$>,2] fi
       if {$>,I==[0,255,0]} rv[$>,3] fi
       if {$>,I==[0,0,255]} rv[$>,4] fi
-    } a x
+    }
+    a x
 
     # Functional optimization.
     e ""
@@ -13936,7 +13938,7 @@ match_histogram : check ${"is_image_arg $1"}" && ${2=1024}>0" skip "${3=0}"
   else
     pass$1
     store. _match_histogram_reference
-    repeat $! { _match_histogram[$>] $2 }
+    foreach { _match_histogram $2 }
   fi
   _match_histogram_reference=
 
@@ -14226,7 +14228,8 @@ _match_rgb :
 #@cli : $$
 mix_rgb : skip ${1=1},${2=0},${3=0},${4=0},${5=1},${6=0},${7=0},${8=0},${9=1}
   e[^-1] "Apply matrix [ $1 $2 $3 ; $4 $5 $6 ; $7 $8 $9 ] to RGB colors of image$?."
-  to_color repeat $! { sh[$>] 0,2 mix_channels. (${1-3};${4-6};${7-9}) rm. }
+  to_color
+  foreach { sh 0,2 mix_channels. (${1-3};${4-6};${7-9}) rm. }
 
 #@cli oklab2rgb
 #@cli : Convert color representation of selected images from OKlab to RGB.
@@ -14892,9 +14895,9 @@ rgb2hsv8 :
   rgb2hsv _rgb2hsx8
 
 _rgb2hsx8 :
-  repeat $! {
-    sh[$>] 0 *. 0.708333 rm.
-    sh[$>] 1,2 *. 255 rm.
+  foreach {
+    sh[0] 0 *. 0.708333 rm.
+    sh[0] 1,2 *. 255 rm.
   }
 
 #@cli rgb2int
@@ -14927,11 +14930,13 @@ rgb2lab : skip "${1=,}"
 rgb2lab8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from RGB to Lab8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
-  rgb2lab $illu repeat $! {
-    sh[$>] 0 *. 2.55 rm.
-    sh[$>] 1 +. 127 *. 0.85 rm.
-    sh[$>] 2 +. 149 *. 0.836 rm.
-  } c 0,255
+  rgb2lab $illu
+  foreach {
+    sh[0] 0 *. 2.55 rm.
+    sh[0] 1 +. 127 *. 0.85 rm.
+    sh[0] 2 +. 149 *. 0.836 rm.
+  }
+  c 0,255
 
 #@cli rgb2lch : illuminant={ 0=D50 | 1=D65 | 2=E } : (no arg)
 #@cli : Convert color representation of selected images from RGB to Lch.
@@ -14950,11 +14955,13 @@ rgb2lch8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from RGB to Lch8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
   pi,facth:=[pi,255/(2*pi)]
-  rgb2lch $illu repeat $! {
-    sh[$>] 0 *. 2.55 rm.
-    sh[$>] 1 *. 1.1086 rm.
-    sh[$>] 2 +. $pi *. $facth rm.
-  } c 0,255
+  rgb2lch $illu
+  foreach {
+    sh[0] 0 *. 2.55 rm.
+    sh[0] 1 *. 1.1086 rm.
+    sh[0] 2 +. $pi *. $facth rm.
+  }
+  c 0,255
 
 #@cli rgb2luv
 #@cli : Convert color representation of selected images from RGB to LUV.
@@ -15053,10 +15060,11 @@ rgb2xyz : skip "${1=,}"
 rgb2xyz8 : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from RGB to XYZ8, using the "${arg0\ $illu,D50,D65,E}" illuminant."
-  rgb2xyz $illu repeat $! {
-    sh[$>] 0 *. 255 rm.
-    sh[$>] 1 *. 255 rm.
-    sh[$>] 2 *. 231.8182 rm.
+  rgb2xyz $illu
+  foreach {
+    sh[0] 0 *. 255 rm.
+    sh[0] 1 *. 255 rm.
+    sh[0] 2 *. 231.8182 rm.
   }
 
 #@cli rgb2yiq
@@ -15074,9 +15082,9 @@ rgb2yiq :
 rgb2yiq8 :
   e[^-1] "Convert color representation of image$? from RGB to YIQ."
   rgb2yiq
-  repeat $! {
-    sh[$>] 1 +. 151.908 *. 0.8393238012481239 rm.
-    sh[$>] 2 +. 133.261 *. 0.9567690472081104 rm.
+  foreach {
+    sh[0] 1 +. 151.908 *. 0.8393238012481239 rm.
+    sh[0] 2 +. 133.261 *. 0.9567690472081104 rm.
   }
 
 #@cli rgb2ycbcr
@@ -15085,10 +15093,10 @@ rgb2yiq8 :
 rgb2ycbcr :
   e[^-1] "Convert color representation of image$? from RGB to YCbCr."
   mix_rgb 66,129,25,-38,-74,112,112,-94,-18
-  repeat $! {
-    sh[$>] 0,2 +. 128 /. 256 rm.
-    sh[$>] 0 +. 16 rm.
-    sh[$>] 1,2 +. 128 rm.
+  foreach {
+    sh[0] 0,2 +. 128 /. 256 rm.
+    sh[0] 0 +. 16 rm.
+    sh[0] 1,2 +. 128 rm.
   }
 
 #@cli rgb2yuv
@@ -15105,10 +15113,11 @@ rgb2yuv :
 #@cli : $ image.jpg rgb2yuv8 split c
 rgb2yuv8 :
   e[^-1] "Convert color representation of image$? from RGB to YUV8."
-  rgb2yuv repeat $! {
-    sh[$>] 0 *. 255 rm.
-    sh[$>] 1 +. 0.44 *. 289.773 rm.
-    sh[$>] 2 +. 0.62 *. 205.645 rm.
+  rgb2yuv
+  foreach {
+    sh[0] 0 *. 255 rm.
+    sh[0] 1 +. 0.44 *. 289.773 rm.
+    sh[0] 2 +. 0.62 *. 205.645 rm.
   }
 
 #@cli remove_opacity
@@ -15443,22 +15452,23 @@ xyz2rgb : skip "${1=,}"
 xyz82rgb : skip "${1=,}"
   l[] { if isnum("$1") illu:="$1>1?2:$1>0?1:0" else if ["'$1'"]!=',' noarg fi illu=2 fi onfail noarg illu=2 }
   e[^-1] "Convert color representation of image$? from XYZ8 to RGB, using the "${arg0\ $illu,D50,D65,E}" illuminant."
-  repeat $! {
-    sh[$>] 0 /. 255 rm.
-    sh[$>] 1 /. 255 rm.
-    sh[$>] 2 /. 231.8182 rm.
-  } xyz2rgb $illu
+  foreach {
+    sh[0] 0 /. 255 rm.
+    sh[0] 1 /. 255 rm.
+    sh[0] 2 /. 231.8182 rm.
+  }
+  xyz2rgb $illu
 
 #@cli ycbcr2rgb
 #@cli : Convert color representation of selected images from YCbCr to RGB.
 ycbcr2rgb :
   e[^-1] "Convert color representation of image$? from YCbCr to RGB."
-  repeat $! {
-    sh[$>] 0 -. 16 rm.
-    sh[$>] 1,2 -. 128 rm.
-    sh[$>] 0,2 mix_rgb. 298,0,409,\
-                        298,-100,-208,\
-                        298,516,0
+  foreach {
+    sh[0] 0 -. 16 rm.
+    sh[0] 1,2 -. 128 rm.
+    sh[0] 0,2 mix_rgb. 298,0,409,\
+                       298,-100,-208,\
+                       298,516,0
     +. 128 /. 256 c. 0,255 rm.
   }
 
@@ -15475,9 +15485,9 @@ yiq2rgb :
 #@cli : Convert color representation of selected images from YIQ8 to RGB.
 yiq82rgb :
   e[^-1] "Convert color representation of image$? from YIQ8 to RGB."
-  repeat $! {
-    sh[$>] 1 /. 0.8393238012481239 -. 151.908 rm.
-    sh[$>] 2 /. 0.9567690472081104 -. 133.261 rm.
+  foreach {
+    sh[0] 1 /. 0.8393238012481239 -. 151.908 rm.
+    sh[0] 2 /. 0.9567690472081104 -. 133.261 rm.
   }
   mix_rgb 1,0.9563,0.6210,\
           1,-0.2721,-0.6474,\
@@ -15497,10 +15507,10 @@ yuv2rgb :
 #@cli : Convert selected images from YUV8 to RGB color bases.
 yuv82rgb :
   e[^-1] "Convert color representation of image$? from YUV8 to RGB."
-  repeat $! {
-    sh[$>] 0 /. 255 rm.
-    sh[$>] 1 /. 289.773 -. 0.44 rm.
-    sh[$>] 2 /. 205.645 -. 0.62 rm.
+  foreach {
+    sh[0] 0 /. 255 rm.
+    sh[0] 1 /. 289.773 -. 0.44 rm.
+    sh[0] 2 /. 205.645 -. 0.62 rm.
   } yuv2rgb
 
 #---------------------------------
@@ -15667,7 +15677,7 @@ columns : skip ${2=$1}
 #@cli : $ 1,10,1,1,'y' +diagonal
 diagonal :
   e[^-1] "Transform vector$? as diagonal matrix."
-  y repeat $! { r[$>] {$>,h+1},100%,1,1,0 r[$>] {$>,h},100%,1,1,-1 }
+  y foreach { r {h+1},100%,1,1,0 r {h},100%,1,1,-1 }
 
 # downsize_aliased : 100<=factor<=0
 # Downsize selected images with a specific algorithm to better render anti-aliased rendering
