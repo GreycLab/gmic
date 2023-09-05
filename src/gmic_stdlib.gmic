@@ -48141,7 +48141,9 @@ fx_skeleton_preview :
 #@gui : Iterations = int(5,1,16)
 #@gui : Colors = choice(1,"Random","Average")
 #@gui : Border Opacity = float(1,0,1)
+#@gui : Border Thickness (px) = int(1,1,16)
 #@gui : Border Color = color(0,0,0,255)
+
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
 #@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
@@ -48153,7 +48155,11 @@ fx_superpixels :
   foreach {
     +srgb2lab slic. ${1-3}
     if $4 +blend shapeaverage else +map. 2,2 fi
-    if $5 f[1] "i!=j(1,0) || i!=j(0,1)" [0],[0],1,4 fc. ${6-9} to_rgba.. j.. .,0,0,0,0,$5,... k..
+    if $5
+      (0,1,0;1,1,1;0,1,0) +dilate[1] . -[1,-1] neq[1] 0 rm.
+      if $6 dilate_circ[1] $6 fi
+      [0],[0],1,4
+      fc. ${7-10} to_rgba.. j.. .,0,0,0,0,$5,... k..
     else k.
     fi
   }
