@@ -19171,10 +19171,10 @@ tv_flow : skip ${1=10},${2=30},${3=0}
 #@cli : $ image.jpg blur 3 +unsharp 1.5,15 cut 0,255
 unsharp : check "${2=2}>=0" skip ${3=0}
   e[^-1] "Apply unsharp mask on image$?, with radius $1, amount $2 and threshold $3."
-  repeat $! {
-    +b[$>] $1 -. [$>]
+  foreach {
+    +b $1 -. ..
     if $3 +norm. >=. $3 *[-2,-1] fi
-    *. $2 -[$>,-1]
+    *. $2 -
   }
 
 #@cli unsharp_octave : _nb_scales>0,_radius[%]>=0,_amount>=0,threshold[%]>=0
@@ -19562,7 +19562,7 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
 histogram_cumul : check ${1=256}>0 skip ${2=0},${3=0%},${4=100%}
   arg0 !$2,"normalized ",""
   e[^-1] "Compute "${}"cumulative histogram of image$?, using $1 levels."
-  histogram $1,$3,$4 cumulate if $2 repeat $! { /[$>] {$>,iM} } fi
+  histogram $1,$3,$4 cumulate if $2 foreach { / {iM} } fi
 
 #@cli histogram_pointwise : nb_levels>0[%],_value0[%],_value1[%]
 #@cli : Compute the histogram of each vector-valued point of selected images.
