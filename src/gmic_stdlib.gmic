@@ -41258,13 +41258,14 @@ fx_imagegrid_triangular :
 #@gui : Rotation Probability (%) = float(50,0,100)
 #@gui : Maximal Angle (deg.) = float(25,0,360)
 #@gui : Minimal Angle (% of Max) = float(0,0,100)
-#@gui : Background = color(0,0,0,100)
+#@gui : Background = color(0,0,0,0)
+#@gui : Background Image (%) = float(100,0,100)
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><small><b>Shadow:</b></small></span>")
 #@gui : Opacity (%) = float(50,0,100)
 #@gui : X-Shift (%) = float(1,-10,10)
 #@gui : Y-Shift (%) = float(1,-10,10)
-#@gui : Smoothnness (%) = float(1,0,5)
+#@gui : Smoothness (%) = float(1,0,5)
 #@gui : sep = separator()
 #@gui : Random Seed = int(1,0,65535)
 #@gui : note = note("<small>Set <i>Random Seed</i> to <b>0</b> to set it also randomly.<small>")
@@ -41273,8 +41274,8 @@ fx_imagegrid_triangular :
 fx_loose_photos :
   photo_density,photo_max_size,photo_min_size,photo_max_ratio,photo_min_ratio,photo_max_angle,photo_min_angle,\
   frame_size,frame_R,frame_G,frame_B,image_rot_prob,image_max_angle,image_min_angle,\
-  background_R,background_G,background_B,background_A,\
-  shadow_opacity,shadow_shift_x,shadow_shift_y,shadow_smoothness,random_seed=${1-23}
+  background_R,background_G,background_B,background_A,background_image,\
+  shadow_opacity,shadow_shift_x,shadow_shift_y,shadow_smoothness,random_seed=${1-24}
 
   foreach {
     nm={n} to_rgba
@@ -41304,7 +41305,7 @@ fx_loose_photos :
     )"
     da_freeze. rm.. sort. +,y channels. 1,100% => coords
 
-    [0],[0],1,3 fc. $background_R,$background_G,$background_B j. [0],0,0,0,0,{(255-$background_A)/255} => canvas
+    [0],[0],1,4 => canvas
 
     repeat h#$coords {
       x,y,w,h,ang={coords,I[$>]}
@@ -41318,7 +41319,7 @@ fx_loose_photos :
       f. "const boundary = 3;
           const x0 = int($x - w/4);
           const y0 = int($y - h/4);
-          i>=0?[[i0,i1,i2]*[$frame_R,$frame_G,$frame_B]/255,i3]:
+          i>=0?[[i0*$frame_R,i1*$frame_G,i2*$frame_B]/255,i3]:
           i==-2?[0,0,0,0]:
                 I(#0,x0 + x/2,y0 + y/2)"
       r2dx. 50%
@@ -41349,9 +41350,12 @@ fx_loose_photos :
         nx0,ny0=$x0,$y0
       fi
 
-      sh. 100% j[canvas] ..,$nx0,$ny0,0,0,1,.,255 rm[-2,-1]
+      +channels. 100% sh.. 100% f. 255 rm. j[canvas] ..,$nx0,$ny0,0,0,1,.,255 rm[-2,-1]
     }
-    k[canvas] => $nm
+    k[0,canvas] => $nm
+    i[0] 100%,100%,1,4 fc[0] $background_R,$background_G,$background_B,$background_A
+    if $background_image sh[1] 100% *. {$background_image%} rm. else rm[1] fi
+    blend alpha
   }
 
 #@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless_preview(1)
