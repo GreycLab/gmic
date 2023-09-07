@@ -41242,7 +41242,7 @@ fx_imagegrid_triangular :
     a c
   }
 
-#@gui Loose Photos : fx_loose_photos, fx_loose_photos(1)
+#@gui Loose Photos : fx_loose_photos, fx_loose_photos, fx_loose_photos_preview(1)
 #@gui : note = note("<span color="#EE5500"><small><b>Photo geometry:</b></small></span>")
 #@gui : Density (%) = float(60,0,100)
 #@gui : Maximal Size (%) = float(40,0,100)
@@ -41267,20 +41267,19 @@ fx_imagegrid_triangular :
 #@gui : Y-Shift (%) = float(1,-10,10)
 #@gui : Smoothness (%) = float(1,0,5)
 #@gui : sep = separator()
-#@gui : Random Seed = int(1,0,65535)
-#@gui : note = note("<small>Set <i>Random Seed</i> to <b>0</b> to set it also randomly.<small>")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.\nLatest Update: <i>2023/09/07</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/07</i>.</small>")
 fx_loose_photos :
   photo_density,photo_max_size,photo_min_size,photo_max_ratio,photo_min_ratio,photo_max_angle,photo_min_angle,\
   frame_size,frame_R,frame_G,frame_B,image_rot_prob,image_max_angle,image_min_angle,\
   background_R,background_G,background_B,background_A,background_image,\
-  shadow_opacity,shadow_shift_x,shadow_shift_y,shadow_smoothness,random_seed=${1-24}
+  shadow_opacity,shadow_shift_x,shadow_shift_y,shadow_smoothness=${1-23}
 
   foreach {
     nm={n} to_rgba
+
+    if narg(_is_preview) srand {date(4)} fi
+
     frame:=$frame_size%*max(w,h)*$photo_max_size%
-    if $random_seed srand $random_seed fi
 
     # Generate random frame positions and sizes.
     100%,100% noise_poissondisk. {lerp(100,5,($photo_density%)^0.25)}%
@@ -41357,6 +41356,10 @@ fx_loose_photos :
     if $background_image sh[1] 100% *. {$background_image%} rm. else rm[1] fi
     blend alpha
   }
+
+fx_loose_photos_preview :
+  _is_preview=1
+  fx_loose_photos $*
 
 #@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless_preview(1)
 #@gui : Equalize Light = float(0,0,100)
@@ -42447,7 +42450,7 @@ fx_lylejk_painting_preview :
 #@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.\nLatest Update: <i>2021/08/30</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/08/30</i>.</small>")
 fx_paint_with_brush :
   predefined_style,previous_style,\
   painting_order,nb_iterations,precision,details_threshold,background_threshold,\
@@ -42659,7 +42662,7 @@ fx_paint_with_brush_preview :
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Authors: <i>Lyle Kroll</i>, <i>Angelo Lama</i> and <i>David Tschumperlé</i>.
-#@gui : \nLatest Update: <i>2011/28/02</i>.</small>")
+#@gui :       Latest Update: <i>2011/02/28</i>.</small>")
 fx_painting : skip ${4=0},${5=0}
   foreach {
     to_colormode {max(3,s)} split_opacity rv
@@ -43345,7 +43348,7 @@ _fx_stylize : # Download pre-defined style image
 #@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.\nLatest Update: <i>2015/25/08</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/08/25</i>.</small>")
 fx_vector_painting :
   foreach {
     split_opacity l[0] {
