@@ -41314,35 +41314,30 @@ fx_loose_photos :
 
       +l. { s3d k[2] r. 3,{h/3},1,1,-1 z. 0,1 s x xm,ym,xM,yM:=floor([im#0,im#1]),ceil([iM#0,iM#1]) rm }
       {2*([$xM-$xm,$yM-$ym]+1)},1,1,-2 j3d. ..,50%,50%,-100,1,2,0,0,200 rm..
-
-      x0,y0,x1,y1:="
-        x0 = int($x - w/4);
-        y0 = int($y - h/4);
-        [ x0, y0, x0 + w/2 - 1, y0 + h/2 - 1 ]"
-
       r. 100%,100%,1,4
-
       f. "const boundary = 3;
+          const x0 = int($x - w/4);
+          const y0 = int($y - h/4);
           i>=0?[[i0,i1,i2]*[$frame_R,$frame_G,$frame_B]/255,i3]:
           i==-2?[0,0,0,0]:
-                [ I(#0,$x0 + x/2,$y0 + y/2), 255 ]"
+                [ I(#0,x0 + x/2,y0 + y/2), 255 ]"
       r2dx. 50%
-
-      nx0,ny0,nx1,ny1=$x0,$y0,$x1,$y1
 
       if u<$image_rot_prob%
         rotate. {"const M_angle = $image_max_angle;
                   const m_angle = M_angle*$image_min_angle%;
                   (u<0.5?-1:1)*u(m_angle,M_angle)"}
-        nx0,ny0,nx1,ny1:="
-          const x0 = floor($x - w/2);
-          const y0 = floor($y - h/2);
-          const x1 = x0 + w - 1;
-          const y1 = y0 + h - 1;
-          [ x0,y0,x1,y1 ]"
       fi
 
+      x0,y0,x1,y1:="
+        const x0 = floor($x - w/2);
+        const y0 = floor($y - h/2);
+        const x1 = x0 + w - 1;
+        const y1 = y0 + h - 1;
+        [ x0,y0,x1,y1 ]"
+
       if $shadow_opacity>0
+        nx0,ny0,nx1,ny1:=$x0,$y0,$x1,$y1
         shift_x,shift_y={0,round([$shadow_shift_x,$shadow_shift_y]*max(w,h)%)}
         sigma:=$shadow_smoothness
         if $shift_x>0 nx1+=$shift_x else nx0+=$shift_x fi
@@ -41350,11 +41345,13 @@ fx_loose_photos :
         if $sigma nx0,ny0,nx1,ny1+=3.5*$sigma*[-1,-1,1,1] fi
         z. {p=$nx0-$x0;q=$ny0-$y0;[p,q,p+$nx1-$nx0,q+$ny1-$ny0]}
         sh. 100% +b. $sigma% shift. $shift_x,$shift_y n. 0,{$shadow_opacity*255%} max[-2,-1] rm.
+      else
+        nx0,ny0=$x0,$y0
       fi
 
       sh. 100% j[canvas] ..,$nx0,$ny0,0,0,1,.,255 rm[-2,-1]
     }
-    k[canvas] => $nm d
+    k[canvas] => $nm
   }
 
 #@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless_preview(1)
