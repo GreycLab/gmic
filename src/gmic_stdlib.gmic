@@ -41242,6 +41242,116 @@ fx_imagegrid_triangular :
     a c
   }
 
+#@gui Loose Photos : fx_loose_photos,fx_loose_photos(1)
+#@gui : note = note("<span color="#EE5500"><small><b>Photo geometry:</b></small></span>")
+#@gui : Density (%) = float(60,0,100)
+#@gui : Maximal Size (%) = float(40,0,100)
+#@gui : Minimal Size (% of Max) = float(50,0,100)
+#@gui : Maximal Ratio (%) = float(100,0,100)
+#@gui : Minimal Ratio (% of Max) = float(50,0,100)
+#@gui : Maximal Angle (deg.) = float(360,0,360)
+#@gui : Minimal Angle (% of Max) = float(0,0,100)
+#@gui : Frame Size (%) = float(2,0,20)
+#@gui : Frame Color = color(255,255,255)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Photo content:</b></small></span>")
+#@gui : Rotation Probability (%) = float(50,0,100)
+#@gui : Maximal Angle (deg.) = float(25,0,360)
+#@gui : Minimal Angle (% of Max) = float(0,0,100)
+#@gui : Background = color(0,0,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Shadow:</b></small></span>")
+#@gui : Opacity (%) = float(50,0,100)
+#@gui : X-Shift (%) = float(1,-10,10)
+#@gui : Y-Shift (%) = float(1,-10,10)
+#@gui : Smoothnness (%) = float(1,0,5)
+#@gui : sep = separator()
+#@gui : Random Seed = int(1,0,65535)
+#@gui : note = note("<small>Set <i>Random Seed</i> to <b>0</b> to set it also randomly.<small>")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.\nLatest Update: <i>2023/09/07</i>.</small>")
+fx_loose_photos :
+  photo_density,photo_max_size,photo_min_size,photo_max_ratio,photo_min_ratio,photo_max_angle,photo_min_angle,\
+  frame_size,frame_R,frame_G,frame_B,image_rot_prob,image_max_angle,image_min_angle,\
+  background_R,background_G,background_B,background_A,\
+  shadow_opacity,shadow_shift_x,shadow_shift_y,shadow_smoothness,random_seed=${1-23}
+
+  foreach {
+    nm={n}
+    frame:=$frame_size%*max(w,h)*$photo_max_size%
+    if $random_seed srand $random_seed fi
+
+    # Generate random frame positions and sizes.
+    100%,100% noise_poissondisk. {lerp(100,5,($photo_density%)^0.25)}%
+    0 eval.. "i?(
+      const Mwh = max(w,h);
+      const M_size = Mwh*$photo_max_size%;
+      const m_size = M_size*$photo_min_size%;
+      width = u(m_size,M_size);
+
+      const M_ratio = $photo_max_ratio%;
+      const m_ratio = M_ratio*$photo_min_ratio%;
+      ratio = u(m_ratio,M_ratio);
+      height = width*ratio;
+
+      u<0.5?swap(width,height);
+
+      const M_angle = $photo_max_angle;
+      const m_angle = M_angle*$photo_min_angle%;
+      angle = u(m_angle,M_angle);
+
+      da_push([u, x, y, width, height, angle])
+    )"
+    da_freeze. rm.. sort. +,y channels. 1,100% => coords
+
+    [0],[0],1,3 fc. $background_R,$background_G,$background_B j. [0],0,0,0,0,{(255-$background_A)/255} => canvas
+
+    repeat h#$coords {
+      x,y,w,h,ang={coords,I[$>]}
+      plane3d $w,$h,1,1 col3d. -1
+      plane3d {[$w,$h]+2*$frame},1,1 col3d. 255
+      c3d[-2,-1] +3d. 0,0,0.1 +3d[-2,-1] r3d. 0,0,1,$ang
+
+      +l. { s3d k[2] r. 3,{h/3},1,1,-1 z. 0,1 s x xm,ym,xM,yM:=floor([im#0,im#1]),ceil([iM#0,iM#1]) rm }
+      {2*([$xM-$xm,$yM-$ym]+1)},1,1,-2 j3d. ..,50%,50%,-100,1,2,0,0,200 rm..
+
+      x0,y0,x1,y1:="
+        x0 = int($x - w/4);
+        y0 = int($y - h/4);
+        [ x0, y0, x0 + w/2 - 1, y0 + h/2 - 1 ]"
+
+      r. 100%,100%,1,4
+
+      f. "const boundary = 3; i>=0?[[i0,i1,i2]*[$frame_R,$frame_G,$frame_B]/255,i3]:i==-2?[0,0,0,0]:[ I(#0,$x0 + x/2,$y0 + y/2), 255 ]"
+      r2dx. 50%
+
+      nx0,ny0,nx1,ny1=$x0,$y0,$x1,$y1
+
+      if u<$image_rot_prob%
+        rotate. {"const M_angle = $image_max_angle; const m_angle = M_angle*$image_min_angle%; (u<0.5?-1:1)*u(m_angle,M_angle)"}
+        nx0,ny0,nx1,ny1:="
+          const x0 = floor($x - w/2);
+          const y0 = floor($y - h/2);
+          const x1 = x0 + w - 1;
+          const y1 = y0 + h - 1;
+          [ x0,y0,x1,y1 ]"
+      fi
+
+      if $shadow_opacity>0
+        shift_x,shift_y={0,round([$shadow_shift_x,$shadow_shift_y]*max(w,h)%)}
+        sigma:=$shadow_smoothness
+        if $shift_x>0 nx1+=$shift_x else nx0+=$shift_x fi
+        if $shift_y>0 ny1+=$shift_y else ny0+=$shift_y fi
+        if $sigma nx0,ny0,nx1,ny1+=3.5*$sigma*[-1,-1,1,1] fi
+        z. {p=$nx0-$x0;q=$ny0-$y0;[p,q,p+$nx1-$nx0,q+$ny1-$ny0]}
+        sh. 100% +b. $sigma% shift. $shift_x,$shift_y n. 0,{$shadow_opacity*255%} max[-2,-1] rm. # Simpler but faster version than 'drop_shadow'
+      fi
+
+      sh. 100% j[canvas] ..,$nx0,$ny0,0,0,1,.,255 rm[-2,-1]
+    }
+    k[canvas] => $nm
+  }
+
 #@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless_preview(1)
 #@gui : Equalize Light = float(0,0,100)
 #@gui : sep = separator()
