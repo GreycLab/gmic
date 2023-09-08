@@ -33670,6 +33670,13 @@ ovh2stats : skip "${1=gmic.eu-*-*-*.log.gz}"
     if !$day&&!$month&&!$year day,month,year=n.a fi
     e "  > "$year/$month/$day:" "$_vt100_g$file$_vt100_n
     it $file
+
+    # Check if data is gzipped.
+    if "find(#-1,['G'MIC-Qt for '])<0"
+      rm. i raw:$file,uint8 o. raw:${-path_tmp}gmic.gz,uint8 rm.
+      x "gunzip -f "${-path_tmp}gmic.gz
+      it ${-path_tmp}gmic
+    fi
     => ${year}_${month}_${day}
   }
 
@@ -33685,7 +33692,8 @@ ovh2stats : skip "${1=gmic.eu-*-*-*.log.gz}"
       store('to_keep',to_keep,p);
       run('$to_keep k[{^}]')"
     if $!>1 i[1--2] ('\n') fi
-    a y => $nm
+    a y
+    => $nm
   }
 
   # Analyze log files.
