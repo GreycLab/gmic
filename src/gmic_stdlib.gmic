@@ -32814,16 +32814,17 @@ img2hex :
   u {t} rm. r. $whds,-1
 
 #@cli img2str
-#@cli : Return the content of the latest of the selected images as a special G'MIC input string.
+#@cli : Return the content of the selected images, as special G'MIC input strings.
 img2str :
-  i[-2] 256
-  eval. ">begin(off = 0);
-    sep = x==w - 1?(y==h - 1?(z==d - 1?(c==s - 1?0:_'^'):_'/'):_';'):_',';
-    it = v2s(i);
-    off + size(it) + 1>=w(#-2)?resize(#-2,round(1.5*w(#-2)),1,1,1,0);
-    for (k = 0, k<size(it) && it[k], ++k, i[#-2,off++] = it[k]);
-    i[#-2,off++] = sep"
-  u {-2,t} rm..
+  str,sep=
+  foreach {
+    str.=$sep({`"s = v2s(crop());
+                 for (k = 1; p = find(s,_','), p>=0, p = find(s,_',',++p),
+                   s[p] = k%w?_',':k%wh?_';':k%whd?_'/':_'^'; ++k;
+                 ); s"`})
+    sep=" "
+  }
+  u $str
 
 #@cli img2text : _line_separator
 #@cli : Return text contained in a multi-line image.
