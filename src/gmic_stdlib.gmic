@@ -1923,7 +1923,7 @@ _display : skip ${1=},${3=}
   view_zoom_mode,view_is_rotated,view_base_channel=3,0,0
 
   canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1,canvas_cross_x,canvas_cross_y=
-  canvas_mouse_x,canvas_mouse_y,canvas_record_window=-1
+  canvas_mouse_x,canvas_mouse_y,canvas_record_frame=-1
   canvas_label_alignment=1
 
   area_width,area_height=0
@@ -2615,7 +2615,7 @@ _display : skip ${1=},${3=}
       $0_rmn canvas_view
     fi
 
-    if $canvas_record_window>=0
+    if $canvas_record_frame>=0
       $0_rmn canvas_view
     fi
 
@@ -2775,8 +2775,8 @@ _display : skip ${1=},${3=}
     fi
 
     # Record window frames.
-    if $canvas_record_window>=0
-      if !$canvas_record_window # First frame: determine filename
+    if $canvas_record_frame>=0
+      if !$canvas_record_frame # First frame: determine filename
         if $is_opencv
           repeat 256 { filename_animation=${"filename gmic.mp4,"$>} if !isfile('$filename_animation') break fi }
         else
@@ -2788,7 +2788,7 @@ _display : skip ${1=},${3=}
         $0_rmn canvas_label_notification
       fi
       font_size:=cut(round($canvas_height/40),16,32)
-      0 t. "Frame \#"$canvas_record_window,0,0,$font_size,1,255
+      0 t. "Frame \#"$canvas_record_frame,0,0,$font_size,1,255
       +dilate. 3 !=. 0 r.. 100%,100%,1,3
       j[canvas_view] ..,{canvas_view,[w,h]-[w#-1,h#-1]-5},0,0,0.75,.,1 rm[-2,-1]
       if $is_opencv
@@ -2798,9 +2798,9 @@ _display : skip ${1=},${3=}
           o[canvas_base] $filename_animation,20,0,1
         fi
       else
-        o[canvas_base] ${"filename "$filename_animation,$canvas_record_window},75
+        o[canvas_base] ${"filename "$filename_animation,$canvas_record_frame},75
       fi
-      canvas_record_window+=1
+      canvas_record_frame+=1
       window_no_wait=1
     fi
 
@@ -3542,12 +3542,12 @@ _display : skip ${1=},${3=}
         $0_rmn canvas_label_notification
         o[canvas_base] $filename
       elif $is_CTRL" && "{*,-W} # CTRL+W: Start/stop window recording
-        if $canvas_record_window<0 # Start recording
-          canvas_record_window=0
+        if $canvas_record_frame<0 # Start recording
+          canvas_record_frame=0
         else # Stop recording
           if $is_opencv o[] $filename_animation,0,0,0 fi # Close video stream
-          notification="Stop recording (\#"$canvas_record_window" frames)"
-          canvas_record_window=-1
+          notification="Stop recording (\#"$canvas_record_frame" frames)"
+          canvas_record_frame=-1
           $0_rmn canvas_label_notification
         fi
         $0_rmn area_3d_view
@@ -3574,7 +3574,7 @@ _display : skip ${1=},${3=}
   }
 
   # Reset image list and display window to their previous states.
-  if $is_opencv" && "$canvas_record_window>=0 o[] $filename_animation,0,0,0 fi # Close recording stream
+  if $is_opencv" && "$canvas_record_frame>=0 o[] $filename_animation,0,0,0 fi # Close recording stream
   f[is_rotated] "i?run('rotate[',y,'] ',-90*i); 0" # Rotate back image to their original angle
   if narg($window_previous_normalization)
     w[] -1,-1,$window_previous_normalization,$window_previous_fullscreen
