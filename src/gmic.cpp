@@ -6589,13 +6589,12 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         // Done.
         if (!is_get && !std::strcmp("done",item)) {
           const CImg<char> &s = callstack.back();
-          if (s[0]!='*' || (s[1]!='b' && s[1]!='f' && s[1]!='l' && s[1]!='r'))
+          if (s[0]!='*' || (s[1]!='f' && s[1]!='l' && s[1]!='r'))
             error(true,0,0,
                   "Command 'done': Not associated to a 'for', 'foreach', 'local' or 'repeat' command "
                   "within the same scope.");
 
-          if (s[1]=='b') callstack.remove(); // End a '{ .. }' block
-          else if (s[1]=='f') {
+          if (s[1]=='f') {
             if (s[4]!='e') { // End a 'for...done' block
               unsigned int *const fd = fordones.data(0,nb_fordones - 1);
               position = fd[0];
@@ -13114,16 +13113,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
         if (is_builtin_command) {
 
-          // Left brace (not ignored previously, so starts a new generic code block).
-          if (!is_get && *item=='{' && !item[1]) {
-            if (is_debug_info && debug_line!=~0U) {
-              gmic_use_argx;
-              cimg_snprintf(argx,_argx.width(),"*block#%u",debug_line);
-              CImg<char>::string(argx).move_to(callstack);
-            } else CImg<char>::string("*block").move_to(callstack);
-            continue;
-          }
-
           // If...[elif]...[else]...endif.
           if (!is_get && (!std::strcmp("if",item) || (check_elif && !std::strcmp("elif",item)))) {
             gmic_substitute_args(false);
@@ -13181,7 +13170,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 break;
               }
               else if (is_star && s[1]=='l') { callstack_local = l; break; }
-              else if (!is_star || (s[1]!='i' && s[1]!='b')) break;
+              else if (!is_star || s[1]!='i') break;
             }
             const char *stb = 0, *ste = 0;
             unsigned int callstack_ind = 0;
@@ -15071,15 +15060,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
     // Post-check call stack consistency.
     if (!is_quit && !is_return) {
       const CImg<char>& s = callstack.back();
-      if (s[0]=='*' && (s[1]=='b' || s[1]=='d' || s[1]=='i' || s[1]=='r' ||
+      if (s[0]=='*' && (s[1]=='d' || s[1]=='i' || s[1]=='r' ||
                         (s[1]=='f' && (s[4]!='e' || !is_end_local)) ||
                         (s[1]=='l' && !is_end_local))) {
         unsigned int reference_line = ~0U;
         if (cimg_sscanf(s,"*%*[a-z]#%u",&reference_line)==1)
           error(true,0,0,
                 "A '%s' command is missing (for '%s', line #%u), before return point.",
-                s[1]=='b'?"}":s[1]=='d'?"while":s[1]=='i'?"fi":"done",
-                s[1]=='b'?"{":s[1]=='d'?"do":s[1]=='i'?"if":s[1]=='r'?"repeat":
+                s[1]=='d'?"while":s[1]=='i'?"fi":"done",
+                s[1]=='d'?"do":s[1]=='i'?"if":s[1]=='r'?"repeat":
                 s[1]=='f'?(s[4]!='e'?"for":"foreach"):"local",
                 reference_line);
         else error(true,0,0,
