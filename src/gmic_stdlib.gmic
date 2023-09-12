@@ -1922,7 +1922,7 @@ _display : skip ${1=},${3=}
   view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
   view_zoom_mode,view_is_rotated,view_base_channel=3,0,0
 
-  canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1,canvas_cross_x,canvas_cross_y=
+  canvas_rect_x0,canvas_rect_y0,canvas_rect_x1,canvas_rect_y1,canvas_cross_x,canvas_cross_y=
   canvas_mouse_x,canvas_mouse_y,window_record_frame=-1
   canvas_label_alignment=1
 
@@ -2520,8 +2520,8 @@ _display : skip ${1=},${3=}
     # Generate label for image coordinates.
     if !0$canvas_label_coords" && "{$selected,w}
       0 view_coords= str=
-      if narg($canvas_crop_x0)
-        x0,y0,x1,y1=$canvas_crop_x0,$canvas_crop_y0,$canvas_crop_x1,$canvas_crop_y1
+      if narg($canvas_rect_x0)
+        x0,y0,x1,y1=$canvas_rect_x0,$canvas_rect_y0,$canvas_rect_x1,$canvas_rect_y1
         if $x0>$x1 x0,x1=$x1,$x0 fi
         if $y0>$y1 y0,y1=$y1,$y0 fi
         dx,dy:=$x1-$x0,$y1-$y0
@@ -2731,12 +2731,12 @@ _display : skip ${1=},${3=}
           }
         fi
 
-        # Draw crop rectangle.
-        if $is_area2" && "narg($canvas_crop_x0)
-          x0:=($canvas_crop_x0-$area_xy_x0)/$area_xy_dx*$canvas_width
-          y0:=($canvas_crop_y0-$area_xy_y0)/$area_xy_dy*$canvas_height
-          x1:=($canvas_crop_x1-$area_xy_x0)/$area_xy_dx*$canvas_width
-          y1:=($canvas_crop_y1-$area_xy_y0)/$area_xy_dy*$canvas_height
+        # Draw rectangular selection.
+        if $is_area2" && "narg($canvas_rect_x0)
+          x0:=($canvas_rect_x0-$area_xy_x0)/$area_xy_dx*$canvas_width
+          y0:=($canvas_rect_y0-$area_xy_y0)/$area_xy_dy*$canvas_height
+          x1:=($canvas_rect_x1-$area_xy_x0)/$area_xy_dx*$canvas_width
+          y1:=($canvas_rect_y1-$area_xy_y0)/$area_xy_dy*$canvas_height
           if $x0>$x1 x0,x1=$x1,$x0 fi
           if $y0>$y1 y0,y1=$y1,$y0 fi
           x0,y0,x1,y1:=ceil([$x0,$y0,$x1,$y1])
@@ -3019,17 +3019,17 @@ _display : skip ${1=},${3=}
         fi
       }
 
-      # Rectangle selection, using CTRL+LMB (drag).
+      # Rectangular selection, using CTRL+LMB (drag).
       if !$is_volumetric" && "$is_CTRL" && "$mouse_x>=0
-        if isin($event_type0,0,2)" && "$is_drag0==2" && "$is_clicked0==2 # Crop starts
-          if !narg($canvas_crop_x0) x,y=$drag_start_x0,$drag_start_y0 else x,y=$drag_end_x0,$drag_end_y0 fi
+        if isin($event_type0,0,2)" && "$is_drag0==2" && "$is_clicked0==2 # Selection starts
+          if !narg($canvas_rect_x0) x,y=$drag_start_x0,$drag_start_y0 else x,y=$drag_end_x0,$drag_end_y0 fi
           cx,cy={$selected,[cut(floor(lerp($area_xy_x0,$area_xy_x1,$x/$canvas_width)),0,w-1),\
                             cut(floor(lerp($area_xy_y0,$area_xy_y1,($y-$thumb_height2)/$canvas_height)),0,h-1)]}
-          if !narg($canvas_crop_x0)
-            canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=$cx,$cy,$cx,$cy
+          if !narg($canvas_rect_x0)
+            canvas_rect_x0,canvas_rect_y0,canvas_rect_x1,canvas_rect_y1=$cx,$cy,$cx,$cy
             $0_rmn canvas_label_coords
-          elif [$cx,$cy]!=[$canvas_crop_x1,$canvas_crop_y1]
-            canvas_crop_x1,canvas_crop_y1=$cx,$cy
+          elif [$cx,$cy]!=[$canvas_rect_x1,$canvas_rect_y1]
+            canvas_rect_x1,canvas_rect_y1=$cx,$cy
             $0_rmn canvas_label_coords
           fi
           n_view_center_x,n_view_center_y=$view_center_x,$view_center_y
@@ -3048,30 +3048,30 @@ _display : skip ${1=},${3=}
              cut($n_view_center_y,$pan_y_min,$pan_y_max)]
           if [$n_view_center_x,$n_view_center_y]!=[$view_center_x,$view_center_y]
             view_center_x,view_center_y=$n_view_center_x,$n_view_center_y
-            is_crop_scroll=1
+            is_select_scroll=1
             $0_rmn canvas_base
           else
-            is_crop_scroll=0
+            is_select_scroll=0
           fi
           event_type0=2
         fi
       fi
 
-      if $event_type0==2" && "$is_drag0==2" && "$is_released0 # Crop ends
-        if $canvas_crop_x0>$canvas_crop_x1 canvas_crop_x0,canvas_crop_x1=$canvas_crop_x1,$canvas_crop_x0 fi
-        if $canvas_crop_y0>$canvas_crop_y1 canvas_crop_y0,canvas_crop_y1=$canvas_crop_y1,$canvas_crop_y0 fi
-        if max($canvas_crop_x1-$canvas_crop_x0,$canvas_crop_y1-$canvas_crop_y0)>8
+      if $event_type0==2" && "$is_drag0==2" && "$is_released0 # Selection ends
+        if $canvas_rect_x0>$canvas_rect_x1 canvas_rect_x0,canvas_rect_x1=$canvas_rect_x1,$canvas_rect_x0 fi
+        if $canvas_rect_y0>$canvas_rect_y1 canvas_rect_y0,canvas_rect_y1=$canvas_rect_y1,$canvas_rect_y0 fi
+        if max($canvas_rect_x1-$canvas_rect_x0,$canvas_rect_y1-$canvas_rect_y0)>8
           view_center_x,view_center_y,view_zoom={$selected,"
             const wc = $canvas_width;
             const hc = $canvas_height;
             const f = 0.5*max(w/wc,h/hc);
-            [ cut(0.5*($canvas_crop_x0 + $canvas_crop_x1)/w,0,1),
-              cut(0.5*($canvas_crop_y0 + $canvas_crop_y1)/h,0,1),
-              2*f*min(wc/max(8,$canvas_crop_x1 - $canvas_crop_x0),
-                      hc/max(8,$canvas_crop_y1 - $canvas_crop_y0)) ]"}
+            [ cut(0.5*($canvas_rect_x0 + $canvas_rect_x1)/w,0,1),
+              cut(0.5*($canvas_rect_y0 + $canvas_rect_y1)/h,0,1),
+              2*f*min(wc/max(8,$canvas_rect_x1 - $canvas_rect_x0),
+                      hc/max(8,$canvas_rect_y1 - $canvas_rect_y0)) ]"}
           $0_rmn canvas_base
         fi
-        canvas_crop_x0,canvas_crop_y0,canvas_crop_x1,canvas_crop_y1=
+        canvas_rect_x0,canvas_rect_y0,canvas_rect_x1,canvas_rect_y1=
         event_type0,is_drag0,is_released0=0
         $0_rmn canvas_label_coords
       fi
@@ -3252,7 +3252,6 @@ _display : skip ${1=},${3=}
         setting_normalization:=($setting_normalization+1)%4
         notification="Normalization: "${"arg0 "$setting_normalization,\
                                         "Off,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
-
         $0_flush_thumb_cache
         $0_rmn canvas_base,canvas_label_notification
       elif {*,-R} # Rotate view
