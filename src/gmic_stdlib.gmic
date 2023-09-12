@@ -3293,15 +3293,19 @@ _display : skip ${1=},${3=}
 
       elif {*,-V} # Crop image
         x,y,z=$view_xyz
-        rx,ry={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
-                           ang = i[$selected]; ang==1?[ $y, w1 - $x ]:ang==2?[ w1 - $x, h1 - $y ]:[ h1 - $y, $x ]"}
-        if {$selected,d>1} view_xyz_disp=$rx,$ry,$z elif {$selected,h>1} view_xyz_disp=$rx,$ry else view_xyz_disp=$rx fi
         if !narg($canvas_crop_x0)
-          canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=$x,$y,$z canvas_crop_view_xyz_disp=$view_xyz_disp
-          notification="Start crop at ("$view_xyz_disp")"
+          canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=$x,$y,$z
+          notification="Start crop"
         else
-          notification="Crop from ("$canvas_crop_view_xyz_disp") to ("$view_xyz_disp")"
-          z[$selected] $canvas_crop_x0,$canvas_crop_y0,$canvas_crop_z0,$x,$y,$z
+          x0,y0,z0,x1,y1,z1:="
+            x0 = $canvas_crop_x0; y0 = $canvas_crop_y0; z0 = $canvas_crop_z0;
+            x1 = $x; y1 = $y; z1 = $z;
+            x0>x1?swap(x0,x1);
+            y0>y1?swap(y0,y1);
+            z0>z1?swap(z0,z1);
+            [ x0,y0,z0,x1,y1,z1 ]"
+          notification="End crop"
+          z[$selected] $x0,$y0,$z0,$x1,$y1,$z1
           canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=
           view_center_x,view_center_y,view_center_z,view_zoom,view_3d_zoom=0.5,0.5,0.5,1,1
           if $is_volumetric $0_rmn area_3d_mesh fi
