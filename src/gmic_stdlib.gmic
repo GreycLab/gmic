@@ -2595,7 +2595,7 @@ _display : skip ${1=},${3=}
     # Generate label for notification.
     if !0$canvas_label_notification" && "['$notification']!=0
       font_size:=cut(round($window_height/40),16,32)
-      0 t. $notification,0,0,{round(1.25*$font_size)},1,255
+      0 t. {``$notification},0,0,{round(1.25*$font_size)},1,255
       r. {[w,h]+20},1,1,0,0,0.5,0.5 frame. 2,2,255 r. {[w,h]+6},1,1,0,0,0.5,0.5
       +n. 200,255 r.. 100%,100%,1,3
       a[-2,-1] c
@@ -2948,6 +2948,9 @@ _display : skip ${1=},${3=}
 
       # Do stuffs when new thumbnail has been selected.
       if $selected!=$previous_selected
+        canvas_crop_start,canvas_rect_x0,canvas_rect_y0,canvas_rect_x1,canvas_rect_y1=
+        drag_start_x0,drag_start_y0,drag_end_x0,drag_end_y0=
+        is_clicked0,is_clicked1,is_clicked2,is_release0,is_release1,is_release2,is_drag0,is_drag1,is_drag2=0
 
         # Ensure that selected thumbnail becomes visible.
         if $thumb_is_visible
@@ -3262,6 +3265,32 @@ _display : skip ${1=},${3=}
         view_is_rotated:=($view_is_rotated+1)%4
         notification="Angle: "{$view_is_rotated*90}\260
         $0_rmn canvas_base,canvas_label_info,canvas_label_notification,area_3d_mesh
+
+      elif {*,-V} # Crop view
+        x,y,z={$selected,"floor(
+          $is_area2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_xy_width),
+                      lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_xy_height),
+                      cut($view_center_z*d,0,d - 1) ]:
+          $is_area3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_xz_width),
+                      cut($view_center_y*h,0,h - 1),
+                      lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_xz_height) ]:
+          $is_area4?[ cut($view_center_x*w,0,w - 1),
+                      lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_zy_height),
+                      lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ]:
+                    [ -1,-1,-1 ])"}
+        if {$selected,d>1} sxyz=$x,$y,$z elif {$selected,h>1} sxyz=$x,$y else sxyz=$x fi
+        if !narg($canvas_crop_start)
+          canvas_crop_start=$x,$y,$z canvas_crop_sxyz=$sxyz
+          notification="Start crop from ("$sxyz")"
+        else
+          notification="Crop from ("$canvas_crop_sxyz") to ("$sxyz")"
+          z[$selected] $canvas_crop_start,$x,$y,$z canvas_crop_start=
+          view_center_x,view_center_y,view_center_z,view_zoom,view_3d_zoom=0.5,0.5,0.5,1,1
+          if $is_volumetric $0_rmn area_3d_mesh fi
+          $0_rmn canvas_base,canvas_label_info
+        fi
+        $0_rmn canvas_label_notification
+
       elif !$is_CTRL" && "{*,X}" && "$is_volumetric # Reset area cross position
         canvas_cross_x,canvas_cross_y=
         $0_rmn canvas_volumetric_background,canvas_base,area_3d_view
@@ -3498,8 +3527,7 @@ _display : skip ${1=},${3=}
       $0_rmn canvas_base
       skip {*,-C}
     elif {*,-ENTER} # ENTER: Reset view
-      view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated=0.5,0.5,0.5,1,0
-      view_3d_zoom=1
+      view_center_x,view_center_y,view_center_z,view_zoom,view_is_rotated,view_3d_zoom=0.5,0.5,0.5,1,0,1
       if $is_volumetric $0_rmn area_3d_mesh fi
       $0_rmn canvas_base,area_3d_view,view_3d_pose
     elif $is_CTRL
