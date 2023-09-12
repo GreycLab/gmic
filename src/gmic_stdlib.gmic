@@ -2524,46 +2524,46 @@ _display : skip ${1=},${3=}
     # Generate label for image coordinates.
     if !0$canvas_label_coords" && "{$selected,w}
       0 view_coords= str=
-      if narg($canvas_rect_x0)
-        x0,y0,x1,y1=$canvas_rect_x0,$canvas_rect_y0,$canvas_rect_x1,$canvas_rect_y1
+
+      x,y,z={$selected,"floor(
+        $is_area2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_xy_width),
+                    lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_xy_height),
+                    cut($view_center_z*d,0,d - 1) ]:
+        $is_area3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_xz_width),
+                    cut($view_center_y*h,0,h - 1),
+                    lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_xz_height) ]:
+        $is_area4?[ cut($view_center_x*w,0,w - 1),
+                    lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_zy_height),
+                    lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ]:
+                  [ -1,-1,-1 ])"}
+      view_xyz=$x,$y,$z
+      view_xy_disp={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1; ang = i[$selected];
+                     !ang?[ $x, $y ]:ang==1?[ $y, w1 - $x ]:ang==2?[ w1 - $x, h1 - $y ]:[ h1 - $y, $x ]"}
+
+      if narg($canvas_crop_x0)" || "narg($canvas_rect_x0)
+        if narg($canvas_crop_x0)
+          x0,y0,z0,x1,y1,z1=$canvas_crop_x0,$canvas_crop_y0,$canvas_crop_z0,$view_xyz
+        else
+          x0,y0,z0,x1,y1,z1=$canvas_rect_x0,$canvas_rect_y0,0,$canvas_rect_x1,$canvas_rect_y1,0
+        fi
         if $x0>$x1 x0,x1=$x1,$x0 fi
         if $y0>$y1 y0,y1=$y1,$y0 fi
-        dx,dy:=$x1-$x0,$y1-$y0
-
-        if {is_rotated,i[$selected]}
-          view_xy0={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
-            ang = i[$selected]; ang==1?[ $y0, w1 - $x0 ]:ang==2?[ w1 - $x0, h1 - $y0 ]:[ h1 - $y0, $x0 ]"}
-          view_xy1={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
-            ang = i[$selected]; ang==1?[ $y1, w1 - $x1 ]:ang==2?[ w1 - $x1, h1 - $y1 ]:[ h1 - $y1, $x1 ]"}
-          view_dxy={is_rotated,(i[$selected]%2?[$dy,$dx]:[$dx,$dy])+1}
+        if $z0>$z1 z0,z1=$z1,$z0 fi
+        dx,dy,dz:=$x1-$x0,$y1-$y0,$z1-$z0
+        view_xy0_disp={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1; ang = i[$selected];
+                       !ang?[ $x0, $y0 ]:ang==1?[ $y0, w1 - $x0 ]:ang==2?[ w1 - $x0, h1 - $y0 ]:[ h1 - $y0, $x0 ]"}
+        view_xy1_disp={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1; ang = i[$selected];
+                       !ang?[ $x1, $y1 ]:ang==1?[ $y1, w1 - $x1 ]:ang==2?[ w1 - $x1, h1 - $y1 ]:[ h1 - $y1, $x1 ]"}
+        view_dxy_disp={is_rotated,(i[$selected]%2?[$dy,$dx]:[$dx,$dy])+1}
+        if $is_volumetric
+          str="Box ( "$view_xy0_disp,$z0" ) - ( "$view_xy1_disp,$z1" ), Size = ( "$view_dxy_disp,{$dz+1}" )"\n\
+              "Length = "{_norm($dx,$dy,$dz)}
         else
-          view_xy0=$x0,$y0
-          view_xy1=$x1,$y1
-          view_dxy:=[$dx,$dy]+1
+          str="Box ( "$view_xy0_disp" ) - ( "$view_xy1_disp" ), Size = ( "$view_dxy_disp" )"\n\
+              "Length = "{_norm($dx,$dy)}", Angle = "{_rad2deg(atan2($y1-$y0,$x1-$x0))%360}"\260"
         fi
-        str="Box ( "$view_xy0" ) - ( "$view_xy1" ), Size = ( "$view_dxy" )"\n\
-            "Length = "{_norm($dx,$dy)}", Angle = "{_rad2deg(atan2($y1-$y0,$x1-$x0))%360}"\260"
       else
-        x,y,z={$selected,"floor(
-          $is_area2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_xy_width),
-                      lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_xy_height),
-                      cut($view_center_z*d,0,d - 1) ]:
-          $is_area3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_xz_width),
-                      cut($view_center_y*h,0,h - 1),
-                      lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_xz_height) ]:
-          $is_area4?[ cut($view_center_x*w,0,w - 1),
-                      lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_zy_height),
-                      lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ]:
-                    [ -1,-1,-1 ])"}
-        view_xyz=$x,$y,$z
-        if {is_rotated,i[$selected]}
-          view_xyz_disp={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
-            ang = i[$selected]; ang==1?[ $y, w1 - $x ]:ang==2?[ w1 - $x, h1 - $y ]:[ h1 - $y, $x ]"}
-        else
-          view_xyz_disp=$x,$y
-        fi
-        if $is_volumetric view_xyz_disp.=,$z fi
-
+        if $is_volumetric view_xyz_disp=$view_xy_disp,$z else view_xyz_disp=$view_xy_disp fi
         if {$selected,inrange($x,0,w,1,0)" && "inrange($y,0,h,1,0)" && "inrange($z,0,d,1,0)}
           s_value={`"val = I(#$selected,$x,$y,$z);
                      size(val)<=6?v2s(val,-1):(
@@ -3292,25 +3292,15 @@ _display : skip ${1=},${3=}
         $0_rmn canvas_base,canvas_label_info,canvas_label_notification,area_3d_mesh
 
       elif {*,-V} # Crop image
-        x,y,z={$selected,"floor(
-          $is_area2?[ lerp($area_xy_x0,$area_xy_x1,$area_mouse_x/$area_xy_width),
-                      lerp($area_xy_y0,$area_xy_y1,$area_mouse_y/$area_xy_height),
-                      cut($view_center_z*d,0,d - 1) ]:
-          $is_area3?[ lerp($area_xz_x0,$area_xz_x1,$area_mouse_x/$area_xz_width),
-                      cut($view_center_y*h,0,h - 1),
-                      lerp($area_xz_z0,$area_xz_z1,$area_mouse_y/$area_xz_height) ]:
-          $is_area4?[ cut($view_center_x*w,0,w - 1),
-                      lerp($area_zy_y0,$area_zy_y1,$area_mouse_y/$area_zy_height),
-                      lerp($area_zy_z0,$area_zy_z1,$area_mouse_x/$area_zy_width) ]:
-                    [ -1,-1,-1 ])"}
+        x,y,z=$view_xyz
         rx,ry={is_rotated,"const w1 = w#$selected - 1; const h1 = h#$selected - 1;
-                          ang = i[$selected]; ang==1?[ $y, w1 - $x ]:ang==2?[ w1 - $x, h1 - $y ]:[ h1 - $y, $x ]"}
-        if {$selected,d>1} view_xyz=$rx,$ry,$z elif {$selected,h>1} view_xyz=$rx,$ry else view_xyz=$rx fi
+                           ang = i[$selected]; ang==1?[ $y, w1 - $x ]:ang==2?[ w1 - $x, h1 - $y ]:[ h1 - $y, $x ]"}
+        if {$selected,d>1} view_xyz_disp=$rx,$ry,$z elif {$selected,h>1} view_xyz_disp=$rx,$ry else view_xyz_disp=$rx fi
         if !narg($canvas_crop_x0)
-          canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=$x,$y,$z canvas_crop_view_xyz=$view_xyz
-          notification="Start crop at ("$view_xyz")"
+          canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=$x,$y,$z canvas_crop_view_xyz_disp=$view_xyz_disp
+          notification="Start crop at ("$view_xyz_disp")"
         else
-          notification="Crop from ("$canvas_crop_view_xyz") to ("$view_xyz")"
+          notification="Crop from ("$canvas_crop_view_xyz_disp") to ("$view_xyz_disp")"
           z[$selected] $canvas_crop_x0,$canvas_crop_y0,$canvas_crop_z0,$x,$y,$z
           canvas_crop_x0,canvas_crop_y0,canvas_crop_z0=
           view_center_x,view_center_y,view_center_z,view_zoom,view_3d_zoom=0.5,0.5,0.5,1,1
