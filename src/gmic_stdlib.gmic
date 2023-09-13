@@ -1800,6 +1800,7 @@ d :
 # 'CTRL+W': Start/stop window recording - 'CTRL+X': Toggle cursor.
 #@cli : \n- **Configuration variables:**
 #@cli : The viewer configuration can be tuned by assigning the following variables:
+#@cli :   - '_display_selected' is an integer or an image name that tell which image is selected by default.
 #@cli :   - '_display_alpha' can be { 0:off | 1:on | 2:over black | 3:over gray | 4:over white } (default value: '0').
 #@cli :   - '_display_background', an integer in range [ 0,9 ] (default value: '3').
 #@cli :   - '_display_cursor' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) } (default value: '1').
@@ -1846,6 +1847,7 @@ _display : skip ${1=},${3=}
   nb_images=$!
 
   # Initialize setting variables.
+  if ['$_display_selected']!=0 setting_selected=$_display_selected else setting_selected=0 fi
   setting_alpha:=narg($_display_alpha)?cut(int(0$_display_alpha),0,4):0
   setting_background:=narg($_display_background)?cut(int(0$_display_background),0,9):3
   setting_cursor:=narg($_display_cursor)?cut(int(0$_display_cursor),0,2):1
@@ -1870,6 +1872,12 @@ _display : skip ${1=},${3=}
   thumb_min_ratio=0.45
   thumb_is_visible:=$nb_images>1
   is_opencv:="find([' "$_flags"'],'opencv')>0"
+  l { # Set default selected image index
+    if isint($setting_selected) selected:=$setting_selected%$nb_images
+    else nmd 1,$setting_selected selected=${} if !narg($selected) selected=0 fi
+    fi
+    onfail selected=0
+  }
 
   # Save original image names to prevent name conflicts with those used in this command.
   foreach { image_name$>={n} => _display$> }
@@ -1917,7 +1925,6 @@ _display : skip ${1=},${3=}
   thumb_mouse_over=-1
   thumb_view_update=0
   thumb_x=
-  selected=0
 
   view_center_x,view_center_y,view_center_z,view_zoom=0.5,0.5,0.5,1
   view_zoom_mode,view_is_rotated,view_base_channel=3,0,0
