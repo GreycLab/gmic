@@ -2037,7 +2037,7 @@ unsigned int gmic::strescape(const char *const str, char *const res) {
   return (unsigned int)(ptrd - res);
 }
 
-// Parse debug info string (eq. to std::sscanf(s,"%x,%x",&line_number,&file_number).
+// Parse debug info string (eq. to cimg_sscanf(s,"%x,%x",&line_number,&file_number).
 bool gmic::get_debug_info(const char *s, unsigned int &line_number, unsigned int &file_number) {
   char c = *(++s);
   bool is_digit = (c>='0' && c<='9') || (c>='a' && c<='f');
@@ -2070,7 +2070,7 @@ double gmic_round(const double x) {
   char tmp[32];
   double y;
   cimg_snprintf(tmp,sizeof(tmp),"%g",x);
-  std::sscanf(tmp,"%lf",&y);
+  cimg_sscanf(tmp,"%lf",&y);
   return y;
 }
 
@@ -2190,7 +2190,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
       gmic_instance.get_variable(str,variables_sizes,&images_names);
     if (value && *value) {
       char end;
-      if (std::sscanf(value,"%lf%c",&res,&end)!=1) res = 0;
+      if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = 0;
     }
   }
   }
@@ -9591,17 +9591,17 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             }
             if (cimg::type<float>::is_nan(_focale3d)) { // Focale
               const CImg<char> s_focale3d = get_variable("_focale3d",variables_sizes,0,0);
-              if (!s_focale3d || std::sscanf(s_focale3d,"%f%c",&_focale3d,&end)!=1)
+              if (!s_focale3d || cimg_sscanf(s_focale3d,"%f%c",&_focale3d,&end)!=1)
                 _focale3d = 700;
             }
             if (cimg::type<float>::is_nan(_specl3d)) { // Specular lightness
               const CImg<char> s_specl3d = get_variable("_specl3d",variables_sizes,0,0);
-              if (!s_specl3d || std::sscanf(s_specl3d,"%f%c",&_specl3d,&end)!=1 || _specl3d<0)
+              if (!s_specl3d || cimg_sscanf(s_specl3d,"%f%c",&_specl3d,&end)!=1 || _specl3d<0)
                 _specl3d = 0.15f;
             }
             if (cimg::type<float>::is_nan(_specs3d)) { // Specular shininess
               const CImg<char> s_specs3d = get_variable("_specs3d",variables_sizes,0,0);
-              if (!s_specs3d || std::sscanf(s_specs3d,"%f%c",&_specs3d,&end)!=1 || _specs3d<0)
+              if (!s_specs3d || cimg_sscanf(s_specs3d,"%f%c",&_specs3d,&end)!=1 || _specs3d<0)
                 _specs3d = 0.15f;
             }
 
@@ -12365,6 +12365,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           unsigned int nb_vals = 0;
           sep = sepx = sepy = sep0 = 0;
           opacity = 1;
+          ind.assign();
           if ((cimg_sscanf(p_argument,"%4095[^,]%c",
                            name.data(),&end)==1 ||
                cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-]%c",
@@ -12387,8 +12388,14 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               (!*argz ||
                cimg_sscanf(argz,"%lf%c",&height,&end)==1 ||
                (cimg_sscanf(argz,"%lf%c%c",&height,&sep,&end)==2 && sep=='%') ||
-               (is_custom_font = cimg::is_varname(argz))) &&
+               (is_custom_font = (cimg::is_varname(argz)))) &&
               height>=0) {
+
+            if (*argz) {
+              err = cimg_sscanf(argz,"%lf%c%c",&(value=-1),&sep,&end);
+              is_custom_font = !((err=1 || (err==2 && sep=='%')) && value>=0 && cimg::type<double>::is_finite(value));
+              if (is_custom_font && value!=-1) arg_error("text");
+            } else is_custom_font = false;
 
             if (!is_cond) {
               strreplace_fw(name);
@@ -12411,7 +12418,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 try {
                   unsigned int l_font = 0;
                   const CImg<char> s_font = get_variable(argz,variables_sizes,&images_names,&l_font);
-                  CImgList<T>::get_unserialize(s_font,l_font + 1).move_to(font);
+                  if (*s_font>='0' && *s_font<='9' && cimg_sscanf(s_font,"%u%c",&uind,&sep)==1)
+                    CImgList<T>::get_unserialize(images[uind]).move_to(font);
+                  else
+                    CImgList<T>::get_unserialize(s_font,l_font + 1).move_to(font);
                 } catch (CImgException&) {
                   error(true,0,0,
                         "Command 'text': Specified custom font '%s' is invalid.",
