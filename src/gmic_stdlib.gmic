@@ -4498,7 +4498,7 @@ echo_file : skip "${2='\n'}"
 
   # Render as a PNG file, using 'cutycapt'.
   delete ${-path_tmp}$0.png
-  x "cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"${-path_tmp}$0.html" --out="${-path_tmp}$0.png
+  x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"${-path_tmp}$0.html" --out="${-path_tmp}$0.png
   rm ${-path_tmp}$0.png to_rgb
 
   # Extract letters.
@@ -4586,6 +4586,62 @@ echo_file : skip "${2='\n'}"
     100%,1,1,1,1
     (0,{w-1}) r. {-2,w},1,1,1,3 round.
     +sqr. +*[-2,-1] a[-4--1] c *[-2,-1] s. c +[-4--1] rm..
+  }
+
+# [Internal] Generate all custom G'MIC fonts and upload them to the G'MIC server.
+upload_fonts :
+  fonts="Arial",\
+        "Arial Black",\
+        "Comic Sans MS",\
+        "Courier New",\
+        "Georgia",\
+        "Impact",\
+        "Lucida Console",\
+        "Lucida Sans",\
+        "Palatino Linotype",\
+        "Tahoma",\
+        "Times New Roman",\
+        "Trebuchet MS",\
+        "Verdana",\
+        "MS Sans Serif",\
+        "MS Serif",\
+        "Montserrat",\
+        "Lato",\
+        "Roboto",\
+        "Halloween",\
+        "Cabin Sketch",\
+        "Cheque",\
+        "Medieval Sharp",\
+        "Acme",\
+        "Sofia"
+
+  repeat narg($fonts) {
+    arg0 $>,$fonts font=${}
+    strvar $font name=${}
+    out_filename=font_$name.gmz
+    target_height=48
+
+    e " - "$font" ("$target_height")."
+    if !isfile(['$out_filename']) l[] {
+      size=$target_height
+      nb_attempts=0
+      do
+        rm
+        x 0,"gmic font2gmz \\\""$font"\\\","$size" o tmp.gmz"
+        tmp.gmz
+        e "   \#"$nb_attempts" -> Height : "{h}
+        if h!=$target_height size+=$target_height-h fi
+        nb_attempts+=1
+      while h!=$target_height" && "($nb_attempts<10" || "($nb_attempts>=10" && "h<$target_height))
+
+      k[256--1] channels 0
+      if h>$target_height r2dy $target_height fi
+
+      serialize uint8,1,0 => $name
+      o $out_filename
+      rm
+    } fi
+
   }
 
 #@cli identity : _width>=0,_height>=0,_depth>=0
