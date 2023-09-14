@@ -22247,15 +22247,22 @@ text_outline : skip "${1=}",${2=0.01~},${3=0.01~},${4=7.5%}
   _text_outline $"*"
 
 _text_outline : skip "${1=}"
-  e[0--3] "Draw outlined text '$1' at position ($2,$3) on image$?, with font height $4, outline $5, opacity $6 and
+  if "isexpr($4)" str="height $4" is_custom_font=0 else str="'$4'" is_custom_font=1 fi
+  e[0--3] "Draw outlined text '$1' at position ($2,$3) on image$?, with font "$str", outline $5, opacity $6 and
            color ${7--1}."
   if ['"$1"']==0 return fi
   sepx,sepy={"sx=['$2']; sy=['$3']; [sx[size(sx)-1], sy[size(sy)-1]]"}
-  is_fontpercent=${"is_percent $4"}
+  if !$is_custom_font is_fontpercent=${"is_percent $4"} fi
   xpos={`s=['"$2"'];$sepx==_'~'||$sepx==_'%'?s[0,size(s)-1]:s`}
   ypos={`s=['"$3"'];$sepy==_'~'||$sepy==_'%'?s[0,size(s)-1]:s`}
   foreach {
-    0 t. "$1",0,0,{-2,$is_fontpercent?h*$4:$4},1,1 expand_xy. {1+$5},0
+    0
+    if $is_custom_font
+      t. "$1",0,0,$4,1,1
+    else
+      t. "$1",0,0,{-2,$is_fontpercent?h*$4:$4},1,1
+    fi
+    expand_xy. {1+$5},0
     +dilate. {2*$5+1}
     i[-3] (${7--1}) r... {s#0},1,1,1,0,2 y... c r... .,.,1,100%
     if $5 *[-3,-2] else rm.. fi
