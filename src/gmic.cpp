@@ -12372,11 +12372,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                            name.data(),gmic_use_argx,&end)==2 ||
                cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
                            name.data(),argx,gmic_use_argy,&end)==3 ||
-               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[a-zA-Z_0-9.eE%+-]%c",
+               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[][a-zA-Z_0-9.eE%+-]%c",
                            name.data(),argx,argy,gmic_use_argz,&end)==4 ||
-               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[a-zA-Z_0-9.eE%+-],%f%c",
+               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[][a-zA-Z_0-9.eE%+-],%f%c",
                            name.data(),argx,argy,argz,&opacity,&end)==5 ||
-               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[a-zA-Z_0-9.eE%+-],%f,"
+               cimg_sscanf(p_argument,"%4095[^,],%255[0-9.eE%~+-],%255[0-9.eE%~+-],%255[][a-zA-Z_0-9.eE%+-],%f,"
                            "%4095[0-9.eEinfa,+-]%c",
                            name.data(),argx,argy,argz,&opacity,gmic_use_color,&end)==6) &&
               (!*argx ||
@@ -12385,10 +12385,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               (!*argy ||
                cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
                (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && (sepy=='%' || sepy=='~'))) &&
-              (!*argz ||
-               cimg_sscanf(argz,"%lf%c",&height,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&height,&sep,&end)==2 && sep=='%') ||
-               (is_custom_font = (cimg::is_varname(argz)))) &&
+              // (!*argz ||
+              //  cimg_sscanf(argz,"%lf%c",&height,&end)==1 ||
+              //  (cimg_sscanf(argz,"%lf%c%c",&height,&sep,&end)==2 && sep=='%') ||
+              //  (is_custom_font = (cimg::is_varname(argz)))) &&
               height>=0) {
 
             if (*argz) {
@@ -12415,13 +12415,22 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     *color?color:"default");
               if (!is_cond) {
                 CImgList<T> font;
+                uind = ~0U;
+                const int l_argz = std::strlen(argz);
+                if (*argz=='[' && argz[l_argz-1]==']') {
+                  argz[l_argz-1] = 0;
+                  ind = selection2cimg(argz + 1,images.size(),images_names,"text");
+                  if (ind.height()!=1) arg_error("text");
+                  uind = (unsigned int)*ind;
+                }
                 try {
-                  unsigned int l_font = 0;
-                  const CImg<char> s_font = get_variable(argz,variables_sizes,&images_names,&l_font);
-                  if (*s_font>='0' && *s_font<='9' && cimg_sscanf(s_font,"%u%c",&uind,&sep)==1)
+                  if (uind!=~0U)
                     CImgList<T>::get_unserialize(images[uind]).move_to(font);
-                  else
+                  else {
+                    unsigned int l_font = 0;
+                    const CImg<char> s_font = get_variable(argz,variables_sizes,&images_names,&l_font);
                     CImgList<T>::get_unserialize(s_font,l_font + 1).move_to(font);
+                  }
                 } catch (CImgException&) {
                   error(true,0,0,
                         "Command 'text': Specified custom font '%s' is invalid.",
