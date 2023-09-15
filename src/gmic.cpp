@@ -12360,11 +12360,12 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
           name.assign(4096);
           *argx = *argy = *argz = *name = *color = 0;
-          double x = 0, y = 0, height = 16;
+          double x = 0, y = 0;
           bool is_custom_font = false;
           unsigned int nb_vals = 0;
           sep = sepx = sepy = sep0 = 0;
           opacity = 1;
+          value = 16; // Font height
           ind.assign();
           if ((cimg_sscanf(p_argument,"%4095[^,]%c",
                            name.data(),&end)==1 ||
@@ -12384,13 +12385,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && (sepx=='%' || sepx=='~'))) &&
               (!*argy ||
                cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && (sepy=='%' || sepy=='~'))) &&
-              // (!*argz ||
-              //  cimg_sscanf(argz,"%lf%c",&height,&end)==1 ||
-              //  (cimg_sscanf(argz,"%lf%c%c",&height,&sep,&end)==2 && sep=='%') ||
-              //  (is_custom_font = (cimg::is_varname(argz)))) &&
-              height>=0) {
-
+               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && (sepy=='%' || sepy=='~')))) {
             if (*argz) {
               err = cimg_sscanf(argz,"%lf%c%c",&(value=-1),&sep,&end);
               is_custom_font = !((err=1 || (err==2 && sep=='%')) && value>=0 && cimg::type<double>::is_finite(value));
@@ -12462,7 +12457,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 cimg_forY(selection,l) {
                   CImg<T> &img = images[selection[l]];
                   const unsigned int font_height = (unsigned int)cimg::round(sep=='%'?
-                                                                             height*img.height()/100:height);
+                                                                             value*img.height()/100:value);
                   if (img || nb_vals) {
                     g_img.assign(std::max(img.spectrum(),(int)nb_vals),1,1,1,(T)0).fill_from_values(color,true);
                     gmic_apply(gmic_draw_text((float)x,(float)y,sepx,sepy,name,
