@@ -4542,7 +4542,7 @@ echo_file : skip "${2='\n'}"
   rm $file_png to_rgb
 
   # Extract letters.
-  autocrop 255
+  autocrop
   eval[0] ">
     begin(
       x0s = y0s = vector256(inf);
@@ -4561,9 +4561,10 @@ echo_file : skip "${2='\n'}"
       set('x1s',v2s(x1s));
       set('y1s',v2s(y1s));
     )"
+
   repeat narg($x0s) {
     x0,y0,x1,y1:=([$x0s][$>]),([$y0s][$>]),([$x1s][$>]),([$y1s][$>])
-    +z[0] $x0,$y0,0,2,$x1,$y1,0,2
+    +z[0] $x0,$y0,0,0,$x1,$y1,0,0
   }
   rm[0] negate
 
@@ -4572,7 +4573,7 @@ echo_file : skip "${2='\n'}"
 
   # Autocrop font along the Y-axis.
   my0,My1=inf,-inf
-  foreach { if iM>0 autocrop_coords 0 x0,y0,z0,x1,y1,z1=${} my0,My1:=min($my0,$y0),max($My1,$y1) fi }
+  foreach { if iM autocrop_coords 0 x0,y0,z0,x1,y1,z1=${} my0,My1:=min($my0,$y0),max($My1,$y1) fi }
   z 0,$my0,100%,$My1
 
   # Set default width for invisible characters.
@@ -19201,12 +19202,17 @@ sharpen : check "$1>=0 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
           it = y*minmod(ixf,ixb) + v*minmod(iyf,iyb);
           amp*sign(itt)*abs(it)"
       fi
-      *. {$1/abs(maxabs(im,iM))} rm[-3,-2] - c $im,$iM
+      vM:=abs(maxabs(im,iM))
+      if $vM>1e-8 *. {$1/$vM} rm[-3,-2] - else rm[-3--1] fi
+      c $im,$iM
     }
   else # Inverse diffusion
     e[0--3] "Sharpen image$? with inverse diffusion and amplitude $1."
     foreach {
-      im,iM:=[im,iM] +laplacian *. {$1/abs(maxabs(im,iM))} - c $im,$iM
+      im,iM:=[im,iM] +laplacian
+      vM:=abs(maxabs(im,iM))
+      if $vM>1e-8 *. {$1/abs(maxabs(im,iM))} - else rm. fi
+      c $im,$iM
     }
   fi
 
