@@ -4453,7 +4453,7 @@ echo_file : skip "${2='\n'}"
 #@cli : This command requires the command line tool `cutycapt` to be installed on your system.
 #@cli : Beware, 'font_size' is the size of font used for the rendering, it does **not** correspond to the font height.
 #@cli : Default values: 'font_name=Sofia', 'font_size=24' and 'font_qualifier=""'.
-+font2gmz : skip "${1=Sofia},${3=}" check "isint(${2=24}) && $2>0"
++font2gmz : skip "${1=Sofia},${3=}" check "isint(${2=64}) && $2>0"
 
   # Extract font name/file information.
   basename "$1",_dir basename=${}
@@ -4576,10 +4576,10 @@ echo_file : skip "${2='\n'}"
   z 0,$my0,100%,$My1
 
   # Set default width for invisible characters.
-  W={{'f'},w} foreach { if !iM r $W,100%,1,1,0 fi }
+  W={{'i'},w} foreach { if !iM r $W,100%,1,1,0 fi }
 
   # Transform to G'MIC gmz font format.
-  +n 0,255 round f[0-255] 255
+  +n 0,255 sharpen 100 round f[0-255] 255
   foreach { if $><256 => char$> else => mask{$>-256} fi }
 
 #@cli function1d : 0<=smoothness<=1,x0>=0,y0,x1>=0,y1,...,xn>=0,yn
@@ -4659,14 +4659,15 @@ update_fonts :
   target_heights=24,32,64,128
 
   repeat narg($fonts) {
-    arg0 $>,$fonts basename ${} fontname=${}
-    strvar $fontname varname=${}
+    arg0 $>,$fonts font=${}
+    basename $font 0 => ${} name={b} rm.
+    strvar $name varname=${}
 
     repeat narg($target_heights) {
       target_height=${arg0\ $>,$target_heights}
       outfile=$_path_rc/font_$varname$target_height.gmz
 
-      e " - "$fontname-$target_height
+      e " - "$name-$target_height
 
       if !isfile(['$outfile']) l[] {
         size=$target_height
@@ -4674,7 +4675,7 @@ update_fonts :
         do
           rm
           outgmz=${-path_tmp}gmic_$0_$varname.gmz
-          x 0,"gmic font2gmz \\\""$fontname"\\\","$size" o "$outgmz
+          x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
           $outgmz
           e "   \#"$nb_attempts" -> "{h}
           if h!=$target_height size+=$target_height-h fi
