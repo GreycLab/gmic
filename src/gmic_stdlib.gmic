@@ -4438,11 +4438,13 @@ echo_file : skip "${2='\n'}"
   codes={^} rm.
 
   # Generate HTML page.
-  if "find(['$1'],'.ttf')>0"
+  if "s=['$1'];find(s,'.ttf')>0 || find(s,'.otf')>0"
+    basename "$1",_dir basename=${}
+    if ['$_dir']==0 _dir=${-path_current} fi
     str1=
     str2="@font-face {\n\
            font-family: gmicFont;\n\
-           src: url("$1");\n\
+           src: url("$_dir$basename");\n\
          }"
     font_family="gmicFont"
   else
@@ -4494,13 +4496,12 @@ echo_file : skip "${2='\n'}"
     </table>\n\
     </body>\n\
     </html>"'})
-  y a y ot ${-path_tmp}$0.html
+  y a y ot ${-path_tmp}gmic_$0.html
 
   # Render as a PNG file, using 'cutycapt'.
-  delete ${-path_tmp}$0.png
-  x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"${-path_tmp}$0.html\
-      " --out="${-path_tmp}$0.png
-  rm ${-path_tmp}$0.png to_rgb
+  x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"${-path_tmp}gmic_$0.html\
+      " --out="${-path_tmp}gmic_$0.png
+  rm ${-path_tmp}gmic_$0.png to_rgb
 
   # Extract letters.
   autocrop 255
