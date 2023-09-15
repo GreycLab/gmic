@@ -4417,6 +4417,33 @@ echo_file : skip "${2='\n'}"
   l[] { it "$1" onfail 0 }
   ('"${2--1}\n"':y) a[-2,-1] y ot. $1 rm.
 
+#@cli font : "Font name",_font_height[%]>0
+#@cli : Return specified font as a variable name that can be further used in command `text`.
+#@cli : 'Font name' can be { Acme | Arial | Arial Black | Cabin Sketch | Cheque | Comic Sans MS | Courier New | \
+# Georgia | Halloween | Impact | Lato | Lucida Console | Lucida Sans | MedievalSharp | Montserrat | MS Sans Serif | \
+# Oswald | Palatino Linotype | Roboto | Sofia | Tahoma | Times New Roman | Trebuchet | Verdana }.
++font : check "isint(${2=24}) && $2>0"
+  e[^-1] "Return default font '$1' with height $2."
+  height:=${"is_percent $2"}?h*$2:$2
+  base_height:="hs = [ 24,32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
+  strvar "$1" fontname=${}
+  varname=__font_$fontname$height
+  if narg(${$varname}) return fi # Font already instancied
+  l[] {
+    filename=${_path_rc}gmic_fonts.gmz
+    if !isfile(['$filename']) https://gmic.eu/gmic_fonts.gmz o $filename
+    else $filename
+    fi
+    k[$fontname$base_height]
+    unserialize
+    if h!=$height r2dy $height fi
+    [^] f[0-255] 255
+    store __font_$fontname$height
+  onfail
+    error[0--3] "Command 'font': Unknown font '$1'."
+  }
+  u $varname
+
 #@cli font2gmz : _font_name,_font_size>0,_font_qualifier
 #@cli : Convert specified font to G'MIC format, so that it can be used as a custom font for command `text`.
 #@cli : 'font_name' can be either a filename as 'font.ttf', or a 'Google Font Name'.
