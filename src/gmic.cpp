@@ -469,7 +469,7 @@ CImg<T>& gmic_draw_text(const float x, const float y,
     return *this;
   }
   if (sepx=='~' || sepy=='~') {
-    const char one[] = { 1 };
+    const unsigned char one[] = { 1 };
     CImg<ucharT> foo;
     foo.draw_text(0,0,"%s",one,0,1,siz,text);
     fx = sepx=='~'?x*(width() - foo.width()):sepx=='%'?x*(width() - 1)/100:x;
@@ -504,7 +504,7 @@ CImg<T>& gmic_draw_text(const float x, const float y,
     return *this;
   }
   if (sepx=='~' || sepy=='~') {
-    const char one[] = { 1 };
+    const unsigned char one[] = { 1 };
     CImg<ucharT> foo;
     foo.draw_text(0,0,"%s",one,0,1,&font,text);
     fx = sepx=='~'?x*(width() - foo.width()):sepx=='%'?x*(width() - 1)/100:x;
