@@ -4423,7 +4423,13 @@ echo_file : skip "${2='\n'}"
 #@cli : This command requires the command line tool `cutycapt` to be installed on your system.
 #@cli : Default values: 'font_name=Sofia', 'font_size=24' and 'font_qualifier=""'.
 +font2gmz : skip "${1=Sofia},${3=}" check "isint(${2=24}) && $2>0"
-  e[^-1] "Convert font '$1' to G'MIC format, with font size $2 and font qualifier '$3'."
+
+  # Extract font name/file information.
+  basename "$1",_dir basename=${}
+  if ['$_dir']==0 _dir=${-path_current} fi
+  path=$_dir 0 => $basename base={b} ext={x} rm.
+  strvar $base varname=${}
+  e[^-1] "Convert font '"$basename"' to G'MIC format, with font size $2 and font qualifier '$3'."
 
   # Generate fontchart codes.
   256,1,1,1,"x;
@@ -4438,13 +4444,11 @@ echo_file : skip "${2='\n'}"
   codes={^} rm.
 
   # Generate HTML page.
-  if "s=['$1'];find(s,'.ttf')>0 || find(s,'.otf')>0"
-    basename "$1",_dir basename=${}
-    if ['$_dir']==0 _dir=${-path_current} fi
+  if "ext=['"$ext"'];find(ext,'.ttf')>0 || find(ext,'.otf')>0" # Font specified as a filename
     str1=
     str2="@font-face {\n\
            font-family: gmicFont;\n\
-           src: url("$_dir$basename");\n\
+           src: url("$path$basename");\n\
          }"
     font_family="gmicFont"
   else
@@ -4496,12 +4500,15 @@ echo_file : skip "${2='\n'}"
     </table>\n\
     </body>\n\
     </html>"'})
-  y a y ot ${-path_tmp}gmic_$0.html
+  y a y
+
+  file_html=${-path_tmp}gmic_${base}_$0.html
+  ot $file_html
 
   # Render as a PNG file, using 'cutycapt'.
-  x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"${-path_tmp}gmic_$0.html\
-      " --out="${-path_tmp}gmic_$0.png
-  rm ${-path_tmp}gmic_$0.png to_rgb
+  file_png=${-path_tmp}gmic_${base}_$0.png
+  x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"$file_html" --out="$file_png
+  rm $file_png to_rgb
 
   # Extract letters.
   autocrop 255
@@ -4612,38 +4619,42 @@ update_fonts :
         "Roboto",\
         "Halloween",\
         "Cabin Sketch",\
-        "Cheque",\
+        "Cheque.otf",\
         "MedievalSharp",\
         "Acme",\
         "Sofia"
+  target_heights=24,32,64,128
 
   repeat narg($fonts) {
-    arg0 $>,$fonts font=${}
-    strvar $font name=${}
-    out_filename=$_path_rc/font_$name.gmz
-    target_height=48
+    arg0 $>,$fonts basename ${} fontname=${}
+    strvar $fontname varname=${}
 
-    e " - "$font-$target_height
-    if !isfile(['$out_filename']) l[] {
-      size=$target_height
-      nb_attempts=0
-      do
+    repeat narg($target_heights) {
+      target_height=${arg0\ $>,$target_heights}
+      outfile=$_path_rc/font_$varname$target_height.gmz
+
+      e " - "$fontname-$target_height
+
+      if !isfile(['$outfile']) l[] {
+        size=$target_height
+        nb_attempts=0
+        do
+          rm
+          x 0,"gmic font2gmz \\\""$font"\\\","$size" o tmp.gmz"
+          tmp.gmz
+          e "   \#"$nb_attempts" -> "{h}
+          if h!=$target_height size+=$target_height-h fi
+          nb_attempts+=1
+        while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
+
+        k[256--1] channels 0
+        if h>$target_height r2dy $target_height fi
+
+        serialize uint8,1,0 => $varname
+        o $outfile
         rm
-        x 0,"gmic font2gmz \\\""$font"\\\","$size" o tmp.gmz"
-        tmp.gmz
-        e "   \#"$nb_attempts" -> Height : "{h}
-        if h!=$target_height size+=$target_height-h fi
-        nb_attempts+=1
-      while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
-
-      k[256--1] channels 0
-      if h>$target_height r2dy $target_height fi
-
-      serialize uint8,1,0 => $name
-      o $out_filename
-      rm
-    } fi
-
+      } fi
+    }
   }
 
 #@cli identity : _width>=0,_height>=0,_depth>=0
