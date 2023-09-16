@@ -4419,13 +4419,15 @@ echo_file : skip "${2='\n'}"
 
 #@cli font : "Font name",_font_height[%]>0
 #@cli : Return specified font as a variable name that can be further used in command `text`.
-#@cli : 'Font name' can be { Acme | Arial | Arial Black | Cabin Sketch | Cheque | Comic Sans MS | Courier New | \
-# Georgia | Halloween | Impact | Lato | Lucida Console | Lucida Sans | MedievalSharp | Montserrat | MS Sans Serif | \
-# Oswald | Palatino Linotype | Roboto | Sofia | Tahoma | Times New Roman | Trebuchet | Verdana }.
+#@cli : 'Font name' can be { Arial | Arial Black | Comic Sans MS | Courier New | Georgia | Impact | Lucida Console | \
+# Lucida Sans | Palatino Linotype | Tahoma | Times New Roman | Trebuchet MS | Verdana | MS Sans Serif | MS Serif | \
+# Montserrat | Lato | Roboto | Halloween | Cabin Sketch | MedievalSharp | Acme | Sofia | Oswald | Cheese Burger | \
+# Cheque-Black | Cheque }.
+#@cli : $ 400,300,1,3 text "Hello World!",0.5~,0.5~,${"font \"Cheese Burger\",80"},1,255,255,128
 +font : check "isint(${2=24}) && $2>0"
   e[^-1] "Return default font '$1' with height $2."
   height:=${"is_percent $2"}?h*$2:$2
-  base_height:="hs = [ 24,32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
+  base_height:="hs = [ 32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
   strvar "$1" fontname=${}
   varname=__font_$fontname$height
   if narg(${$varname}) u $varname return fi # Font already instancied
@@ -4641,6 +4643,7 @@ echo_file : skip "${2='\n'}"
 
 # [Internal] Generate all custom G'MIC fonts and upload them to the G'MIC server.
 update_fonts :
+  target_heights=32,64,128
   fonts="Arial",\
         "Arial Black",\
         "Comic Sans MS",\
@@ -4661,17 +4664,19 @@ update_fonts :
         "Roboto",\
         "Halloween",\
         "Cabin Sketch",\
-        $HOME/work/src/gmic/html/fonts/"Cheque.otf",\
         "MedievalSharp",\
         "Acme",\
         "Sofia",\
         "Oswald"
-  target_heights=24,32,64,128
+  files $HOME/work/src/gmic/html/fonts/*.otf if narg(${}) fonts.=,${} fi
+  files $HOME/work/src/gmic/html/fonts/*.ttf if narg(${}) fonts.=,${} fi
 
+  list_fonts,sep=
   repeat narg($fonts) {
     arg0 $>,$fonts font=${}
     basename $font 0 => ${} name={b} rm.
     strvar $name varname=${}
+    list_fonts.=$sep$name sep=,
 
     repeat narg($target_heights) {
       target_height=${arg0\ $>,$target_heights}
@@ -4712,7 +4717,16 @@ update_fonts :
   o $outfile1
   o $outfile2
   e " - Upload all fonts to G'MIC server."
-  _upload $outfile1
+#  _upload $outfile1
+
+  # Generate documentation string for command 'font'.
+  str="#@cli : 'Font name' can be { "
+  repeat narg($list_fonts) {
+    arg0 $>,$list_fonts
+    str.=${}
+    if $< str.=" | " else str.=" }." fi
+  }
+  e " - Generate documentation string for command 'font':\n"$str
   rm
 
 #@cli identity : _width>=0,_height>=0,_depth>=0
