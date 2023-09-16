@@ -4653,21 +4653,18 @@ update_fonts :
         "Courier New",\
         "Creepster",\
         "Georgia",\
-        "Halloween",\
         "Impact",\
         "Lucida Console",\
         "Lucida Sans",\
         "Luckiest Guy",\
         "Macondo",\
         "MedievalSharp",\
-        "Montserrat",\
         "Oswald",\
         "Palatino Linotype",\
         "Playfair Display",\
         "Roboto",\
         "Satisfy",\
         "Sofia",\
-        "Tahoma",\
         "Titan One",\
         "Times New Roman",\
         "Ubuntu",\
@@ -31231,12 +31228,12 @@ vignette : check "${1=100}>=0 && ${2=70}>=0 && $2<=100 && ${3=90}>=0 && $3<=100"
     c. $2%,$3% n. 0,$1 - c $mM
   }
 
-#@cli watermark_visible : _text,0<_opacity<1,_size>0,_angle,_mode={ 0=remove | 1=add },_smoothness>=0
+#@cli watermark_visible : _text,0<_opacity<1,_{ size>0 | font },_angle,_mode={ 0=remove | 1=add },_smoothness>=0
 #@cli : Add or remove a visible watermark on selected images (value range must be [0,255]).
 #@cli : Default values: 'text=(c) G'MIC', 'opacity=0.3', 'size=53', 'angle=25', 'mode=1' and 'smoothness=0'.
 #@cli : $ image.jpg watermark_visible ,0.7
-watermark_visible : check "${2=0.3}>0 && $2<1 && ${3=53}>0 && ${6=0.5}>=0"
-                    skip "${1=\251\ G\47MIC}",${4=25},${5=1}
+watermark_visible : check "inrange(${2=0.3},0,1) && ${6=0.5}>=0"
+                    skip "${1=\251\ G\47MIC}",${3=53},${4=25},${5=1}
   e[^-1] ${arg0\ !$5,Add,Remove}" visible watermark '$1' on image$?, with opacity $2, size $3, angle $4 deg."
   foreach {
     0 t. "$1",0,0,$3,1,255 rotate. $4,0,0 b. $6 n. 0,255
@@ -50863,15 +50860,16 @@ fx_streak :
 
 #@gui Visible Watermark : fx_watermark_visible, fx_watermark_visible(0)
 #@gui : Text = text{"\\251 G'MIC"}
-#@gui : Opacity = float(0.4,0.1,0.9)
+#@gui : Opacity = float(0.4,0,1)
+#@gui : Font = choice("")
 #@gui : Size = int(50,13,128)
 #@gui : Angle = float(25,0,360)
-#@gui : Smoothness = float(0.5,0,5)
 #@gui : Lightness = choice(1,"Darker","Brighter")
+#@gui : Smoothness = float(0.5,0,5)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_watermark_visible : skip "${1= }"
-  watermark_visible "$1",$2,$3,$4,$6,$5
+  watermark_visible "$1",$2,${4-7}
 
 #@gui Warp by Intensity : fx_warp_by_intensity, fx_warp_by_intensity_preview(0)
 #@gui : X-Factor = float(0.04,-6,6)
