@@ -4417,19 +4417,25 @@ echo_file : skip "${2='\n'}"
   l[] { it "$1" onfail 0 }
   ('"${2--1}\n"':y) a[-2,-1] y ot. $1 rm.
 
-#@cli font : "Font name",_font_height[%]>0
+#@cli font : { 'Font_name' | font_number },_font_height[%]>0
 #@cli : Return specified font as a variable name that can be further used in command `text`.
-#@cli : 'Font name' can be { Acme | Arial | Arial Black | Black Ops One | BlackChancery | Cabin Sketch | \
+#@cli : 'Font_name' can be { Acme | Arial | Arial Black | Black Ops One | BlackChancery | Cabin Sketch | \
 # Carnevalee Freakshow | Cheese Burger | Cheque | Cheque-Black | Chlorinar | Comic Sans MS | Courier New | \
 # Creepster | Georgia | Impact | Lobster | Luckiest Guy | Macondo | MedievalSharp | Odin Rounded | Oswald | \
 # Palatino Linotype | Playfair Display | Roboto | Sacramento | Satisfy | Sofia | Tex Gyre Adventor | \
 # Times New Roman | Titan One | Verdana }.
 #@cli : $ 400,300,1,3 text "Hello World!",0.5~,0.5~,${"font \"Cheese Burger\",80"},1,255,255,128
 +font : check "isint(${2=24}) && $2>0"
-  e[^-1] "Return default font '$1' with height $2."
+  fonts="Acme","Arial","Arial Black","Black Ops One","BlackChancery","Cabin Sketch","Carnevalee Freakshow",\
+        "Cheese Burger","Cheque","Cheque-Black","Chlorinar","Comic Sans MS","Courier New","Creepster","Georgia",\
+        "Impact","Lobster","Luckiest Guy","Macondo","MedievalSharp","Odin Rounded","Oswald","Palatino Linotype",\
+        "Playfair Display","Roboto","Sacramento","Satisfy","Sofia","Tex Gyre Adventor","Times New Roman","Titan One",\
+        "Verdana"
+  if "isint($1)" arg0 {$1%narg($fonts)},$fonts font=${} else font="$1" fi
+  e[^-1] "Return default font '"$font"' with height $2."
   height:=${"is_percent $2"}?h*$2:$2
   base_height:="hs = [ 32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
-  strvar "$1" fontname=${}
+  strvar $font fontname=${}
   varname=__font_$fontname$height
   if narg(${$varname}) u $varname return fi # Font already instancied
   l[] {
@@ -50873,13 +50879,7 @@ fx_streak :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_watermark_visible : skip "${1= }"
-  fonts="Acme","Arial","Arial Black","Black Ops One","BlackChancery","Cabin Sketch","Carnevalee Freakshow",\
-        "Cheese Burger","Cheque","Cheque-Black","Chlorinar","Comic Sans MS","Courier New","Creepster","Georgia",\
-        "Impact","Lobster","Luckiest Guy","Macondo","MedievalSharp","Odin Rounded","Oswald","Palatino Linotype",\
-        "Playfair Display","Roboto","Sacramento","Satisfy","Sofia","Tex Gyre Adventor","Times New Roman","Titan One",\
-        "Verdana"
-  arg0 $3,$fonts font=${}
-  watermark_visible "$1",$2,${"font \""$font"\",$4"},${5-7}
+  watermark_visible "$1",$2,${"font $3,$4"},${5-7}
 
 #@gui Warp by Intensity : fx_warp_by_intensity, fx_warp_by_intensity_preview(0)
 #@gui : X-Factor = float(0.04,-6,6)
