@@ -33032,25 +33032,44 @@ fitscreen : skip "${2=},${3=},${4=},${5=}"
     s[1] = max(1,s[1],ms[1]);
     round(s)"
 
-#@cli fontchart
+#@cli fontchart : display_mode={ 0: List of characters | N: List of fonts with height 'N'}.
 #@cli : Insert G'MIC font chart at the end of the image list.
-#@cli : $ fontchart
-+fontchart :
-  e[^-1] "Generate G'MIC font chart."
-  l[] {
-    repeat 256 {
-      if $>==92 char=\\ else char={`max(1,(c=$>;c>=23&&c<=28?32:c))`} fi
-      0 t. {``$char},0,0,50,1,255
+#@cli : Default value: 'display_mode=0'.
+#@cli : $ fontchart 0 fontchart 64
++fontchart : check "isint(${1=0}) && $1>=0"
+  s0,s1=characters,"fonts, with height $1"
+  e[^-1] "Generate G'MIC font chart (list of "${s{!!$1}}")."
+
+  if !$1 # List of characters
+    l[] {
+      repeat 256 {
+        if $>==92 char=\\ else char={`max(1,(c=$>;c>=23&&c<=28?32:c))`} fi
+        0 t. {``$char},0,0,50,1,255
+      }
+      a z,0.5
+      s z
+      foreach {
+        t $>,1,-1,13,1,200
+        0 t. \\${dec2oct\ $>},1,-1,13,1,1
+        100%,100%,1,1,200 j... .,{-3,[w,h]-[w#-1,h#-1]},0,0,1,.. rm[-2,-1]
+      }
+      frame 1,1,128 append_tiles ,
     }
-    a z,0.5
-    s z
+  else # List of fonts
+    font "Arial" $_path_rc/gmic_fonts.gmz
     foreach {
-      t $>,1,-1,13,1,200
-      0 t. \\${dec2oct\ $>},1,-1,13,1,1
-      100%,100%,1,1,200 j... .,{-3,[w,h]-[w#-1,h#-1]},0,0,1,.. rm[-2,-1]
+      if "find(name(512),'64')>0"
+        ('{n}') z. 0,{w-3} strcapitalize {t} name=${} rm.
+        e " - "$name
+        rm
+        0 t. $name:\n"   Hello World!",0,0,${"font \""$name"\",$1"},1,255
+      else rm
+      fi
     }
-    frame 1,1,128 append_tiles ,
-  }
+    r ${-max_wh},1,1,0,0,0.5,0.5
+    frame 10,25,0 frame 3,3,128
+    append_tiles 3
+  fi
 
 # font2cimgh
 # Encode a font image as a C-style string for CImg.h.
