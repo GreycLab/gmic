@@ -4417,13 +4417,14 @@ echo_file : skip "${2='\n'}"
   l[] { it "$1" onfail 0 }
   ('"${2--1}\n"':y) a[-2,-1] y ot. $1 rm.
 
-#@cli font : { 'Font_name' | font_number },_font_height[%]>0,_is_bold={ 0 | 1 }
-#@cli : Return specified font as a variable name that can be further used in command `text`.
+#@cli font : { 'Font_name' | font_number | font.gmz },_font_height[%]>0,_is_bold={ 0 | 1 }
+#@cli : Return font identifier (variable name) that can be further used in command `text` as a custom font.
 #@cli : 'Font_name' can be { Acme | Arial | Arial Black | Black Ops One | BlackChancery | Cabin Sketch | \
 # Caprasimo | Carnevalee Freakshow | Cheese Burger | Cheque | Cheque-Black | Chlorinar | Comic Sans MS | \
 # Courier New | Creepster | Georgia | Impact | Lobster | Luckiest Guy | Macondo | MedievalSharp | Odin Rounded | \
 # Oswald | Palatino Linotype | Playfair Display | Roboto | Sacramento | Satisfy | Sofia | Tex Gyre Adventor | \
 # Times New Roman | Titan One | Verdana }.
+#@cli : If a filename 'font.gmz' is specified, it must be a file converted with command `font2gmz`.
 #@cli : Default values: 'font_height=64' and 'is_bold=0'.
 #@cli : $ 400,300,1,3 text "Hello World!",0.5~,0.5~,${"font \"Cheese Burger\",80"},1,255,255,128
 +font : check "isint(${2=24}) && $2>0 && isbool(${3=0})"
@@ -4432,20 +4433,26 @@ echo_file : skip "${2='\n'}"
         "Impact","Lobster","Luckiest Guy","Macondo","MedievalSharp","Odin Rounded","Oswald","Palatino Linotype",\
         "Playfair Display","Roboto","Sacramento","Satisfy","Sofia","Tex Gyre Adventor","Times New Roman","Titan One",\
         "Verdana"
-  if "isint($1)" arg0 {$1%narg($fonts)},$fonts font=${} else font="$1" fi
+  if "s = ['$1']; find(s,'.gmz')==size(s)-4" font="$1" is_file=1
+  elif "isint($1)" arg0 {$1%narg($fonts)},$fonts font=${} is_file=0
+  else font="$1" is_file=0
+  fi
   qualifier0,qualifier1="regular","bold"
   e[^-1] "Return default font '"$font"' with height $2 and "${qualifier$3}" face."
   height:=${"is_percent $2"}?h*$2:$2
-  base_height:="hs = [ 32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
   strvar $font fontname=${}
   varname=__font_${fontname}_$qualifier$3$height
 
   if narg(${$varname}) u $varname return fi # Font already instancied
   l[] {
-    input_cached gmic_fonts.gmz
-    k[$fontname$base_height]
-    unserialize
-    if $3 dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand_xy {round($dsiz/2)} dilate $dsiz fi # Bold face
+    if $is_file "$1"
+    else
+      base_height:="hs = [ 32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
+      input_cached gmic_fonts.gmz k[$fontname$base_height] unserialize
+    fi
+    if $3 # Bold face
+      dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand_xy {round($dsiz/2)} dilate $dsiz
+    fi
     if h!=$height
       if h>$height r2dy $height,2
       else
@@ -4599,8 +4606,8 @@ echo_file : skip "${2='\n'}"
   W={{'f'},w} foreach { if !iM r $W,100%,1,1,0 fi }
 
   # Transform to G'MIC gmz font format.
-  +n 0,255 sharpen 100 round f[0-255] 255
-  foreach { if $><256 => char$> else => mask{$>-256} fi }
+  n 0,255 sharpen 100 round
+  foreach { => mask$> }
 
 #@cli function1d : 0<=smoothness<=1,x0>=0,y0,x1>=0,y1,...,xn>=0,yn
 #@cli : Insert continuous 1D function from specified list of keypoints (xk,yk)
@@ -4705,9 +4712,7 @@ update_fonts :
           delete $outgmz
         while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
 
-        k[256--1] channels 0
         if h>$target_height r2dy $target_height fi
-
         serialize uint8,1,0 => $varname$target_height
         o $outfile
         rm
