@@ -4446,7 +4446,7 @@ echo_file : skip "${2='\n'}"
   if narg(${$varname}) u $varname return fi # Font already instancied
   l[] {
     if $is_file "$1"
-    else input_cached gmic_fonts.gmz k[$fontname] unserialize decompress_rle * 255
+    else input_cached gmic_fonts.gmz k[$fontname] unserialize
     fi
     if $3 # Bold face
       dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand_xy {round($dsiz/2)} dilate $dsiz
@@ -4560,14 +4560,11 @@ echo_file : skip "${2='\n'}"
   ot $file_html
 
   # Render as a PNG file, using 'cutycapt'.
-  tic
   file_png=${-path_tmp}gmic_$0_$varname.png
   x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"$file_html" --out="$file_png
   rm $file_png to_rgb
-  toc
 
   # Extract letters.
-  tic
   autocrop
   eval[0] ":
     begin(
@@ -4591,7 +4588,6 @@ echo_file : skip "${2='\n'}"
       set('x1s',v2s(x1s));
       set('y1s',v2s(y1s));
     )"
-  toc
 
   repeat narg($x0s) {
     x0,y0,x1,y1:=([$x0s][$>]),([$y0s][$>]),([$x1s][$>]),([$y1s][$>])
@@ -4717,7 +4713,7 @@ update_fonts :
 
       if h>$target_height r2dy $target_height fi
 
-      ge 75% compress_rle 1 serialize uint8,1,0 => $varname
+      ge 75% serialize auto,1,0 => $varname
       o $outfile
       rm
     } fi
