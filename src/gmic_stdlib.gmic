@@ -11520,16 +11520,18 @@ _update_header_html : check "narg(${1=}) && ${2=0}>0 && isbool(${3=0})"
         # Retrieve latest stable version specified in the header file.
         +l. {
           s -,{'>'}
-          if {2,"i[0]>=_'0' && i[0]<=_'9' && i[1]==_'.' && i[2]>=_'0' && i[2]<=_'9' &&
-                 i[3]==_'.' && i[4]>=_'0' && i[4]<=_'9'"}
-            ver={2,`crop(0,0,1,5)`}
+          if {2,"inrange(i[0],_'0',_'9') && i[1]==_'.' &&
+                 inrange(i[2],_'0',_'9') && i[3]==_'.' &&
+                 inrange(i[4],_'0',_'9')"}
+            stable_ver={2,`crop(0,0,1,5)`}
           fi
           if $3
             x "date +%Y%m%d >"${-path_tmp}/gmic_date it ${-path_tmp}/gmic_date discard. 10 date={t} rm.
-            ver=${strver\ $2}
-            pre={`s=['$date'];string(s[0,4],'/',s[4,2],'/',s[6,2])`}
+            pre_ver=${strver\ $2}
+            pre_date={`s=['$date'];string(s[0,4],'/',s[4,2],'/',s[6,2])`}
           else
-            ver=${strver\ $2}
+            stable_ver=${strver\ $2}
+            pre_ver,pre_date=
           fi
           rm
         }
@@ -11537,17 +11539,17 @@ _update_header_html : check "narg(${1=}) && ${2=0}>0 && isbool(${3=0})"
         rm[0]
         if $is_gmic
           i[0] ('"        Latest stable version: <b>"\
-                 "<a href=\"https://gmic.eu/download.html\">"$ver"</a></b>"')
-          if $3
+                 "<a href=\"https://gmic.eu/download.html\">"$stable_ver"</a></b>"')
+          if ['$pre_ver']!=0
             i[1] ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
-                   "Current pre-release: <b><a href=\"https://gmic.eu/files/prerelease\">"$ver"</a></b> ("$pre")"')
+                   "Current pre-release: <b><a href=\"https://gmic.eu/files/prerelease\">"$pre_ver"</a></b> ("$pre_date")"')
           fi
         else
           i[0] ('"        Latest stable version: "\
-                 "<b><a href=\"http://cimg.eu/files/CImg_"$ver".zip\">"$ver"</a></b>"')
-          if $3
+                 "<b><a href=\"http://cimg.eu/files/CImg_"$ver".zip\">"$stable_ver"</a></b>"')
+          if ['$pre_ver']!=0
             i[1] ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
-                   "Current pre-release: <b><a href=\"http://cimg.eu/files/CImg_latest.zip\">"$ver"</a></b> ("$pre")"')
+                   "Current pre-release: <b><a href=\"http://cimg.eu/files/CImg_latest.zip\">"$pre_ver"</a></b> ("$pre_date")"')
           fi
         fi
         y
