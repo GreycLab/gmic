@@ -4560,16 +4560,20 @@ echo_file : skip "${2='\n'}"
   ot $file_html
 
   # Render as a PNG file, using 'cutycapt'.
+  tic
   file_png=${-path_tmp}gmic_$0_$varname.png
   x 0,"cutycapt --min-width="{32*$2}" --min-height="{32*$2}" --url=file://"$file_html" --out="$file_png
   rm $file_png to_rgb
+  toc
 
   # Extract letters.
+  tic
   autocrop
-  eval[0] ">
+  eval[0] ":
     begin(
       x0s = y0s = vector256(inf);
       x1s = y1s = vector256(-inf);
+      void = [ 0,0,0 ];
     );
     i0==255 && i1==160?(
       ind = i2;
@@ -4578,12 +4582,16 @@ echo_file : skip "${2='\n'}"
       x>x1s[ind]?(x1s[ind] = x);
       y>y1s[ind]?(y1s[ind] = y);
     );
+    void;
     end(
+      merge(x0s,min); merge(y0s,min);
+      merge(x1s,max); merge(y1s,max);
       set('x0s',v2s(x0s));
       set('y0s',v2s(y0s));
       set('x1s',v2s(x1s));
       set('y1s',v2s(y1s));
     )"
+  toc
 
   repeat narg($x0s) {
     x0,y0,x1,y1:=([$x0s][$>]),([$y0s][$>]),([$x1s][$>]),([$y1s][$>])
@@ -4694,7 +4702,7 @@ update_fonts :
     e " - "$name
 
     if !isfile(['$outfile']) l[] {
-      size=$target_height
+      size:=round($target_height/1.14)
       nb_attempts=0
       do
         rm
@@ -4705,7 +4713,7 @@ update_fonts :
         if h!=$target_height size+=$target_height-h fi
         nb_attempts+=1
         delete $outgmz
-      while h!=$target_height" && "($nb_attempts<10" || "($nb_attempts>=10" && "h<$target_height))
+      while h!=$target_height" && "($nb_attempts<8" || "($nb_attempts>=8" && "h<$target_height))
 
       if h>$target_height r2dy $target_height fi
 
