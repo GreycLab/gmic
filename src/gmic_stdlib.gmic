@@ -4446,9 +4446,7 @@ echo_file : skip "${2='\n'}"
   if narg(${$varname}) u $varname return fi # Font already instancied
   l[] {
     if $is_file "$1"
-    else
-      base_height:="hs = [ 32,64,128 ]; repeat(size(hs),k,h = hs[k]; h>=$height?break()); h"
-      input_cached gmic_fonts.gmz k[$fontname$base_height] unserialize
+    else input_cached gmic_fonts.gmz k[$fontname] unserialize decompress_rle * 255
     fi
     if $3 # Bold face
       dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand_xy {round($dsiz/2)} dilate $dsiz
@@ -4693,7 +4691,7 @@ update_fonts :
 
     outfile=$_path_rc/font_$varname$target_height.gmz
 
-    e " - "$name-$target_height
+    e " - "$name
 
     if !isfile(['$outfile']) l[] {
       size=$target_height
@@ -4711,7 +4709,7 @@ update_fonts :
 
       if h>$target_height r2dy $target_height fi
 
-      ge 75% * 255 compress_rle 1 serialize uint8,1,0 => $varname$target_height
+      ge 75% compress_rle 1 serialize uint8,1,0 => $varname
       o $outfile
       rm
     } fi
