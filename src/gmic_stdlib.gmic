@@ -4657,7 +4657,6 @@ echo_file : skip "${2='\n'}"
 
 # [Internal] Generate all custom G'MIC fonts and upload them to the G'MIC server.
 update_fonts :
-  target_heights=512
   fonts="Acme",\
         "Arial",\
         "Arial Black",\
@@ -4683,6 +4682,7 @@ update_fonts :
         "Verdana"
   files $HOME/work/src/gmic/html/fonts/*.otf if narg(${}) fonts.=,${} fi
   files $HOME/work/src/gmic/html/fonts/*.ttf if narg(${}) fonts.=,${} fi
+  target_height=512
 
   list_fonts,sep=
   repeat narg($fonts) {
@@ -4691,33 +4691,30 @@ update_fonts :
     strvar $name varname=${}
     list_fonts.=$sep$name sep=,
 
-    repeat narg($target_heights) {
-      target_height=${arg0\ $>,$target_heights}
-      outfile=$_path_rc/font_$varname$target_height.gmz
+    outfile=$_path_rc/font_$varname$target_height.gmz
 
-      e " - "$name-$target_height
+    e " - "$name-$target_height
 
-      if !isfile(['$outfile']) l[] {
-        size=$target_height
-        nb_attempts=0
-        do
-          rm
-          outgmz=${-path_tmp}gmic_$0_$varname.gmz
-          x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
-          $outgmz
-          e "   \#"$nb_attempts" -> "{h}
-          if h!=$target_height size+=$target_height-h fi
-          nb_attempts+=1
-          delete $outgmz
-        while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
-
-        if h>$target_height r2dy $target_height fi
-
-        ge 75% * 255 compress_rle 1 serialize uint8,1,0 => $varname$target_height
-        o $outfile
+    if !isfile(['$outfile']) l[] {
+      size=$target_height
+      nb_attempts=0
+      do
         rm
-      } fi
-    }
+        outgmz=${-path_tmp}gmic_$0_$varname.gmz
+        x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
+        $outgmz
+        e "   \#"$nb_attempts" -> "{h}
+        if h!=$target_height size+=$target_height-h fi
+        nb_attempts+=1
+        delete $outgmz
+      while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
+
+      if h>$target_height r2dy $target_height fi
+
+      ge 75% * 255 compress_rle 1 serialize uint8,1,0 => $varname$target_height
+      o $outfile
+      rm
+    } fi
   }
 
   # Generate font collection file.
