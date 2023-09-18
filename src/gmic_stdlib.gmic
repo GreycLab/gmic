@@ -4729,18 +4729,26 @@ _update_fonts :
   e " - "$name
 
   if !isfile(['$outfile']) l[] {
-    size:=round($target_height/1.14)
-    nb_attempts=0
+    outgmz=${-path_tmp}gmic$0_$varname.gmz
+    size:=round($target_height/1.5)
+    best_size=0 best_font=
     do
       rm
-      outgmz=${-path_tmp}gmic_$0_$varname.gmz
-      x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
-      $outgmz
-      e "   \#"$nb_attempts" -> "{h}
-      if h!=$target_height size+=$target_height-h fi
-      nb_attempts+=1
-      delete $outgmz
-    while h!=$target_height" && "($nb_attempts<8" || "($nb_attempts>=8" && "h<$target_height))
+      if $size!=$best_size" || "!narg($best_font)
+        x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
+        $outgmz
+        if h>$target_height +store best_font best_size=$size fi
+      else
+        $best_font
+        break
+      fi
+      e "   \#"$>" -> "{h}
+      if h!=$target_height
+        nsize:=$size+$target_height-h
+        size:=round(lerp($nsize,$size,0.35))
+      fi
+    while h!=$target_height
+    delete $outgmz
 
     if h>$target_height r2dy $target_height fi
 
