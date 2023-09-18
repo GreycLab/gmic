@@ -4657,7 +4657,7 @@ echo_file : skip "${2='\n'}"
 
 # [Internal] Generate all custom G'MIC fonts and upload them to the G'MIC server.
 update_fonts :
-  target_heights=32,64,128
+  target_heights=512
   fonts="Acme",\
         "Arial",\
         "Arial Black",\
@@ -4712,7 +4712,8 @@ update_fonts :
         while h!=$target_height" && "($nb_attempts<6" || "($nb_attempts>=6" && "h<$target_height))
 
         if h>$target_height r2dy $target_height fi
-        serialize uint8,1,0 => $varname$target_height
+
+        ge 75% * 255 compress_rle 1 serialize uint8,1,0 => $varname$target_height
         o $outfile
         rm
       } fi
@@ -4732,7 +4733,6 @@ update_fonts :
   rm
 
   # Generate documentation string for command 'font'.
-
   str="#@cli : 'Font name' can be { "
   0x{narg($list_fonts)} => $list_fonts sort_list +,n lof n list_fonts=${} rm
   repeat narg($list_fonts) {
