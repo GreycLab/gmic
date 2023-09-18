@@ -4687,10 +4687,41 @@ update_fonts :
   target_height=512
 
   nb_fonts:=narg($fonts)
-  repeat $nb_fonts { arg0 $>,$fonts font$>=${} }
   repeat narg($fonts) {
-    arg0 $>,$fonts font=${}
-    _update_fonts $font,$target_height
+    arg0 $>,$fonts font=${} basename $font 0 => ${} name={b} rm. strvar $name varname=${}
+    outfile=$_path_rc/font_$varname.gmz
+    target_height=512
+    e " - "$name
+
+    if !isfile(['$outfile']) l[] {
+      outgmz=${-path_tmp}gmic_$0_$varname.gmz
+      size:=round($target_height/1.18)
+      best_size=0 best_font=
+      do
+        rm
+        if $size!=$best_size" || "!narg($best_font)
+          x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
+          $outgmz
+          if h>$target_height +store best_font best_size=$size fi
+          e "   \#"$>" -> "{h}
+        else
+          $best_font
+          e "   \#"$>" -> Best guess: "{h}
+          break
+        fi
+        if h!=$target_height
+          nsize:=$size+$target_height-h
+          size:=round(lerp($nsize,$size,0.35))
+        fi
+      while h!=$target_height
+      delete $outgmz
+
+      if h>$target_height r2dy $target_height fi
+
+      ge 75% serialize auto,1,0 => $varname
+      o $outfile
+      rm
+    } fi
   }
 
   # Generate font collection file.
@@ -4702,7 +4733,7 @@ update_fonts :
   o $outfile1
   o $outfile2
   e " - Upload all fonts to G'MIC server."
-  _upload $outfile1
+#  _upload $outfile1
   rm
 
   # Generate documentation string for command 'font'.
@@ -4719,43 +4750,6 @@ update_fonts :
     if $< str.=" | " else str.=" }." fi
   }
   e " - Generate documentation string for command 'font':\n"$str
-
-_update_fonts :
-  v 0
-  basename "$1" 0 => ${} name={b} rm.
-  strvar $name varname=${}
-  outfile=$_path_rc/font_$varname.gmz
-  target_height=$2
-  e " - "$name
-
-  if !isfile(['$outfile']) l[] {
-    outgmz=${-path_tmp}gmic$0_$varname.gmz
-    size:=round($target_height/1.5)
-    best_size=0 best_font=
-    do
-      rm
-      if $size!=$best_size" || "!narg($best_font)
-        x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
-        $outgmz
-        if h>$target_height +store best_font best_size=$size fi
-      else
-        $best_font
-        break
-      fi
-      e "   \#"$>" -> "{h}
-      if h!=$target_height
-        nsize:=$size+$target_height-h
-        size:=round(lerp($nsize,$size,0.35))
-      fi
-    while h!=$target_height
-    delete $outgmz
-
-    if h>$target_height r2dy $target_height fi
-
-    ge 75% serialize auto,1,0 => $varname
-    o $outfile
-    rm
-  } fi
 
 #@cli identity : _width>=0,_height>=0,_depth>=0
 #@cli : Insert an identity map of given size at the end of the image list.
