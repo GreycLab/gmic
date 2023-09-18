@@ -4686,35 +4686,17 @@ update_fonts :
   files $HOME/work/src/gmic/html/fonts/*.ttf if narg(${}) fonts.=,${} fi
   target_height=512
 
-  repeat narg($fonts) {
-    arg0 $>,$fonts font=${}
-    basename $font 0 => ${} name={b} rm.
-    strvar $name varname=${}
-    outfile=$_path_rc/font_$varname.gmz
-
-    e " - "$name
-
-    if !isfile(['$outfile']) l[] {
-      size:=round($target_height/1.14)
-      nb_attempts=0
-      do
-        rm
-        outgmz=${-path_tmp}gmic_$0_$varname.gmz
-        x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
-        $outgmz
-        e "   \#"$nb_attempts" -> "{h}
-        if h!=$target_height size+=$target_height-h fi
-        nb_attempts+=1
-        delete $outgmz
-      while h!=$target_height" && "($nb_attempts<8" || "($nb_attempts>=8" && "h<$target_height))
-
-      if h>$target_height r2dy $target_height fi
-
-      ge 75% serialize auto,1,0 => $varname
-      o $outfile
-      rm
-    } fi
-  }
+  nb_fonts:=narg($fonts)
+  repeat $nb_fonts { arg0 $>,$fonts font$>=${} }
+  1,$nb_fonts,1,1,":
+    font = get(string('font',y),256,1);
+#    run('v 1 _$0 ',font,',',$target_height);
+    echo('v 1 _$0 ',font,',',$target_height);
+  "
+  # repeat narg($fonts) {
+  #   arg0 $>,$fonts font=${}
+  #   _update_fonts $font
+  # }
 
   # Generate font collection file.
   files ${_path_rc}font_*.gmz files=${}
@@ -4742,6 +4724,34 @@ update_fonts :
     if $< str.=" | " else str.=" }." fi
   }
   e " - Generate documentation string for command 'font':\n"$str
+
+_update_fonts :
+  basename "$1" 0 => ${} name={b} rm.
+  strvar $name varname=${}
+  outfile=$_path_rc/font_$varname.gmz
+  target_height=$2
+  e " - "$name
+
+  if !isfile(['$outfile']) l[] {
+    size:=round($target_height/1.14)
+    nb_attempts=0
+    do
+      rm
+      outgmz=${-path_tmp}gmic_$0_$varname.gmz
+      x 0,"gmic font2gmz \\\""$font"\\\","$size" o "$outgmz
+      $outgmz
+      e "   \#"$nb_attempts" -> "{h}
+      if h!=$target_height size+=$target_height-h fi
+      nb_attempts+=1
+      delete $outgmz
+    while h!=$target_height" && "($nb_attempts<8" || "($nb_attempts>=8" && "h<$target_height))
+
+    if h>$target_height r2dy $target_height fi
+
+    ge 75% serialize auto,1,0 => $varname
+    o $outfile
+    rm
+  } fi
 
 #@cli identity : _width>=0,_height>=0,_depth>=0
 #@cli : Insert an identity map of given size at the end of the image list.
