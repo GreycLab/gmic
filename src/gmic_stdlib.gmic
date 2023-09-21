@@ -5025,11 +5025,12 @@ _input_glob :
   l[] {
     it "$1" f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
     0 => "$1" folder={f} rm. # Retrieve file folder
-    1 # [1]: pts (unrolled)
+    1 # [1]: vertices (unrolled)
     1 # [2]: primitives (unrolled)
     1 # [3]: colors (unrolled)
     1 # [4]: opacity
     1,1,1,2 # [5]: texture 2D pts
+    0 # [6]: vertices weights (RGB)
     _input_obj_rgb,_input_obj_alpha=
     eval "
       next_item() = (
@@ -5071,10 +5072,11 @@ _input_glob :
           X = s2v(line,q); next_item();
           Y = s2v(line,q); next_item();
           Z = s2v(line,q); next_item();
-          line[q]?(R = s2v(line,q)):(R = 0); next_item();
-          line[q]?(G = s2v(line,q)):(G = 0); next_item();
-          line[q]?(B = s2v(line,q)):(B = 0); next_item();
+          line[q]?(R = s2v(line,q)):(R = -1); next_item();
+          line[q]?(G = s2v(line,q)):(G = -1); next_item();
+          line[q]?(B = s2v(line,q)):(B = -1); next_item();
           da_push(#1,X,Y,Z);
+          da_push(#6,[R,G,B]);
           ++nbv;
 
         ):line[0,3]==id_vt?( # Coordinates: texture
@@ -5173,10 +5175,9 @@ _input_glob :
         p = ++np;
         ++line_number;
       );
-      repeat(5,k,k1 = k + 1; resize(#k1,1,da_size(#k1),1,s#k1,0));
+      repeat(6,k,k1 = k + 1; resize(#k1,1,da_size(#k1),1,s#k1,0));
       set('nbp',nbp);
       set('nbv',nbv)"
-
     rm[0,5--1] i[0] ({'CImg3d'},{ui2f([$nbv,$nbp])}:y) a y => "$1"
   }
 
