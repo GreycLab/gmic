@@ -3773,8 +3773,9 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
       if (*p=='%') { ++p; ind0 = _gmic_percent(ind0); iind0 = (int)cimg::round(ind0); }
       else { _iind0 = (int)cimg::round(ind0); iind0 = _iind0<0?_iind0 + (int)index_end:_iind0; }
       if (iind0<0 || iind0>=(int)index_end) {
-        if (!index_end) error(true,"Command '%s': Invalid %s '%s%s%s' (no item available).",
-                              command,stype,ctypel,string,ctyper);
+        if (!index_end) error(true,"Command '%s': Invalid %s '%s%s%s' (no %s available).",
+                              command,stype,ctypel,string,ctyper,
+                              is_selection?"image":"item");
         error(true,"Command '%s': Invalid %s '%s%s%s' (contains index %d, not in range -%u...%u).",
               command,stype,ctypel,string,ctyper,iind0,index_end,index_end - 1);
       }
@@ -5366,7 +5367,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                           !std::strcmp("cursor",command)))
             selection2cimg(s_selection,10,CImgList<char>::empty(),command).move_to(selection);
           else if (*command=='i' && (!command[1] || !std::strcmp("input",command)))
-            selection2cimg(s_selection,siz + 1,images_names,command,true).move_to(selection);
+            selection2cimg(s_selection,siz + 1,images_names,command).move_to(selection);
           else if (!is_get &&
                    ((*command=='e' && (!command[1] ||
                                        !std::strcmp("echo",command) ||
@@ -13669,8 +13670,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                       verbosity = 0;
                       is_debug = false;
                       try {
-                        inds = selection2cimg(inbraces,nb_arguments + 1,
-                                              CImgList<char>::empty(),"",false);
+                        inds = selection2cimg(inbraces,nb_arguments + 1,CImgList<char>::empty(),"",false);
                         is_valid_subset = true;
                       } catch (...) { inds.assign(); is_valid_subset = false; }
                       is_debug = o_is_debug;
