@@ -1808,6 +1808,8 @@ d :
 #@cli :   - '_display_is_info' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global } \
 # (default value: '-1').
+#@cli :   - '_display_print_images' can be { 0:off | N>0 } (default value: '5'). It sets the max number 'N' of images \
+# whose information is initially printed on `stderr` or `stdout`.
 #@cli :   - '_display_3d_is_rendered' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded | 4:gouraud-shaded | \
 # 5=phong-shaded } (default value: '4').
@@ -1854,7 +1856,7 @@ _display : skip ${1=},${3=}
   setting_is_grid:=narg($_display_is_grid)?cut(int(0$_display_is_grid),0,1):1
   setting_is_info:=narg($_display_is_info)?cut(int(0$_display_is_info),0,1):1
   setting_normalization:=narg($_display_normalization)?cut(int(0$_display_normalization),-1,3):-1
-  setting_print_mode:=narg($_display_print_mode)?max(int(0$_display_print_mode),0):5
+  setting_print_images:=narg($_display_print_images)?max(0,$_display_print_images):5
   setting_3d_is_rendered:=narg($_display_3d_is_rendered)?cut(int(0$_display_3d_is_rendered),0,1):1
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?cut(int(0$_display_3d_rendering_mode),0,5):4
   setting_3d_motion_rendering_mode:=narg($_display_3d_motion_rendering_mode)?\
@@ -1881,7 +1883,7 @@ _display : skip ${1=},${3=}
   }
 
   # Save original image names to prevent name conflicts with those used in this command.
-  foreach { image_name$>={n} }
+  foreach { image_name$>={n} => _display$> }
 
   # Generate window and log titles and print log message.
   (${3--1}:y) => image_indices
@@ -1900,10 +1902,6 @@ _display : skip ${1=},${3=}
   }
   if $nb_images>1 window_title.=" (#"$nb_images")" else window_title.=" ("{0,[w,h,d,s]}")" fi
   if $2 e[0--4] "Display image"$_gmic_s" = '"$log_title"'." fi
-  if $nb_images<=$setting_print_mode
-    v + _print[^$nb_images--1] "",0,${3--1} v -
-  fi
-  foreach[^-1] { => _display$> }
 
   # Initialize display window.
   window_previous_normalization,windows_previous_fullscreen=
@@ -1946,6 +1944,14 @@ _display : skip ${1=},${3=}
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x5 => is_printed,is_infnan,is_rotated,is_mesh3d,thumb_is_cached
   f[is_infnan,is_mesh3d] -1
+
+  # Print information of first images.
+  repeat min($nb_images,$setting_print_images) {
+    =>[$>] ${image_name$>}
+    v + _print[$>] $1,0,{image_indices,i[$>]} v -
+    =>[$>] _display$>
+    =[is_printed] 1,0,$>
+  }
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
@@ -2145,7 +2151,7 @@ _display : skip ${1=},${3=}
     if !0$canvas_base
 
       # Print information about image on stderr/stdout (if not already done).
-     if {is_printed,$nb_images>$setting_print_mode" && "!i[$selected]}
+     if {is_printed,$setting_print_images" && "!i[$selected]}
         =>[$selected] ${image_name$selected}
         v + _print[$selected] $1,0,{image_indices,i[$selected]} v -
         =>[$selected] _display$selected
