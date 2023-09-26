@@ -28903,36 +28903,28 @@ frame_pattern : check $1>=3 skip "${2=0},${3=0}"
     }
   fi
 
-#@cli frame_round : frame_size[%]>=0,radius[%]>=0,_smoothness[%]>=0,_col1,...,_colN
+#@cli frame_round : size_x[%]>=0,size_y[%]>=0,radius[%]>=0,_smoothness[%]>=0,_col1,...,_colN
 #@cli : Insert an inner round frame in selected images.
-#@cli : Default values: 'size=1, 'radius=30%', 'smoothness=0' and 'col=0,0,0,255'.
-frame_round : check "${1=1}>=0 && ${2=20%}>=0 && ${3=0}>=0" skip "${4=0},${5=$4},${6=$4},${7=255}"
-  e[^-1] "Insert inner round frame on image$?, with size $1, radius $2, smoothness $3 and color (${4--1})."
-  if !$1" && "!$2 return fi
+#@cli : Default values: 'size_x=size_y=5%, 'radius=30%', 'smoothness=0' and 'col=0,0,0,255'.
+frame_round : check "${1=5%}>=0 && ${2=$1}>=0 && ${3=30%}>=0 && ${4=0}>=0" skip "${5=0},${6=$5},${7=$5},${8=255}"
+  e[^-1] "Insert $1x$2 round frame on image$?, with radius $3, smoothness $4 and color (${5--1})."
+  if !max($1,$2,$3) return fi
   foreach {
-    size_max:=round(min(w,h)/2)
-    size:=cut(int(${"is_percent $1"}?$1*$size_max:$1),0,$size_max)
-    radius_max:=round((min(w,h)-2*$size)/2)
-    radius:=cut(int(${"is_percent $2"}?$2*$radius_max:$2),0,$radius_max)
-    if $size<1" && "$radius<1 continue fi
-    {0,[w,h]}
-    if $size>=1 # Inner frame
-      siz1:=$size-1
-      rectangle. 0,0,100%,$siz1,1,1
-      rectangle. 0,0,$siz1,100%,1,1
-      rectangle. {w-$size},0,100%,100%,1,1
-      rectangle. 0,{h-$size},100%,100%,1,1
+    fwM,fhM:=round([w,h]/2)
+    fw,fh:=round([${is_percent\ $1}?lerp(0,$fwM,$1):$1,${is_percent\ $2}?lerp(0,$fhM,$2):$2])
+    iw,ih:=[w,h]-2*[$fw,$fh]
+    if $iw<=0" || "$ih<=0 fc ${5--1}
+    else
+      R:=${is_percent\ $3}?max(w,h)*$3:$3
+      $iw,$ih
+      shape_circle $R shift. 50%,50%,0,0,2 ==. 0
+      x0,y0,x1,y1:=w2=round(w/2);h2=round(w/2);[-w2,-h2,w#1-w2,h#1-h2]
+      j.. .,$x0,$y0 j.. .,$x1,$y0 j.. .,$x1,$y1 j.. .,$x0,$y1 rm.
+      frame. $fw,$fh,1 b. $4
+      1,1,1,{0,s},${5--1} r. ..,..,1,100%
+      j... .,0,0,0,0,1,..
+      k...
     fi
-    if $radius>=1 # Round corners
-      shape_circle[] {1+2*$radius} ==. 0 s. yx,2
-      j[1] [-4],$size,$size
-      j[1] ...,{w#1-w#-3-$size},$size
-      j[1] ..,$size,{h#1-h#-2-$size}
-      j[1] .,{[w#1,h#1]-[w#-1,h#-1]-$size}
-      rm[-4--1]
-    fi
-    if $3 b. $3 n. 0,1 fi
-    100%,100%,1,{0,s} fc. ${4--1} j... .,0,0,0,0,1,.. k[0]
   }
 
 #@cli frame_seamless : frame_size>=0,_patch_size>0,_blend_size>=0,\
@@ -35396,7 +35388,7 @@ x_2048 : check_display $0
     r. ..,..,1,1,0,0,0.5,0.5 dilate_circ. 3 b. 0.5
     j... ..,0,0,0,0,1,.,1 rm[-2,-1]
   }
-  frame_round[2--1] 0,20%,0.5,187,173,160 frame[2--1] 7,7,187,173,160
+  frame_round[2--1] 0,0,20%,0.5,187,173,160 frame[2--1] 7,7,187,173,160
   to_rgb[2--1]
   r[2] 400%,400%,1,3,0,2 j[1] [2],18,130
   sprite3d[3--1]
@@ -41728,7 +41720,7 @@ fx_dices :
     repeat 6 { {2*$2},{2*$2} _dice$> }
     if $3%2 negate[-6--1] fi
 
-    frame_round[-6--1] 0,30%,0.5,128,128,128,0 frame[-6--1] 1,1,128,128,128,0
+    frame_round[-6--1] 0,0,30%,0.5,128,128,128,0 frame[-6--1] 1,1,128,128,128,0
     r2dy[-6--1] $2 a[-6--1] x
 
     foreach[^-1] {
@@ -52340,14 +52332,15 @@ fx_frame :
  mv. 0 }
 
 #@gui Frame [Round] : fx_frame_round, fx_frame_round(1)
-#@gui : Size (%) = float(1,0,100)
+#@gui : X-Size (%) = float(10,0,100)
+#@gui : Y-Size (%) = float(10,0,100)
 #@gui : Radius (%) = float(20,0,100)
 #@gui : Smoothness = float(0.1,0,15)
 #@gui : Color = color(0,0,0,255)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_frame_round :
-  to_rgba frame_round $1%,$2%,${3-7}
+  to_rgba frame_round $1%,$2%,$3%,${4-7}
 
 #@gui Frame [Smooth] : fx_frame_smooth, fx_frame_smooth(1)
 #@gui : Width (%) = int(10,0,100)
