@@ -19307,9 +19307,11 @@ sharpen : check "$1>=0 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
 sharpen_alpha : check "${1=1}>=0 && isint(${2=5}) && $2>0"
   e[^-1] "Sharpen image$? with a multi-scale and alpha boosting algorithm, with amplitude $1 and $2 scales."
   foreach {
-    repeat $2 { l[0] { . b.. {1+$>^2} sub_alpha. .. } } # Multi-scale decomposition
-    N:=$!-2 foreach[^0] { sh 100% *. {lerp(1,1+$1,$>/$N)} c. 0,255 rm. }
-    blend alpha
+    split_opacity l[0] {
+      repeat $2 { l[0] { . b.. {1+$>^2} sub_alpha. .. } } # Multi-scale decomposition
+      N:=$!-2 foreach[^0] { sh 100% *. {$<?lerp(1,1+$1,$>/$N):(1+$1)} c. 0,255 rm. }
+      blend alpha
+    } a c
   }
 
 #@cli smooth : amplitude[%]>=0,_sharpness>=0,0<=_anisotropy<=1,_alpha[%],_sigma[%],_dl>0,_da>0,\
@@ -51643,6 +51645,30 @@ fx_mighty_details :
 
 fx_mighty_details_preview :
   gui_split_preview "fx_mighty_details $*",${-3--1}
+
+#@gui Sharpen [Alpha] : fx_sharpen_alpha,fx_sharpen_alpha_preview(0)
+#@gui : Amplitude (%) = float(100,0,400)
+#@gui : Number of Scales = int(5,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = choice(0,"All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
+#@gui : "Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [Luminance]",
+#@gui : "YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",
+#@gui : "YCbCr [Green Chrominance]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",
+#@gui : "Lab [b-Chrominance]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [Hue]",
+#@gui : "HSV [Saturation]","HSV [Value]","HSI [Intensity]","HSL [Lightness]","CMYK [Cyan]","CMYK [Magenta]",
+#@gui : "CMYK [Yellow]","CMYK [Key]","YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/29</i>.</small>")
+fx_sharpen_alpha :
+  ac "sharpen_alpha {$1%},$2",$3,1
+
+fx_sharpen_alpha_preview :
+  gui_split_preview "fx_sharpen_alpha $*",${-3--1}
 
 #@gui Sharpen [Deblur] : fx_deblur, fx_deblur_preview(0)
 #@gui : Radius = float(2,0,20)
