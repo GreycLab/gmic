@@ -31732,28 +31732,29 @@ fade_z : skip ${1=30},${2=70}
   e[^-1] "Create ($1%,$2%) transversal fading from image$?."
   repeat int($!/2) { l[$>,{$>+1}] { (0/1) _fade $1,$2 } }
 
-#@cli sub_alpha : [base_image],_opacity_gain>=1
+#@cli sub_alpha : [base_image]
 #@cli : Compute the minimal alpha-channel difference (opposite of alpha blending) between the selected images
 #@cli : and the specified base image.
 #@cli : The alpha difference A-B is defined as the image having minimal opacity, such that alpha_blend(B,A-B) = A.
-#@cli : Default value: 'opacity_gain=1'.
 #@cli : $ image.jpg testimage2d {w},{h} +sub_alpha[0] [1] display_rgba
-sub_alpha : check "${2=1}>=1 && "${"is_image_arg $1"}
-  e[^-1] "Compute minimal alpha-channel difference between image$? and base image $1, with opacity gain $2."
-  remove_opacity repeat $! { pass$1 0 l[$>,-1] {
-    to_colormode 0 r ${-max_whd},100%,0,0,0.5,0.5  # Normalize image dimensions.
-
-    # Estimate minimal alpha-channel.
-    +>[0,1] *[2] 255
-    -[0,2] [1] replace[2] 0,1
-    i[2] [0] /[2,3]
-    compose_channels[2] max
-    *[2] $2 c[2] 0,1
-
-    # Synthetize alpha-difference image.
-    +replace[2] 0,1 /[0,3] +[0,1] *[1] 255 a c
-
-  } }
+sub_alpha : check ${"is_image_arg $1"}
+  e[^-1] "Compute minimal alpha-channel difference between image$? and base image $1."
+  remove_opacity
+  pass$1
+  foreach[^-1] {
+    pass. rv
+    100%,100%,1,{s+1},"begin(null = vectors(0));
+      I_a = I(#0);
+      I_c = I(#1);
+      I_a==I_c?null:(
+        dI_ac = I_a - I_c;
+        alpha_b = max(dI_ac/(I_a - 255*(I_c>I_a)));
+        I_b = I_a - dI_ac/alpha_b;
+        cut([ I_b,alpha_b*255 ],0,255)
+      )"
+    k.
+  }
+  rm.
 
 #---------------------------------------------
 #
