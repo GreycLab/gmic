@@ -18531,7 +18531,7 @@ inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9}) && 
       coef:=0.5^($nb_scales-$iter)
       patch_size:="v=round(max(min($3,5),$3*$coef));v+(1-(v%2))"
       patch_size:=min(w,h,$patch_size)
-      blend_size:="v=if($5,round(max(3,$5*$coef)));v+(1-(v%2))"
+      blend_size:="v=$5?round(max(3,$5*$coef)):0;v+(1-(v%2))"
       iter+=1
       ==[scaled_mask] 0
 
@@ -18549,7 +18549,7 @@ inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9}) && 
         # Upscale correspondence map from previous scale.
         *[correspondence] 2 r[correspondence] 200%,200%,1,2 r[correspondence] [scaled_img],[scaled_img],1,2,0,1
         100%,100%,1,1,x +f. y a[-2,-1] c
-        f[scaled_mask] "*if(i,1,
+        f[scaled_mask] "*i?1:(
                            upc = i(#"$correspondence",x-1,y,0,0); vpc = i(#"$correspondence",x-1,y,0,1);
                            ucp = i(#"$correspondence",x,y-1,0,0); vcp = i(#"$correspondence",x,y-1,0,1);
                            ucc = i(#"$correspondence",x,y,0,0); vcc = i(#"$correspondence",x,y,0,1);
@@ -18674,11 +18674,11 @@ kuwahara : check $1>0
        v3=i(x-"$p",y+"$p",0,"$s",0,1); \
        v4=i(x+"$p",y+"$p",0,"$s",0,1); \
        vm=min(v1,v2,v3,v4); \
-       if(c>="$s",i, \
-         if(vm==v1,i(x-"$p",y-"$p",0,c,0,1),
-           if(vm==v2,i(x+"$p",y-"$p",0,c,0,1),
-             if(vm==v3,i(x-"$p",y+"$p",0,c,0,1),
-               i(x+"$p",y+"$p",0,c,0,1)))))"
+       c>="$s"?i: \
+       vm==v1?i(x-"$p",y-"$p",0,c,0,1):
+       vm==v2?i(x+"$p",y-"$p",0,c,0,1):
+       vm==v3?i(x-"$p",y+"$p",0,c,0,1):
+              i(x+"$p",y+"$p",0,c,0,1)"
     channels 0,{s-2}
   }
 
@@ -18692,7 +18692,7 @@ laplacian :
 #@cli lic : _amplitude>0,_channels>0
 #@cli : Render LIC representation of selected vector fields.
 #@cli : Default values: 'amplitude=30' and 'channels=1'.
-#@cli : $ 400,400,1,2,'if(c==0,x-w/2,y-h/2)' +lic 200,3 quiver[-2] [-2],10,1,1,1,255
+#@cli : $ 400,400,1,2,'c==0?x-w/2:y-h/2' +lic 200,3 quiver[-2] [-2],10,1,1,1,255
 lic : skip ${1=30},${2=1}
   e[^-1] "Render LIC representation of 2D vector field$?, with amplitude $1 and $2 channel(s)."
   foreach {
@@ -18982,11 +18982,11 @@ peronamalik_flow : check "${1=20}>0 && ${2=5}>=0" skip ${3=5},${4=0}
    +gradient xy,0 a[-2,-1] c norm. b. 0.8 /. $1 sqr. *. -1 exp. a[-2,-1] c
    f. '\"s1=s-1;
           C=i(x,y,z,s-1);
-          if(c>=s1,0,
+          c>=s1?0:
            (C+i(x+1,y,z,s-1,0,1))*(j(1,0,0,0,0,1)-i) -
            (C+i(x-1,y,z,s-1,0,1))*(i-j(-1,0,0,0,0,1)) +
            (C+i(x,y+1,z,s-1,0,1))*(j(0,1,0,0,0,1)-i) -
-           (C+i(x,y-1,z,s-1,0,1))*(i-j(0,-1,0,0,0,1)))\"'"
+           (C+i(x,y-1,z,s-1,0,1))*(i-j(0,-1,0,0,0,1))\"'"
   pde_flow $2,$3,_peronamalik_flow,$4
   um _peronamalik_flow
 
@@ -19362,7 +19362,7 @@ solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
          ${arg0\ ($4==0),$4,auto}" scales."
   foreach {
     [0]
-    repeat if($4,$4,int(max(log2(max(w,h))-1,1))) {
+    repeat $4?$4:int(max(log2(max(w,h))-1,1)) {
       f:=2^$<
       r[1] {0,max(1,w/$f)},{0,max(1,h/$f)},1,100%,3
       +ri[0] [1],2 l. { $1 k[0] }
@@ -19513,7 +19513,7 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
     # Get synthetised result and normalize it.
     repeat s { =.. ${sum$>},0,0,0,$> =. 0,0,0,0,$> }
     ifft rm.
-    repeat s { sh. $> avg:=ia -. $avg *. {sqrt(${var$>}/if(iv,iv,1))} +. $avg rm. }
+    repeat s { sh. $> avg:=ia -. $avg *. {sqrt(${var$>}/(iv?iv:1))} +. $avg rm. }
     c $mM
   }
 
@@ -19527,7 +19527,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
   e[^-1] "Resynthetize $1x$2 version(s) of texture$? using a patch-matching algorithm with "\
          ${"if $3 u \"$3 \" else u auto- fi"}"scales, $4x$4 patches, blending size $5 and precision $6."
   foreach {
-    nb_scales:=round(if($3,$3,log2(min(w,h)/16)),1,1)
+    nb_scales:=round($3?$3:log2(min(w,h)/16),1,1)
     width:=ispercentage($1)?round(w*$1,1,1):$1
     height:=ispercentage($2)?round(h*$2,1,1):$2
 
@@ -19941,7 +19941,7 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
     e[0--3] "Detect skin in image$?, using tolerance $1 and target circle at ($2,$3) with radius $4."
     to_rgb srgb2rgb rgb2ycbcr channels 1,2
     foreach {
-      100%,100% circle[1] $2,$3,$4,1,1 +f[1] 'if(i,y,-1)' f[1] 'if(i,x,-1)' discard[1,2] -1 a[1,2] c
+      100%,100% circle[1] $2,$3,$4,1,1 +f[1] "i?y:-1" f[1] "i?x:-1" discard[1,2] -1 a[1,2] c
       +warp[0] [1],0,0,1 rm[1]
       s[1] c
       m0={1,ia} -[1] $m0
@@ -20004,13 +20004,13 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
     vmin=$2 vmax=$3
     if $percent_min||$percent_max
       im,iM:=im,iM
-      vmin:=if($percent_min,$im+($iM-$im)*$2,$2)
-      vmax:=if($percent_max,$im+($iM-$im)*$3,$3)
+      vmin:=$percent_min?$im+($iM-$im)*$2:$2
+      vmax:=$percent_max?$im+($iM-$im)*$3:$3
     fi
     dv:=$vmax-$vmin
-    nb_levels:=max(1,round(if($percent_nblevels,$1*(1+$vmax-$vmin),$1)))
-    f 'if(i>=$vmin&&i<=$vmax,if(i==$vmax,$nb_levels-1,int((i-$vmin)*$nb_levels/($vmax-$vmin))),-1)'
-    pointcloud 1,$nb_levels,{if($s>1,$nb_levels,1)},{if($s>2,$nb_levels,1)}
+    nb_levels:=max(1,round($percent_nblevels?$1*(1+$vmax-$vmin):$1))
+    f "i>=$vmin&&i<=$vmax?(i==$vmax?$nb_levels-1:int((i-$vmin)*$nb_levels/($vmax-$vmin))):-1"
+    pointcloud 1,$nb_levels,{$s>1?$nb_levels:1},{$s>2?$nb_levels:1}
   }
 
 #@cli histogram_cumul : _nb_levels>0,_is_normalized={ 0 | 1 },_val0[%],_val1[%]
@@ -20257,7 +20257,7 @@ minimal_path : check "$1>=0 && $2>=0 && $3>=0" skip ${7=0}
   foreach {
     nm={n}
     - {im} + {iM/100}
-    100%,100% = 1,${4-6} distance. 1,[0],{if($7,4,3)} k. channels. 1
+    100%,100% = 1,${4-6} distance. 1,[0],{$7?4:3} k. channels. 1
     i[0] 0
     eval "
       x = round(ispercentage($1)?$1*(w - 1):$1);
@@ -20394,7 +20394,7 @@ patches : check "isint($1) && $1>0 && isint($2) && $2>0 && isint($3) && $3>0"
 
 #@cli plot2value
 #@cli : Retrieve values from selected 2D graph plots.
-#@cli : $ 400,300,1,1,'if(y>300*abs(cos(x/10+2*u)),1,0)' +plot2value +display_graph[-1] 400,300
+#@cli : $ 400,300,1,1,'y>300*abs(cos(x/10+2*u))?1:0' +plot2value +display_graph[-1] 400,300
 plot2value :
   e[^-1] "Retrieve values from 2D graph plot$?."
   foreach {
@@ -21079,8 +21079,8 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
 
     # Draw x-axis.
     is_0x=0
-    if $3==$4 y0=$3 else y0:=v=-($my)*$h1/($My-$my);if($4>=$3,v,$h1-v) fi
-    sty:=if($y0>$h1-$5,-1,1)
+    if $3==$4 y0=$3 else y0:=v=-($my)*$h1/($My-$my);$4>=$3?v:$h1-v fi
+    sty:=$y0>$h1-$5?-1:1
 
     if $1!=$2" && "$y0>=0" && "$y0<=$h1
       line 0,$y0,$w1,$y0,$6,$pattern,$color
@@ -21093,11 +21093,11 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
       i=0 do
         val:=_$offx+$i*$deltax i+=1
         if $val>=$mx" && "$val<=$Mx
-          x:=v=($val-$mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v)
+          x:=v=($val-$mx)*$w1/($Mx-$mx);$2>=$1?v:$w1-v
           line $x,{$y0-1},$x,{$y0+1},$6,$pattern,$color
           if $val
             0 t. $val,0,0,$5,1,1 100%,100%,1,[0] fc. $color
-            j[0] .,{max(0,min($w1-w,$x-w/2))},{if($sty>0,$y0+3,$y0-h-3)},0,0,$6,.. rm[-2,-1]
+            j[0] .,{max(0,min($w1-w,$x-w/2))},{$sty>0?$y0+3:$y0-h-3},0,0,$6,.. rm[-2,-1]
           else is_0x=1
           fi
         fi
@@ -21106,8 +21106,8 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
 
     # Draw y-axis.
     is_0y=0
-    if $1==$2 x0=$1 else x0:=v=-($mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v) fi
-    stx:=if($x0>$w1-$5,-1,1)
+    if $1==$2 x0=$1 else x0:=v=-($mx)*$w1/($Mx-$mx);$2>=$1?v:$w1-v fi
+    stx:=$x0>$w1-$5?-1:1
 
     if $3!=$4" && "$x0>=0" && "$x0<=$w1
       line $x0,0,$x0,$h1,$6,$pattern,$color
@@ -21120,11 +21120,11 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
       i=0 do
         val:=_$offy+$i*$deltay i+=1
         if $val>=$my" && "$val<=$My
-          y:=v=($val-$my)*$h1/($My-$my);if($4>=$3,v,$h1-v)
+          y:=v=($val-$my)*$h1/($My-$my);$4>=$3?v:$h1-v
           line {$x0-1},$y,{$x0+1},$y,$6,$pattern,$color
           if $val
             0 t. $val,0,0,$5,1,1 100%,100%,1,[0] fc. $color
-            j[0] .,{if($stx>0,$x0+6,$x0-w-6)},{max(0,min($h1-h,$y-h/2))},0,0,$6,.. rm[-2,-1]
+            j[0] .,{$stx>0?$x0+6:$x0-w-6},{max(0,min($h1-h,$y-h/2))},0,0,$6,.. rm[-2,-1]
           else is_0y=1
           fi
         fi
@@ -21134,7 +21134,7 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
     # Draw origin, if necessary.
     if $is_0x" || "$is_0y
       0 t. 0,0,0,$5,1,1 100%,100%,1,[0] fc. $color
-      j[0] .,{if($stx>0,$x0+6,$x0-w-6)},{if($sty>0,$y0+3,$y0-h-3)},0,0,$6,.. rm[-2,-1]
+      j[0] .,{$stx>0?$x0+6:$x0-w-6},{$sty>0?$y0+3:$y0-h-3},0,0,$6,.. rm[-2,-1]
     fi
   }
 
