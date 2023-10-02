@@ -911,7 +911,7 @@ reference : skip "${2=}"
 "* 'if(condition,expr_then,_expr_else)': return value of 'expr_then' or 'expr_else', depending on the value of "\
 "'condition' { 0:false | other:true }. 'expr_else' can be omitted in which case '0' is returned if the condition "\
 "does not hold. Using the ternary operator 'condition?expr_then[:expr_else]' gives an equivalent expression. "\
-"For instance, G'MIC commands \n~~~\nfill if(x%10==0,255,i)\n~~~\n and \n~~~\nfill x%10?i:255\n~~~\n both draw blank "\
+"For instance, G'MIC commands \n~~~\nfill if(!(x%10),255,i)\n~~~\n and \n~~~\nfill x%10?i:255\n~~~\n both draw blank "\
 "vertical lines on every 10th column of an image."\n\
 "* 'do(expression,_condition)' repeats the evaluation of 'expression' until 'condition' vanishes "\
 "(or until 'expression' vanishes if no 'condition' is specified). For instance, the expression: "\
@@ -1112,7 +1112,7 @@ reference : skip "${2=}"
 "### Evaluate a mathematical expression: "\n\
 "\n~~~\n$ gmic echo \"cos(pi/4)^2+sin(pi/4)^2={cos(pi/4)^2+sin(pi/4)^2}\"\n~~~"\n\n\
 "### Plot a 2D function: "\n\
-"\n~~~\n$ gmic 1000,1,1,2 fill \"X=3*(x-500)/500;X^2*sin(3*X^2)+(c==0?u(0,-1):cos(X*10))\" plot\n~~~"\n\
+"\n~~~\n$ gmic 1000,1,1,2 fill \"X=3*(x-500)/500;X^2*sin(3*X^2)+(!c?u(0,-1):cos(X*10))\" plot\n~~~"\n\
 "===\n![2D Plot](../img/example_plot.png)\n==="\n\n\
 "### Plot a 3D elevated function in random colors: "\n\
 "\n~~~\n$ gmic 128,128,1,3,\"u(0,255)\" plasma 10,3 blur 4 sharpen 10000 n 0,255 "\
@@ -1521,7 +1521,7 @@ clean_cluts :
 
     # Standardize names for 'Moviz'.
     if "str = lowercase(['"$nm"*']);
-        find(str,'tpf_-_cinematica_')==0" l[] {
+        !find(str,'tpf_-_cinematica_')" l[] {
        if !narg($tpf) tpf=1 fi
        ('moviz_$tpf')
        tpf+=1
@@ -1544,7 +1544,7 @@ clean_cluts :
 
     # Standardize names for 'SmallHD MovieLook'.
     if "str = lowercase(['"$nm"']);
-        find(str,'smallhd_movielook_')==0" l[] {
+        !find(str,'smallhd_movielook_')" l[] {
       ('$nm') z. 18,100%
       replace_str "apocalypsethisverymoment","apocalypse_this_very_moment"
       replace_str "bobford","bob_ford"
@@ -1556,17 +1556,17 @@ clean_cluts :
 
     # Standardize names for 'Fuji XTrans III'.
     if "str = lowercase(['"$nm"']);
-        find(str,'fuji_xtrans_iii')==0" l[] {
+        !find(str,'fuji_xtrans_iii')" l[] {
       ('$nm')
       replace_str "_-_","_" nm={t} rm
     } fi
 
     # Standardize names for 'RawTherapee'.
     if "str = lowercase(['"$nm"']);
-        find(str,'kodak')==0 ||
-        find(str,'polaroid')==0 ||
-        find(str,'fuji')==0 ||
-        find(str,'ilford')==0" l[] {
+        !find(str,'kodak') ||
+        !find(str,'polaroid') ||
+        !find(str,'fuji') ||
+        !find(str,'ilford')" l[] {
       ({'$nm'},{'*'})
       replace_str " ","_"
       replace_str "xp_2","xp2"
@@ -1585,11 +1585,11 @@ clean_cluts :
 
     # Standardize names for 'PictureFX'.
     if "str = lowercase(['"$nm"']);
-        find(str,'technicalfx')==0 ||
-        find(str,'picturefx')==0 ||
-        find(str,'analogfx')==0 ||
-        find(str,'goldfx')==0 ||
-        find(str,'zilverfx')==0" l[] {
+        !find(str,'technicalfx') ||
+        !find(str,'picturefx') ||
+        !find(str,'analogfx') ||
+        !find(str,'goldfx') ||
+        !find(str,'zilverfx')" l[] {
       ('$nm')
       replace_str "-","_" nm={t} rm
     } fi
@@ -2675,8 +2675,8 @@ _display : skip ${1=},${3=}
           cursor[0] 0
           wxy2,hxy2:=[$area_xy_width,$area_xy_height]+2
           repeat $is_volumetric?3:1 {
-            cx,cy:=$>==0?[($ix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
-                          ($iy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+            cx,cy:=!$>?[($ix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                        ($iy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
                    $>==1?[($ix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
                           ($iz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
                          [($iz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
@@ -2711,14 +2711,14 @@ _display : skip ${1=},${3=}
 
         if $is_area234" && "$is_cursor_over_image
           repeat $is_volumetric?3:1 {
-            dx,dy:=$>==0?[$area_xy_width/$area_xy_dx,$area_xy_height/$area_xy_dy]:\
+            dx,dy:=!$>?[$area_xy_width/$area_xy_dx,$area_xy_height/$area_xy_dy]:\
                    $>==1?[$area_xz_width/$area_xz_dx,$area_xz_height/$area_xz_dz]:\
                          [$area_zy_width/$area_zy_dz,$area_zy_height/$area_zy_dy]
             dl:=max($dx,$dy)
             if $dl>8 # Draw outline of pixel/voxel under cursor if zoomed enough
               opacity:=lerp(0,1,min(($dl-8)/10,1))
-              cx,cy:=$>==0?[($rix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
-                            ($riy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+              cx,cy:=!$>?[($rix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                          ($riy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
                      $>==1?[($rix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
                             ($riz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
                            [($riz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
@@ -2757,14 +2757,14 @@ _display : skip ${1=},${3=}
 
             # Draw current crop rectangle.
             if narg($canvas_crop_x0)
-              cx0,cy0:=$>==0?[($canvas_crop_x0-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
-                              ($canvas_crop_y0-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+              cx0,cy0:=!$>?[($canvas_crop_x0-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                            ($canvas_crop_y0-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
                        $>==1?[($canvas_crop_x0-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
                               ($canvas_crop_z0-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
                              [($canvas_crop_z0-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
                               ($canvas_crop_y0-$area_zy_y0)/$area_zy_dy*$area_zy_height]
-              cx1,cy1:=$>==0?[($rix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
-                              ($riy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
+              cx1,cy1:=!$>?[($rix-$area_xy_x0)/$area_xy_dx*$area_xy_width,\
+                            ($riy-$area_xy_y0)/$area_xy_dy*$area_xy_height]:\
                        $>==1?[($rix-$area_xz_x0)/$area_xz_dx*$area_xz_width,\
                               ($riz-$area_xz_z0)/$area_xz_dz*$area_xz_height]:\
                              [($riz-$area_zy_z0)/$area_zy_dz*$area_zy_width,\
@@ -4111,7 +4111,7 @@ _display_histogram : check "${1=0}>=0 && ${2=0}>=0 && ${3=256}>0" skip ${4=0%},$
 #@cli : 'outline_opacity-1' is used as the actual drawing opacity.
 #@cli : Default values: 'width=512', 'height=width', 'outline_opacity=3', 'vertex_radius=0', 'is_antialiased=1',\
 # 'is_decorated=1', 'xlabel="x-axis"' and 'ylabel="y-axis"'.
-#@cli : $ 1024,1,1,2,'t=x/40;(c==0?sin(t):cos(t))*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)' display_parametric 512,512
+#@cli : $ 1024,1,1,2,'t=x/40;(!c?sin(t):cos(t))*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)' display_parametric 512,512
 #@cli : $ 1000,1,1,2,u(-100,100) quantize 4,1 noise 12 channels 0,2 +normalize 0,255 append c \
 # display_parametric 512,512,0.1,8
 display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${5=1},${6=1},"${7=x-axis}","${8=y-axis}"
@@ -5361,7 +5361,7 @@ output_ggr : skip "${2=}"
   N=$! +foreach {
     r 1,{w*h*d},1,100%,-1 to_rgba / 255
     if narg("$2") name="$2"
-    else l[] { 1 => "$1" ('{b}') f "x==0 && i>=_'a' && i<=_'z'?i-_'a'+_'A':i" name={t} rm }
+    else l[] { 1 => "$1" ('{b}') f "!x && i>=_'a' && i<=_'z'?i-_'a'+_'A':i" name={t} rm }
     fi
     ('"GIMP Gradient\nName: "$name\n{0,h}\n')
     repeat h#0 {
@@ -8210,7 +8210,7 @@ parse_gui_images :
   _preview_area_width,_preview_area_height=256
   if !narg($_input_image) sp landscape,800 store. _input_image fi
 
-  repeat $_nb_filters { f=$> if '${_f${f}_locale}'==0
+  repeat $_nb_filters { f=$> if ['${_f${f}_locale}']==0
     command=${_f${f}_command_preview}
     if ['$command']==0 command=${_f${f}_command} fi
     pipeline=
@@ -8688,7 +8688,7 @@ parse_gui_json :
         if $nbargs-$n>1 name=${arg$n} url=${arg{$n+1}}
         else url,name=${arg$n}
         fi
-        if $align==0 align=left elif $align==1 align=right else align=center fi
+        if !$align align=left elif $align==1 align=right else align=center fi
         ('"      { \"type\": \"link\", \"name\": \""$name"\", \"url\": \""{/$url}"\", \"align\": "\
           "\""$align"\""$visibility" }"$sepp\n')
 
@@ -9306,7 +9306,7 @@ _random_pattern_check_image :
     N:=ispercentage($2)?$ir^2*$2:$2
     $N,1,1,2
     eval "
-     if ($5==0,
+     if (!$5,
        # Type 0: Asplenium adiantum-nigrum.
        f1 = [ 0,0,0,0.16 ];           g1 = [ 0,0 ];
        f2 = [ 0.2,-0.26,0.23,0.22 ];  g2 = [ 0,1.6 ];
@@ -9538,8 +9538,8 @@ _sample :
     }
 
     # Resize to desired dimensions.
-    if $W>0" && "$H==0 r2dx. $W round.
-    elif $W==0" && "$H>0 r2dy. $H round.
+    if $W>0" && "!$H r2dx. $W round.
+    elif !$W" && "$H>0 r2dy. $H round.
     elif $W>0" && "$H>0
       if w/$W>h/$H r2dy. $H else r2dx. $W fi
       r. $W,$H,1,100%,0,0,0.5,0.5 round.
@@ -10050,7 +10050,7 @@ update_color_presets_html : check "isbool(${1=0})"
 
         ('$preset') replace_seq. 39,"92,92,39" preset_esc={t} rm.
         _title $preset title=${}
-        if $>%4==0 if $> ('"        </tr>\n"') fi ('"        <tr>\n"') fi
+        if !($>%4) if $> ('"        </tr>\n"') fi ('"        <tr>\n"') fi
 
         ('"          <td><table>"\n\
           "              <tr><td>"\n\
@@ -11213,7 +11213,7 @@ parse_gui_zart :
         if $nbargs-$n>1 name=${arg$n} url=${arg{$n+1}}
         else url,name=${arg$n}
         fi
-        if $align==0 align=left elif $align==1 align=right else align=center fi
+        if !$align align=left elif $align==1 align=right else align=center fi
         +e "  <link name=\""$name"\" url=\""$url"\" align=\""$align"\" />"
 
       elif ['$type']=='note'
@@ -12353,7 +12353,7 @@ compress_clut : check "${1=1.5}>0 && ${2=0.75}>0 && isint(${3=2048}) && (!$3 || 
       do
         +l. { s y rm[$index] a y } # Remove kth keypoint
         +decompress_clut_$method. {0,[w,h,d]},$colorspace
-        if $_metric==0 -. [0] norm. else srgb2lab. deltaE. [1],{$_metric-1}," " fi
+        if !$_metric -. [0] norm. else srgb2lab. deltaE. [1],{$_metric-1}," " fi
         emax,eavg:=[iM,ia] rm.
 
         if $emax<=$max_error" && "$eavg<=$avg_error rv[-2,-1] else index+=1 fi
@@ -12517,7 +12517,8 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
     if $1 # Encode for binary data.
       !=[0] 0 *[0] 2 -[0] 1 *
     else # Encode for arbitrary data.
-      *. -1 rv a x y discard -1 f '>i(0,y-1)<0&&i==0&&i(0,y+1)<0?-1:i' discard -1
+      *. -1 rv a x y discard -1
+      f ">i(0,y-1)<0 && !i && i(0,y+1)<0?-1:i" discard -1
     fi
     i[0] ($header:y) a y => $nm
   }
@@ -12999,7 +13000,7 @@ noise_poissondisk : check "${1=8}>0 && isint(${2=30}) && $2>0 && ${3=2}>0"
 #@cli : $ image.jpg +normp[0] 0 +normp[0] 1 +normp[0] 2 +normp[0] inf
 normp : check "isnum(${1==2}) && $1>=0"
   e[^-1] "Compute pointwise L"$1"-norm of vectors, in image$?."
-  if $1==0 != 0 compose_channels +
+  if !$1 != 0 compose_channels +
   elif $1==1 abs compose_channels +
   elif $1==2 norm
   elif $1==inf abs compose_channels max
@@ -13343,7 +13344,7 @@ adjust_colors : check "${1=0}>=-100 && $1<=100 && ${2=0}>=-100 && $2<=100 && ${3
   e[^-1] "Adjust colors of image$?, with brightness $1, contrast $2, gamma $3, hue shift $4, saturation $5 and
           value range [$6,$7]."
   foreach { split_opacity l[0] {
-    range:="$6==$7 && $6==0?[im,iM]:[min($6,$7),max($6,$7)]"
+    range:="$6==$7 && !$6?[im,iM]:[min($6,$7),max($6,$7)]"
     m:=arg(1,$range) M:=arg(2,$range) fact:=255/max(1e-5,$M-$m)
     - $m * $fact
     if $4" || "$5 # Adjust Hue/Saturation
@@ -15225,7 +15226,7 @@ rgb2hcy :
   to_color f "
     M = max(R,G,B);
     C = M - min(R,G,B);
-    H = 60*(C==0?0:M==R?((G-B)/C)%6:M==G?(B-R)/C+2:(R-G)/C+4);
+    H = 60*(!C?0:M==R?((G-B)/C)%6:M==G?(B-R)/C+2:(R-G)/C+4);
     Y = 0.299*R + 0.587*G + 0.114*B;
     [ H,C/255,Y/255 ]"
 
@@ -15240,7 +15241,7 @@ rgb2hsi :
     M = max(R,G,B);
     C = M - m;
     sum = R + G + B;
-    H = 60*(C==0?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
+    H = 60*(!C?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
     S = sum<=0?0:1 - 3*m/sum;
     I = sum/(3*255);
     [ H, S, I ]"
@@ -15263,9 +15264,9 @@ rgb2hsl :
     m = min(R,G,B);
     M = max(R,G,B);
     C = M - m;
-    H = 60*(C==0?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
+    H = 60*(!C?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
     L = 0.5*(m + M)/255;
-    S = L==1 || L==0?0:C/(1 - abs(2*L - 1))/255;
+    S = L==1 || !L?0:C/(1 - abs(2*L - 1))/255;
     [ H, S, L ]"
 
 #@cli rgb2hsl8
@@ -15285,7 +15286,7 @@ rgb2hsv :
   f "
     M = max(R,G,B);
     C = M - min(R,G,B);
-    H = 60*(C==0?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
+    H = 60*(!C?0:M==R?((G - B)/C)%6:M==G?(B - R)/C + 2:(R - G)/C + 4);
     S = M<=0?0:C/M;
     [ H, S, M/255 ]"
 
@@ -16017,7 +16018,7 @@ autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isin
       e "\r  > "$n/$N
       rprogress {100*$n/$N}
       +==[1] $n +*[0,-1] rm..
-      if $4==0 coords=${autocrop_coords.\ auto} rm. +z[0] $coords
+      if !$4 coords=${autocrop_coords.\ auto} rm. +z[0] $coords
       elif $4==1 autocrop.
       else coords=${autocrop_coords.\ auto} rm. ($coords) y.
       fi
@@ -16189,7 +16190,7 @@ extract : check "isin(${2=0},0,1,2,3)"
   s0,s1,s2,s3=xyzc-coordinates,xyz-coordinates,scalar-values,vector-values
   e[^-1] "Extract "$s$2" from image$? verifying condition '$1'."
   str=">begin(run('1,32,1,',arg(1+$2,4,3,1,s)));($1)?("
-  if $2==0   str.="da_push([x,y,z,c]));i"
+  if !$2     str.="da_push([x,y,z,c]));i"
   elif $2==1 str.="da_push([x,y,z]));I"
   elif $2==2 str.="da_push(i));i"
   else       str.="da_push(I));I"
@@ -17679,7 +17680,7 @@ denoise_cnn : skip "${1=0},${2=64}"
   replace_str. "nn_input X,32,32,1,3","nn_input X,"$ps","$ps",1,3" # Set patch size
 
   # Preserve upward compatibility.
-  if $1==0
+  if !$1
     replace_str. "nn_crop OUT,OUT0,2,2,0,29,29,0","nn_crop OUT,OUT0,2,2,0,0,29,29,0,2"
   elif inrange($1,1,4)
     replace_str. "nn_crop OUT,OUT0,2,2,0,29,29,0","nn_crop OUT,OUT0,2,2,0,0,29,29,0,2"
@@ -17810,7 +17811,7 @@ dilate_oct : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
   rm[0,1]
 
 _kr_circle :
-  if $1%2==0 2,2,1,1,1 else 1,1,1,1,1 fi r. $1,$1,1,1,0,0,0.5,0.5
+  if !($1%2) 2,2,1,1,1 else 1,1,1,1,1 fi r. $1,$1,1,1,0,0,0.5,0.5
   distance. 1 round. 0.5 ir. 0,{$1/2}
 
 _jf_circle :
@@ -18017,14 +18018,14 @@ _gradient :
 
   # Process images.
   foreach {
-    nm={n} laxes=$axes if '$laxes'==0 if d>1 laxes=xyz else laxes=xy fi fi
+    nm={n} laxes=$axes if ['$laxes']==0 if d>1 laxes=xyz else laxes=xy fi fi
     ('$laxes')
     repeat w {
       a={`i[#1,$>]`} s=${s$a}
       if 0${gradient_$a}>0 [gradient_$a]
       elif $scheme==-1 # Backward
         (-1${s}1${s}0) +correlate[0] .,$boundary rm..
-      elif $scheme==0 # Centered
+      elif !$scheme # Centered
         (-0.5${s}0${s}0.5) +correlate[0] .,$boundary rm..
       elif $scheme==1 # Forward
         (0${s}-1${s}1) +correlate[0] .,$boundary rm..
@@ -18160,7 +18161,7 @@ hessian : skip "${1=},${2=}"
 
   # Process images.
   foreach {
-    nm={n} laxes=$axes if '$laxes'==0 if d>1 laxes=xxxyxzyyyzzz else laxes=xxxyyy fi fi
+    nm={n} laxes=$axes if ['$laxes']==0 if d>1 laxes=xxxyxzyyyzzz else laxes=xxxyyy fi fi
     ('$laxes')
     repeat int(w/2) {
       a1,a2={`i[#1,2*$>]`},{`i[#1,2*$>+1]`}
@@ -18397,7 +18398,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && ${2=75%}>=0 && isint(${3=1}) && $3>=
 
         # Apply diffusion iterations.
         ri... ..,3
-        if $3==0 # Isotropic diffusion
+        if !$3 # Isotropic diffusion
           repeat $nb_iter { j... ..,0,0,0,0,1,. b... 0.5 }
 
         elif $3==1 # Delaunay-guided
@@ -18692,7 +18693,7 @@ laplacian :
 #@cli lic : _amplitude>0,_channels>0
 #@cli : Render LIC representation of selected vector fields.
 #@cli : Default values: 'amplitude=30' and 'channels=1'.
-#@cli : $ 400,400,1,2,'c==0?x-w/2:y-h/2' +lic 200,3 quiver[-2] [-2],10,1,1,1,255
+#@cli : $ 400,400,1,2,'!c?x-w/2:y-h/2' +lic 200,3 quiver[-2] [-2],10,1,1,1,255
 lic : skip ${1=30},${2=1}
   e[^-1] "Render LIC representation of 2D vector field$?, with amplitude $1 and $2 channel(s)."
   foreach {
@@ -19359,7 +19360,7 @@ split_freq :
 #@cli : $ image.jpg command "foo : gradient x" +solve_poisson foo +foo[0] +laplacian[1]
 solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
   e[^-1] "Solve Poisson equation for image$?, for laplacian command '$1', with $2 iterations, time step $3 and "\
-         ${arg0\ ($4==0),$4,auto}" scales."
+         ${arg0\ !$4,$4,auto}" scales."
   foreach {
     [0]
     repeat $4?$4:int(max(log2(max(w,h))-1,1)) {
@@ -19402,7 +19403,7 @@ split_alpha : check "isint(${1=0}) && $1>=0 && isbool(${2=1})"
 #@cli : Default values: 'nb_scales=4', 'base_scale=0' and 'detail_scale=0'.
 #@cli : $ image.jpg split_details ,
 split_details : check "isint(${1=4}) && $1>0 && ${2=0}>=0 && ${3=0}>=0"
-  if ($2)==0" && "($3)==0
+  if !$2" && "!$3
     e[^-1] "Split image$? using $1 spatial scales and 'a trous' wavelets."
     foreach {
       repeat $1-1 {
@@ -19562,7 +19563,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
              vcp = i(x,y - 1,0,1);
              ucc = i(x,y,0,0);
              vcc = i(x,y,0,1);
-             if (ucc==upc && vcc==vpc && c==0, upc + 1,
+             if (ucc==upc && vcc==vpc && !c, upc + 1,
              if (ucc==ucp && vcc==vcp && c==1, vcp + 1,i))"
       fi
 
@@ -20446,7 +20447,7 @@ pointcloud : check "${1=0}<=3 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
       $siz_x,$siz_y,$siz_z,{$1!=2?s-3:1}
       if $1<0 # -X-opacity
         f.. ">V = I; P = V[0,3]; C = V[3,size(V) - 3]; I(#-1,P) = (1+$1)*I(#-1,P) - $1*C; V"
-      elif $1==0 # Binary
+      elif !$1 # Binary
         f.. ">V = I; P = V[0,3]; C = V[3,size(V) - 3]; I(#-1,P) = C; V"
       elif $1==1 # Cumulative
         f.. ">V = I; P = V[0,3]; C = V[3,size(V) - 3]; I(#-1,P) += C; V"
@@ -21566,7 +21567,7 @@ close_binary :
               , #else
                 for_spline(i(#"$new_strokes",P)|=2);
                 for_spline(
-                  if (i(#"$new_strokes",P[0] + 1,P[1])==0,
+                  if (!i(#"$new_strokes",P[0] + 1,P[1]),
                     edgels = area = 0; Q0 = Q = [ P[0] + 1,P[1],2 ];
                     do (
                       i(#"$new_strokes",Q[0],Q[1]) = 4;
@@ -21577,7 +21578,7 @@ close_binary :
                       is_cond = 0; break()
                     );
                   );
-                  if (i(#"$new_strokes",P[0],P[1] + 1)==0,
+                  if (!i(#"$new_strokes",P[0],P[1] + 1),
                     edgels = area = 0; Q0 = Q = [ P[0],P[1] + 1,3 ];
                     do (
                       i(#"$new_strokes",Q[0],Q[1]) = 4;
@@ -21588,7 +21589,7 @@ close_binary :
                       is_cond = 0; break()
                     );
                   );
-                  if (i(#"$new_strokes",P[0] - 1,P[1])==0,
+                  if (!i(#"$new_strokes",P[0] - 1,P[1]),
                     edgels = area = 0; Q0 = Q = [ P[0] - 1,P[1],0 ];
                     do (
                       i(#"$new_strokes",Q[0],Q[1]) = 4;
@@ -21599,7 +21600,7 @@ close_binary :
                       is_cond = 0; break()
                     );
                   );
-                  if (i(#"$new_strokes",P[0],P[1] - 1)==0,
+                  if (!i(#"$new_strokes",P[0],P[1] - 1),
                     edgels = area = 0; Q0 = Q = [ P[0],P[1] - 1,1 ];
                     do (
                       i(#"$new_strokes",Q[0],Q[1]) = 4;
@@ -22084,7 +22085,7 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
     !method?(znm1 = zn + [ precision,0 ]);
     repeat (itermax,iter,
       pzn = p(zn);
-      method==0?(
+      !method?(
         znp1 = zn - pzn**(zn - znm1)//(pzn - p(znm1)); # secant
         znm1 = zn;
       ):method==1?(
@@ -22157,7 +22158,7 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
 
       # Compute reference sprite.
       ind:=1+($>%$N) area=${area$ind}
-      if $3==0 [$ind]
+      if !$3 [$ind]
       elif $3==1 +rotate[$ind] {round(u)*180}
       elif $3==2 +rotate[$ind] {round(u(3))*90}
       else +rotate[$ind] {u*360} sh. 100% !=. 0 area:=is rm.
@@ -22188,7 +22189,7 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
       n={@7}
       if $n
         s3d. rm[-2,-1]
-        if $3==0 # No rotation allowed.
+        if !$3 # No rotation allowed.
           [-6] i.. (-128;{w};{h};{s})
           if $n>1 4,{$n-1},1,1,-128,0,0,0 fi
           +channels.. 100% i.. (-128;{w};{h};{s})
@@ -22316,7 +22317,7 @@ polka_dots : check $1>=0 skip ${2=20},${3=50},${4=50},${5=0},${6=10},${7=1},${8=
 #@cli : Draw specified 2D vector/orientation field on selected images.
 #@cli : Default values: 'sampling=5%', 'factor=1', 'is_arrow=1', 'opacity=1', 'pattern=(undefined)'
 #@cli : and 'color1=0'.
-#@cli : $ 100,100,1,2,'c==0?x-w/2:y-h/2' 500,500,1,3,255 quiver[-1] [-2],10
+#@cli : $ 100,100,1,2,'!c?x-w/2:y-h/2' 500,500,1,3,255 quiver[-1] [-2],10
 #@cli : $ image.jpg +resize2dy 600 luminance[0] gradient[0] mul[1] -1 reverse[0,1] append[0,1] c \
 # blur[0] 8 orientation[0] quiver[1] [0],20,1,1,0.8,255
 quiver : check ${"is_image_arg $1"}" && ${2=5%}>0 && ${3=1}>=0 && isbool(${4=1})" skip "${5=1},${6=0}"
@@ -22363,7 +22364,7 @@ rectangle : skip ${5=1},${6=0},${7=$6}
 #@cli : $ 400,400 rorschach 3%
 rorschach : check "${1=5%}>=0 && isint(${2=1}) && $2>=0 && $2<=3"
   e[^-1] "Render rorschach-like inkblots on image$?, with smoothness $1 and "${arg0\ $2,no,x,y,xy}"-mirroring."
-  if $2==0 # No mirroring.
+  if !$2 # No mirroring.
    rand -1,1 b $1 >= 0
   elif $2==1 # X-mirroring.
     foreach {
@@ -22413,7 +22414,7 @@ _sierpinski :
         Y = y - alpha;
         W = w - 2*alpha;
         H = h - 2*alpha;
-        t = t0 + (Y==0?X:
+        t = t0 + (!Y?X:
                   X==W - 1?W - 1 + Y:
                   Y==H - 1?2*W + H - 3 - X:
                   2*(W + H - 2) - Y);"
@@ -22587,13 +22588,13 @@ turbulence : check "${1=32}>0 && ${2=6}>0" skip ${3=3},${4=0},${5=0}
     nm={n}
     if $4 . fi
     f. 0 +noise. 10,0 b. $1,0
-    if $5==0||$5==1 -. {ia} abs.
+    if isbool($5) -. {ia} abs.
     elif $5==3||$5==4 ^. 2
     elif $5==5 ^. 3
     fi
     repeat $2-1 {
       +noise.. 10,0 b. {$1/2^$>},0
-      if $5==0 -. {ia} abs.
+      if !$5 -. {ia} abs.
       elif $5==4 ^. 2
       elif $5==5 ^. 3
       fi
@@ -23177,7 +23178,7 @@ cubes3d : check ${1=1}>=0
         P = I(#-4,0,y);
         R = i(#-3,0,y);
         W = I(#-2,0,y);
-        norm(W)==0?(W = [ 0,0,1 ]);
+        !norm(W)?(W = [ 0,0,1 ]);
         !y?(
           P0 = P;
           do (ref = [ v,v,v ]; ref/=norm(v); crossWref = cross(W,ref), norm(crossWref)<1e-5);
@@ -23931,7 +23932,7 @@ _opacity3d :
   e[^-1] "Input 3D object from parametric surface ($1,$2,$3)."
   # Compute (x(a,b),y(a,b),z(a,b)) and normalize it.
   ($4,$5;$4,$5^$6,$6;$7,$7) r. $8,$9,1,2,3 channels. 0,2
-  f. "a=i(x,y,0,0);b=i(x,y,0,1);c==0?$1:c==1?$2:$3"
+  f. "a=i(x,y,0,0);b=i(x,y,0,1);!c?$1:c==1?$2:$3"
   sh. 0 xmin,xmax:=im,iM n. 16,{$10-17} rm.
   sh. 1 ymin,ymax:=im,iM n. 16,{$11-17} rm.
   sh. 2 zmin,zmax:=im,iM n. 16,{$12-17} rm.
@@ -23996,7 +23997,7 @@ pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(
     rm[0]                                               # Remove input image (now useless).
     i[0] ('CImg3d')                                     # Header.
     i[1] ($3;$3)                                        # Geometry.
-    i[3] 2,$3,1,1,x==0?1:y                              # Primitives.
+    i[3] 2,$3,1,1,x?y:1                                 # Primitives.
     1,$3,1,1,1                                          # Opacities.
     y a[-6--1] y                                        # Merge as a 3D object.
     => $nm
@@ -24167,27 +24168,27 @@ _primitives3d :
 
       ):n==2?( # Colored segment
         i0 = f2ui(i[#3,pp++]); i1 = f2ui(i[#3,pp++]);
-        mode==0?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O)):
+        !mode?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O)):
         add_colored_segment(i0,i1,R,G,B,O);
 
       ):n==3?( # Colored triangle
         i0 = f2ui(i[#3,pp++]); i1 = f2ui(i[#3,pp++]); i2 = f2ui(i[#3,pp++]);
-        mode==0?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O); add_colored_point(i2,R,G,B,O)):
+        !mode?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O); add_colored_point(i2,R,G,B,O)):
         mode==1?(add_colored_segment(i0,i1,R,G,B,O); add_colored_segment(i1,i2,R,G,B,O);
                  add_colored_segment(i2,i0,R,G,B,O)):
         (da_push(#$prims,3,ui2f(i0),ui2f(i1),ui2f(i2)); da_push(#$cols,R,G,B); da_push(#$opacs,O); ++N);
 
       ):n==4?( # Colored quadrangle
         i0 = f2ui(i[#3,pp++]); i1 = f2ui(i[#3,pp++]); i2 = f2ui(i[#3,pp++]); i3 = f2ui(i[#3,pp++]);
-        mode==0?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O);
-                 add_colored_point(i2,R,G,B,O); add_colored_point(i3,R,G,B,O)):
+        !mode?(add_colored_point(i0,R,G,B,O); add_colored_point(i1,R,G,B,O);
+               add_colored_point(i2,R,G,B,O); add_colored_point(i3,R,G,B,O)):
         mode==1?(add_colored_segment(i0,i1,R,G,B,O); add_colored_segment(i1,i2,R,G,B,O);
                  add_colored_segment(i2,i3,R,G,B,O); add_colored_segment(i3,i0,R,G,B,O)):
         (da_push(#$prims,4,ui2f(i0),ui2f(i1),ui2f(i2),ui2f(i3)); da_push(#$cols,R,G,B); da_push(#$opacs,O); ++N);
 
       ):n==5?( # Colored sphere
         i0 = f2ui(i[#3,pp++]); i1 = f2ui(i[#3,pp++]); is_outlined = i[#3,pp]; pp+=3;
-        mode==0?(
+        !mode?(
           P0 = I[#2,i0]; P1 = I[#2,i1]; nind = da_size(#2); da_push(#2,(P0 + P1)/2);
           add_colored_point(nind,R,G,B,O);
         ):(
@@ -24199,7 +24200,7 @@ _primitives3d :
         i0 = f2ui(i[#3,pp++]); i1 = f2ui(i[#3,pp++]);
         tx0 = cut(i[#3,pp++],0,wt1); ty0 = cut(i[#3,pp++],0,ht1);
         tx1 = cut(i[#3,pp++],0,wt1); ty1 = cut(i[#3,pp++],0,ht1);
-        mode==0?(
+        !mode?(
           copy(RGB0,i(#ind_texture,tx0,ty0,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           copy(RGB1,i(#ind_texture,tx1,ty1,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           add_colored_point(i0,RGB0[0],RGB0[1],RGB0[2],O);
@@ -24219,7 +24220,7 @@ _primitives3d :
         tx0 = cut(i[#3,pp++],0,wt1); ty0 = cut(i[#3,pp++],0,ht1);
         tx1 = cut(i[#3,pp++],0,wt1); ty1 = cut(i[#3,pp++],0,ht1);
         tx2 = cut(i[#3,pp++],0,wt1); ty2 = cut(i[#3,pp++],0,ht1);
-        mode==0?(
+        !mode?(
           copy(RGB0,i(#ind_texture,tx0,ty0,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           copy(RGB1,i(#ind_texture,tx1,ty1,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           copy(RGB2,i(#ind_texture,tx2,ty2,0,0),min(3,s#ind_texture),1,wh#ind_texture);
@@ -24247,7 +24248,7 @@ _primitives3d :
         tx1 = cut(i[#3,pp++],0,wt1); ty1 = cut(i[#3,pp++],0,ht1);
         tx2 = cut(i[#3,pp++],0,wt1); ty2 = cut(i[#3,pp++],0,ht1);
         tx3 = cut(i[#3,pp++],0,wt1); ty3 = cut(i[#3,pp++],0,ht1);
-        mode==0?(
+        !mode?(
           copy(RGB0,i(#ind_texture,tx0,ty0,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           copy(RGB1,i(#ind_texture,tx1,ty1,0,0),min(3,s#ind_texture),1,wh#ind_texture);
           copy(RGB2,i(#ind_texture,tx2,ty2,0,0),min(3,s#ind_texture),1,wh#ind_texture);
@@ -24483,7 +24484,7 @@ skeleton3d : check "isint(${1=2}) && $1>=0 && $1<=2 && isint(${2=3}) && $2>=0 &&
       if $n
         r[2] 3,$n,1,1,-1 r[3] 2,$n,1,1,-1 r[4] 3,$n,1,1,-1
 
-        if $2==0" || "($2==3" && "$1==0) # Frame with squares.
+        if !$2" || "($2==3" && "!$1) # Frame with squares.
           =[1] {4*$n}
           i[3] [2]x3 +z.. 0,1 z. 0,2 -[2] . +[4] .
           s. x *.. -1 a[-3--1] x +[3] . -[5,-1] a[2-5] x
@@ -25126,7 +25127,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2}) && $2>=0 && ${3=0.05}>=0"
       const d = size(eig);
       ind = 1 + x + w*y + wh*z;
       L = eig[0,3];
-      if (max(L)==0, # Empty tensor -> do not display
+      if (!max(L), # Empty tensor -> do not display
         i[#ind,6] = i[#ind,7] = 0;
         resize(#ind,1,8,1,1,0);
       _(else),
@@ -25391,7 +25392,7 @@ voxelize3d : check "${1=128}>0 && isbool(${2=1}) && isbool(${3=0})" check3d
           norm(N)?( # Non-colinear vertices
             S = -dot(N,P0#); # Affine shift
             proj_plane = argmax(abs(N)); # Best 2D projection plane
-            proj_plane==0?( # YZ-backprojection
+            !proj_plane?( # YZ-backprojection
               Q0 = [ P0#[1],P0#[2] ]; Q1 = [ P1#[1],P1#[2] ]; Q2 = [ P2#[1],P2#[2] ];
               _rasterize_triangle(Q0,Q1,Q2,round((-N[1]*a - N[2]*b - S)/N[0]),a,b);
             ):proj_plane==1?( # XZ-backprojection
@@ -25775,7 +25776,7 @@ _exec_out :
   s0,s1,s2=stdout,stderr,stdout+stderr
   e[0--3] "Execute external command '"$command"', and return "${s$mode}" output."
   filename_rand filename=${}
-  if $mode==0 x $command" > "$filename
+  if !$mode x $command" > "$filename
   elif $mode==1 x $command" 2> "$filename
   else x $command"  >"$filename" 2>&1"
   fi
@@ -25831,7 +25832,7 @@ _exec_out :
 
 # The implementation below allows to use parallel as a regular command with selections.
 parallel : skip "${1=},${2=},${3=},${4=},${5=},${6=},${7=},${8=},${9=},${10=},${11=},${12=},${13=},${14=},${15=}"
-  if $1==0||$1==1||$1==2 e[0--3] "Execute "{$#-1}" commands '${2--1}' in parallel on image$?."
+  if inrange($1,0,2) e[0--3] "Execute "{$#-1}" commands '${2--1}' in parallel on image$?."
   else e[0--3] "Execute "$#" commands '$*' in parallel on image$?."
   fi
   parallel $"*"
@@ -28772,13 +28773,13 @@ array_fade : skip ${2=$1},${3=60},${4=90},${5=1}
 array_mirror : skip ${2=2},${3=0}
   e[^-1] "Create a 2^$1x2^$1 mirrored-array from image$?, with expand type $2."
   repeat $1 {
-    if $3==0
+    if !$3
       if $2>=3 r 33%,33%,100%,100%,2
       else r 50%,50%,100%,100%,2
       fi
     fi
     foreach {
-      if $2==0 +mirror x a x
+      if !$2 +mirror x a x
       elif $2==1 +mirror y a y
       else +mirror x a x +mirror y a y if $2==3 r 150%,150%,1,100%,0,2,1,1 fi
       fi
@@ -28839,7 +28840,7 @@ frame_cube : check "${1=1}>=0" skip ${2=0},${3=0},${4=0},${5=0},${6=0},${7=0}
       cx=$2*$w/2*($f+$m*$1)/$f
       cy=$3*$h/2*($f+$m*$1)/$f
       s3d r[2] 3,{{2,h}/3},1,1,-1
-      f[2] "i(2,y)<0.5?i:i+(x==0?"$cx":x==1?"$cy":($1-1)*"$m")"
+      f[2] "i(2,y)<0.5?i:i+(!x?"$cx":x==1?"$cy":($1-1)*"$m")"
       y[2] a y
       *3d 2 {2*$w},{2*$h},1,$s f3d {2*$f}
       j3d. ..,50%,50%,0,1,2,0,0 rm..
@@ -29561,7 +29562,7 @@ brushify : check ${"is_image_arg $1"}" &&"\         # $1: [brush]
     autocrop r ${-max_wh},1,1,0,0,0.5,0.5
     a z => brush
     wb,hb,whb:=w,h,wh ls:=255*$6
-    if $5==0 +f. 0
+    if !$5 +f. 0
     elif $5==1 +n. -$ls,0
     elif $5==2 +g xy +[-2,-1] min. 0 n. -$ls,0
     elif $5==3 +g xy +[-2,-1] max. 0 n. 0,$ls
@@ -29849,7 +29850,7 @@ fire_edges : check "${1=0.7}>=0 && ${2=0.25}>=0 && $2<=1 && ${3=0.5}>=0 && ${4=2
       n. 0,255
       j[0] .,0,0,0,0,1,[1],1 rm.
       correlate[0] [2]
-      if $>>=$6" && "($>-$6)%($7+1)==0 [0] fi
+      if $>>=$6" && "!(($>-$6)%($7+1)) [0] fi
     }
     rm[0-2] =>[^] $nm
   }
@@ -30162,16 +30163,16 @@ pencilbw : skip ${1=0.3},${2=60}
 #@cli : $ image.jpg +norm +ge[-1] 30% +pixelsort[0] +,y,[1],[2]
 pixelsort : check "(str1='${1=+}'; str1=='+' || str1=='-') && "\
                   "(str2='${2=x}'; str2=='x' || str2=='y' || str2=='z' || str2=='xy' || str2=='yx') && "\
-                  "('${3=}'==0 || "${"is_image_arg $3"}") && "\
-                  "('${4=}'==0 || "${"is_image_arg $4"}")"
+                  "(['${3=}']==0 || "${"is_image_arg $3"}") && "\
+                  "(['${4=}']==0 || "${"is_image_arg $4"}")"
   s0="descending" s1="ascending"
-  if '$3'!=0" && "'$4'!=0
+  if ['$3']!=0" && "['$4']!=0
     e[^-1] "Apply 'pixelsort' effect to image$? in "${s{['$1']=='+'}}" order, along axis $2,
             with sorting criterion $3 and mask $4."
-  elif '$3'!=0" && "'$4'==0
+  elif ['$3']!=0" && "['$4']==0
     e[^-1] "Apply 'pixelsort' effect to image$? in "${s{['$1']=='+'}}" order, along axis $2,
             with sorting criterion $3."
-  elif '$3'==0" && "'$4'!=0
+  elif ['$3']==0" && "['$4']!=0
     e[^-1] "Apply 'pixelsort' effect to image$? in "${s{['$1']=='+'}}" order, along axis $2,
             with mask $4."
   else
@@ -30404,7 +30405,7 @@ sponge : skip ${1=13}
   }
 
 _circle :
-  if $1%2==0 2,2 else 1 fi
+  if !($1%2) 2,2 else 1 fi
   +. 1 r. $1,$1,1,1,0,0,0.5,0.5 distance. 1 n. 0,1 sqrt. c. 0.85,0.86 *. -1 n. 0,1
 
 #@cli stained_glass : _edges[%]>=0, shading>=0, is_thin_separators={ 0 | 1 }
@@ -30536,7 +30537,7 @@ stylize :
         r. [-3],[-3],[-3],1,2 r.. [-4],[-4],[-4],1,2
         a[-3,-1] c a[-3,-1] c # Append gradient information as last channel
         stylize_match[-2,-1]
-        if $init_type==0
+        if !$init_type
           +matchpatch.. .,3,3,1,{2*$mprec0},{2*$mprec1},$penalize_repetitions # Initial image match with 3x3 patches
         else
           ..,..,1,2,"round([x,y]*([w#-1,h#-1]-1)/([w,h]-1))" # Identity
@@ -30733,7 +30734,7 @@ equirectangular2nadirzenith :
       );
       rr = sqrt(X*X + Y*Y);
       cc = atan(2*rr);
-      phi = rr==0?0:asin(cos(cc)*sinphi1);
+      phi = rr?asin(cos(cc)*sinphi1):0;
       X = atan2(X,-Y*sinphi1)/pi;
       Y = phi/pi;
       (++X)*=0.5*w;
@@ -30748,7 +30749,7 @@ equirectangular2nadirzenith :
 #@cli : $ image.jpg +fisheye ,
 fisheye : skip ${1=50},${2=50},${3=50},${4=1.2}
   e[^-1] "Apply Fish-eye effect on image$?, centered at ($1%,$2%) with radius $3% and amplitude $4."
-  if $4==0 return fi
+  if !$4 return fi
   foreach {
     100%,100%,1,1 =. 1,$1%,$2% distance. 1 c. 0,$3% *. -1 n. 0,1 ^. {1/$4}
     i.. ({-$1/100},{1-$1/100};{-$1/100},{1-$1/100}^{-$2/100},{-$2/100};{1-$2/100},{1-$2/100}) r.. .,.,1,2,3
@@ -30989,7 +30990,7 @@ twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
 #@cli : 'interpolation' can be { 0:nearest-neighbor | 1:linear | 2:cubic }.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'mode=0', 'interpolation=1', 'boundary_conditions=0' and 'nb_frames=1'.
-#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*(c==0?cos(4*A):sin(8*A))' \
+#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*(!c?cos(4*A):sin(8*A))' \
 # warp[-2] [-1],1,1,0 quiver[-1] [-1],10,1,1,1,100
 #@cli : $$ https://gmic.eu/oldtutorial/_warp
 
@@ -31255,7 +31256,7 @@ scanlines : skip ${1=60},${2=2},${3=0},${4=0},${5=0}
 shade_stripes : skip ${1=5},${2=1},${3=0.8},${4=2}
   e[^-1] "Add "${arg0\ !$2,vertical,horizontal}" shaded stripes to image$?, with frequency $1, darkness $3 and
           lightness $4."
-  n 0,255 foreach { {max(1,w*($2!=0))},{max(1,h*($2==0))} noise. $1,2 ==. 1 distance. 1 ri. .. n. $3,$4 * c 0,255 }
+  n 0,255 foreach { {max(1,w*($2!=0))},{max(1,h*!$2)} noise. $1,2 ==. 1 distance. 1 ri. .. n. $3,$4 * c 0,255 }
 
 #@cli shadow_patch : _opacity>=0
 #@cli : Add shadow patches to selected images.
@@ -33733,7 +33734,7 @@ math_lib :
     ref([I],_I);
     _M = max(_I);
     _C = _M - min(_I);
-    [ 60*(_C==0?0:_M==_I[0]?((_I[1] - _I[2])/_C)%6:_M==_I[1]?(_I[2] - _I[0])/_C + 2:(_I[0] - _I[1])/_C + 4),
+    [ 60*(!_C?0:_M==_I[0]?((_I[1] - _I[2])/_C)%6:_M==_I[1]?(_I[2] - _I[0])/_C + 2:(_I[0] - _I[1])/_C + 4),
       _M<=0?0:_C/_M, _M/255 ];
   );
 
@@ -33775,7 +33776,7 @@ math_lib :
 
   _doi_orientation(px,py,qx,qy,rx,ry) = (
     _doi_orientation_val = (qy - py)*(rx - qx) - (qx - px)*(ry - qy);
-    _doi_orientation_val==0?0:_doi_orientation_val>0?1:2;
+    !_doi_orientation_val?0:_doi_orientation_val>0?1:2;
   );
 
   length_spline(P0,T0,P1,T1) = ( # Compute the length of a spline P0-P1 with tangents T0,T1
@@ -33834,12 +33835,12 @@ math_lib :
     _deltaE00_Cprime1 = norm(_deltaE00_a1prime,_deltaE00_lab1[2]);
     _deltaE00_Cprime2 = norm(_deltaE00_a2prime,_deltaE00_lab2[2]);
 
-    _deltaE00_lab1[2]==0 && _deltaE00_a1prime==0?(
+    !_deltaE00_lab1[2] && !_deltaE00_a1prime?(
       _deltaE00_hprime1 = 0;
     ):(
       _deltaE00_hprime1 = atan2(_deltaE00_lab1[2],_deltaE00_a1prime);
       _deltaE00_hprime1<0?(_deltaE00_hprime1+=_deltaE00_deg360inrad);
-      _deltaE00_lab2[2]==0 && _deltaE00_a2prime==0?(
+      !_deltaE00_lab2[2] && !_deltaE00_a2prime?(
         _deltaE00_hprime2 = 0;
       ):(
         _deltaE00_hprime2 = atan2(_deltaE00_lab2[2],_deltaE00_a2prime);
@@ -33851,7 +33852,7 @@ math_lib :
     _deltaE00_deltaLprime = _deltaE00_lab2[0] - _deltaE00_lab1[0];
     _deltaE00_deltaCprime = _deltaE00_Cprime2 - _deltaE00_Cprime1;
     _deltaE00_CprimeProduct = _deltaE00_Cprime1*_deltaE00_Cprime2;
-    _deltaE00_CprimeProduct==0?(
+    !_deltaE00_CprimeProduct?(
       _deltaE00_deltahprime = 0;
     ):(
       _deltaE00_deltahprime = _deltaE00_hprime2 - _deltaE00_hprime1;
@@ -33867,7 +33868,7 @@ math_lib :
     _deltaE00_barLprime = (_deltaE00_lab1[0] + _deltaE00_lab2[0])/2;
     _deltaE00_barCprime = (_deltaE00_Cprime1 + _deltaE00_Cprime2)/2;
     _deltaE00_hprimeSum = _deltaE00_hprime1 + _deltaE00_hprime2;
-    _deltaE00_Cprime1*_deltaE00_Cprime2==0?(
+    !(_deltaE00_Cprime1*_deltaE00_Cprime2)?(
       _deltaE00_barhprime = _deltaE00_hprimeSum;
     ):(
       abs(_deltaE00_hprime1 - _deltaE00_hprime2)<=_deltaE00_deg180inrad?(
@@ -33907,7 +33908,7 @@ math_lib :
   # l: value of the pixels of the silhouette.
   _next_edgel4(k,P,op) = (
     ref(P#[0],_u); ref(P#[1],_v);
-    P#[2]==0?(i(#k,_u,_nv = _v + 1,0,0)#op?[ _u,_v,1 ]:i(#k,_nu = _u + 1,_nv,0,0)#op?[ _u,_nv,0 ]:[ _nu,_nv,3 ]):
+    !P#[2]?(i(#k,_u,_nv = _v + 1,0,0)#op?[ _u,_v,1 ]:i(#k,_nu = _u + 1,_nv,0,0)#op?[ _u,_nv,0 ]:[ _nu,_nv,3 ]):
     P#[2]==1?(i(#k,_pu = _u - 1,_v,0,0)#op?[ _u,_v,2 ]:i(#k,_pu,_nv = _v + 1,0,0)#op?[ _pu,_v,1 ]:[ _pu,_nv,0 ]):
     P#[2]==2?(i(#k,_u,_pv = _v - 1,0,0)#op?[ _u,_v,3 ]:i(#k,_pu = _u - 1,_pv,0,0)#op?[ _u,_pv,2 ]:[ _pu,_pv,1 ]):
              (i(#k,_nu = _u + 1,_v,0,0)#op?[ _u,_v,0 ]:i(#k,_nu,_pv = _v - 1,0,0)#op?[ _nu,_v,3 ]:[ _nu,_pv,2 ]);
@@ -33917,7 +33918,7 @@ math_lib :
 
   _previous_edgel4(k,P,op) = (
     ref(P#[0],_u); ref(P#[1],_v);
-    P#[2]==0?(i(#k,_u,_pv = _v - 1,0,0)#op?[ _u,_v,3 ]:i(#k,_nu = _u + 1,_pv,0,0)#op?[ _u,_pv,0 ]:[ _nu,_pv,1 ]):
+    !P#[2]?(i(#k,_u,_pv = _v - 1,0,0)#op?[ _u,_v,3 ]:i(#k,_nu = _u + 1,_pv,0,0)#op?[ _u,_pv,0 ]:[ _nu,_pv,1 ]):
     P#[2]==1?(i(#k,_nu = _u + 1,_v,0,0)#op?[ _u,_v,0 ]:i(#k,_nu,_nv = _v + 1,0,0)#op?[ _nu,_v,1 ]:[ _nu,_nv,2 ]):
     P#[2]==2?(i(#k,_u,_nv = _v + 1,0,0)#op?[ _u,_v,1 ]:i(#k,_pu = _u - 1,_nv,0,0)#op?[ _u,_nv,2 ]:[ _pu,_nv,3 ]):
              (i(#k,_pu = _u - 1,_v,0,0)#op?[ _u,_v,2 ]:i(#k,_pu,_pv = _v - 1,0,0)#op?[ _pu,_v,3 ]:[ _pu,_pv,0 ]);
@@ -33927,7 +33928,7 @@ math_lib :
 
   _next_edgel8(k,P,op) = (
     ref(P#[0],_u); ref(P#[1],_v);
-    P#[2]==0?(i(#k,_nu = _u + 1,_nv = _v + 1,0,0)#op?[ _nu,_nv,3 ]:i(#k,_u,_nv,0,0)#op?[ _u,_nv,0 ]:[ _u,_v,1 ]):
+    !P#[2]?(i(#k,_nu = _u + 1,_nv = _v + 1,0,0)#op?[ _nu,_nv,3 ]:i(#k,_u,_nv,0,0)#op?[ _u,_nv,0 ]:[ _u,_v,1 ]):
     P#[2]==1?(i(#k,_pu = _u - 1,_nv = _v + 1,0,0)#op?[ _pu,_nv,0 ]:i(#k,_pu,_v,0,0)#op?[ _pu,_v,1 ]:[ _u,_v,2 ]):
     P#[2]==2?(i(#k,_pu = _u - 1,_pv = _v - 1,0,0)#op?[ _pu,_pv,1 ]:i(#k,_u,_pv,0,0)#op?[ _u,_pv,2 ]:[ _u,_v,3 ]):
              (i(#k,_nu = _u + 1,_pv = _v - 1,0,0)#op?[ _nu,_pv,2 ]:i(#k,_nu,_v,0,0)#op?[ _nu,_v,3 ]:[ _u,_v,0 ]);
@@ -33938,7 +33939,7 @@ math_lib :
 
   _previous_edgel8(k,P,op) = (
     ref(P#[0],_u); ref(P#[1],_v);
-    P#[2]==0?(i(#k,_nu = _u + 1,_pv = _v - 1,0,0)#op?[ _nu,_pv,1 ]:i(#k,_u,_pv,0,0)#op?[ _u,_pv,0 ]:[ _u,_v,3 ]):
+    !P#[2]?(i(#k,_nu = _u + 1,_pv = _v - 1,0,0)#op?[ _nu,_pv,1 ]:i(#k,_u,_pv,0,0)#op?[ _u,_pv,0 ]:[ _u,_v,3 ]):
     P#[2]==1?(i(#k,_nu = _u + 1,_nv = _v + 1,0,0)#op?[ _nu,_nv,2 ]:i(#k,_nu,_v,0,0)#op?[ _nu,_v,1 ]:[ _u,_v,0 ]):
     P#[2]==2?(i(#k,_pu = _u - 1,_nv = _v + 1,0,0)#op?[ _pu,_nv,3 ]:i(#k,_u,_nv,0,0)#op?[ _u,_nv,2 ]:[ _u,_v,1 ]):
              (i(#k,_pu = _u - 1,_pv = _v - 1,0,0)#op?[ _pu,_pv,0 ]:i(#k,_pu,_v,0,0)#op?[ _pu,_v,3 ]:[ _u,_v,2 ]);
@@ -34492,7 +34493,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     *. 200 i[-2] 100%,100%,1,3 a[-2,-1] c
 
     rows -5,100% a y,0.5 r2dx 480
-    if $2==0 o $HOME/work/src/gmic/html/img/donations_latest_months.png fi
+    if !$2 o $HOME/work/src/gmic/html/img/donations_latest_months.png fi
   }
 
   total_eur:=$all_sum_eur+$all_sum_usd/$eur2usd
@@ -34511,7 +34512,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     shape_heart 82 +r. 100%,100%,1,3 hsv2rgb. rv[-2,-1] *. 255 a[-2,-1] c
     r. ..,..,1,100%,0,0,0.23,0.15 drop_shadow. 3,3,2,0,0
     blend alpha,0.7 r2dx 500
-    if $2==0 o $HOME/Desktop/donations_latest_months.jpg,85 rm return fi
+    if !$2 o $HOME/Desktop/donations_latest_months.jpg,85 rm return fi
   }
 
   # Generate coin graphics.
@@ -34747,7 +34748,7 @@ uint82base64 : skip "${1=0}"
     od = ov = n = 0;
     for (os = 0, os<whds#-2,
       v = i[#-2,os++]&255;
-      n==0?(i[#-1,od++] = hash[v>>2]; ov = v; n = 1):
+      !n?(i[#-1,od++] = hash[v>>2]; ov = v; n = 1):
       n==1?(i[#-1,od++] = hash[((ov&3)<<4) | (v>>4)]; ov = v; n = 2):
       (i[#-1,od++] = hash[((ov&15)<<2) | (v>>6)]; i[#-1,od++] = hash[v&63]; n = 0);
     );
@@ -34845,9 +34846,9 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
     rgb2hsv.. r.. 100%,100%,$n,3 f.. "[z*360/d,G,B]" hsv2rgb..
     N:=6*$n P:=2*$N-1
     i[0] ('CImg3d') i[1] ($N,$P) i[2] 3,$N # Header, points
-    i[3] 2,$N,1,1,"x?y:1" i[4] 3,{$N-1},1,1,"x==0?2:x==1?y:y+1" y[3,4] a[3,4] y # Primitives
+    i[3] 2,$N,1,1,"x?y:1" i[4] 3,{$N-1},1,1,"!x?2:x==1?y:y+1" y[3,4] a[3,4] y # Primitives
     l[4] { # Colors
-      s z i[0--2] (-128,{w},{h},3) 4,{$N-$n},1,1,'x==0?-128:x==1?y%$n:0' # Colors
+      s z i[0--2] (-128,{w},{h},3) 4,{$N-$n},1,1,'!x?-128:x==1?y%$n:0' # Colors
       3,{$P-$N},1,1,200 y a y
     }
     l[5] { # Opacities
@@ -34877,7 +34878,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
     [background]
 
     3,$N,1,1,"const t = 0.8*"$|"; const a = "$alpha"; const oma = 1 - a;
-              x==0?oma*cos("$cfx"*y + t) + a*cos("$nfx"*y + t):
+              !x?oma*cos("$cfx"*y + t) + a*cos("$nfx"*y + t):
               x==1?oma*sin("$cfy"*y + t) + a*sin("$nfy"*y + t):
                    oma*sin("$cfz"*y + t) + a*sin("$nfz"*y + t)"
     y.
@@ -35777,7 +35778,7 @@ _x_color_curves :
 
     # Display view.
     if $need_refresh
-      if $viewmode==0 # Modified view.
+      if !$viewmode # Modified view.
         +xcc_backto[1]
       elif $viewmode%2 # Split view.
         w2={0,int(w/2)} b:=$viewmode==1 +z[{!$b}] 0,{$w2-1} +z[$b] $w2,100%
@@ -35859,7 +35860,7 @@ __x_color_curves :
 #@cli : Colorized selected B&W images, using an interactive window.
 #@cli : When >0, argument 'max_resolution' defines the maximal image resolution used in the interactive window.
 #@cli : Default values: 'is_lineart=1', 'max_resolution=1024' and 'multichannels_output=0'.
-x_colorize : skip ${1=0},${3=0},${4=0},${5=0},${6=0} check "${2=1024}==0 || $2>=128" check_display $0
+x_colorize : skip ${1=0},${3=0},${4=0},${5=0},${6=0} check "!${2=1024} || $2>=128" check_display $0
   s0="image" s1="lineart" s2="multichannel" s3="merged" use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e[^-1] "Colorize selected B&W "${s{!$1}}"$? interactively, with maximum resolution $2 and "${s{2+!$3}}" output."
   e "\n
@@ -36569,7 +36570,7 @@ x_fisheye : check_display $0
     w.
     if {*,CTRLLEFT}" && "{*,D} w[] {3*w},{3*h} elif {*,CTRLLEFT}" && "{*,C} w[] {1.5*w},{1.5*h} fi
     rm.
-    if {*}==0" || "{*,ESC}" || "{*,Q} rm[-2,-1] w 0 return fi
+    if !{*}" || "{*,ESC}" || "{*,Q} rm[-2,-1] w 0 return fi
   while 1
 
 #@cli x_fourier
@@ -36796,7 +36797,7 @@ x_hanoi : check_display $0
   }
 
   w[] 640,400,0,"[G"{`39`}"MIC] Tower of Hano\357"
-  1,3,1,3,'y==0?[32,128,100]:y==1?[64,16,0]:[0,0,0]' r. {*,w},{*,h},1,3,3 => background
+  1,3,1,3,'!y?[32,128,100]:y==1?[64,16,0]:[0,0,0]' r. {*,w},{*,h},1,3,3 => background
   nb_moves,buttons,motion3d_x,motion3d_y=0
   x,rod,rod_source,rod_target,selected=-1
   fading=$| error=0
@@ -37570,7 +37571,7 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       # Refresh view.
       if $refresh
         _x_mask_color[2] {$2*w#2/w#0},$3,{``$colors_add},{``$colors_sub} delay=${}
-        if $visumode==0 +. 64 c. 0,255 +a[1,-1] c drgba. w. -1,-1,$nm" [half-masked]" rm.
+        if !$visumode +. 64 c. 0,255 +a[1,-1] c drgba. w. -1,-1,$nm" [half-masked]" rm.
         elif $visumode==1 +a[1,-1] c drgba. w. -1,-1,$nm" [masked]" rm.
         else w. -1,-1,$nm" [mask]"
         fi
@@ -37775,7 +37776,7 @@ x_minesweeper : check "${1=20}>=8 && $1<=30 && ${2=$1}>=8 && $2<=30" check_displ
     if $x>=0\ &&\ $y>=0\ &&\ $x<{board,w}\ &&\ $y<{board,h}
       if $b&1  # Try to clean square.
         started=1 val={field,i($x,$y)}
-        if $val==0 +==[field] 0 j[board] [field],0,0,0,0,1,. rm. failed=1  # Found a mine -> boom!
+        if !$val +==[field] 0 j[board] [field],0,0,0,0,1,. rm. failed=1  # Found a mine -> boom!
         elif $val==1 # Found an empty area
           +flood[field] $x,$y,0,0,1,1,-1 ==. -1 dilate. 3 j[board] [field],0,0,0,0,1,. rm.
         else =[board] $val,$x,$y # Close to one or several mines
@@ -38131,7 +38132,7 @@ x_pacman : check_display $0
       [visu]
       repeat 4 {
         mg=${mg$>} xg=${xg$>} yg:=${yg$>}+24
-        if $mg==0 j. [ghost$>_$t],$xg,$yg,0,0,1,[ghostm_$t]
+        if !$mg j. [ghost$>_$t],$xg,$yg,0,0,1,[ghostm_$t]
         elif $mg==1 t2:=$left>7?$t:$left>3?int(12*$|)%4:int(24*$|)%4 j. [ghosta_$t2],$xg,$yg,0,0,1,[ghostm_$t]
         elif $mg==2 j. [ghostd_$t],$xg,$yg,0,0,0.8,[ghostdm]
         else j. [ghost$>_$t],$xg,$yg,0,0,{$mg-2},[ghostm_$t] j. [ghostd_$t],$xg,$yg,0,0,1,[ghostdm]
@@ -38168,7 +38169,7 @@ x_pacman : check_display $0
         xg=${xg$>} yg=${yg$>} dg=${dg$>} mg=${mg$>}
 
         if max(abs($xg-$xp),abs($yg-$yp))<=8              # Test collision between ghost and pacman.
-          if $mg==0" && "!$dying_pacman dying_pacman=1    # Was in normal mode -> dying pacman.
+          if !$mg" && "!$dying_pacman dying_pacman=1      # Was in normal mode -> dying pacman.
             xscore=$xp yscore:=$yp+12 oscore=1 nscore=4
           elif $mg==1 mg=2 mg$>=$mg score+=100            # Was in invicibility mode -> dying ghost.
             xscore=$xp yscore:=$yp+12 oscore=1 nscore=1
@@ -38183,8 +38184,8 @@ x_pacman : check_display $0
         if !($xg&15)" && "!($yg&15) # Check if ghost can take a new direction.
           ({u},{u},{u},{u};0,1,2,3)
           if $mg<2 # Try to chase or escape pacman
-            =. {u(0.6,1)},{$mg==0?(dX0=$xp-$xg;dY0=$yp-$yg;abs(dX0)>abs(dY0)?(dX0>0?0:2):(dY0>0?1:3)):\
-                                  (dX1=$xp-$xg;dY1=$yp-$yg;abs(dX1)<abs(dY1)?(dX1>0?2:0):(dY1>0?3:1))}
+            =. {u(0.6,1)},{!$mg?(dX0=$xp-$xg;dY0=$yp-$yg;abs(dX0)>abs(dY0)?(dX0>0?0:2):(dY0>0?1:3)):\
+                                (dX1=$xp-$xg;dY1=$yp-$yg;abs(dX1)<abs(dY1)?(dX1>0?2:0):(dY1>0?3:1))}
             =. 0,{($dg+2)%4}
             if $is_get_ready =. 0.8,{path,i({$xg>>4},{$yg>>4})} fi
           else =. 1,{path,i({$xg>>4},{$yg>>4})} # If dying ghost, follow the best path to home.
@@ -38197,8 +38198,8 @@ x_pacman : check_display $0
         fi
         u:=D=${dg$>};(D==0)-(D==2)
         v:=D=${dg$>};(D==1)-(D==3)
-        xg$>:=($xg+$u*(1+($mg==0)))%(16*$mw)
-        yg$>:=($yg+$v*(1+($mg==0)))%(16*$mh)
+        xg$>:=($xg+$u*(1+!$mg))%(16*$mw)
+        yg$>:=($yg+$v*(1+!$mg))%(16*$mh)
       }
 
       wait 22
@@ -38644,9 +38645,9 @@ x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
       if !narg($u0) u0=$u1 v0=$v1 fi
       if $u0!=$u1" || "$v0!=$v1
         n0:=sqrt(($u0)^2+($v0)^2)
-        nu0:=if($n0>135,$u0*135/$n0,$u0) nv0:=if($n0>135,$v0*135/$n0,$v0) nw0:=sqrt(max(0,18225-($nu0)^2-($nv0)^2))
+        nu0:=$n0>135?$u0*135/$n0:$u0 nv0:=$n0>135?$v0*135/$n0:$v0 nw0:=sqrt(max(0,18225-($nu0)^2-($nv0)^2))
         n1:=sqrt(($u1)^2+($v1)^2)
-        nu1:=if($n1>135,$u1*135/$n1,$u1) nv1:=if($n1>135,$v1*135/$n1,$v1) nw1:=sqrt(max(0,18225-($nu1)^2-($nv1)^2))
+        nu1:=$n1>135?$u1*135/$n1:$u1 nv1:=$n1>135?$v1*135/$n1:$v1 nw1:=sqrt(max(0,18225-($nu1)^2-($nv1)^2))
         u:=$nv0*$nw1-$nw0*$nv1 v:=$nw0*$nu1-$nu0*$nw1 w:=$nv0*$nu1-$nu0*$nv1 n:=sqrt(($u)^2+($v)^2+($w)^2)
         rotation3d[] $u,$v,$w,{-asin($n/18225)*180/pi} mv[pose3d] $! m*[-2,-1] => pose3d
         u0=$u1 v0=$v1 rm[visu_3d]
@@ -38728,7 +38729,7 @@ x_reflection3d : check_display $0
 
     tic=$|
     # Recreate 3D interpolated background object.
-    +rows. 8,{8+3*i[6]-1} +j... .,0,8,0,0,{if($anim<250,0,0.5-0.5*cos(($anim-250)/100))} rm..
+    +rows. 8,{8+3*i[6]-1} +j... .,0,8,0,0,{$anim<250?0:0.5-0.5*cos(($anim-250)/100)} rm..
 
     # Render 3D background object (with flat colors).
     +z[-6] $xb,0,{$xb+399},399 j3d. ..,75%,50%,0,1,3,0,0
@@ -38776,7 +38777,7 @@ x_rubber3d : check_display $0
   col3d... 200,200,200,0.3 col3d.. 128,200,76 col3d. 200,128,76
   c3d[-3--1] r3d. 1,0,0,70 +3d[-3--1] +3d. 10,-8,20 *3d. 1.5
   400,400,64,3
-  {w},{h},1,3,'if(c==0,x,if(c==1,y,y*{1,d}/h))'
+  {w},{h},1,3,'!c?x:c==1?y:y*{1,d}/h'
   {w},{h},1,3
   w[] ${"fitscreen .,35%"},0,"[G"{`39`}"MIC] 3D Rubber Object"
   frame=0
@@ -38798,7 +38799,7 @@ x_rubber3d : check_display $0
 #@cli : Segment foreground from background in selected opaque RGB images, interactively.
 #@cli : Return RGBA images with binary alpha-channels.
 #@cli : Default value: 'max_resolution=1024'.
-x_segment : check "${1=1024}==0 || $1>=128" check_display $0
+x_segment : check "!${1=1024} || $1>=128" check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e[^-1] "Extract foreground from background in image$? interactively, with maximum resolution $1."
   e "\n
@@ -38878,16 +38879,16 @@ x_segment : check "${1=1024}==0 || $1>=128" check_display $0
         dy:=($y1-$y0)/6 y0+=$dy y1+=$dy
       elif $o>0" || "($is_ctrl" && "{*,ARROWUP}) # Zoom in.
         if $x1-$x0>16" && "$y1-$y0>16
-          cx:=if($x>=0" && "!{*,ARROWUP},$x,($x0+$x1)/2)
-          cy:=if($y>=0" && "!{*,ARROWUP},$y,($y0+$y1)/2)
+          cx:=$x>=0" && "!{*,ARROWUP}?$x:($x0+$x1)/2
+          cy:=$y>=0" && "!{*,ARROWUP}?$y:($y0+$y1)/2
           x0:=$cx+($x0-$cx)*0.75} y0={$cy+($y0-$cy)*0.75
           x1:=$cx+($x1-$cx)*0.75} y1={$cy+($y1-$cy)*0.75
         fi
       elif $o<0" || "($is_ctrl" && "{*,ARROWDOWN}) # Zoom out.
         zfactor:=max(($x1-$x0+1)/$w,($y1-$y0+1)/$h)
         if $zfactor<1.3
-          cx:=if($x>=0" && "!{*,ARROWDOWN},$x,($x0+$x1)/2)
-          cy:=if($y>=0" && "!{*,ARROWDOWN},$y,($y0+$y1)/2)
+          cx:=$x>=0" && "!{*,ARROWDOWN}?$x:($x0+$x1)/2
+          cy:=$y>=0" && "!{*,ARROWDOWN}?$y:($y0+$y1)/2
           x0:=$cx+($x0-$cx)/0.75} y0={$cy+($y0-$cy)/0.75
           x1:=$cx+($x1-$cx)/0.75} y1={$cy+($y1-$cy)/0.75
           dx:=$zfactor^2*($w-$x0-$x1)/2 dy:=$zfactor^2*($h-$y0-$y1)/2
@@ -38911,7 +38912,7 @@ x_segment : check "${1=1024}==0 || $1>=128" check_display $0
       if narg($baseview)" && "$is_button" && "$x>=0" && "$y>=0" && "$x<$w" && "$y<$h
         if $selection==-1" && "$N # Check for selection of an existing point.
           ($x;$y) r. $N,2 -. [points] *. {max($ww,$wh)/max($x1-$x0,$y1-$y0)} sqr. s. y +[-2,-1]
-          dmin:=im selection:=if($dmin>25,-1,xm) rm.
+          dmin:=im selection:=$dmin>25?-1:xm rm.
         fi
         if $selection>=0
           if $marker_mode # Move existing point.
@@ -38967,9 +38968,9 @@ x_segment : check "${1=1024}==0 || $1>=128" check_display $0
         nx0:=$x0*$pw/$w ny0:=$y0*$ph/$h
         nx1:=$x1*$pw/$w ny1:=$y1*$ph/$h
         +z[img] $x0,$y0,$x1,$y1
-        r. $ww,$wh,1,100%,{if($ww<w" && "$wh<h,2,1)}
+        r. $ww,$wh,1,100%,{$ww<w" && "$wh<h?2:1}
         +z[labels] $nx0,$ny0,$nx1,$ny1
-        r. $ww,$wh,1,100%,{if($ww<w" && "$wh<h,2,3)}
+        r. $ww,$wh,1,100%,{$ww<w" && "$wh<h?2:3}
         if $bg_mode>=3 *. -1 +. 1 fi
         *. {255-$opacity} +. $opacity a[-2,-1] c
         if $bg_mode%3>=1 i.. 100%,100%,1,3,{(($bg_mode-1)%3)*255} blend[-2,-1] alpha
@@ -39028,7 +39029,7 @@ _x_segment :
 x_select_color : skip ${1=xsc_variable} check_display $0
   rm
   n:=narg($$1) if !$n $1=0,0,0 fi
-  rgba_mode:=$n>=4 R:=arg(1,$$1) G:=arg(2,$$1) B:=arg(3,$$1) A:=if($rgba_mode,arg(4,$$1),255)
+  rgba_mode:=$n>=4 R:=arg(1,$$1) G:=arg(2,$$1) B:=arg(3,$$1) A:=$rgba_mode?arg(4,$$1):255
   e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
              ($$1)"."
   if !{*} w[] {400+24*$rgba_mode},400,0,"Select a color" fi
@@ -39105,7 +39106,7 @@ x_select_color : skip ${1=xsc_variable} check_display $0
       else t. "RGB ("$R","$G","$B")",{$x0+115},{$y1+8},14,1,0
       fi
       ('${dec2hex\ {$R*65536+$G*256+$B}}') -. {'0'} r. 6,1,1,1,0,0,1,0 +. {'0'}
-      f. if(i>=_'a'" && "i<=_'z',i+_'A'-_'a',i)
+      f. i>=_'a'" && "i<=_'z'?i+_'A'-_'a':i
       t.. "html ""#"{t},{$x0+115},{$y1+40},14,1,0 rm.
       w. 100%,100%,0 rm.
       if $rgba_mode $1=$R,$G,$B,$A else $1=$R,$G,$B fi
@@ -39266,7 +39267,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
       is_inside:=$X>=0" && "$Y>=0" && "$X<=100" && "$Y<=100
 
       # Check for a point selection.
-      if $selected<0 +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=if(im>8,-1,ym) rm. fi
+      if $selected<0 +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=im>8?-1:ym rm. fi
 
       if $x>=0" && "$b&1" && "$selected>=0 # Move an existing point.
         if {*,SHIFTLEFT}" || "{*,SHIFTRIGHT} X={points,i(0,$selected)} fi
@@ -39278,7 +39279,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
 
       elif $b&1" && "$is_inside # Create new point.
         ($X,$Y) a[points,-1] y sort[points] +,y
-        +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=if(im>8,-1,ym) $1={points,^} rm[view,-1]
+        +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=im>8?-1:ym $1={points,^} rm[view,-1]
       elif $b&2" && "$selected>0" && "$selected<{points,h-1}" && "$is_inside # Delete an existing point.
         l[points] { s y rm[$selected] a y } wait -1 selected=-1 $1={points,^} rm[view]
       fi
@@ -39364,7 +39365,7 @@ x_select_palette : skip ${1=xsp_variable},${2=0} check_display $0
         ($R^$G^$B) rgb2hsv. H,S,V:=round([i[0],i[1]*255,i[2]*255]) rm.
         t.. "HSV ("$H","$S","$V")",8,{$wh-31},14,1,0
         ('${dec2hex\ {$R*65536+$G*256+$B}}') -. {'0'} r. 6,1,1,1,0,0,1,0 +. {'0'}
-        f. if(i>=_'a'" && "i<=_'z',i+_'A'-_'a',i)
+        f. i>=_'a'" && "i<=_'z'?i+_'A'-_'a':i
         t... "html ""#"{t},8,{$wh-17},14,1,0 rm.
       fi
       sh[baseview] 3 j... ..,8,8,0,0,1,. rm[-2,-1]
@@ -39516,13 +39517,13 @@ x_spline : check_display $0
     r2dx. 50% w. rm[3,4,-1] wait
 
     # Handle key events.
-    if {*,SPACE} visuflags+=if($visuflags&1,-1,1) wait -1 fi  # Show/hide spline
-    if {*,P} visuflags+=if($visuflags&2,-2,2) wait -1 fi      # Show/hide points
-    if {*,ENTER} visuflags+=if($visuflags&4,-4,4) wait -1 fi  # Show/hide polygon
-    if {*,T} visuflags+=if($visuflags&8,-8,8) wait -1 fi      # Show/hide tangents
-    if {*,I} visuflags+=if($visuflags&16,-16,16) wait -1 fi   # Show/hide indices
+    if {*,SPACE} visuflags+=$visuflags&1?-1:1 wait -1 fi  # Show/hide spline
+    if {*,P} visuflags+=$visuflags&2?-2:2 wait -1 fi      # Show/hide points
+    if {*,ENTER} visuflags+=$visuflags&4?-4:4 wait -1 fi  # Show/hide polygon
+    if {*,T} visuflags+=$visuflags&8?-8:8 wait -1 fi      # Show/hide tangents
+    if {*,I} visuflags+=$visuflags&16?-16:16 wait -1 fi   # Show/hide indices
     if {*,C}" && "!{*,CTRLLEFT}" && "!{*,CTRLRIGHT} # Show/hide coordinates
-      visuflags+=if($visuflags&32,-32,32) wait -1 fi
+      visuflags+=$visuflags&32?-32:32 wait -1 fi
     if {*,PADADD}" && "$roundness<1 roundness*=1.1 wait -1 fi    # Increase roundness
     if {*,PADSUB}" && "$roundness>0.1 roundness*=0.9 wait -1 fi  # Decrease roundness
     if {*,R}" && "!{*,CTRLLEFT}" && "!{*,CTRLRIGHT} rm. i[1] 0 wait -1 fi  # Reset curve
@@ -39532,7 +39533,7 @@ x_spline : check_display $0
     if {*,r} w[] fi # Resize window if necessary.
 
     # Set/unset active point.
-    if {*,b}==0 active=-1                            # Unset active point if mouse button is released
+    if !{*,b} active=-1                              # Unset active point if mouse button is released
     elif {*,x}>=0" && "{*,b}" && "$active==-1        # Find new active point
       [2] ({2*[{*,x},{*,y}]}) -[-2,-1] sqr. s. x +[-2,-1]  # Compute distance vector to points
       nearest:=ym                                    # Set nearest point
@@ -39616,10 +39617,10 @@ x_starfield3d : check_display $0
       repeat $N {
         +r3d[$>] 1,{$>%4},1,{-${z$>}/2}
         j3d.. .,{90+${x$>}},{60+${y$>}},${z$>},1,4,0,0 rm.
-        z$>:=tl=280+6*$<;if($t<tl,min(0,${z$>}+20),-20*($t-tl))
+        z$>:=tl=280+6*$<;$t<tl?min(0,${z$>}+20):-20*($t-tl)
       }
 
-      # Presents.
+      # Version number.
       if $t<280 op:=max(0,min(1,($t-200)/20))
       else op:=max(0,1-($t-280)/20)
       fi
@@ -39692,7 +39693,7 @@ x_tetris : check_display $0
   # Start game.
   time=$| score=0 fall_mode=0 gameover=0 n=-1 nn:=round(u(0,$N-1))
   do
-    wait {if($fall_mode,-1,-20)}
+    wait {$fall_mode?-1:-20}
 
     # In case of game over.
     if $gameover
@@ -39730,7 +39731,7 @@ x_tetris : check_display $0
     # Manage user interactions.
     if {*,SPACE} fall_mode=1 fi
     if {*,ARROWUP}" || "{*,ARROWLEFT}" || "{*,ARROWRIGHT}
-      an:=if({*,ARROWUP},n=$n+1;if(n%4,n,n-4),$n)
+      an:={*,ARROWUP}?(n=$n+1;n%4?n:n-4):$n
       nx:=w2=int({m$an,w}/2);max(w2,min($x-{*,ARROWLEFT}+{*,ARROWRIGHT},$W-({m$an,w}%2)-w2))
       +j[board] [m$an],{$nx-int({m$an,w}/2)},$y,0,0,-1,[m$an]
       if iM==1 x=$nx n=$an fi
@@ -40162,7 +40163,7 @@ x_waves : check_display $0
       1,{4*$nb},1,1,1 y a y
     } [4] sprites3d.. .,1 rm. +3d[-2,-1] fi
     -3d. {$w/2},{$w/2} *3d. {0,0.9*max(w,h)/$w} # Center and scale 3D object.
-    r3d. 0,0,1,{if({*,b}&2,{*,x}*360/{*,w},$|*30)} r3d. 1,0,0,120 # Get rotated 3D object.
+    r3d. 0,0,1,{{*,b}&2?{*,x}*360/{*,w}:$|*30} r3d. 1,0,0,120 # Get rotated 3D object.
     +j3d[0] .,50%,65%,30,1,3,0,0
     fps=${-fps} if $fps>0 to. $fps" fps",5,{h-22},16,2,0.2 fi
     w.
@@ -40237,7 +40238,7 @@ gui_preview_wh :
 
 # Function used for filters based on parallelization with spatial splitting.
 gui_parallel_overlap :
-  apo "$1",$3,{if($2,2^($2-1),0)}
+  apo "$1",$3,{$2?2^($2-1):0}
 
 # Function that renders a single preview image from multiple preview images.
 # Pre-cond : Number of image is $!>1.
@@ -41454,7 +41455,7 @@ _heart80x73 :
 #@gui : url = link{"David Revoy (Deevad)","http://www.davidrevoy.com/"}
 fx_gmicky :
   rm
-  if $1==0 sp gmicky => "name(Gmicky)"
+  if !$1 sp gmicky => "name(Gmicky)"
   elif $1==1 sp gmicky_mahvin => "name(Gmicky)"
   elif $1==2 sp gmicky_wilber => "name(Gmicky & Wilber)"
   else sp roddy => "name(Roddy)"
@@ -41608,7 +41609,7 @@ fx_array_mirror : skip ${7=0}
   elif $5==5 rotate 270
   fi
   if $7
-    if $4==0 columns 0,{100-$7}%
+    if !$4 columns 0,{100-$7}%
     elif $4==1 rows 0,{100-$7}%
     elif $4==2 z 0,0,{100-$7}%,{100-$7}%
     elif $4==3 z {$7/2}%,{$7/2}%,{100-$7/2}%,{100-$7/2}%
@@ -41681,7 +41682,7 @@ fx_array_preview :
 fx_asciiart : skip "${10=},${11=},${12=}"
   foreach {
     to_rgb apply_gamma {10^$7} b $8% n 0,255
-    if $1==0 dict="$2"
+    if !$1 dict="$2"
     elif $1==1
       dict=" 01"
     elif $1==2
@@ -41703,7 +41704,7 @@ fx_asciiart : skip "${10=},${11=},${12=}"
     else +img2ascii $dict,$3,$4%,$5
     fi
     wh=${}
-    if $6==0 k. n 0,255
+    if !$6 k. n 0,255
     elif $6==1 k. negate n 0,255
     elif $6==2" || "$6==3
       r[0] $wh,1,100%,1
@@ -41768,7 +41769,7 @@ fx_dices :
 
       # Convert input image to dices pattern.
       *.. $2 channels.. 0,1 r.. {$2*100}%,{$2*100}%
-      $2,$2,1,2,'if(c,y,x)' r. ...,...,1,2,0,2 +[-3,-1] +warp. ..,0,0,1 rm...
+      $2,$2,1,2,"c?y:x" r. ...,...,1,2,0,2 +[-3,-1] +warp. ..,0,0,1 rm...
 
       if $3<2 rm[0] mv. 0
       else r[0] [2],[2],1,100% rv[0,-1] blend[0,-1] multiply
@@ -41958,7 +41959,7 @@ fx_extract_objects :
     w,h:=w,h
     x,y:=$1%*(w-1),$2%*(h-1)
     color:=I($x,$y)
-    if $7==0 # Output: Crop.
+    if !$7 # Output: Crop.
       +replace_color $3,0,$color,0,0,0,0 autocrop_components. $4%,$min_area,$6,2
       repeat w {
         +z[0] {1,i($>,0)},{1,i($>,1)},{1,i($>,3)},{1,i($>,4)}
@@ -42281,7 +42282,7 @@ fx_montage : skip "${2=A}"
   if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
   to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
   if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{if($3==0,$4,2+max(0,$4-0.5))},$15,\
+  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},$15,\
     "if $""7%2 mirror x fi if $""8%2 mirror y fi "\
     "rotate {90*$""6} "\
     "if $5||$6 "\
@@ -42300,7 +42301,7 @@ fx_montage_preview : skip "${2=A}"
   code0=X code1="$2" code2=H code3=V code4=A code5=B
   to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
   if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{if($3==0,$4,2+max(0,$4-0.5))},0,\
+  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},0,\
     "if $""7%2 mirror x fi if $""8%2 mirror y fi
      rotate {90*$""6}
      if $5||$6
@@ -42469,7 +42470,7 @@ fx_taquin :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/26/05</i>.</small>")
 fx_rotate_tileable :
   if $3 array_mirror 1,{$3-1},1 fi
-  rotate_tileable $1,{if($3==0,$2,$2/2)}
+  rotate_tileable $1,{!$3?$2:$2/2}
 
 fx_rotate_tileable_preview :
   l { fx_rotate_tileable $* onfail gui_warning_preview "Invalid image size" }
@@ -42594,7 +42595,7 @@ fx_bokeh :
     repeat $1 { +rows. $> _fx_bokeh... {^} rm. }
     rm. => "name("$nm"),opacity(100),mode(screen),pos("$pos")"
     rv
-    if 0$_output_mode==0 gui_merge_layers
+    if !0$_output_mode gui_merge_layers
     elif 0$_output_mode<2 rm.
     fi
   }
@@ -42666,11 +42667,11 @@ _fx_bokeh :
 fx_brushify :
   _fx_brushify $*
   s0=0--3 s1=1--2 s2=0--2
-  l[${s{$1==0?0:$1==1?1:2}},-1] { brushify[^-1] .,$3,{$5%},$6,$9,$10,$11,$12%,$13,$14,$15,$16,$17,$18 rm. }
+  l[${s{!$1?0:$1==1?1:2}},-1] { brushify[^-1] .,$3,{$5%},$6,$9,$10,$11,$12%,$13,$14,$15,$16,$17,$18 rm. }
 
 _fx_brushify : # Insert brush at the end of the list
   N:=0.9*$4
-  if $1==0 +autocrop. i.. 100%,100%,1,3,1 blend[-2,-1] alpha rr2d. $N,$N,0,3
+  if !$1 +autocrop. i.. 100%,100%,1,3,1 blend[-2,-1] alpha rr2d. $N,$N,0,3
   elif $1==1 +autocrop[0] i.. 100%,100%,1,3,1 blend[-2,-1] alpha rr2d. $N,$N,0,3
   elif $1==2 $4,$4 rectangle. 10%,10%,90%,90%,1,1
   elif $1==3 shape_diamond. $N
@@ -42694,13 +42695,13 @@ fx_brushify_preview :
   fx_brushify $*
   if $19
     _fx_brushify $*
-    if $1==0 rm.. elif $1==1 rm[0] fi
+    if !$1 rm.. elif $1==1 rm[0] fi
     rr2d. {0,max(1,w/5)},{0,max(1,h/5)},0,2 n. 0,255
     frame. 3,3,0 frame. 1,1,255 frame. 1,1,0
     to_rgb. to. "Brush",4,2,13,2,1,255,255,0 to_a.
     j[^-1] .,2,2 rm.
   else
-    if $1==0 rm. elif $1==1 rm[0] fi
+    if !$1 rm. elif $1==1 rm[0] fi
   fi
 
 #@gui Cartoon : cartoon, fx_cartoon_preview(0)
@@ -43831,7 +43832,7 @@ fx_shapeism :
       +channels[2] 100% +>[1] $> !=.. 0 -|[-2,-1] a[2,-1] c
 
       # Create shape at given scale.
-      size:=if($6<=1,$7,$7+($8-$7)*$>/($6-1))
+      size:=$6<=1?$7:$7+($8-$7)*$>/($6-1)
       if $size<1 break fi
       if $5 {2*$size},{2*$size} _fx_shapeism$1. ${2-4} r2dy. $size
       else $size,$size _fx_shapeism$1. ${2-4}
@@ -45068,7 +45069,7 @@ fx_stamp :
       if $7 r 150%,150%,1,1,3 fi
       noise $5
       if $1 otsu 256 else >= $2% fi
-      b {if($7,1.5,1)*$3},0 sharpen $4 n 0,255
+      b {($7?1.5:1)*$3},0 sharpen $4 n 0,255
       apply_curve 1,0,0,101,33,170,229,255,255
       if $7 r $wh,1,1,2 fi
       if $6 negate fi
@@ -46747,7 +46748,7 @@ fx_colormap :
       r. 3,{w/3},1,1,-1 permute. yzcx r. $3,1,1,3,3
       index[0] .,$2,1 rm.
     else                      # Adaptive colormap.
-      autoindex[0] $3,$2,{if($3<=32,1,0)}
+      autoindex[0] $3,$2,{$3<=32}
     fi
     a c
   }
@@ -47196,9 +47197,9 @@ fx_hsv_equalizer :
     to_rgb rgb2hsv s c
     # From now on 0,1,2 are H,S,V
     #3 masks:
-    +f[0] if(abs(i-$2)<$3/2|abs(i-$2-360)<$3/2|abs(i-$2+360)<$3/2,1,0)
-    +f[0] if(abs(i-$7)<$8/2|abs(i-$7-360)<$8/2|abs(i-$7+360)<$8/2,1,0)
-    +f[0] if(abs(i-$12)<$13/2|abs(i-$12-360)<$13/2|abs(i-$12+360)<$13/2,1,0)
+    +f[0] abs(i-$2)<$3/2|abs(i-$2-360)<$3/2|abs(i-$2+360)<$3/2
+    +f[0] abs(i-$7)<$8/2|abs(i-$7-360)<$8/2|abs(i-$7+360)<$8/2
+    +f[0] abs(i-$12)<$13/2|abs(i-$12-360)<$13/2|abs(i-$12+360)<$13/2
     # From now on 3,4,5 are Masks
     +threshold[1,2] 0.01 *[-1,-2] [-1]x2 *[-1,3] *[-1,4] *[-1,5]  #0 saturation and value not in mask
     # Hue shift:
@@ -47225,9 +47226,9 @@ fx_hsv_equalizer_preview :
       to_rgb rgb2hsv s c
       (0,359) r. ..,{{0,h}/10},1,1,3 . f. 1       #create lower band
       j[0] [3],0,91% j[1] [4],0,91% j[2] [4],0,91% rm[-1,-2] #paste lower band
-      +f[0] if(abs(i-$2)<$3/2|abs(i-$2-360)<$3/2|abs(i-$2+360)<$3/2,1,0)
-      +f[0] if(abs(i-$7)<$8/2|abs(i-$7-360)<$8/2|abs(i-$7+360)<$8/2,1,0)
-      +f[0] if(abs(i-$12)<$13/2|abs(i-$12-360)<$13/2|abs(i-$12+360)<$13/2,1,0) #masks
+      +f[0] abs(i-$2)<$3/2|abs(i-$2-360)<$3/2|abs(i-$2+360)<$3/2
+      +f[0] abs(i-$7)<$8/2|abs(i-$7-360)<$8/2|abs(i-$7+360)<$8/2
+      +f[0] abs(i-$12)<$13/2|abs(i-$12-360)<$13/2|abs(i-$12+360)<$13/2 #masks
       -|[-3--1] +. 0.33 /. 1.33   #1 and 0.25
       *[2,-1] a c hsv2rgb
     fi
@@ -49144,8 +49145,8 @@ fx_circle_transform :
   foreach {
     to_rgba r:=dx=($3-$1)*(w-1)%;dy=($4-$2)*(h-1)%;norm(dx,dy)
     if $7==0 cond="i(X,Y,z,c,$8,$9)"
-    elif $7==1 cond="if(N<"$r",i(X,Y,z,c,$8,$9),i)"
-    else cond="if(N>"$r",i(X,Y,z,c,$8,$9),i)"
+    elif $7==1 cond="N<$r?i(X,Y,z,c,$8,$9):i"
+    else cond="N>$r?i(X,Y,z,c,$8,$9):i"
     fi
     f "U = x - w*$1%;
        V = y - h*$2%;
@@ -49459,7 +49460,7 @@ fx_symmetrizoscope :
   if !$3 to_a fi
   repeat $1 {
     ang:=$2+180*$>/max(1,$1-1)
-    symmetrize 50%,50%,$ang,$3,0,{if($4!=2,$4,$>%2)}
+    symmetrize 50%,50%,$ang,$3,0,{$4!=2?$4:$>%2}
   }
 
 #@gui Morph [Interactive] : fx_morph_interactive, fx_morph_interactive_preview : +
@@ -50112,7 +50113,7 @@ __fx_simulate_grain :
     c. 0,255
     adjust_colors. ${7-11}
     if $13 k[0,-1] rv
-    else blend[0,-1] ${bm$2},{if($2<=4,$3,1)}
+    else blend[0,-1] ${bm$2},{$2<=4?$3:1}
     fi
     a[^-1] c
   } } rm.
@@ -50255,7 +50256,7 @@ __fx_dof_blur :
   [0],[0],1,{0,s+1}
   s=0
   repeat $1 {
-    +==[1] {if($4,$<,$>)} b. 2%
+    +==[1] {$4?$<:$>} b. 2%
     j.. [0],0,0,0,0,-1,.,1
     j.. .,0,0,0,100%,-1
     rm.
@@ -50555,7 +50556,7 @@ fx_dirty_preview :
 
 _fx_dirty :
   foreach {
-    dct 100%,100%,1,{if($2,1,s)} noise. $1,2
+    dct 100%,100%,1,{$2?1:s} noise. $1,2
     ==. 0 point. 0,0,0,1,1
     * idct c 0,255
   }
@@ -51986,7 +51987,7 @@ fx_split_details_alpha :
   remove_opacity
   foreach {
     repeat $1-1 {
-      s:=$3+($2-$3)*$>/if($1-2>0,$1-2,1)
+      s:=$3+($2-$3)*$>/($1-2>0?$1-2:1)
       +_fx_split_details_alpha_blur. $s
       sub_alpha.. .
     }
@@ -52160,24 +52161,24 @@ fx_droste :
         $5*w/100,$6*h/100,$7*w/100,$8*h/100])
       100%,100%,1,2,-32767 polygon. 4,$x0,$y0,$x1,$y1,$x2,$y2,$x3,$y3,1,-65535
       sh. 0
-      f. "if(i==-65535,
+      f. "i==-65535?(
             x03 = "$x0"+(y-"$y0")/("$y3"-"$y0")*("$x3"-"$x0");
             x12 = "$x1"+(y-"$y1")/("$y2"-"$y1")*("$x2"-"$x1");
-            (x-x03)/(x12-x03)*(w-1),i)"
+            (x-x03)/(x12-x03)*(w-1)):i"
       rm.
       sh. 1
-      f. "if(i==-65535,
+      f. "i==-65535?(
             y01 = "$y0"+(x-"$x0")/("$x1"-"$x0")*("$y1"-"$y0");
             y32 = "$y3"+(x-"$x3")/("$x2"-"$x3")*("$y2"-"$y3");
-            (y-y01)/(y32-y01)*(h-1),i)"
+            (y-y01)/(y32-y01)*(h-1)):i"
       rm.
       xshift,yshift,alpha:=w*$10/100,h*$11/100,-$12*pi/180
       ca,sa,w2,h2:=cos($alpha)/$13,sin($alpha)/$13,w/2,h/2
-      f. 'if(i==-32767,i,X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;if(c==0,$w2-$xshift+X*$ca-Y*$sa,$h2-$yshift+X*$sa+Y*$ca))'
-      if $14==0 sh. 0 f. 'if(i==-32767,x,i)' rm. sh. 1 f. 'if(i==-32767,y,i)' rm.
-      elif $14==1 sh. 0 f. 'if(i==-32767,x,w-1-i)' rm. sh. 1 f. 'if(i==-32767,y,i)' rm.
-      elif $14==2 sh. 0 f. 'if(i==-32767,x,i)' rm. sh. 1 f. 'if(i==-32767,y,h-1-i)' rm.
-      else sh. 0 f. 'if(i==-32767,x,w-1-i)' rm. sh. 1 f. 'if(i==-32767,y,h-1-i)' rm.
+      f. 'i==-32767?i:(X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;c==0?$w2-$xshift+X*$ca-Y*$sa:$h2-$yshift+X*$sa+Y*$ca)'
+      if $14==0 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:i' rm.
+      elif $14==1 sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:i' rm.
+      elif $14==2 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
+      else sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
       fi
       if $16<2 warp.. .,0,{$16==0},$15 rm.
       else
@@ -53214,7 +53215,7 @@ _fx_drop_shadow3d :
   point3d 0,0,1 r3d. 1,0,0,$1 r3d. 0,1,0,$2 r3d. 0,0,1,$3
   u,v,w:=i(0,8),i(0,9),i(0,10) rm.
   to_a channels 100% if im==iM return fi
-  +f 'X=x/w-0.5;Y=y/h-0.5;A=($7-$4*$7/100)*$w/(X*$u+Y*$v+$7*$w);if(A<0,1e8,A)'
+  +f 'X=x/w-0.5;Y=y/h-0.5;A=($7-$4*$7/100)*$w/(X*$u+Y*$v+$7*$w);A<0?1e8:A'
   +*. 'y/h-0.5' *.. 'x/w-0.5' +.. {0.5-$5/100} +. {0.5-$6/100} *.. {w} *. {h}
   a[-2,-1] c warp[0] .,0,1,0 rm.
   b $8% n 0,$12 i.. ($9^$10^$11) r.. .,.,1,3 a[-2,-1] c
@@ -53988,7 +53989,7 @@ fx_crystal :
       do
         +b. $sigma sigma*=(1+$2)
         sh[0,-1] $s max. .. rm[-2,-1]
-        f. 'W=i(x,y,z,$s);if(W<0.001||W>=1,0,if(c<$s,i/W,1))'
+        f. 'W=i(x,y,z,$s);W<0.001||W>=1?0:c<$s?i/W:1'
         if !iM rm[1] break fi
         sh. $s
         j[0] [1],0,0,0,0,1,[2] k[0]
@@ -54280,7 +54281,7 @@ fx_mineral_mosaic :
     to_rgb
     +b $3 segment_watershed. $1 +norm.
     area. 0 +<=. {$2^2} inpaint.. . rm. label.
-    +f[0] 'if(c==0,x,y)' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
+    +f[0] 'c==0?x:y' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
     -[-3,-1] rm[0,-2] channels. 0,1
     alpha:=$5*pi/180 sh. 0 *. {cos($alpha)} rm. sh. 1 *. {sin($alpha)} rm. compose_channels. +
     normalize_local. 1000 n. -$4,$4
@@ -54852,7 +54853,7 @@ fx_satin :
 fx_seamless_turbulence :
   foreach {
     wh:=w,h rm
-    $wh,1,{if($6,3,1)} rand. 0,255
+    $wh,1,{$6?3:1} rand. 0,255
     $wh rand. {$3*pi/180-$4*10*pi},{$3*pi/180+$4*10*pi} +sin. cos.. a[-2,-1] c
     r[-2,-1] 130%,130%,1,100%,0,2,0.5,0.5 b. $2 orientation.
     vector2tensor.
@@ -56108,7 +56109,7 @@ fx_blocks3d :
     if $16 {2*$M},{2*$M},1,4,-1 else $M,$M,1,4,-1 fi
     f3d:=0.5*w/tan($7*pi/360) f3d $f3d
     l3d {$10*$f3d},{$11*$f3d},{$12*$f3d} sl3d $13 ss3d $14
-    j3d. [0],$8%,$9%,0,1,{if($15,3,2)},0,1
+    j3d. [0],$8%,$9%,0,1,{$15?3:2},0,1
     sh. 100% +. 1 *. 255 rm.
 
     # Render object outline
@@ -56562,9 +56563,9 @@ fx_circle_art :
     rows. 0,2
     f. "r = x/(w-1);
         t = 2*pi*x/$2;
-        if(y==0,(r^$11)*cos("$t0"+$13*t),
-        if(y==1,(r^$12)*sin("$t0"+$14*t),
-                 max(0,$3*($9+($10-$9)*r))))"
+        y==0?(r^$11)*cos("$t0"+$13*t):
+        y==1?(r^$12)*sin("$t0"+$14*t):
+             max(0,$3*($9+($10-$9)*r))"
   fi
 
   # Convert to 3D object.
@@ -56609,7 +56610,7 @@ fx_circle_art :
 fx_equation_parametric :
   foreach {
     w,h:=w,h rm
-    $5,1,1,2,"t=$3+x*($4-$3)/($5-1);if(c==0,$1,$2)"
+    $5,1,1,2,"t = $3 + x*($4-$3)/($5-1); !c?$1:$2"
     channels. 0,2
     ($8,$11^$9,$12^$10,$13) r. {-2,w},1,1,3,3 a c
     display_parametric $w,$h,{$6+$14*1.001},$7,$15,$16
@@ -56998,7 +56999,7 @@ fx_lightning :
           new_length:=max(2,round(($nb_points-$p)*u($19%,$20%)))
           new_x={$i,i[8+3*$p]}
           new_y={$i,i[9+3*$p]}
-          new_angle:=$angle+u($21,$22)*if(u>0.5,1,-1)
+          new_angle:=$angle+u($21,$22)*(u>0.5?1:-1)
         fi
 
         _fx_lightning $new_length,$4,$5
@@ -57006,8 +57007,8 @@ fx_lightning :
         +3d. $new_x,$new_y
         +*3d. $fact [0],[0] j3d. ..,$12%,$13%,0,1,1,0,0 rm..
 
-        dilation:=$15*(if($23>0,1.5,10)^($23*($new_level-1)))
-        blur:=max(0,-1+(1+$16)*(if($24>0,2,5)^($24*($new_level-1))))
+        dilation:=$15*($23>0?1.5:10)^($23*($new_level-1))
+        blur:=max(0,-1+(1+$16)*($24>0?2:5)^($24*($new_level-1)))
         opacity:=min(1,$10/255*(2^($25*($new_level-1))))
 
         dilate. $dilation b. $blur% n. 0,1 *. $opacity max[0,-1]
@@ -59237,7 +59238,7 @@ fx_intarsia :
     round[1] index[0] [1]
 
     # Output header and title.
-    0 => $nm ('{b}') f. 'if(x,i,if(i>=97&&i<=122,i-32,i))' image_basename={t} rm[-2,-1]
+    0 => $nm ('{b}') f. 'x?i:i>=97&&i<=122?i-32:i' image_basename={t} rm[-2,-1]
     ('"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n\
        \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n\
        <html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n\
@@ -59253,7 +59254,7 @@ fx_intarsia :
       color={1,I($>)}
       R,G,B=$color
       ('${dec2hex\ {$R*65536+$G*256+$B}}') -. {'0'} r. 6,1,1,1,0,0,1,0 +. {'0'}
-      f. if(i>=_'a'" && "i<=_'z',i+_'A'-_'a',i)
+      f. i>=_'a'" && "i<=_'z'?i+_'A'-_'a':i
       hcolor={t} rm.
       48,32,1,4 fc. $color,255 frame. 1,1,0,0,0,255 o. "$1/"${image_name}_$>.png rm.
       ('"<tr><td><b>Colour "$>"</b></td><td><img src=\""${image_name}_$>.png"\" /></td><td>#"$hcolor"</td></tr>\n"')
@@ -59329,7 +59330,7 @@ fx_intarsia_preview :
     if max(w,h)>$3 rr2d $3,$3,0 fi
     to_rgba
     _fx_intarsia $5,$6,0
-    100%,100%,1,1,'if(y%2,y*w+w-1-x,y*w+x)<$8*wh/100' *
+    100%,100%,1,1,"(y%2?y*w+w-1-x:y*w+x)<$8*wh/100" *
     if min(w,h)<140 rr2d 140,140,1,1 fi
     expand_xy 16,0
 
