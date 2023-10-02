@@ -688,6 +688,7 @@ reference : skip "${2=}"
 "and return '0' (false) or '1' (true)."\n\
 "* 'isfile(\\'path\\')' (resp. 'isdir('path')') returns '0' (false) or '1' (true) whether its string argument is a "\
 "path to an existing file (resp. to a directory) or not."\n\
+"* 'ispercentage(arg)' returns `1` (true) or `0` (false) whether 'arg' ends with a '%' or not."\n\
 "* 'isvarname(\\'str\\')' returns '0' (false) or '1' (true) whether its string argument would be a valid to name "\
 "a variable or not."\n\
 "* 'isin(v,a_1,...,a_n)' returns '0' (false) or '1' (true) whether the first argument 'v' appears in the set of other "\
@@ -1808,6 +1809,8 @@ d :
 #@cli :   - '_display_is_info' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global } \
 # (default value: '-1').
+#@cli :   - '_display_print_images' can be { 0:off | N>0 } (default value: '5'). It sets the max number 'N' of images \
+# whose information is initially printed on `stderr` or `stdout`.
 #@cli :   - '_display_3d_is_rendered' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_3d_rendering_mode' can be { 0:dots | 1:wireframe | 2:flat | 3:flat-shaded | 4:gouraud-shaded | \
 # 5=phong-shaded } (default value: '4').
@@ -1854,6 +1857,7 @@ _display : skip ${1=},${3=}
   setting_is_grid:=narg($_display_is_grid)?cut(int(0$_display_is_grid),0,1):1
   setting_is_info:=narg($_display_is_info)?cut(int(0$_display_is_info),0,1):1
   setting_normalization:=narg($_display_normalization)?cut(int(0$_display_normalization),-1,3):-1
+  setting_print_images:=narg($_display_print_images)?max(0,$_display_print_images):5
   setting_3d_is_rendered:=narg($_display_3d_is_rendered)?cut(int(0$_display_3d_is_rendered),0,1):1
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?cut(int(0$_display_3d_rendering_mode),0,5):4
   setting_3d_motion_rendering_mode:=narg($_display_3d_motion_rendering_mode)?\
@@ -1941,6 +1945,14 @@ _display : skip ${1=},${3=}
   if $nb_images>1 (255,0) r. 33,1,1,1,3 channels. -3,0 +mirror. x => thumb_shade_left,thumb_shade_right fi
   1,${nb_images}x5 => is_printed,is_infnan,is_rotated,is_mesh3d,thumb_is_cached
   f[is_infnan,is_mesh3d] -1
+
+  # Print information of first images.
+  repeat min($nb_images,$setting_print_images) {
+    =>[$>] ${image_name$>}
+    v + _print[$>] $1,0,{image_indices,i[$>]} v -
+    =>[$>] _display$>
+    =[is_printed] 1,0,$>
+  }
 
   # Enter user interaction loop.
   for {*}" && "!{*,ESC} {
@@ -2140,7 +2152,7 @@ _display : skip ${1=},${3=}
     if !0$canvas_base
 
       # Print information about image on stderr/stdout (if not already done).
-      if {is_printed,!i[$selected]}
+     if {is_printed,$setting_print_images" && "!i[$selected]}
         =>[$selected] ${image_name$selected}
         v + _print[$selected] $1,0,{image_indices,i[$selected]} v -
         =>[$selected] _display$selected
@@ -14040,7 +14052,7 @@ int2rgb :
 #@cli : See also: ''premula''.
 ipremula :
   e[^-1] "Convert image$? with premultiplied alpha colors to normal colors."
-  to_a foreach { sh. 100% max. 1e-8 sh.. 0,{s#-2-2} /. .. rm[-2,-1] }
+  to_a foreach { +channels. 100% /. 255 max. 1e-8 sh.. 0,{s#0-2} /. .. k[0] }
 
 #@cli jzazbz2rgb : illuminant={ 0:D50 | 1:D65 | 2:E } : (no arg)
 #@cli : Convert color representation of selected images from RGB to Jzazbz.
@@ -15056,7 +15068,7 @@ compress_palette :
 #@cli : See also: ''ipremula''.
 premula :
   e[^-1] "Convert image$? with normal colors to premultiplied alpha colors."
-  to_a foreach { sh. 100% /. 255 sh.. 0,{s#-2-2} *. .. rm[-2,-1] }
+  to_a foreach { +channels. 100% /. 255 sh.. 0,{s#0-2} *. .. k[0] }
 
 #@cli pseudogray : _max_increment>=0,_JND_threshold>=0,_bits_depth>0
 #@cli : Generate pseudogray colormap with specified increment and perceptual threshold.
@@ -18739,6 +18751,21 @@ meancurvature_flow : skip ${1=10},${2=30},${3=0}
 #@cli : Apply (opt. thresholded) median filter on selected images with structuring element size x size.
 #@cli : $ image.jpg +median 5
 
+#@cli merge_alpha
+#@cli : Merge selected alpha detail scales into a single image.
+#@cli : Alpha detail scales have been obtained with command ''split_alpha''.
+merge_alpha :
+  e[^-1] "Merge alpha detail$? into a single image."
+  repeat $!-1 {
+    r[0] [1],[1],1,100%,5 c[0] 0,255
+    blend[0,1] alpha
+  }
+  if s=['{b}'];find(s,'_0')==size(s)-2
+    ext={x} if ['$ext']!=0 ext..=. fi
+    ({'{f}{b}'}) z. 0,{w-3} bm={t} rm.
+    => $bm$ext
+  fi
+
 #@cli nlmeans : [guide],_patch_radius>0,_spatial_bandwidth>0,_tonal_bandwidth>0,_patch_measure_command : \
 # _patch_radius>0,_spatial_bandwidth>0,_tonal_bandwidth>0,_patch_measure_command
 #@cli : Apply non local means denoising of Buades et al, 2005. on selected images.
@@ -19289,6 +19316,19 @@ sharpen : check "$1>=0 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
     }
   fi
 
+#@cli sharpen_alpha : _amplitude[%]>=0,_nb_scales>0
+#@cli : Sharpen selected images using a multi-scale and alpha boosting algorithm.
+#@cli : Default values: 'amplitude=1' and 'nb_scales=5'.
+sharpen_alpha : check "${1=1}>=0 && isint(${2=5}) && $2>0"
+  e[^-1] "Sharpen image$? with a multi-scale and alpha boosting algorithm, with amplitude $1 and $2 scales."
+  foreach {
+    split_opacity l[0] {
+      repeat $2 { l[0] { . b.. {1+$>^2} sub_alpha. .. } } # Multi-scale decomposition
+      foreach[^0] { sh 100% *. {$<?lerp(1,1+$1,$>/($>+$<)):(1+$1)} c. 0,255 rm. }
+      blend alpha
+    } a c
+  }
+
 #@cli smooth : amplitude[%]>=0,_sharpness>=0,0<=_anisotropy<=1,_alpha[%],_sigma[%],_dl>0,_da>0,\
 # _precision>0,_interpolation,_fast_approx={ 0 | 1 } : \
 # nb_iterations>=0,_sharpness>=0,_anisotropy,_alpha,_sigma,_dt>0,0 : [tensor_field],_amplitude>=0,_dl>0,_da>0,\
@@ -19329,6 +19369,29 @@ solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
       rm.
     }
     rm[0]
+  }
+
+#@cli split_alpha : _nb_scales={ 0:auto | N>0 },_subsample={ 0:no | 1:yes }
+#@cli : Split selected images into alpha detail scales.
+#@cli : Image reconstruction is done with command ''merge_alpha''.
+#@cli : Default values: 'nb_scales=0' and 'subsample=1'.
+split_alpha : check "isint(${1=0}) && $1>=0 && isbool(${2=1})"
+  s= if $1 s="$1 " fi s0,s1="out",
+  e[^-1] "Split image$? into "${s}"alpha detail scales, with"$s$2" subsampling."
+  if $1==1 return fi
+  foreach {
+    bm={f}{b} ext={x} if ['$ext']!=0 ext..=. fi
+    nb_scales_max:=round(log2(min(w,h)))
+    nb_scales:=$1?min($nb_scales_max,$1):$nb_scales_max
+    repeat $nb_scales-1 {
+      if $2 # With subsampling
+        +r. 50%,50%,1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... . rm.
+      else # Without subsampling
+        ratio:=100/(2^($>+1))
+        +r. $ratio%,$ratio%,1,100%,2 r. ..,..,1,100%,5 c. 0,255 sub_alpha.. .
+      fi
+    }
+    rv foreach { => ${bm}_$>$ext }
   }
 
 #@cli split_details : _nb_scales>0,_base_scale[%]>=0,_detail_scale[%]>=0
@@ -21796,7 +21859,6 @@ ja : skip "${2=0},${3=0},${4=0},${5=0},${6=1}"
 #@cli : a centering ratio (in [0,1]) rather than a position.
 #@cli : Usual centering ratio are { 0:left-justified | 0.5:centered | 1:right-justified }.
 #@cli : Default values: 'x=y=z=c=0' and 'opacity=1'.
-#@cli : $ image.jpg +crop 40%,40%,60%,60% resize[-1] 200%,200%,1,3,5 frame[-1] 2,2,0 image[0] [-1],30%,30% keep[0]
 imagealpha : skip "${2=0},${3=0},${4=0},${5=0},${6=1}"
   _gmic_arg1="$1" _gmic_s="$?" pass$1 v + _$0[^-1] .,${2--1} rm.
 
@@ -21837,7 +21899,7 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
 #@cli : Draw specified colored spline curve on selected images (cubic hermite spline).
 #@cli : Default values: 'opacity=1' and 'color1=0'.
 #@cli : $ image.jpg repeat 30 { spline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
-# {u(-600,600)},{u(-600,600)},0.6,255 }
+# {u(-600,600)},{u(-600,600)},1,${-RGB} }
 spline : skip ${9=1},${10=0}
   e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, with opacity $9 and color (${10--1})."
   foreach {
@@ -21878,8 +21940,8 @@ thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
 #@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
-#@cli : $ image.jpg repeat 30 { spline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
-# {u(-600,600)},{u(-600,600)},0.6,255 }
+#@cli : $ image.jpg repeat 30 { thickspline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
+# {u(-600,600)},{u(-600,600)},3,1,${-RGB} }
 thickspline : skip ${9=3},${10=1},${11=0}
   e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, "\
    "with thickness $9, opacity $10 and color (${11--1})."
@@ -25817,7 +25879,6 @@ rprogress : skip ${2=""}
 
 #@cli run : "G'MIC pipeline"
 #@cli : Run specified G'MIC pipeline.
-#@cli : This is only useful when used from a shell, e.g. to avoid shell substitutions to happen in argument.
 run :
   m "__run : $*" v=$^ v {$v+2} __run v $v um __run
 
@@ -28892,36 +28953,28 @@ frame_pattern : check $1>=3 skip "${2=0},${3=0}"
     }
   fi
 
-#@cli frame_round : frame_size[%]>=0,radius[%]>=0,_smoothness[%]>=0,_col1,...,_colN
+#@cli frame_round : size_x[%]>=0,size_y[%]>=0,radius[%]>=0,_smoothness[%]>=0,_col1,...,_colN
 #@cli : Insert an inner round frame in selected images.
-#@cli : Default values: 'size=1, 'radius=30%', 'smoothness=0' and 'col=0,0,0,255'.
-frame_round : check "${1=1}>=0 && ${2=20%}>=0 && ${3=0}>=0" skip "${4=0},${5=$4},${6=$4},${7=255}"
-  e[^-1] "Insert inner round frame on image$?, with size $1, radius $2, smoothness $3 and color (${4--1})."
-  if !$1" && "!$2 return fi
+#@cli : Default values: 'size_x=size_y=5%, 'radius=30%', 'smoothness=0' and 'col=0,0,0,255'.
+frame_round : check "${1=5%}>=0 && ${2=$1}>=0 && ${3=30%}>=0 && ${4=0}>=0" skip "${5=0},${6=$5},${7=$5},${8=255}"
+  e[^-1] "Insert $1x$2 round frame on image$?, with radius $3, smoothness $4 and color (${5--1})."
+  if !max($1,$2,$3) return fi
   foreach {
-    size_max:=round(min(w,h)/2)
-    size:=cut(int(${"is_percent $1"}?$1*$size_max:$1),0,$size_max)
-    radius_max:=round((min(w,h)-2*$size)/2)
-    radius:=cut(int(${"is_percent $2"}?$2*$radius_max:$2),0,$radius_max)
-    if $size<1" && "$radius<1 continue fi
-    {0,[w,h]}
-    if $size>=1 # Inner frame
-      siz1:=$size-1
-      rectangle. 0,0,100%,$siz1,1,1
-      rectangle. 0,0,$siz1,100%,1,1
-      rectangle. {w-$size},0,100%,100%,1,1
-      rectangle. 0,{h-$size},100%,100%,1,1
+    fwM,fhM:=round([w,h]/2)
+    fw,fh:=round([${is_percent\ $1}?lerp(0,$fwM,$1):$1,${is_percent\ $2}?lerp(0,$fhM,$2):$2])
+    iw,ih:=[w,h]-2*[$fw,$fh]
+    if $iw<=0" || "$ih<=0 fc ${5--1}
+    else
+      R:=${is_percent\ $3}?max(w,h)*$3:$3
+      $iw,$ih
+      shape_circle $R shift. 50%,50%,0,0,2 ==. 0
+      x0,y0,x1,y1:=w2=round(w/2);h2=round(w/2);[-w2,-h2,w#1-w2,h#1-h2]
+      j.. .,$x0,$y0 j.. .,$x1,$y0 j.. .,$x1,$y1 j.. .,$x0,$y1 rm.
+      frame. $fw,$fh,1 b. $4
+      1,1,1,{0,s},${5--1} r. ..,..,1,100%
+      j... .,0,0,0,0,1,..
+      k...
     fi
-    if $radius>=1 # Round corners
-      shape_circle[] {1+2*$radius} ==. 0 s. yx,2
-      j[1] [-4],$size,$size
-      j[1] ...,{w#1-w#-3-$size},$size
-      j[1] ..,$size,{h#1-h#-2-$size}
-      j[1] .,{[w#1,h#1]-[w#-1,h#-1]-$size}
-      rm[-4--1]
-    fi
-    if $3 b. $3 n. 0,1 fi
-    100%,100%,1,{0,s} fc. ${4--1} j... .,0,0,0,0,1,.. k[0]
   }
 
 #@cli frame_seamless : frame_size>=0,_patch_size>0,_blend_size>=0,\
@@ -28984,11 +29037,10 @@ frame_y : skip ${2=255},${3=$2},${4=$3},${5=255}
 _frame :
   foreach {
     nm={n}
-    fw,fh,fd:=round($1*if(${is_percent\ $1},w,1)),\
-              round($2*if(${is_percent\ $2},h,1)),\
-              round($3*if(${is_percent\ $3},d,1))
-    {[w,h,d]+2*[$fw,$fh,$fd]},100% fc[1] ${4--1}
-    j[1] [0],$fw,$fh,$fd rm[0] => $nm
+    fw,fh,fd:=round([${is_percent\ $1}?w*$1:$1,${is_percent\ $2}?h*$2:$2,${is_percent\ $3}?d*$3:$3])
+    1,1,1,100%,${4--1} r. {0,[w,h,d]+2*[$fw,$fh,$fd]},100%
+    j. ..,$fw,$fh,$fd
+    k. => $nm
   }
 
 #@cli img2ascii : _charset,_analysis_scale>0,_analysis_smoothness[%]>=0,_synthesis_scale>0,_output_ascii_filename
@@ -31731,28 +31783,29 @@ fade_z : skip ${1=30},${2=70}
   e[^-1] "Create ($1%,$2%) transversal fading from image$?."
   repeat int($!/2) { l[$>,{$>+1}] { (0/1) _fade $1,$2 } }
 
-#@cli sub_alpha : [base_image],_opacity_gain>=1
+#@cli sub_alpha : [base_image]
 #@cli : Compute the minimal alpha-channel difference (opposite of alpha blending) between the selected images
 #@cli : and the specified base image.
 #@cli : The alpha difference A-B is defined as the image having minimal opacity, such that alpha_blend(B,A-B) = A.
-#@cli : Default value: 'opacity_gain=1'.
 #@cli : $ image.jpg testimage2d {w},{h} +sub_alpha[0] [1] display_rgba
-sub_alpha : check "${2=1}>=1 && "${"is_image_arg $1"}
-  e[^-1] "Compute minimal alpha-channel difference between image$? and base image $1, with opacity gain $2."
-  remove_opacity repeat $! { pass$1 0 l[$>,-1] {
-    to_colormode 0 r ${-max_whd},100%,0,0,0.5,0.5  # Normalize image dimensions.
-
-    # Estimate minimal alpha-channel.
-    +>[0,1] *[2] 255
-    -[0,2] [1] replace[2] 0,1
-    i[2] [0] /[2,3]
-    compose_channels[2] max
-    *[2] $2 c[2] 0,1
-
-    # Synthetize alpha-difference image.
-    +replace[2] 0,1 /[0,3] +[0,1] *[1] 255 a c
-
-  } }
+sub_alpha : check ${"is_image_arg $1"}
+  e[^-1] "Compute minimal alpha-channel difference between image$? and base image $1."
+  remove_opacity
+  pass$1
+  foreach[^-1] {
+    nm={n} pass. rv
+    100%,100%,1,{s+1},"begin(null = vectors(0));
+      I_a = I(#0);
+      I_c = I(#1);
+      I_a==I_c?null:(
+        dI_ac = I_a - I_c;
+        alpha_b = max(dI_ac/(I_a - 255*(I_c>I_a)));
+        I_b = I_a - dI_ac/alpha_b;
+        cut([ I_b,alpha_b*255 ],0,255)
+      )"
+    k. => $nm
+  }
+  rm.
 
 #---------------------------------------------
 #
@@ -33079,22 +33132,20 @@ fitscreen : skip "${2=},${3=},${4=},${5=}"
 +fontchart : check "isint(${1=0}) && $1>=0"
   s0,s1=characters,"fonts, with height $1"
   e[^-1] "Generate G'MIC font chart (list of "${s{!!$1}}")."
-  if !$1 # List of characters
-    l[] {
-      repeat 256 {
-        if $>==92 char=\\ else char={`max(1,(c=$>;c>=23&&c<=28?32:c))`} fi
-        0 t. {``$char},0,0,50,1,255
-      }
-      a z,0.5
-      s z
-      foreach {
-        t $>,1,-1,13,1,200
-        0 t. \\${dec2oct\ $>},1,-1,13,1,1
-        100%,100%,1,1,200 j... .,{-3,[w,h]-[w#-1,h#-1]},0,0,1,.. rm[-2,-1]
-      }
-      frame 1,1,128 append_tiles ,
+  if !$1 l[] { # List of characters
+    repeat 256 {
+      if $>==92 char=\\ else char={`max(1,(c=$>;c>=23&&c<=28?32:c))`} fi
+      0 t. {``$char},0,0,50,1,255
     }
-  else # List of fonts
+    a z,0.5
+    s z
+    foreach {
+      t $>,1,-1,13,1,200
+      0 t. \\${dec2oct\ $>},1,-1,13,1,1
+      100%,100%,1,1,200 j... .,{-3,[w,h]-[w#-1,h#-1]},0,0,1,.. rm[-2,-1]
+    }
+    frame 1,1,128 append_tiles ,
+  } else l[] { # List of fonts
     input_cached gmic_fonts.gmz
     foreach {
       ('{n}') strcapitalize {t} name=${} rm.
@@ -33105,7 +33156,7 @@ fitscreen : skip "${2=},${3=},${4=},${5=}"
     r ${-max_wh},1,1,0,0,0.5,0.5
     frame 10,25,0 frame 3,3,128
     append_tiles 3
-  fi
+  } fi
 
 # font2cimgh
 # Encode a font image as a C-style string for CImg.h.
@@ -33263,7 +33314,7 @@ is_half :
   (2049) u {i==2048} rm.
 
 #@cli is_ext : filename,_extension
-#@cli : Return 1 if specified filename has a given extensioin.
+#@cli : Return 1 if specified filename has a given extension.
 is_ext : skip "${1=},${2=}"
   0 => "_$1" u {"lowercase(['"{x}"'])==lowercase(['$2'])"} rm.
 
@@ -35386,7 +35437,7 @@ x_2048 : check_display $0
     r. ..,..,1,1,0,0,0.5,0.5 dilate_circ. 3 b. 0.5
     j... ..,0,0,0,0,1,.,1 rm[-2,-1]
   }
-  frame_round[2--1] 0,20%,0.5,187,173,160 frame[2--1] 7,7,187,173,160
+  frame_round[2--1] 0,0,20%,0.5,187,173,160 frame[2--1] 7,7,187,173,160
   to_rgb[2--1]
   r[2] 400%,400%,1,3,0,2 j[1] [2],18,130
   sprite3d[3--1]
@@ -41718,7 +41769,7 @@ fx_dices :
     repeat 6 { {2*$2},{2*$2} _dice$> }
     if $3%2 negate[-6--1] fi
 
-    frame_round[-6--1] 0,30%,0.5,128,128,128,0 frame[-6--1] 1,1,128,128,128,0
+    frame_round[-6--1] 0,0,30%,0.5,128,128,128,0 frame[-6--1] 1,1,128,128,128,0
     r2dy[-6--1] $2 a[-6--1] x
 
     foreach[^-1] {
@@ -51633,6 +51684,30 @@ fx_mighty_details :
 fx_mighty_details_preview :
   gui_split_preview "fx_mighty_details $*",${-3--1}
 
+#@gui Sharpen [Alpha] : fx_sharpen_alpha,fx_sharpen_alpha_preview(0)
+#@gui : Amplitude (%) = float(100,0,400)
+#@gui : Number of Scales = int(5,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = choice(0,"All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
+#@gui : "Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [Luminance]",
+#@gui : "YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",
+#@gui : "YCbCr [Green Chrominance]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",
+#@gui : "Lab [b-Chrominance]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [Hue]",
+#@gui : "HSV [Saturation]","HSV [Value]","HSI [Intensity]","HSL [Lightness]","CMYK [Cyan]","CMYK [Magenta]",
+#@gui : "CMYK [Yellow]","CMYK [Key]","YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/09/29</i>.</small>")
+fx_sharpen_alpha :
+  ac "sharpen_alpha {$1%},$2",$3,1
+
+fx_sharpen_alpha_preview :
+  gui_split_preview "fx_sharpen_alpha $*",${-3--1}
+
 #@gui Sharpen [Deblur] : fx_deblur, fx_deblur_preview(0)
 #@gui : Radius = float(2,0,20)
 #@gui : Iterations = int(10,0,100)
@@ -51917,7 +51992,6 @@ fx_unsharp_preview :
 #@gui : Number of Levels = int(6,2,8)
 #@gui : Base Scale = float(10,0,30)
 #@gui : Details Scale = float(1,0,20)
-#@gui : Opacity Gain = float(5,1,20)
 #@gui : sep = separator()
 #@gui : Preview Without Alpha = bool(0)
 #@gui : sep = separator()
@@ -51928,7 +52002,7 @@ fx_split_details_alpha :
     repeat $1-1 {
       s={$3+($2-$3)*$>/if($1-2>0,$1-2,1)}
       +_fx_split_details_alpha_blur. $s
-      sub_alpha.. .,$4
+      sub_alpha.. .
     }
   }
 
@@ -51942,8 +52016,8 @@ _fx_split_details_alpha_blur :
 
 fx_split_details_alpha_preview :
   foreach {
-    fx_split_details_alpha ${1-4}
-    if $5 remove_opacity[^-1] else to_rgba. fi
+    fx_split_details_alpha ${1-3}
+    if $4 remove_opacity[^-1] else to_rgba. fi
     N={int(sqrt($!))} N={round($!/$N,1,1)} r2dy {100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
@@ -52331,14 +52405,15 @@ fx_frame :
  mv. 0 }
 
 #@gui Frame [Round] : fx_frame_round, fx_frame_round(1)
-#@gui : Size (%) = float(1,0,100)
+#@gui : X-Size (%) = float(10,0,100)
+#@gui : Y-Size (%) = float(10,0,100)
 #@gui : Radius (%) = float(20,0,100)
 #@gui : Smoothness = float(0.1,0,15)
 #@gui : Color = color(0,0,0,255)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_frame_round :
-  to_rgba frame_round $1%,$2%,${3-7}
+  to_rgba frame_round $1%,$2%,$3%,${4-7}
 
 #@gui Frame [Smooth] : fx_frame_smooth, fx_frame_smooth(1)
 #@gui : Width (%) = int(10,0,100)
