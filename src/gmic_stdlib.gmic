@@ -49798,7 +49798,7 @@ fx_project_stereographic :
          \{$dilation\}\{$mirror\}\{$boundary\}\{$centerx,$centery\}
 
   # So that preview line does not hide left/right frontier:
-  nradangx,nradangy={[$centerx,$centery]+rot(-90°)*([$radangx,$radangy]-[$centerx,$centery])}
+  nradangx,nradangy:=[$centerx,$centery]+rot(-90°)*([$radangx,$radangy]-[$centerx,$centery])
   init="const boundary = "$is_inverse?$boundary:2";
         const interpolation = 1;
         const dilation = 2^"$dilation";
@@ -49869,15 +49869,15 @@ fx_project_stereographic_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/06/11</i>.</small>")
 fx_symmetrize :
   if !$6 to_a fi
-  angle={isnan($3)?$5:atan2($4-$2,$3-$1)*180/pi}
+  angle:=isnan($3)?$5:atan2($4-$2,$3-$1)*180/pi
   symmetrize $1%,$2%,$angle,${6-8}
 
 fx_symmetrize_preview :
   fx_symmetrize $*
   rr2d ${-gui_preview_wh},0,1
-  u,v={angle=isnan($3)?$5*pi/180:atan2($4-$2,$3-$1);[cos(angle),sin(angle)]}
+  u,v:=angle=isnan($3)?$5*pi/180:atan2($4-$2,$3-$1);[cos(angle),sin(angle)]
   foreach {
-    x0,y0,x1,y1={V=[$u,$v];([${1,2},${1,2}]+10000*[V,-V])*([w,h,w,h]-1)%}
+    x0,y0,x1,y1:=V=[$u,$v];([${1,2},${1,2}]+10000*[V,-V])*([w,h,w,h]-1)%
     line $x0,$y0,$x1,$y1,1,0x0F0F0F0F,0,0,0,255
     line $x0,$y0,$x1,$y1,1,0xF0F0F0F0,255
   }
@@ -50172,7 +50172,7 @@ fx_blur_bloom :
   op=${"arg0 $4,+,max,min"}
   if !$7 ac "blur_bloom ${1-3},"$op",${5-6},xy",$9
   else
-    wh={[w,h]}
+    wh:=w,h
     rotate $8,2,1
     ac "blur_bloom ${1-3},"$op",${5-6},x blur_bloom {$1*(1-$7)},${2-3},"$op",${5-6},y",$9
     rotate {-$8},2,1
@@ -50214,12 +50214,12 @@ _fx_blur_dof :
     foreach {
       if $11 drgba fi
       split_opacity l[0] {
-        rmax={(w*w+h*h)^0.5} R={$7*$rmax/100} r={$8*$rmax/100}
-        t={$9*pi/180} u={cos($t)} v={sin($t)}
-        l1={($rmax/(1e-8+$R))^2} l2={($rmax/(1e-8+$r))^2}
-        a={$l1*($u)^2+$l2*($v)^2} b={$u*$v*($l1-$l2)} c={$l1*($v)^2+$l2*($u)^2}
+        rmax:=(w*w+h*h)^0.5 R:=$7*$rmax/100 r:=$8*$rmax/100
+        t:=$9*pi/180 u:=cos($t) v:=sin($t)
+        l1:=($rmax/(1e-8+$R))^2 l2:=($rmax/(1e-8+$r))^2
+        a:=$l1*($u)^2+$l2*($v)^2 b:=$u*$v*($l1-$l2) c:=$l1*($v)^2+$l2*($u)^2
         100%,100%,1,1,'X=(x-$5*w/100)/max(w,h);Y=(y-$6*h/100)/max(w,h);f=$a*X*X+2*$b*X*Y+$c*Y*Y;exp(-f^$10/2.5)'
-        -[1] 1 *[1] -$1 ms={im} Ms={iM}
+        -[1] 1 *[1] -$1 ms,Ms:=im,iM
 
         if $11 # With preview of guides.
           +isoline3d[1] {0.1*$1} col3d. 255,255,0
@@ -50259,7 +50259,7 @@ __fx_dof_blur :
     j.. [0],0,0,0,0,-1,.,1
     j.. .,0,0,0,100%,-1
     rm.
-     ns={$2+($3-$2)*($>+1)/($1-1)}
+     ns:=$2+($3-$2)*($>+1)/($1-1)
      b[0] {sqrt($ns^2-$s^2)}%
      s=$ns
   }
@@ -50392,7 +50392,7 @@ _fx_blur_multidirectional :
     if $blend_mode<3 +f {$blend_mode?0:inf} fi
 
     repeat $nb_orientations {
-      angle={$angle_ref+$angle_range*($>/$nb_orientations-0.5)}
+      angle:=$angle_ref+$angle_range*($>/$nb_orientations-0.5)
 
       # Kernel definition.
       $smoothness,1 gaussian. 20%,0.1
@@ -50468,8 +50468,8 @@ fx_blur_radial_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/08/10</i>.</small>")
 fx_chromatic_aberrations :
-  U1={u=[${1-3}];u/max(1e-8,norm(u))}
-  U2={u=[${10-12}];u/max(1e-8,norm(u))}
+  U1:=u=[${1-3}];u/max(1e-8,norm(u))
+  U2:=u=[${10-12}];u/max(1e-8,norm(u))
 
   foreach {
     to_color split_opacity l[0] {
@@ -50511,8 +50511,8 @@ _fx_chromatic_aberrations :
   fi
   if $4 # Smoothness
     s. c
-    m,M={-2,[im,iM]} b.. $4 n.. $m,$M
-    m,M={[im,iM]} b. $4 n. $m,$M
+    m,M:=im#-2,iM#-2 b.. $4 n.. $m,$M
+    m,M:=im,iM b. $4 n. $m,$M
     a[-2,-1] c
   fi
   if $5 # Center/Borders attenuation
@@ -50592,7 +50592,7 @@ _fx_flip_blocks :
   if ($3>1)" && "$2>1 s y,-$2 mirror y a y fi
   if $4!=1" && "$1>1" && "$2>1
     s y,-$2 N=$!
-    s x,-$1 M={$!/$N}
+    s x,-$1 M:=$!/$N
     ap "rotate {($4-1)*90}"
     append_tiles $M,$N
   fi
@@ -50763,7 +50763,7 @@ fx_jpeg_artefacts :
   repeat $!-3 { l[$>,-3--1] {
 
     # Decompose image into luma/chroma
-    l[0] { w,h={[w,h]} r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
+    l[0] { w,h:=w,h r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
 
     repeat 3 {
       # Compute DCT of image with 8x8 blocks.
@@ -50935,7 +50935,7 @@ fx_noise_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/01/24</i>.</small>")
 _fx_noise_perlin :
-  seedx,seedy={[$1>>8,$1&255]}
+  seedx,seedy:=[$1>>8,$1&255]
   foreach {
     if $2 .,.,1,. noise_perlin. {r=2^$4;s=max(w,h)*$3%;[max(1,s/r),max(1,s*r)]},1,$seedx,$seedy *. $2 + fi
     if $5 .,.,1,. noise_perlin. {r=2^$7;s=max(w,h)*$6%;[max(1,s/r),max(1,s*r)]},1,$seedx,$seedy *. $5 + fi
@@ -51012,7 +51012,7 @@ fx_stripes_y_preview :
 fx_8bits :
   remove_opacity
   foreach {
-    w={w} h={h}
+    w,h:=w,h
     r $1%,$1%,1,100%,2
     +luminance sharpen. $2 otsu. 256 blend[-2,-1] shapeaverage0
     l. { s c quantize $3,1,1 a c }
@@ -51147,11 +51147,11 @@ fx_shade_stripes_preview :
 fx_rebuild_from_similar_blocks :
   foreach {
     split_opacity l[0] {
-      to_rgb w0,h0,S={[w,h,round(min(w,h)*$1%)]} # S: Block size
+      to_rgb w0,h0,S:=w,h,round(min(w,h)*$1%) # S: Block size
 
       # Split image into regular blocks.
       r {ceil([w,h]/$S)*$S},1,100%,0,3,0.5,0.5
-      M,N={[w,h]/$S}
+      M,N:=[w,h]/$S
 
       s yx,-$S a z # Original RGB blocks
 #    +mirror x +mirror y a z # + all xy mirrors
@@ -51409,7 +51409,7 @@ __fx_equalize_details :
   if $3==0 b {$2*$5/2}
   elif $3==1
     if $2>0
-      m={im} M={iM} n. 0,255
+      m,M:=im,iM n. 0,255
       repeat int($2/5) { bilateral 15,{5*$5} }
       bilateral 15,{($2%5)*$5}
       *. {($M-$m)/255} +. $m
@@ -51591,7 +51591,7 @@ fx_local_processing :
   com=${com$1}
   if $6 com="s c "$com" a c" fi
   foreach {
-    size={round(max(8,max(w,h)*$3%))}
+    size:=round(max(8,max(w,h)*$3%))
     +ac "at \""$com"\","$size","$size",1,$4%,$4%",$7
     if $5 +norm[0] bilateral[1] .,{$5/20}%,{2+$5/4} rm. fi
     blend alpha,{$2%}
@@ -51658,7 +51658,7 @@ fx_magic_details_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/08/08</i>.</small>")
 _fx_mighty_details :
   +smooth $3,0,1,0.5,0.5 -[1] [0]
-  +abs. sign.. M={iM} ^. {2-$2} *. {$M/iM} *[-2,-1]
+  +abs. sign.. M:=iM ^. {2-$2} *. {$M/iM} *[-2,-1]
   +diffusiontensors[0] 0,1,0.5,0.5
   repeat $4 { smooth[1] [2],20 }
   *[1] {-$1/5} +
@@ -51808,7 +51808,7 @@ fx_sharpen_multiscale_preview :
 
 _fx_sharpen_multiscale :
   foreach {
-    N={max(1,int(log2(min(w,h))-2))}
+    N:=max(1,int(log2(min(w,h))-2))
     +l { repeat $N { +r. 50%,50%,1,100%,2 +r. ..,..,1,100%,5 -[-3,-1] } } # Decompose
     guided[0] 4,100 # Smooth guide image
 
@@ -51986,7 +51986,7 @@ fx_split_details_alpha :
   remove_opacity
   foreach {
     repeat $1-1 {
-      s={$3+($2-$3)*$>/if($1-2>0,$1-2,1)}
+      s:=$3+($2-$3)*$>/if($1-2>0,$1-2,1)
       +_fx_split_details_alpha_blur. $s
       sub_alpha.. .
     }
@@ -52004,7 +52004,7 @@ fx_split_details_alpha_preview :
   foreach {
     fx_split_details_alpha ${1-3}
     if $4 remove_opacity[^-1] else to_rgba. fi
-    N={int(sqrt($!))} N={round($!/$N,1,1)} r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -52033,7 +52033,7 @@ fx_split_details_gaussian_preview :
   foreach {
     fx_split_details_gaussian $*
     if $4 equalize[^-1] 256 fi n[^-1] 0,255
-    N={int(sqrt($!))} N={round($!/$N,1,1)} r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -52067,7 +52067,7 @@ fx_split_details_wavelets_preview :
   foreach {
     fx_split_details_wavelets $1,0
     if $3 equalize[^-1] 256 fi n[^-1] 0,255
-    N={int(sqrt($!))} N={round($!/$N,1,1)} r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -52155,8 +52155,9 @@ fx_droste :
   repeat $! {
     if $16==1 100%,100%,1,1,'x' 100%,100%,1,1,'y' a[-2,-1] c fi
     repeat $9 {
-      x0={round($1*w/100)} y0={round($2*h/100)} x1={round($3*w/100)} y1={round($4*h/100)}
-      x2={round($5*w/100)} y2={round($6*h/100)} x3={round($7*w/100)} y3={round($8*h/100)}
+      x0,y0,x1,y1,x2,y2,x3,y3:=round([\
+        $1*w/100,$2*h/100,$3*w/100,$4*h/100,\
+        $5*w/100,$6*h/100,$7*w/100,$8*h/100])
       100%,100%,1,2,-32767 polygon. 4,$x0,$y0,$x1,$y1,$x2,$y2,$x3,$y3,1,-65535
       sh. 0
       f. "if(i==-65535,
@@ -52170,8 +52171,8 @@ fx_droste :
             y32 = "$y3"+(x-"$x3")/("$x2"-"$x3")*("$y2"-"$y3");
             (y-y01)/(y32-y01)*(h-1),i)"
       rm.
-      xshift={w*$10/100} yshift={h*$11/100} alpha={-$12*pi/180}
-      ca={cos($alpha)/$13} sa={sin($alpha)/$13} w2={w/2} h2={h/2}
+      xshift,yshift,alpha:=w*$10/100,h*$11/100,-$12*pi/180
+      ca,sa,w2,h2:=cos($alpha)/$13,sin($alpha)/$13,w/2,h/2
       f. 'if(i==-32767,i,X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;if(c==0,$w2-$xshift+X*$ca-Y*$sa,$h2-$yshift+X*$sa+Y*$ca))'
       if $14==0 sh. 0 f. 'if(i==-32767,x,i)' rm. sh. 1 f. 'if(i==-32767,y,i)' rm.
       elif $14==1 sh. 0 f. 'if(i==-32767,x,w-1-i)' rm. sh. 1 f. 'if(i==-32767,y,i)' rm.
@@ -52217,7 +52218,7 @@ fx_droste_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/19/01</i>.</small>")
 fx_frame_blur :
   foreach {
-    to_rgb sx={$1%*max(w,h)} sy={$2%*max(w,h)}
+    to_rgb sx:=$1%*max(w,h) sy:=$2%*max(w,h)
     +r {w+$sx},{h+$sy},1,100%,3 b[1] $4%
 
     if $6 balance_gamma[1] ${7-9} fi
@@ -52227,16 +52228,16 @@ fx_frame_blur :
     z[1] {$3/2}%,{$3/2}%,{100-$3/2}%,{100-$3/2}%
     to_rgba[1]
 
-    if $5 r={1+1/$5} sh[1] 100% f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
-      v={min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))}
+    if $5 r:=1+1/$5 sh[1] 100% f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
+      v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))
       c. $v,{$v+0.5/max(w,h)} n. 0,255 rm. fi
 
-    s={$11%*max(w,h)}
+    s:=$11%*max(w,h)
     r[1] {w+$s},{h+$s},1,4,0,0,0.5,0.5
     i[1] 100%,100%,1,3 fc[1] ${12-14} blend[1,2] alpha to_a.
 
     if $5 sh[1] 100% f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
-      v={min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))}
+      v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))
       c. $v,{$v+0.5/max(w,h)} n. 0,255 rm. fi
     rotate[1] $21,1,0
     r[1] [0],[0],1,4,0,0,$19,$20
@@ -52312,11 +52313,10 @@ fx_frame_mirror :
 
 fx_frame_mirror_preview :
   foreach {
-    ws,hs={[w,h]} fx_frame_mirror $* wd,hd={[w,h]}
-    rr2d $_preview_area_width,$_preview_area_height wp,hp={[w,h]}
-    ws,hs={[$ws,$hs]*[$wp,$hp]/[$wd,$hd]}
-
-    coords={off=([$wp,$hp]-[$ws,$hs])*[$3,$4]%;[off,off+[$ws,$hs]-1]}
+    ws,hs:=w,h fx_frame_mirror $* wd,hd:=w,h
+    rr2d $_preview_area_width,$_preview_area_height wp,hp:=w,h
+    ws,hs:=[$ws,$hs]*[$wp,$hp]/[$wd,$hd]
+    coords:=off=([$wp,$hp]-[$ws,$hs])*[$3,$4]%;[off,off+[$ws,$hs]-1]
     split_opacity 100%,100%,1,1,$9 rectangle. $coords,1,1 *[0,-1] a c
     rectangle $coords,0.75,0xF0F0F0F0,255
     rectangle $coords,0.75,0x0F0F0F0F,0,0,0,255
@@ -52386,7 +52386,7 @@ fx_frame :
  to_rgba repeat $! {
    z. $1%,$3%,$2%,$4%
    frame. $11,$11,${12-15}
-    sx={$5%*max(w,h)} sy={$6%*max(w,h)}
+   sx,sy:=[$5%,$6%]*max(w,h)
    frame. $sx,$sy,${7-10}
  mv. 0 }
 
@@ -52409,10 +52409,10 @@ fx_frame_round :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/25/04</i>.</small>")
 fx_frame_smooth :
   foreach {
-     sx={$1%*max(w,h)} sy={$2%*max(w,h)}
+     sx,sy:=[$1%,$2%]*max(w,h)
      100%,100%,1,1,0
-     if $3 r={1+1/$3} f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
-       v={min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))} <=. $v
+     if $3 r:=1+1/$3 f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
+       v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2)) <=. $v
      fi
      frame $sx,$sy,1
      inpaint_pde[0] [1],100%,1,15
@@ -52563,7 +52563,7 @@ fx_fourier_old : skip ${2=0}
   if $2 remove_opacity fi
   magic="GMICFFT" i=0
   for $i<$! {
-    ni={$i+1} nm={$i,n} is_ifft=0
+    ni:=$i+1 nm={$i,n} is_ifft=0
     +columns[$i] 100%
     l. {
       mag,m0,M0,m1,M1=${u\ {t}}
@@ -52581,7 +52581,7 @@ fx_fourier_old : skip ${2=0}
     fi
     if !$is_ifft
       l[$i] {
-        fftpolar +.. 1 log.. m0,M0,m1,M1={[im#0,iM#0,im#1,iM#1]} n[-2,-1] 0,255
+        fftpolar +.. 1 log.. m0,M0,m1,M1:=im#0,iM#0,im#1,iM#1 n[-2,-1] 0,255
         if $1==0 ({'$magic,$m0,$M0,$m1,$M1'},0) y. a x
         elif $1==1 ({'$magic,$m0,$M0,$m1,$M1'},0) a y
         else ({'$magic,$m0,$M0'},0) a[-3,-1] y ({'$magic,$m1,$M1'},0) a[-2,-1] y
@@ -52595,7 +52595,7 @@ fx_fourier_old : skip ${2=0}
       fi
       l[$i,{$i+1}] { n[0] $m0,$M0 n[1] $m1,$M1 exp[0] -[0] 1 ifftpolar c 0,255 }
     fi
-    i+={$1<2" || "$is_ifft>2?1:2}
+    i+=$1<2" || "$is_ifft>2?1:2
   }
 
 fx_fourier_old_preview :
@@ -52842,7 +52842,7 @@ fx_split_colors : skip ${2=0}
   foreach {
     nm=${-gui_layer_name}
     pos=${-gui_layer_pos}
-    min_area={max(1,w*h*$3%)}
+    min_area:=max(1,w*h*$3%)
     split_colors $1,$2,$min_area
     =>[^] "name("$nm"),pos("$pos")"
     if $4 gui_autocrop_layers fi
@@ -52920,10 +52920,10 @@ fx_morph_layers :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/30/03</i>.</small>")
 fx_apply_multiscale : skip "${13=}"
   foreach {
-    w0={w} h0={h}
+    w0,h0:=w,h
     apply_scales "$13",$1,$2%,$3%,{10^$4},{arg(1+$5,1,3,5,6)}
     if $8" || "($9" && "$8!=$12) to_a N=$! repeat $! {
-      angle={$9?$8+($12-$8)*$>/max($N-1,1):$8}
+      angle:=$9?$8+($12-$8)*$>/max($N-1,1):$8
       rotate[$>] $angle
     } fi
     if $14
@@ -52933,8 +52933,8 @@ fx_apply_multiscale : skip "${13=}"
     fi
     w=${-max_w} h=${-max_h} N=$!
     repeat $! {
-      cx={$9?$6+($10-$6)*$>/max($N-1,1):$6}
-      cy={$9?$7+($11-$7)*$>/max($N-1,1):$7}
+      cx:=$9?$6+($10-$6)*$>/max($N-1,1):$6
+      cy:=$9?$7+($11-$7)*$>/max($N-1,1):$7
       gui_set_layer_pos[$>] {$>,($w-w)*$cx},{$>,($h-h)*$cy}
     }
   }
@@ -52942,12 +52942,12 @@ fx_apply_multiscale : skip "${13=}"
 fx_apply_multiscale_preview :
   foreach {
     fx_apply_multiscale $"*"
-    N={int(sqrt($!))} N={round($!/$N,1,1)} r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
     to_rgba
     max_wh=${-max_wh}
     N=$! foreach {
-      cx={$9?$6+($10-$6)*$>/max($N-1,1):$6}
-      cy={$9?$7+($11-$7)*$>/max($N-1,1):$7}
+      cx:=$9?$6+($10-$6)*$>/max($N-1,1):$6
+      cy:=$9?$7+($11-$7)*$>/max($N-1,1):$7
       r $max_wh,1,100%,0,0,$cx,$cy
       0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0]
     }
@@ -52987,7 +52987,7 @@ fx_pack : skip "${8=}"
     repeat 256 { filename "$8/gmic_pack.txt",$> filename=${} if isfile(['{/$filename}']) else break fi }
     if !narg($filename) filename="$8/gmic_pack.txt" fi
     l[] { repeat narg($coords)/2 {
-      x={arg(1+2*$>,$coords)} y={arg(2+2*$>,$coords)}
+      x,y:=arg(1+2*$>,$coords),arg(2+2*$>,$coords)
       ('"Image ""#"{1+$>}" ("${nm$>}"): "$x,$y\n')
     } a x ot $filename rm }
   fi
@@ -52996,10 +52996,10 @@ fx_pack : skip "${8=}"
 
 fx_pack_preview : skip "${8=}"
   if !$! return fi
-  w={w} h={h}
+  w,h:=w,h
   filled=0 repeat $! { filled={$>,$filled+w*h} }
   fx_pack $1,$2,$3,$4,$5,$6,0
-  area={w*h}
+  area:=wh
   to_rgba rr2d $w,$h,0
   i[0] $w,16,1,4,255 t[0] "Filled: "{round(100*$filled/$area)}%,3,1,14,1,0,0,0,255
   a y,0.5
@@ -53037,9 +53037,9 @@ fx_stroke :
       b $3
       if $6>=100
         shift $7,$8
-        if $6!=100 wh={w},{h} r $6%,$6%,1,1,3 r $wh,1,1,0,0,0.5,0.5 fi
+        if $6!=100 wh:=w,h r $6%,$6%,1,1,3 r $wh,1,1,0,0,0.5,0.5 fi
       else
-        if $6!=100 wh={w},{h} r $6%,$6%,1,1,3 r $wh,1,1,0,0,0.5,0.5 fi
+        if $6!=100 wh:=w,h r $6%,$6%,1,1,3 r $wh,1,1,0,0,0.5,0.5 fi
         shift $7,$8
       fi
       > {99.99-min(99.99,$2)}%
@@ -53079,15 +53079,15 @@ fx_tiles2layers_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/05/04</i>.</small>")
 fx_tones2layers :
-  sval=$2 eval={max($2,$3)}
+  sval=$2 eval:=max($2,$3)
   remove_opacity
   foreach {
     nm={n}
     +luminance rv
     repeat $1-1 {
       [1]
-      val0={$sval+($eval-$sval)*$>/($1-2)}
-      val1={$sval+($eval-$sval)*($>+1)/($1-2)-1}
+      val0:=$sval+($eval-$sval)*$>/($1-2)
+      val1:=$sval+($eval-$sval)*($>+1)/($1-2)-1
       +ir[0] $val0,$val1
       if $5 *. [0] b. $4% n. 0,255  # Scalar alpha.
       else b. $4% n. 0,255  # Binary alpha.
@@ -53127,7 +53127,7 @@ fx_tones2layers_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2012/24/11</i>.</small>")
 _fx_burn :
   foreach {
-    w,h={[w,h]}
+    w,h:=w,h
     +norm
     fx_fourier_old. 2
     +rows. 0,{$h-1} r. $2%,$2%,1,100%,0,0,0.5,0.5 b. $3%
@@ -53212,7 +53212,7 @@ fx_drop_shadow3d_preview :
 
 _fx_drop_shadow3d :
   point3d 0,0,1 r3d. 1,0,0,$1 r3d. 0,1,0,$2 r3d. 0,0,1,$3
-  u={i(0,8)} v={i(0,9)} w={i(0,10)} rm.
+  u,v,w:=i(0,8),i(0,9),i(0,10) rm.
   to_a channels 100% if im==iM return fi
   +f 'X=x/w-0.5;Y=y/h-0.5;A=($7-$4*$7/100)*$w/(X*$u+Y*$v+$7*$w);if(A<0,1e8,A)'
   +*. 'y/h-0.5' *.. 'x/w-0.5' +.. {0.5-$5/100} +. {0.5-$6/100} *.. {w} *. {h}
@@ -53307,7 +53307,7 @@ fx_guided_lightrays :
         polygon(#-1,2,xl,yl,xl + L*u,yl + L*v,-1,255);
      )"
 
-    equalize. 65536,1,{iM} n. 0,1 power={10^(-$1%)} ^. {max(1e-2,$power)} b. $5% n. 0,255
+    equalize. 65536,1,{iM} n. 0,1 power:=10^(-$1%) ^. {max(1e-2,$power)} b. $5% n. 0,255
     i[-2] (${9-11}:cyzx) r.. .,.,1,3 a[-2,-1] c
     k. gui_set_layer_mode $bmode gui_set_layer_opacity $13
   }
@@ -53374,7 +53374,7 @@ fx_illuminate_shape2d :
   opacity=$1,$2,$7,$10,$16,$17
   blending_mode=${arg0\ $blending_mode,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,\
                   softlight,hardlight,grainmerge}
-  keep_input_bg&={$!>1}
+  keep_input_bg&=$!>1
 
   if $output_type # Output : bumpmap or normalmap
     repeat $!-$keep_input_bg { _fx_illuminate_shape2d[$>] $* }
@@ -53406,7 +53406,7 @@ fx_illuminate_shape2d_preview :
   input_type,\
   keep_input_bg,\
   preview_interactive=$1,$7,$-2
-  keep_input_bg&={$!>1}
+  keep_input_bg&=$!>1
   if $preview_interactive fx_illuminate_shape2d_preview_interactive $* fi
   if $keep_input_bg
     repeat $!-1 { l[$>,-1] {
@@ -53422,7 +53422,7 @@ fx_illuminate_shape2d_preview_interactive :
   _output_mode=0
   input_type,\
   keep_input_bg=$1,$7
-  keep_input_bg&={$!>1}
+  keep_input_bg&=$!>1
   repeat $!-$keep_input_bg { if $keep_input_bg sel=$>,-1 else sel=$> fi +l[$sel] {
     to_rgba
     +_fx_illuminate_shape2d[0] $1,2,${3-6},0,1,""$9,0,${11-15},""${16-29},""0,0
@@ -53445,7 +53445,7 @@ fx_illuminate_shape2d_preview_interactive :
 
     do
       x,y,b,mw={rgb,[{*,x},{*,y}]*[w,h]/[{*,w},{*,h}]},{*,b},{*,-o}
-      lightz={cut($lightz-0.3*sign($mw)+($y0>=0?3*($y-$y0)/h),0.1,4)}
+      lightz:=cut($lightz-0.3*sign($mw)+($y0>=0?3*($y-$y0)/h),0.1,4)
       if $x<0 x,y={rgb,ang=$|;(1+[cos(1.4*ang),sin(0.85*ang)])*[w,h]/2} fi
       if !$b" || "($b&1)
         if $b" && "!$clicked x0,y0=$x,$y
@@ -53466,8 +53466,8 @@ fx_illuminate_shape2d_preview_interactive :
         +r2dx[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
         w. rm. wait
       fi
-      if {*,CTRLLEFT}" && "{*,-D} w[] {1.5*[{*,w},{*,h}]} wsiz={*,w},{*,h}
-      elif {*,CTRLLEFT}" && "{*,-C} w[] {0.75*[{*,w},{*,h}]} wsiz={*,w},{*,h}
+      if {*,CTRLLEFT}" && "{*,-D} w[] {1.5*[{*,w},{*,h}]} wsiz={*,w,h}
+      elif {*,CTRLLEFT}" && "{*,-C} w[] {0.75*[{*,w},{*,h}]} wsiz={*,w,h}
       elif {*,CTRLLEFT}" && "{*,-R} w[] $wsiz0
       fi
       ox,oy,ob=$x,$y,$b
@@ -53526,7 +53526,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
 
   elif $input_type==2 # Bump map
     to_a
-    s c,-{s-1} >. 0 *.. . rv s. c S={$!-1} +[^0] /. $S
+    s c,-{s-1} >. 0 *.. . rv s. c S:=$!-1 +[^0] /. $S
 
   elif $input_type==3 # Normal map
     +channels 100% >. 0 *.. . rv
@@ -53550,7 +53550,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
                 $shape_smoothness
   fi
   if $input_type<=2
-    if $input_type==2" && "$shape_smoothness mM={[im,iM]} guided. ..,$shape_smoothness%,100 n. $mM fi
+    if $input_type==2" && "$shape_smoothness mM:=im,iM guided. ..,$shape_smoothness%,100 n. $mM fi
     *. $bump_factor
   fi
 
@@ -53600,7 +53600,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
       [ res,0 ]"
     channels. 0 *. 255 c. 0,255
     if $light_smoothness" || "$linearity
-      mM={[im,iM]}
+      mM:=im,iM
       if $light_smoothness b. $light_smoothness% fi
       if $linearity n. 0,1 ^. {10^-($linearity%)} fi
       n. $mM
@@ -53744,7 +53744,7 @@ fx_pop_shadows :
   foreach {
     split_opacity l[0] {
       .x2
-      luminance.. negate.. imM={-2,[im,iM]} b.. $2% n.. $imM
+      luminance.. negate.. imM:=im#-2,iM#-2 b.. $2% n.. $imM
       blend[0,1] overlay,$1
       max
       if $3 n 0,255 fi
@@ -53981,12 +53981,12 @@ fx_cracks_preview :
 fx_crystal :
   foreach {
     split_opacity l[0] {
-      s={s}
+      s:=s
       +gradient_norm >=. {(100-$3)/5} remove_pixels. {100-max(0.1,$1*$3%)}%,{is} *
       +norm !=. 0 a c
       sigma=0.5
       do
-        +b. $sigma sigma*={(1+$2)}
+        +b. $sigma sigma*=(1+$2)
         sh[0,-1] $s max. .. rm[-2,-1]
         f. 'W=i(x,y,z,$s);if(W<0.001||W>=1,0,if(c<$s,i/W,1))'
         if !iM rm[1] break fi
@@ -54014,7 +54014,7 @@ fx_crystal_background :
     split_opacity l[0] {
       N:=2*max(3,round(ispercentage($2)?4*wh*$2:$2))
       if $5 col="u([255,255,255])" else col="u(255)" fi
-      srand $3 M={max(w,h)} 2,$N
+      srand $3 M:=max(w,h) 2,$N
       repeat $1 { rand. {-$M/2},{3*$M/2} polygon.. $N,{^},{-$4%},{$col} }
       rm. n 0,255
     }
@@ -54257,7 +54257,7 @@ fx_marble :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/02/09</i>.</small>")
 fx_maze :
   foreach {
-    w={w} h={h}
+    w,h:=w,h
     r. {100/$1}%,{100/$1}%,1,100%,2
     if $3==0 f. 1
     elif $3==1 negate.
@@ -54282,7 +54282,7 @@ fx_mineral_mosaic :
     area. 0 +<=. {$2^2} inpaint.. . rm. label.
     +f[0] 'if(c==0,x,y)' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
     -[-3,-1] rm[0,-2] channels. 0,1
-    alpha={$5*pi/180} sh. 0 *. {cos($alpha)} rm. sh. 1 *. {sin($alpha)} rm. compose_channels. +
+    alpha:=$5*pi/180 sh. 0 *. {cos($alpha)} rm. sh. 1 *. {sin($alpha)} rm. compose_channels. +
     normalize_local. 1000 n. -$4,$4
     + c 0,255
   }
@@ -54352,10 +54352,10 @@ fx_shapes :
               $!" provided)." fi
     to_colormode[0-{$2-1}] ${max_s[0-{$2-1}]} remove_opacity[$2--1]
     repeat $!-$2 { l[0-{$2-1},{$2+$>}] {
-      norm. w={w} h={h} r. $3%,$3%,1,1,2
-      s={$4*max(round($w/w),round($h/h))}
-      r0={$s*$5%} r1={$s*$6%}
-      repeat $2 { r={round($r0+$>*($r1-$r0)/($2-1))} if $r +r[$>] $r,$r,1,100%,3 else 1,1 fi }
+      norm. w,h:=w,h r. $3%,$3%,1,1,2
+      s:=$4*max(round($w/w),round($h/h))
+      r0,r1:=$s*[$5,$6]%
+      repeat $2 { r:=round($r0+$>*($r1-$r0)/($2-1)) if $r +r[$>] $r,$r,1,100%,3 else 1,1 fi }
       r[-$2--1] $s,$s,1,100%,0,0,0.5,0.5
       map_sprites[$2--1] $2,$8
     } } rm[0-{$2-1}]
@@ -54363,12 +54363,12 @@ fx_shapes :
 
 fx_shapes_preview :
   if $1 foreach {
-    w={w} h={h}
+    w,h:=w,h
     gui_split_preview "fx_shapes ${1-3},1,${5--2}",$-1
     r $w,$h,1,100%,0,0,0.5,0.5
   } else
     if $!>$2 repeat $!-$2 { l[0-{$2-1},{$2+$>}] {
-      w={w} h={h}
+      w,h:=w,h
       +fx_shapes ${1-3},1,${5--2} rm..
       r. $w,$h,1,100%,0,0,0.5,0.5
     } } rm[0-{$2-1}]
@@ -54377,10 +54377,10 @@ fx_shapes_preview :
   fi
 
 _fx_shapes :
-  norm w={w} h={h} r $3%,$3%,1,1,2
-  s={(1+$10)*$4*max(round($w/w),round($h/h))}
-  r0={$s*$5%} r1={$s*$6%}
-  repeat $2 { r={round($r0+$>*($r1-$r0)/($2-1))} if $r _fx_shapes{$1-1}[] $r,$s else 1,1 fi }
+  norm w,h:=w,h r $3%,$3%,1,1,2
+  s:=(1+$10)*$4*max(round($w/w),round($h/h))
+  r0,r1:=$s*[$5,$6]%
+  repeat $2 { r:=round($r0+$>*($r1-$r0)/($2-1)) if $r _fx_shapes{$1-1}[] $r,$s else 1,1 fi }
   r[-$2--1] $s,$s,1,1,0,0,0.5,0.5
   if $9 rv[-$2--1] *[-$2--1] -1 +[-$2--1] 1 fi
   map_sprites $2,$8
@@ -54419,7 +54419,7 @@ _fx_shapes9 :
   rm.. +mirror y max
 
 _fx_shapes10 :
-  S={$2+1-($2%2)}
+  S:=$2+1-($2%2)
   $S,$S,1,1,"X=x/(w-1);Y=y/(h-1);r=abs(0.5-sqrt(X^2+Y^2));a=atan2(y,x);r<0.1-0.17*(0.5-$1/$2)*sin(2*a)"
   +mirror xy max
 
@@ -54658,7 +54658,7 @@ fx_pills_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/16/05</i>.</small>")
 fx_plaid_texture :
   foreach {
-    w={w} h={h} s={s}
+    w,h,s:=w,h,s
     rows $1%
     b $5% sharpen $6
     r $w,$h,1,$s,2
@@ -54705,7 +54705,7 @@ fx_color_ellipses :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/10/08</i>.</small>")
 _fx_random_pattern :
-  if $4 srand _seed={_round(u(100000))} else _seed=$3 fi
+  if $4 srand _seed:=_round(u(100000)) else _seed=$3 fi
   srand $_seed
   random_pattern $1,$1,$2
   adjust_colors. ${5-9}
@@ -54774,7 +54774,7 @@ fx_syntexturize_preview :
 _fx_syntexturize_matchpatch_preview :
   foreach {
     if $7 +b {20.5-$7/50}% -[0] [1] fc. ${average_vectors.} + c 0,255 fi
-    w={w} h={h}
+    w,h:=w,h
     syntexturize_matchpatch 100%,100%,${3--1}
     to_rgba r $w,$h,1,4,0,0,0.5,0.5
   }
@@ -54851,14 +54851,14 @@ fx_satin :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/02/04</i>.</small>")
 fx_seamless_turbulence :
   foreach {
-    wh={w},{h} rm
+    wh:=w,h rm
     $wh,1,{if($6,3,1)} rand. 0,255
     $wh rand. {$3*pi/180-$4*10*pi},{$3*pi/180+$4*10*pi} +sin. cos.. a[-2,-1] c
     r[-2,-1] 130%,130%,1,100%,0,2,0.5,0.5 b. $2 orientation.
     vector2tensor.
     smooth.. .,$1,0.5,20 rm.
     r. $wh,1,100%,0,0,0.5,0.5
-    if $5!=1 ia={ia} - $ia * $5 + $ia fi
+    if $5!=1 ia:=ia - $ia * $5 + $ia fi
   }
   c 0,255 n 0,255
 
@@ -55012,7 +55012,7 @@ fx_tetris :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/09/29</i>.</small>")
 fx_triangular_pattern :
   if !$! 1024,1024,1,3 fi
-  W,H={0,[w,h]} f={arg0($14,1,1.5,2,3,4)*100} r[0] $f%,$f%,1,100%
+  W,H={0,[w,h]} f:=arg0($14,1,1.5,2,3,4)*100 r[0] $f%,$f%,1,100%
   1,1,1,6
   eval "
 
@@ -55115,10 +55115,9 @@ fx_truchet :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/04/30</i>.</small>")
 fx_voronoi :
   foreach {
-    wh={[w,h]} f={arg(1+$16,1,1.5,2,2.5)*100} r $f%,$f%,1,100%,3
-
-    if $2 +gradient_norm t={(255-$1)/4} else +s c med[^0] t={255-$1} fi
-    if $3 mM={[im,iM]} b. $3 n. $mM fi
+    wh:=w,h f:=arg(1+$16,1,1.5,2,2.5)*100 r $f%,$f%,1,100%,3
+    if $2 +gradient_norm t:=(255-$1)/4 else +s c med[^0] t:=255-$1 fi
+    if $3 mM:=im,iM b. $3 n. $mM fi
     >. $t
     f. "u<($4%)^4?i:0"
     label_fg. 0,1 voronoi.
@@ -55311,7 +55310,7 @@ _fx_inpaint_patch :
 fx_inpaint_patch :
   foreach {
     if $14
-      bs={max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)}
+      bs:=max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)
       at "_fx_inpaint_patch $*",$bs,$bs,1,25%,25%,0,2
     else _fx_inpaint_patch $*
     fi
@@ -55830,7 +55829,7 @@ fx_smooth_skin :
       # Skin detection step.
       if $5 +balance_gamma 128,128,128 else [0] fi
       if $1==0 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
-      M={iM} b. $3% *. {$M/iM} *. $4 c. 0,1
+      M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
 
       # Details smoothing step.
       split_details[0] 4,$9%,$10%
@@ -55845,7 +55844,7 @@ _fx_smooth_skin :
   if $1==0 b {$2/8}%
   else
     if $2>0
-      m={im} M={iM} n 0,255
+      m,M:=im,iM n 0,255
       repeat int($2/5) { bilateral 3%,{5*3} }
       bilateral 3%,{($2%5)*3}
       * {($M-$m)/255} + $m
@@ -55855,7 +55854,7 @@ _fx_smooth_skin :
 fx_smooth_skin_preview :
   if $14==0
     gui_split_preview "if $5 balance_gamma 128,128,128 fi if $1==0 f 1 elif $1==2 detect_skin $2 "\
-     "else detect_skin $2,$6%,$7%,$8% fi M={iM} b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
+     "else detect_skin $2,$6%,$7%,$8% fi M:=iM b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
   elif $14==1
     gui_split_preview "b $9%",${-3--1}
   elif $14==2
@@ -56060,8 +56059,8 @@ fx_scale_dcci2x_preview :
 # $13 = Rendering mode.
 # $14 = Antialiasing (0 | 1)
 fx_render3d : skip ${14=1}
-  width={(1+$14)*$1} height={(1+$14)*$2}
-  n3d c3d m3d {round($13)} f3d={0.5*max($width,$height)/tan($7*pi/360)}
+  width,height:=(1+$14)*[$1,$2]
+  n3d c3d m3d {round($13)} f3d:=0.5*max($width,$height)/tan($7*pi/360)
   f3d $f3d l3d {$8*$f3d},{$9*$f3d},{$10*$f3d} sl3d $11 ss3d $12
   foreach {
     *3d {$3*max($width,$height)} r3d 0,0,1,{-$6} r3d 0,1,0,{-$5} r3d 1,0,0,{-$4}
@@ -56096,18 +56095,18 @@ fx_render3d : skip ${14=1}
 fx_blocks3d :
   foreach {
     nm=${"-gui_layer_name"}
-    W={w} H={h} M={max(w,h)}
+    W,H,M:=w,h,max(w,h)
     if w>h r2dx $1 else r2dy $1 fi
-    w={w} h={h} m={max(w,h)}
+    w,h,m:=w,h,max(w,h)
     if $3>0 mirror y fi
     imageblocks3d $3,$2%
-    -3d. {$w/2},{$h/2} f={$4*$M/($m*(2-$16))} *3d $f,$f,{$f*abs($3*$1/100)}
+    -3d. {$w/2},{$h/2} f:=$4*$M/($m*(2-$16)) *3d $f,$f,{$f*abs($3*$1/100)}
     if $3>0 r3d 1,0,0,180 fi
     r3d 0,0,1,$5 r3d 1,0,0,-$6
 
     # Render object.
     if $16 {2*$M},{2*$M},1,4,-1 else $M,$M,1,4,-1 fi
-    f3d={0.5*w/tan($7*pi/360)} f3d $f3d
+    f3d:=0.5*w/tan($7*pi/360) f3d $f3d
     l3d {$10*$f3d},{$11*$f3d},{$12*$f3d} sl3d $13 ss3d $14
     j3d. [0],$8%,$9%,0,1,{if($15,3,2)},0,1
     sh. 100% +. 1 *. 255 rm.
@@ -56293,7 +56292,7 @@ fx_imageobject3d :
   _fx_imageobject3d "_",$1 fx_render3d ${2--1}
 
 fx_imageobject3d_preview :
-  w={w} h={h} _fx_imageobject3d "_preview_",$1 fx_render3d $w,$h,${4--1}
+  w,h:=w,h _fx_imageobject3d "_preview_",$1 fx_render3d $w,$h,${4--1}
 
 _fx_imageobject3d_0 : imageplane3d
 _fx_imageobject3d_1 : imagecube3d
@@ -56498,7 +56497,7 @@ fx_mesh3d_preview : skip "${1=},${2=}"
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_random3d :
   foreach {
-    f3d={0.5*max(w,h)/tan($5*pi/360)} f3d $f3d l3d {$6*$f3d},{$7*$f3d},{$8*$f3d} sl3d $9 ss3d $10
+    f3d:=0.5*max(w,h)/tan($5*pi/360) f3d $f3d l3d {$6*$f3d},{$7*$f3d},{$8*$f3d} sl3d $9 ss3d $10
     to_rgb ({w},{h},{d},{s}) /. 2
     repeat $2 {
       ({1,@0}) +. {1,@1} *. $3 /. 100 _fx_random3d$1 {^} rm..
@@ -56559,7 +56558,7 @@ fx_circle_art :
     rand. -1,1 +rand. -1,1 +rand. -$3,$3 a[-3--1] y
   else # Spiral.
     {max(1,round($2*$7))}
-    t0={$8*2*pi/180}
+    t0:=$8*2*pi/180
     rows. 0,2
     f. "r = x/(w-1);
         t = 2*pi*x/$2;
@@ -56570,7 +56569,7 @@ fx_circle_art :
 
   # Convert to 3D object.
   l. {
-    transpose s x,-1 h={h}
+    transpose s x,-1 h:=h
     i[0] ({'CImg3d'},{2*$h},$h) # Header.
     ++... . -[-4,-2] i .. i[-3,-1] 1,100% a[-6--1] x # Vertices.
     1,$h,1,1,5 1,$h,1,1,2*y ++. 1 a[-3--1] x z. 0,5 # Primitives.
@@ -56609,7 +56608,7 @@ fx_circle_art :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/13/11</i>.</small>")
 fx_equation_parametric :
   foreach {
-    w={w} h={h} rm
+    w,h:=w,h rm
     $5,1,1,2,"t=$3+x*($4-$3)/($5-1);if(c==0,$1,$2)"
     channels. 0,2
     ($8,$11^$9,$12^$10,$13) r. {-2,w},1,1,3,3 a c
@@ -56635,7 +56634,7 @@ fx_equation_parametric :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_equation_plot :
   foreach {
-    w={w} h={h} rm
+    w,h:=w,h rm
     $4,1,1,$5,"X=$2+($3-$2)*x/($4-1);$1"
     dg $w,$h,$6,$7,$2,$3
   }
@@ -56675,7 +56674,7 @@ fx_generate_random_portrait_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_corner_gradient : skip ${17=0}
   foreach {
-    wh={w},{h} rm
+    wh:=w,h rm
     ($1,$5;$9,$13^$2,$6;$10,$14^$3,$7;$11,$15^$4,$8;$12,$16)
     _gb_fwd $17
     r. $wh,1,100%,3
@@ -56740,7 +56739,7 @@ fx_custom_gradient : skip "${15=}"
   repeat $!-1 { l[$>,-1] {
     _fx_custom_gradient1[0] ${1-14},"$15",${16--1}
     +distance[0] 1,$11 +distance[0] 0,$11 *. -1 +[0] 1 +[0,-2,-1]  # Signed distance function.
-    m={$9%*{0,im}} M={$10%*{0,iM}}
+    m,M={0,[$9%*im,$10%*iM]}
     -[0] $m *[0] {1,(w-2)/($M-$m)} +[0] 1
     round[0] map[0] .
   } }
@@ -56848,7 +56847,7 @@ _fx_line_gradient :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_linear_gradient : skip ${13=0}
   foreach {
-    wh={w},{h} rm
+    wh:=w,h rm
     ($1^$2^$3^$4) ($5^$6^$7^$8)
     if $9 rv[-2,-1] fi
     r $wh
@@ -56870,7 +56869,7 @@ fx_linear_gradient : skip ${13=0}
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/29/06</i>.</small>")
 fx_radial_gradient : skip ${14=0}
   foreach {
-    wh={w},{h} rm
+    wh:=w,h rm
     ($1^$2^$3^$4) ($5^$6^$7^$8)
     if $9 rv[-2,-1] fi
     r $wh
@@ -56980,7 +56979,7 @@ fx_lightning :
   foreach {
     100%,100%
     l. {
-      fact={max(w,h)/$3*$2%} srand $11
+      fact:=max(w,h)/$3*$2% srand $11
       repeat $1 {
         if $!<=1
           i=0
@@ -56990,16 +56989,16 @@ fx_lightning :
           new_y=0
           new_angle=$14
         else
-          i={round(u(1,max(1,($!-1)*$6)))}
+          i:=round(u(1,max(1,($!-1)*$6)))
           level={$i,@-2}
           angle={$i,@-1}
           nb_points={$i,i[6]}
-          p={round(($nb_points-2)*u($17%,$18%))}
-          new_level={$level+1}
-          new_length={max(2,round(($nb_points-$p)*u($19%,$20%)))}
+          p:=round(($nb_points-2)*u($17%,$18%))
+          new_level:=$level+1
+          new_length:=max(2,round(($nb_points-$p)*u($19%,$20%)))
           new_x={$i,i[8+3*$p]}
           new_y={$i,i[9+3*$p]}
-          new_angle={$angle+u($21,$22)*if(u>0.5,1,-1)}
+          new_angle:=$angle+u($21,$22)*if(u>0.5,1,-1)
         fi
 
         _fx_lightning $new_length,$4,$5
@@ -57007,9 +57006,9 @@ fx_lightning :
         +3d. $new_x,$new_y
         +*3d. $fact [0],[0] j3d. ..,$12%,$13%,0,1,1,0,0 rm..
 
-        dilation={$15*(if($23>0,1.5,10)^($23*($new_level-1)))}
-        blur={max(0,-1+(1+$16)*(if($24>0,2,5)^($24*($new_level-1))))}
-        opacity={min(1,$10/255*(2^($25*($new_level-1))))}
+        dilation:=$15*(if($23>0,1.5,10)^($23*($new_level-1)))
+        blur:=max(0,-1+(1+$16)*(if($24>0,2,5)^($24*($new_level-1))))
+        opacity:=min(1,$10/255*(2^($25*($new_level-1))))
 
         dilate. $dilation b. $blur% n. 0,1 *. $opacity max[0,-1]
         ($new_level;$new_angle) a[-2,-1] y
@@ -57099,20 +57098,20 @@ fx_lissajous :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/06/27</i>.</small>")
 fx_mandelbrot :
-  if !narg($_size) _size={max(w,h)} fi
+  if !narg($_size) _size:=max(w,h) fi
   rm $_size,$_size
   mandelbrot ${1-4},$6,{$5?[1,$7,$8]:[0,0,0]}
   srand $11 $9,1,1,3 rand. 0,255 r. {$9*$10},1,1,3,3 point. 0 map.. .,3 rm.
 
 fx_mandelbrot_preview :
-  _size={min(${-gui_preview_wh})}
+  _size:=min(${-gui_preview_wh})
   if "$15 || $16 || $17"
-    x0,y0,x1,y1={"P0 = [${1,2}];
+    x0,y0,x1,y1:="P0 = [${1,2}];
                   dP = [${3,4}] - P0;
                   C = P0 + [${12,13}]%*dP;
                   zfact = $14*($15?1:$16?0:-2);
                   dC = 0.5*dP*(1 - 0.98*zfact);
-                  [C - dC,C + dC]"}
+                  [C - dC,C + dC]"
     status=\{$x0\}\{$y0\}\{$x1\}\{$y1\}\{$5\}\{$6\}\{$7\}\{$8\}\{$9\}\{$10\}\{$11\}\
            \{50,50\}\{$14\}\{0\}\{0\}\{0\}\{$18\}
     px,py=50
@@ -57123,7 +57122,7 @@ fx_mandelbrot_preview :
   fi
   fx_mandelbrot $x0,$y0,$x1,$y1,${5--1}
 
-  x0r,y0r,x1r,y1r={"C = ["$px,$py"]%*w; dC = 0.5*w*(1 - 0.98*$14); round([C - dC, C + dC - 1])"}
+  x0r,y0r,x1r,y1r:="C = ["$px,$py"]%*w; dC = 0.5*w*(1 - 0.98*$14); round([C - dC, C + dC - 1])"
   rectangle $x0r,$y0r,$x1r,$y1r,0.7,0xF0F0F0F0,255,255,255,255
   rectangle $x0r,$y0r,$x1r,$y1r,0.7,0x0F0F0F0F,0,0,0,255
   if $18 to "Z0 = ( "{_$x0}" , "{_$y0}" )\nZ1 = ( "{_$x1}" , "{_$y1}" )",2,2,16 fi
@@ -57279,16 +57278,16 @@ fx_memoakten_algorithm_a :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/30/06</i>.</small>")
 fx_neon_lightning :
-  d={$13*255}
+  d:=$13*255
   foreach {
     100%,100%,1,4 rm[0]
     repeat $7 {
-      x0={max(0,min(w,$1+u(-$3,$3)))} y0={max(0,min(h,$2+u(-$3,$3)))}
-      x1={max(0,min(w,$4+u(-$6,$6)))} y1={max(0,min(h,$5+u(-$6,$6)))}
-      u0={u(0,100)} v0={u(0,100)} u1={u(0,100)} v1={u(0,100)}
-      R={max(0,min(255,u($10-$d,$10+$d)))}
-      G={max(0,min(255,u($11-$d,$11+$d)))}
-      B={max(0,min(255,u($12-$d,$12+$d)))}
+      x0:=max(0,min(w,$1+u(-$3,$3))) y0:=max(0,min(h,$2+u(-$3,$3)))
+      x1:=max(0,min(w,$4+u(-$6,$6))) y1:=max(0,min(h,$5+u(-$6,$6)))
+      u0,v0,u1,v1:=u([0,0,0,0],[100,100,100,100])
+      R:=max(0,min(255,u($10-$d,$10+$d)))
+      G:=max(0,min(255,u($11-$d,$11+$d)))
+      B:=max(0,min(255,u($12-$d,$12+$d)))
       spline $x0%,$y0%,$u0%,$v0%,$x1%,$y1%,$u1%,$v1%,1,$R,$G,$B,1
     }
     s c,-3
@@ -57376,9 +57375,9 @@ fx_neon_lightning :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/01/09</i>.</small>")
 fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   foreach {
-    if !narg($_size) _size={max(w,h)} fi
+    if !narg($_size) _size:=max(w,h) fi
     rm
-    antialias={arg(1+$33,1,1.5,2,2.5,3,3.5,4)}
+    antialias:=arg(1+$33,1,1.5,2,2.5,3,3.5,4)
     {$antialias*[$_size,$_size]}
     if $5==1
       pz="z^^2 - 1" dpz="2*zn" d2pz="2"
@@ -57442,23 +57441,23 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   }
 
 fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
-  is_custom_expression={$5==0?2:1}
-  is_color_by_custom={$12==0?2:0}
-  is_color_by_iter={$12==1?2:0}
-  is_color_by_value={$12==2?2:0}
-  _size0={min(${-gui_preview_wh})}
-  _size={$_size0/arg(1+$44,1,1.5,2,2.5,3,3.5,4)}
+  is_custom_expression:=$5==0?2:1
+  is_color_by_custom:=$12==0?2:0
+  is_color_by_iter:=$12==1?2:0
+  is_color_by_value:=$12==2?2:0
+  _size0:=min(${-gui_preview_wh})
+  _size:=$_size0/arg(1+$44,1,1.5,2,2.5,3,3.5,4)
 
   angle=$38
   if "$39 || $40 || $41"
-    x0,y0,x1,y1={"P0 = [${1,2}];
+    x0,y0,x1,y1:="P0 = [${1,2}];
                   dP = [${3,4}] - P0;
                   M = P0 + 0.5*dP;
                   C = P0 + [${35,36}]%*dP;
                   C = M + rot(-$38°)*(C - M);
                   zfact = $37*($39?1:$40?0:-2);
                   dC = 0.5*dP*(1 - 0.98*zfact);
-                  [ C - dC, C + dC ]"}
+                  [ C - dC, C + dC ]"
     px,py=50
   elif $42
     x0,y0,x1,y1=-2,-2,2,2
@@ -57472,7 +57471,7 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
 
   foreach {
     r2dx $_size0,1
-    x0r,y0r,x1r,y1r={"C = [ "$px,$py" ]%*w; dC = 0.5*w*(1 - 0.98*$37); round([ C - dC, C + dC - 1 ])"}
+    x0r,y0r,x1r,y1r:="C = [ "$px,$py" ]%*w; dC = 0.5*w*(1 - 0.98*$37); round([ C - dC, C + dC - 1 ])"
     rectangle $x0r,$y0r,$x1r,$y1r,0.7,0xF0F0F0F0,255,255,255,255
     rectangle $x0r,$y0r,$x1r,$y1r,0.7,0x0F0F0F0F,0,0,0,255
     if $43 to "Z0 = ( "{_$x0}" , "{_$y0}" )\nZ1 = ( "{_$x1}" , "{_$y1}" )",2,2,16 fi
@@ -57582,14 +57581,14 @@ fx_shadebobs :
     t=0
     repeat $3 {
       repeat $1 {
-        r={$6+$5*cos(6*$7*$t)+(1-$5)*sin(6*$8*$t)}
-        a={(360*sin($7*$t)+30*$6*$>)*pi/180}
-        ax={2*$>*pi/$1+$t}
-        cx={(1+$9*cos($ax)+$r*cos($a))*w/2}
-        cy={(1+$9*sin($ax)+$r*sin($a))*h/2}
+        r:=$6+$5*cos(6*$7*$t)+(1-$5)*sin(6*$8*$t)
+        a:=(360*sin($7*$t)+30*$6*$>)*pi/180
+        ax:=2*$>*pi/$1+$t
+        cx:=(1+$9*cos($ax)+$r*cos($a))*w/2
+        cy:=(1+$9*sin($ax)+$r*sin($a))*h/2
         ellipse. $cx,$cy,$2%,$2%,0,-1,1
       }
-      t+={$4%}
+      t+=$4%
     }
   }
   & 255 if $10 map {$10-1} fi
@@ -57679,15 +57678,15 @@ fx_sine_curve :
 
   if !narg($_is_preview) _is_preview=0 fi
   if [$prev_xc,$prev_yc]!=[$xc,$yc]
-    xr,yr,xa,ya,prev_xa,prev_ya+={d=[$xc,$yc]-[$prev_xc,$prev_yc];[d,d,d]}
+    xr,yr,xa,ya,prev_xa,prev_ya+=d=[$xc,$yc]-[$prev_xc,$prev_yc];[d,d,d]
   fi
   if [$prev_xa,$prev_ya]!=[$xa,$ya]
-    delta_a={"
+    delta_a:="
       a = [ "$xa" - "$xc", "$ya" - "$yc" ];
       b = [ "$prev_xa" - "$xc", "$prev_ya" - "$yc" ];
       (atan2(a[1],a[0]) - atan2(b[1],b[0]))*180/pi;
-    "}
-    xr,yr={[$xc,$yc]+rot($delta_a°)*[$xr-$xc,$yr-$yc]}
+    "
+    xr,yr:=[$xc,$yc]+rot($delta_a°)*[$xr-$xc,$yr-$yc]
   else delta_a=0 fi
   if [$colR,$colG,$colB]==[0,0,0]" && "$preview_background==1 colR,colG,colB=255
   elif [$colR,$colG,$colB]==[255,255,255]" && "$preview_background==2 colR,colG,colB=0
@@ -57770,11 +57769,11 @@ fx_sine_curve :
 
   # Change unit for some variables.
   W,H:=w#0?[w#0,h#0]:0$_is_preview" && "0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:[1024,1024]
-  nresolution={max(1,round($periods*1000000*($resolution%)^2))}
-  nfocale={arg($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)}
-  noxa,noxb,noya,noyb,noza,nozb={[$oxa,$oxb,$oya,$oyb,$oza,$ozb]*pi/180}
-  nantialiasing={arg0($antialiasing,1,1.25,1.5,2,3)}
-  rW,rH={[$W,$H]*$nantialiasing} # Size of the non-antialiased rendering
+  nresolution:=max(1,round($periods*1000000*($resolution%)^2))
+  nfocale:=arg($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
+  noxa,noxb,noya,noyb,noza,nozb:=[$oxa,$oxb,$oya,$oyb,$oza,$ozb]*pi/180
+  nantialiasing:=arg0($antialiasing,1,1.25,1.5,2,3)
+  rW,rH:=[$W,$H]*$nantialiasing # Size of the non-antialiased rendering
 
   # Generate and render curve.
   l[] {
@@ -57879,7 +57878,7 @@ fx_sine_curve :
   if 0$_output_mode k[0] fi
 
   # Update parameter values.
-  r,m,o,p,s,a={d=$dp;[d==0?2:0,d==1?2:0,d==2?2:0,d==3?2:0,d==4?2:0,d==5?2:0]}
+  r,m,o,p,s,a:=d=$dp;[d==0?2:0,d==1?2:0,d==2?2:0,d==3?2:0,d==4?2:0,d==5?2:0]
   u "{"$preset"}{"$preset"}{"$resolution"}{"$periods"}{"$dp"}"\
     "{"$ratx"}_"$r"{"$raty"}_"$r"{"$ratz"}_"$r\
     "{"$mxa"}_"$m"{"$mya"}_"$m"{"$mza"}_"$m"{"$mxb"}_"$m"{"$myb"}_"$m"{"$mzb"}_"$m\
@@ -57962,7 +57961,7 @@ fx_symmetric_shape2d :
 _fx_symmetric_shape2d :
   (${10-21}) f. "isnan(i)?-1024:i" discard. -1024 r. 2,{h/2},1,1,-1 permute. cyzx
   f. "x = R - $2; y = G - $3; [ atan2(y,x), norm(x,y) ]"
-  l. { n={h} .x{$1-1} a y f "const pi2 = 2*pi; [ (R + int(y/"$n")*pi2/$1)%pi2, G ]" sort +,y }
+  l. { n:=h .x{$1-1} a y f "const pi2 = 2*pi; [ (R + int(y/"$n")*pi2/$1)%pi2, G ]" sort +,y }
   f. "[ $2*w#-2,$3*h#-2 ]/100 + [ G*cos(R), G*sin(R) ]*(min(w#-2,h#-2)-1)%" permute. cyzx
   coords={^} rm.
   if $22 polygon {narg($coords)/2},$coords,1,${23-25},{$26*255%}
@@ -57977,16 +57976,16 @@ _fx_symmetric_shape2d_preview :
   cx1,cy1,cx2,cy2,cx3,cy3,cx4,cy4,cx5,cy5,cx6,cy6=${10-21}
   angx,angy=$6,$7
   if [$2,$3]!=[$4,$5]" || "[$angx,$angy]!=[$8,$9] # Center or angle has been modified
-    dx,dy={[$2-$4,$3-$5]}
-    repeat 6 { i={1+$>}
-      cx$i,cy$i={"
+    dx,dy:=[$2-$4,$3-$5]
+    repeat 6 { i:=1+$>
+      cx$i,cy$i:="
         const cx = "${cx$i}";
         const cy = "${cy$i}";
         dang = atan2($7 - $3,$6 - $2) - atan2($9 - $3,$8 - $2);
         dsca = norm($6 - $2,$7 - $3)/norm($9 - $3,$8 - $2);
-        [ $2,$3 ] + dsca*rot(dang)*[ cx - $4, cy - $5 ]"}
+        [ $2,$3 ] + dsca*rot(dang)*[ cx - $4, cy - $5 ]"
     }
-    angx,angy={[$6+$2-$4,$7+$3-$5]}
+    angx,angy:=[$6+$2-$4,$7+$3-$5]
   fi
 
   foreach {
@@ -58058,7 +58057,7 @@ _fx_tree:
   avg_branching,std_branching,avg_leftangle,avg_rightangle,std_angle,avg_length,std_length,avg_thickness,std_thickness,\
   Rt,Gt,Bt,At,Ot,Rl,Gl,Bl,Al,Ol,gammaRGBA,gammaO=${1-28}
 
-  W,H,S={[w,h,min(w,h)]}
+  W,H,S:=w,h,min(w,h)
   l[] {
     if $2 srand $2 fi
 
@@ -58115,7 +58114,7 @@ _fx_tree:
     # Normalize coordinates to fit image size and aspect ratio.
     1,100%,1,4,"[ i0#-1,i2#-1,i4#-1,i6#-1 ]"
     1,100%,1,4,"[ i1#-2,i3#-2,i5#-2,i7#-2 ]"
-    sx,sy={10^[$xratio,$yratio]}
+    sx,sy:=10^[$xratio,$yratio]
     -.. 0.5 *.. {-2,$S*$sx/(2.1*max(abs(iM),abs(im)))} +.. {$W/2} *. {$S*$sy/(1.05*max(iM))}
     f... "round([ i0#-2,i0#-1,i1#-2,i1#-1,i2#-2,i2#-1,i3#-2,i3#-1,i8 ])"
     rm[-2,-1]
@@ -58170,8 +58169,8 @@ fx_turbulence :
 # Generate a preview with start/end rendering of an animation.
 fx_animate_preview : skip ${4=1},${5=0},${6=$5}
   repeat $! {
-    if $5 width=$5 else width={w} fi
-    if $6 height=$6 else height={h} fi
+    if $5 width=$5 else width:=w fi
+    if $6 height=$6 else height:=h fi
     if $4 s. x,2 else . fi
     -$1.. $2 -$1. $3   # Assume this is a 1->1 filter.
     r[-2,-1] {max(w,{-2,w})},{max(h,{-2,h})},1,100%,3
@@ -58223,7 +58222,7 @@ fx_animate_elevation3d : skip "${4=}"
                       "${7-8},${20-29},$9",$1,$2,{``$filename}
 
 fx_animate_elevation3d_preview : skip "${4=}"
-  w={w} h={h}
+  w,h:=w,h
   _fx_elevation3d ${5-6},0
   fx_animate_preview fx_render3d,$w","$h",${10-19},$9",\
                                       $w","$h",${20-29},$9",0,$w,$h
@@ -58271,7 +58270,7 @@ fx_animate_extrude3d : skip "${4=}"
                       "${8-9},${21-30},$10",$1,$2,{``$filename}
 
 fx_animate_extrude3d_preview : skip "${4=}"
-  w={w} h={h}
+  w,h:=w,h
   _fx_extrude3d ${5-7},0
   fx_animate_preview fx_render3d,$w","$h",${11-20},$10",\
                                       $w","$h",${21-30},$10",0,$w,$h
@@ -58317,7 +58316,7 @@ fx_animate_imageobject3d : skip "${4=}"
                       "${6-7},${19-28},$8",$1,$2,{``$filename}
 
 fx_animate_imageobject3d_preview : skip "${4=}"
-  w={w} h={h}
+  w,h:=w,h
   _fx_imageobject3d "_preview_",$5
   fx_animate_preview fx_render3d,$w","$h",${9-18},$8",\
                                       $w","$h",${19-28},$8",0,$w,$h
@@ -58336,13 +58335,13 @@ fx_animate_imageobject3d_preview : skip "${4=}"
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2012/01/09</i>.</small>")
 fx_text_pointcloud3d :
-  W={w} H={h} M={round(1.5*max(w,h))} rm
+  W,H,M:=w,h,round(1.5*max(w,h)) rm
   text_pointcloud3d "$2","$3",$4
   col3d. ${5-7} *3d. {0.7*$M}
   f3d 4000 db3d 0 m3d
   repeat $1 {
     rprogress {60*$>/$1}
-    angle={$>*360/$1}
+    angle:=$>*360/$1
     +r3d[0] 1,0,1,$angle
     $M,$M,1,3,-1 j3d. ..,50%,50%,0,1 rm..
   }
@@ -58527,7 +58526,7 @@ fx_lavalampbw :
   if !$! (255;100^64;16^128;0) r. 512,512,1,3,3 fi
   foreach {
     remove_opacity
-    w={w} h={h}
+    w,h:=w,h
     +r $4%,$4%,1,1,0 [-1]x{$1-1} rand[^0] 0,1 stencil[^0] $5,0
     if $3 [1] fi
     morph[^0] $2,$6,0
@@ -58624,7 +58623,7 @@ fx_moire :
 
   # Auto-reduce number of frames (4, 5 or 6).
   if $4
-    skip={"
+    skip:="
       l<=6?1:(
         const l5 = int(l/5);
         const l4 = int(l/4);
@@ -58639,7 +58638,7 @@ fx_moire :
           r6<=r4 && r6<=r5?l6:
           l4
         )
-      )"}
+      )"
     k[0--1:$skip]
     if $!>6 rm[6--1] fi
   fi
@@ -58652,13 +58651,13 @@ fx_moire :
   if 0$_is_preview
     W,H=$_preview_area_width,$_preview_area_height
     if $3
-      if $W>$H W={$H/sqrt(2)} else H={$W*sqrt(2)} fi
+      if $W>$H W:=$H/sqrt(2) else H:=$W*sqrt(2) fi
       fW,fH=$W,$H
-      W,H/={arg($3,4,3,2,1)}
+      W,H/=arg($3,4,3,2,1)
     fi
   elif $3
-    W,H,fW,fH={"$3==1?[620,877]:$3==2?[827,1169]:$3==3?[1240,1754]:[2480,3508]"},2480,3508
-    W,H,fW,fH={round([$W,$H,$fW,$fH]*0.95)} # Take printer margins into account
+    W,H,fW,fH:="$3==1?[620,877]:$3==2?[827,1169]:$3==3?[1240,1754]:[2480,3508]",2480,3508
+    W,H,fW,fH:=round([$W,$H,$fW,$fH]*0.95) # Take printer margins into account
   else
     W,H=${-max_wh}
   fi
@@ -58687,14 +58686,14 @@ fx_moire :
 
   # Upscale with nearest-neighbor for printing.
   if $3
-    ir={round(max($fW/$W,$fH/$H))*100}
+    ir:=round(max($fW/$W,$fH/$H))*100
     r $ir%,$ir%,1,100%,1
     r $fW,$fH,1,100%,0,1,0.5,0.5
   fi
 
   # Insert frame number label.
   if $7" && "$8
-    ax,ay={a=$7-1;[a%2?0.95:0.05,int(a/2)?0.95:0.05]}
+    ax,ay:=a=$7-1;[a%2?0.95:0.05,int(a/2)?0.95:0.05]
     0 t. "#"$N,0,0,{0,h*$8%},1,255 autocrop. frame. 5%,15%,0 negate. to_rgb. j[^-1] .,$ax~,$ay~ rm.
   fi
   => "name(Merged Frames),pos(0,0),opacity(100),mode(alpha)","name(Mask),pos(0,0),opacity(100),mode(alpha)"
@@ -58818,8 +58817,8 @@ fx_spatial_transition_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/01/08</i>.</small>")
 fx_cupid :
-  max_wh={$!>0?[${-max_wh}]:[512,512]}
-  w,h={S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]}
+  max_wh:=$!>0?[${-max_wh}]:[512,512]
+  w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_cupid {($7?2:1)*min($w,$h)}
     if $7 r2dx 50% fi
@@ -58845,8 +58844,8 @@ fx_cupid_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/01/08</i>.</small>")
 fx_gear :
-  max_wh={$!>0?[${-max_wh}]:[512,512]}
-  w,h={S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]}
+  max_wh:=$!>0?[${-max_wh}]:[512,512]
+  w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_gear {($11?2:1)*min($w,$h)},${2-5}
     if $11 r2dx 50% fi
@@ -58868,8 +58867,8 @@ fx_gear_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/01/08</i>.</small>")
 fx_heart :
-  max_wh={$!>0?[${-max_wh}]:[512,512]}
-  w,h={S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]}
+  max_wh:=$!>0?[${-max_wh}]:[512,512]
+  w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_heart {($7?2:1)*min($w,$h)}
     if $7 r2dx 50% fi
@@ -59083,7 +59082,7 @@ fx_custom_code : skip "${1=-skip ,}"
   um _fx_custom_code_start
 
 fx_custom_code_preview : skip "${1=-skip ,}"
-  w={w} h={h}
+  w,h:=w,h
   l {
     ({'{/"$1"}'}) discard. 92,10 _gcp_arg={t} rm.
     if $6 gui_split_preview "fx_custom_code $_gcp_arg,${2--2}",${-3--1}
@@ -59252,7 +59251,7 @@ fx_intarsia :
     nb_cols={1,w}
     repeat $nb_cols {
       color={1,I($>)}
-      R={arg(1,$color)} G={arg(2,$color)} B={arg(3,$color)}
+      R,G,B=$color
       ('${dec2hex\ {$R*65536+$G*256+$B}}') -. {'0'} r. 6,1,1,1,0,0,1,0 +. {'0'}
       f. if(i>=_'a'" && "i<=_'z',i+_'A'-_'a',i)
       hcolor={t} rm.
@@ -59265,7 +59264,7 @@ fx_intarsia :
     starting=${"arg {1+$5},\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\""}
     label=${"arg {1+$6},Row,Column"}
     if $6 dir0="T &#8594; B" dir1="B &#8594; T" else dir0="L &#8594; R" dir1="R &#8594; L" fi
-    dir={arg(1+2*$5+$6,0,0,1,0,0,1,1,1)}
+    dir:=arg(1+2*$5+$6,0,0,1,0,0,1,1,1)
 
     +map[0] [1]
     +fx_intarsia_preview. ${1-7},63 drgba.
@@ -59295,13 +59294,13 @@ fx_intarsia :
       s y
       foreach {
         if $>%2 mirror. x fi
-        im={im} compress_rle 0,0 rows 6,100%
+        im:=im compress_rle 0,0 rows 6,100%
         ('"<tr><td valign=\"top\"><b>"$label" "{1+$>}"</b></td><td valign=\"top\">"${dir$dir}"</td><td>\n"')
         i=0 n=0 do
           val={0,i[$i]} i+=1
           if $val>=0 occ=1
           else
-            occ={-$val}
+            occ:=-$val
             val={0,i[$i]}
             if $val<0 val=0 else i+=1 fi
           fi
@@ -59313,7 +59312,7 @@ fx_intarsia :
         while $i<h#0
         ('"</td></tr>\n"')
         rm[0] a x
-        dir={!$dir}
+        dir:=!$dir
       }
       a x
     }
@@ -59372,7 +59371,7 @@ fx_image_sample :
   mv. 0
 
 fx_image_sample_preview :
-  w={w} h={h} rm
+  w,h:=w,h rm
   fx_image_sample $1,{$w>$h?$w:0},{$h>$w?$h:0}
 
 #@gui Solve Maze : fx_solve_maze, fx_solve_maze_preview(1)
