@@ -270,7 +270,7 @@ help : skip ${1=""}
     command={`"
       s = ['$1']; len = size(s); z = 0;
       (p = find(s,_'['))>0?(s[p] = 0; len = p);
-      isin(s[0],_'-',_'+') && len>1 && !(s[z + 1]=='3' && s[z + 2]=='d')?(copy(s,s[z + 1],len - 1); s[len - 1] = 0);
+      isin(s[0],_'-',_'+') && len>1 && !(s[z + 1]==_'3' && s[z + 2]==_'d')?(copy(s,s[z + 1],len - 1); s[len - 1] = 0);
       s"`}
 
     s +,{'"#@cli "$command" :"'} s +,{'"#@cli "$command":"'} s +,{'"#@cli "$command"\n"'}
@@ -4831,7 +4831,7 @@ _input_bytes :
 #@cli : Default value: 'read_data_as=1'.
 +input_csv : check "isvarname('${2=1}') || isin($2,0,1,2)"
   l[] {
-    is_var:="s=['$2'];s!='0'&&s!='1'"
+    is_var:="s = ['$2']; s!='0' && s!='1'"
     if $is_var # Read data as new variables
       e[0--4] "Input string array from file '"{/"$1"}"', in variable '$2'."
       it "$1" replace {'" "'},255 s -,{'\n'}
@@ -5122,14 +5122,14 @@ _input_glob :
         ):line02==id_f?( # Primitive: colored or textured face
           q = 0; next_item();
           v0 = s2v(line,q) - 1; next_item();
-          vt0 = -1; line[q]=='/'?(++q; vt0 = s2v(line,q) - 1; isnan(vt0)?(vt0 = -1); next_item()); # Texture coords
-          line[q]=='/'?(++q; next_item()); # Skip normal index
+          vt0 = -1; line[q]==_'/'?(++q; vt0 = s2v(line,q) - 1; isnan(vt0)?(vt0 = -1); next_item()); # Texture coords
+          line[q]==_'/'?(++q; next_item()); # Skip normal index
           v1 = s2v(line,q) - 1; next_item();
-          vt1 = -1; line[q]=='/'?(++q; vt1 = s2v(line,q) - 1; isnan(vt1)?(vt1 = -1); next_item()); # Texture coords
-          line[q]=='/'?(++q; next_item()); # Skip normal index
+          vt1 = -1; line[q]==_'/'?(++q; vt1 = s2v(line,q) - 1; isnan(vt1)?(vt1 = -1); next_item()); # Texture coords
+          line[q]==_'/'?(++q; next_item()); # Skip normal index
           v2 = s2v(line,q) - 1; next_item();
-          vt2 = -1; line[q]=='/'?(++q; vt2 = s2v(line,q) - 1; isnan(vt2)?(vt2 = -1); next_item()); # Texture coords
-          line[q]=='/'?(++q; next_item()); # Skip normal index
+          vt2 = -1; line[q]==_'/'?(++q; vt2 = s2v(line,q) - 1; isnan(vt2)?(vt2 = -1); next_item()); # Texture coords
+          line[q]==_'/'?(++q; next_item()); # Skip normal index
           is_colored = min(vt0,vt1,vt2)<0 || p_img<0;
           !is_colored?(xyt0 = I[#5,vt0]; xyt1 = I[#5,vt1]; xyt2 = I[#5,vt2]);
           !line[q]?( # Triangle
@@ -5146,8 +5146,8 @@ _input_glob :
             ++nbp;
           ):(
             v3 = s2v(line,q) - 1; next_item();
-            vt3 = -1; line[q]=='/'?(++q; vt3 = s2v(line,q) - 1; isnan(vt3)?(vt3 = -1); next_item()); # Texture coords
-            line[q]=='/'?(++q; next_item()); # Skip normal index
+            vt3 = -1; line[q]==_'/'?(++q; vt3 = s2v(line,q) - 1; isnan(vt3)?(vt3 = -1); next_item()); # Texture coords
+            line[q]==_'/'?(++q; next_item()); # Skip normal index
             is_colored|=vt3<0;
             !line[q]?( # Quadrangle
               is_colored?( # Colored quadrangle
@@ -5740,7 +5740,7 @@ parse_cli : skip "${1=print},${2=*}"
       q = find(#0,'\n#@cli',p);
       q<0?(copy(i[p],0,h - p,1,0); break());
       for (r = q + 6, r<h && (c=i[r])<=_' ' && c!=_'\n', ++r);
-      r>=h || i[r]=='\n'?(copy(i[p],0,r - p,1,0); p = r; continue());
+      r>=h || i[r]==_'\n'?(copy(i[p],0,r - p,1,0); p = r; continue());
 
       (i[r]==_':' && i[r + 1]==_':')?( # Category
         r = find(#0,_'\n',r)%h;
@@ -5749,7 +5749,7 @@ parse_cli : skip "${1=print},${2=*}"
         r = find(#0,_'\n',r)%h;
         crop(0,r,1,6)=='\n#@cli'?(
           for (s = r + 6, s<h && (c=i[s])<=_' ' && c!='_\n', ++s);
-          s<h && i[s]==':' && i[s + 1]!=':'?(r = s):break();
+          s<h && i[s]==_':' && i[s + 1]!=':'?(r = s):break();
         ):break(),1
 
       ):( # Unexpected '#@cli' line -> Display warning
@@ -6920,7 +6920,7 @@ parse_gmd :
     ):
 
     # Word highlight: ' 'word_highlight' '.
-    non_escaped && c=='\'' && nc!=c?(
+    non_escaped && c==_'\'' && nc!=c?(
       word_highlight<0 && semiblank(pc)?( # Opening
         word_highlight = y;
       ):
@@ -8220,7 +8220,7 @@ parse_gui_images :
       repeat ${_f${f}_nb_params} { p=$>
         type=${_f${f}_p${p}_type}
         arg0=${_f${f}_p${p}_a0}
-        if s='$type';s=='file'||s=='filein'||s=='fileout'||s=='folder'||s=='value'
+        if s=['$type'];s=='file'||s=='filein'||s=='fileout'||s=='folder'||s=='value'
           if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"\"
           else
             args= ac=
@@ -8230,7 +8230,7 @@ parse_gui_images :
             pipeline.=$c$s$args$s
           fi
           c=,
-        elif s='$type';s=='text'
+        elif s=['$type'];s=='text'
           val,off=0
           N=${_f${f}_p${p}_nb_args}
           l[] { if isint($arg0) val=$arg0 N-=1 off=1 fi onfail }
@@ -8240,19 +8240,19 @@ parse_gui_images :
           if ['$args']==0 s=\" elif ['$args'][0]==_'\"' s= fi
           pipeline.=$c$s$args$s
           c=,
-        elif s='$type';s=='float'||s=='int'
+        elif s=['$type'];s=='float'||s=='int'
           pipeline.=$c$arg0 c=,
-        elif s='$type';s=='button'
+        elif s=['$type'];s=='button'
           pipeline.=${c}0 c=,
-        elif s='$type';s=='bool'
+        elif s=['$type'];s=='bool'
           val=0
-          if s='$arg0';s==1||s=='true' val=1 fi
+          if s=['$arg0'];s==1||s=='true' val=1 fi
           pipeline.=$c$val c=,
-        elif s='$type';s=='choice'
+        elif s=['$type'];s=='choice'
           val=0
           l[] { if isint($arg0) val=$arg0 fi onfail }
           pipeline.=$c$val c=,
-        elif s='$type';s=='color'
+        elif s=['$type'];s=='color'
           if ${_f${f}_p${p}_nb_args}==1" && "['$arg0'][0]==_'#' # Convert colors specified as '#RRGGBB[AA]'
             l[] {
               ('$arg0') autocrop. {'#'} s x,-2 _f${f}_p${p}_nb_args=$!
@@ -8260,7 +8260,7 @@ parse_gui_images :
             }
           fi
           repeat ${_f${f}_p${p}_nb_args} { a=$> pipeline.=$c${_f${f}_p${p}_a${a}} c=, }
-        elif s='$type';s=='point'
+        elif s=['$type'];s=='point'
           pipeline.=$c$arg0,${_f${f}_p${p}_a1} c=,
         fi
       }
@@ -8306,7 +8306,7 @@ parse_gui_thumbnails :
       repeat ${_f${f}_nb_params} { p=$>
         type=${_f${f}_p${p}_type}
         arg0=${_f${f}_p${p}_a0}
-        if s='$type';s=='file'||s=='filein'||s=='fileout'||s=='folder'||s=='value'
+        if s=['$type'];s=='file'||s=='filein'||s=='fileout'||s=='folder'||s=='value'
           if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"\"
           else
             args= ac=
@@ -8316,7 +8316,7 @@ parse_gui_thumbnails :
             pipeline.=$c$s$args$s
           fi
           c=,
-        elif s='$type';s=='text'
+        elif s=['$type'];s=='text'
           val,off=0
           N=${_f${f}_p${p}_nb_args}
           l[] { if isint($arg0) val=$arg0 N-=1 off=1 fi onfail }
@@ -8326,19 +8326,19 @@ parse_gui_thumbnails :
           if ['$args']==0 s=\" elif ['$args'][0]==_'\"' s= fi
           pipeline.=$c$s$args$s
           c=,
-        elif s='$type';s=='float'||s=='int'
+        elif s=['$type'];s=='float'||s=='int'
           pipeline.=$c$arg0 c=,
-        elif s='$type';s=='button'
+        elif s=['$type'];s=='button'
           pipeline.=${c}0 c=,
-        elif s='$type';s=='bool'
+        elif s=['$type'];s=='bool'
           val=0
-          if s='$arg0';s==1||s=='true' val=1 fi
+          if s=['$arg0'];s==1||s=='true' val=1 fi
           pipeline.=$c$val c=,
-        elif s='$type';s=='choice'
+        elif s=['$type'];s=='choice'
           val=0
           l[] { if isint($arg0) val=$arg0 fi onfail }
           pipeline.=$c$val c=,
-        elif s='$type';s=='color'
+        elif s=['$type'];s=='color'
           if ${_f${f}_p${p}_nb_args}==1" && "['$arg0'][0]==_'#' # Convert colors specified as '#RRGGBB[AA]'
             l[] {
               ('$arg0') autocrop. {'#'} s x,-2 _f${f}_p${p}_nb_args=$!
@@ -8346,7 +8346,7 @@ parse_gui_thumbnails :
             }
           fi
           repeat ${_f${f}_p${p}_nb_args} { a=$> pipeline.=$c${_f${f}_p${p}_a${a}} c=, }
-        elif s='$type';s=='point'
+        elif s=['$type'];s=='point'
           pipeline.=$c$arg0,${_f${f}_p${p}_a1} c=,
         fi
       }
@@ -8672,7 +8672,7 @@ parse_gui_json :
            "\"max\": \""$arg2"\", \"pos\": \""$ppos"\""$visibility" }"$sepp\n')
         ppos+=1
 
-      elif ['$type']=='file'" || "['$type']=='filein'" || "['$type']=='fileout'
+      elif s=['$type']:s=='file'" || "s=='filein'" || "s=='fileout'
         ('"      { \"type\": \"file\", \"name\": \""$name"\", \"default\": \""{/$arg0}"\", \"pos\": "\
           "\""$ppos"\""$visibility" }"$sepp\n')
         ppos+=1
@@ -8860,7 +8860,7 @@ parse_gui_gmicol :
          ('"    <float name=\""$name"\" value=\""$arg0"\" min=\""$arg1"\" max=\""$arg2"\""\
            $responsivity$visibility"/>"\n')
 
-      elif ['$type']=='file'" || "['$type']=='filein'" || "['$type']=='fileout'
+      elif s=['$type'];s=='file'" || "s=='filein'" || "s=='fileout'
         ('"    <file name=\""$name"\" value=\""$arg0"\""$responsivity$visibility"/>\n"')
 
       elif ['$type']=='folder'
@@ -8928,7 +8928,9 @@ parse_gui_strings :
       _parse_gui_strings ${_f${f}_name}
       repeat ${_f${f}_nb_params} { p=$>
         type=${_f${f}_p${p}_type}
-        if s=['$type'];s!='link'&&s!='note'&&s!='separator'&&s!='value' _parse_gui_strings ${_f${f}_p${p}_name} fi
+        if s=['$type'];s!='link'" && "s!='note'" && "s!='separator'" && "s!='value'
+          _parse_gui_strings ${_f${f}_p${p}_name}
+        fi
         if ['$type']==['choice']
           repeat ${_f${f}_p${p}_nb_args} { a=$>
             arg=${_f${f}_p${p}_a${a}}
@@ -11201,7 +11203,7 @@ parse_gui_zart :
       elif s=['$type'];s=='int'" || "s=='float'
         +e "  <"$type" name=\""$name"\" default=\""$arg0"\" min=\""$arg1"\" max=\""$arg2"\" />"
 
-      elif ['$type']=='file'" || "['$type']=='filein'" || "['$type']=='fileout'
+      elif s=['$type'];s=='file'" || "s=='filein'" || "s=='fileout'
         +e "  <file name=\""$name"\" default=\""$arg0"\" />"
 
       elif ['$type']=='folder'
