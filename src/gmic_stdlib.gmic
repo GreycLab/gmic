@@ -4081,8 +4081,8 @@ _display_histogram : check "${1=0}>=0 && ${2=0}>=0 && ${3=256}>0" skip ${4=0%},$
  and maximum value $5."
   foreach {
     nm={n}
-    if ${is_percent\ $4} m={im+(iM-im)*$4} else m=$4 fi
-    if ${is_percent\ $5} M={im+(iM-im)*$5} else M=$5 fi
+    if "ispercentage($4)" m={im+(iM-im)*$4} else m=$4 fi
+    if "ispercentage($5)" M={im+(iM-im)*$5} else M=$5 fi
     s={s} s c
     repeat $s { l[{-1-$>}] { s z histogram $3,$m,$M a z } }
     a c f '"${7--1}"' vM={iM} s z
@@ -4452,7 +4452,7 @@ echo_file : skip "${2='\n'}"
   fi
   qualifier0,qualifier1="regular","bold"
   e[^-1] "Return default font '"$font"' with height $2 and "${qualifier$3}" face."
-  height:=${"is_percent $2"}?h*$2:$2
+  height:=ispercentage($2)?h*$2:$2
   strvar $font fontname=${}
   varname=__font_${fontname}_$qualifier$3$height
 
@@ -9302,7 +9302,7 @@ _random_pattern_check_image :
   ir:=round($1)
   if !$ir 0
   else l[] {
-    N:=${"is_percent $2"}?$ir^2*$2:$2
+    N:=ispercentage($2)?$ir^2*$2:$2
     $N,1,1,2
     eval "
      if ($5==0,
@@ -11393,7 +11393,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  (330,331,$_version) sort. discard. store. compat
+  (331,$_version) sort. discard. store. compat
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -12773,8 +12773,8 @@ _inrange : skip "${3=1},${4=$3}"
   e[0--3] "Extract pixel values in range [$1,$2] in image"$_gmic_s", with"$s" boundar"$b" included."
   foreach {
     m=$1 M=$2
-    if ${is_percent\ $1} m:=im+(iM-im)*$1 fi
-    if ${is_percent\ $2} M:=im+(iM-im)*$2 fi
+    if ispercentage($1) m:=im+(iM-im)*$1 fi
+    if ispercentage($2) M:=im+(iM-im)*$2 fi
     f. inrange(i,$m,$M,$3)
   }
 
@@ -12916,7 +12916,7 @@ noise_poissondisk : check "${1=8}>0 && isint(${2=30}) && $2>0 && ${3=2}>0"
   foreach {
     W,H,D:=[w,h,d]
     value:=iM+(im==iM?1:0)
-    R:=${is_percent\ $R0}?max(w,h,d)*$R0:$R0
+    R:=ispercentage($R0)?max(w,h,d)*$R0:$R0
     C:=$R/sqrt(sum([$W,$H,$D]>1)) # Cell size
 
     # Determing optimal set of neighbors.
@@ -15976,8 +15976,8 @@ apply_scales : check "isint($2) && $2>0 && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}
   e[^-1] "Apply command '$1' on image$? for $2 scales ($3 -> $4) and "${s{min(6,$6)}}" interpolation."
   foreach {
     nm={n}
-    scale0:=${"is_percent $3"}?$3*max(w,h,d):$3
-    scale1:=${"is_percent $4"}?$4*max(w,h,d):$4
+    scale0:=ispercentage($3)?$3*max(w,h,d):$3
+    scale1:=ispercentage($4)?$4*max(w,h,d):$4
     repeat $2 {
       scale:=$scale0+($scale1-$scale0)*($>/max(1,$2-1))^$5
       w={0,w==1?1:max(1,round($scale*w/max(w,h,d)))}
@@ -16006,9 +16006,9 @@ autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isin
          ${arg0\ $3,low,high}" connectivity "\
          "and output type set to '"${arg0\ $4,crop,segmentation,coordinates}"'.\n"
   foreach {
-    min_area:=max(1,round(if(${is_percent\ $2},$2*w*h,$2)))
+    min_area:=max(1,round(ispercentage($2)?$2*w*h:$2))
     +channels 100% >. $1 area_fg. 0,$3 >=. $min_area  # Discard background and small objects.
-    +area. 0,1 <. $min_area -|[-2,-1] label_fg. 0,1    # Fill small holes in objects.
+    +area. 0,1 <. $min_area -|[-2,-1] label_fg. 0,1   # Fill small holes in objects.
 
     # Extract detected objects.
     N:=iM repeat iM {
@@ -16425,9 +16425,9 @@ resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
                            + B/6*P0 + (-B/3+1)*P1 + B/6*P2);"
   foreach {
     nm={n}
-    nw:=${"is_percent $1"}?max(1,round($1*w)):round($1)
-    nh:=${"is_percent $2"}?max(1,round($2*h)):round($2)
-    nd:=${"is_percent $3"}?max(1,round($3*d)):round($3)
+    nw:=ispercentage($1)?max(1,round($1*w)):round($1)
+    nh:=ispercentage($2)?max(1,round($2*h)):round($2)
+    nd:=ispercentage($3)?max(1,round($3*d)):round($3)
     if !$nw" || "!$nh" || "!$nd rm 0
     elif !w rm $nw,$nh,$nd,1
     else
@@ -16512,8 +16512,8 @@ _resize2din : check "$1>0 && ${2=100%}>0 && ${3=3}>=0 && $3<=6 && ${4=0}>=0 && $
                     "${5=0}>=0 && $5<=1 && ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1"
   e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2, while preserving 2D ratio."
   eval "repeat (l,k,
-    W = "${"is_percent $1"}"?w#k*$1:$1;
-    H = "${"is_percent $2"}"?h#k*$2:$2;
+    W = ispercentage($1)?w#k*$1:$1;
+    H = ispercentage($2)?h#k*$2:$2;
     dims = round(min(W/w#k,H/h#k)*[w#k,h#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),d#k,s#k,${3-8});
   )"
@@ -16541,9 +16541,9 @@ _resize3din : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 &&
                     "${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1 && ${9=0}>=0 && $9<=1"
   e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2x$3, while preserving 3D ratio."
   eval "repeat (l,k,
-    W = "${"is_percent $1"}"?w#k*$1:$1;
-    H = "${"is_percent $2"}"?h#k*$2:$2;
-    D = "${"is_percent $3"}"?d#k*$3:$3;
+    W = ispercentage($1)?w#k*$1:$1;
+    H = ispercentage($2)?h#k*$2:$2;
+    D = ispercentage($3)?d#k*$3:$3;
     dims = round(min(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
   )"
@@ -16572,8 +16572,8 @@ _resize2dout : check "$1>0 && ${2=100%}>0 && ${3=3}>=0 && $3<=6 && ${4=0}>=0 && 
                      "${5=0}>=0 && $5<=1 && ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1"
   e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2, while preserving 2D ratio."
   eval "repeat (l,k,
-    W = "${"is_percent $1"}"?w#k*$1:$1;
-    H = "${"is_percent $2"}"?h#k*$2:$2;
+    W = ispercentage($1)?w#k*$1:$1;
+    H = ispercentage($2)?h#k*$2:$2;
     dims = round(max(W/w#k,H/h#k)*[w#k,h#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),d#k,s#k,${3-8});
   )"
@@ -16601,9 +16601,9 @@ _resize3dout : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 &
                      "${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1 && ${9=0}>=0 && $9<=1"
   e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2x$3, while preserving 3D ratio."
   eval "repeat (l,k,
-    W = "${"is_percent $1"}"?w#k*$1:$1;
-    H = "${"is_percent $2"}"?h#k*$2:$2;
-    D = "${"is_percent $3"}"?d#k*$3:$3;
+    W = ispercentage($1)?w#k*$1:$1;
+    H = ispercentage($2)?h#k*$2:$2;
+    D = ispercentage($3)?d#k*$3:$3;
     dims = round(max(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
   )"
@@ -16632,7 +16632,7 @@ _resize2dx : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=
                     ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
   e[0--3] "Resize 2D image"$_gmic_s" to $1 pixels along the x-axis, while preserving 2D ratio."
   foreach {
-    size:=${is_percent\ $1}?$1*w:$1
+    size:=ispercentage($1)?$1*w:$1
     r {max(1,$size)},{max(1,h*$size/w)},100%,100%,${2-7}
   }
 
@@ -16660,7 +16660,7 @@ _resize2dy : check "$1>=0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>
                     ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
   e[0--3] "Resize 2D image"$_gmic_s" to $1 pixels along the y-axis, while preserving 2D ratio."
   foreach {
-    size:=${is_percent\ $1}?$1*h:$1
+    size:=ispercentage($1)?$1*h:$1
     r {max(1,w*$size/h)},{max(1,$size)},100%,100%,${2-7}
   }
 
@@ -16687,7 +16687,7 @@ _resize3dx : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=
                     ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
   e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the x-axis, while preserving 3D ratio."
   foreach {
-    size:=${is_percent\ $1}?$1*w:$1
+    size:=ispercentage($1)?$1*w:$1
     r {max(1,$size)},{max(1,h*$size/w)},{max(1,d*$size/w)},100%,${2-7}
   }
 
@@ -16714,7 +16714,7 @@ _resize3dy : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=
                     ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
   e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the y-axis, while preserving 3D ratio."
   foreach {
-    size:=${is_percent\ $1}?$1*h:$1
+    size:=ispercentage($1)?$1*h:$1
     r {max(1,w*$size/h)},{max(1,$size)},{max(1,d*$size/h)},100%,${2-7}
   }
 
@@ -16741,7 +16741,7 @@ _resize3dz : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=
                     ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
   e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the z-axis, while preserving 3D ratio."
   foreach {
-    size:=${is_percent\ $1}?$1*d:$1
+    size:=ispercentage($1)?$1*d:$1
     r[$>] {max(1,w*$size/d)},{max(1,h*$size/d)},{max(1,$size)},100%,${2-7}
   }
 
@@ -16908,8 +16908,8 @@ seamcarve : check "${2=100%}>=0 && ${5=25%}>=0" skip ${3=0},${4=1}
   e[^-1] "Resize image$? to $1x$2 using seam-carving algorithm, "${arg0\ !$3,with,without}" priority channel, "\
          ${arg0\ !$4,with,without}" anti-aliasing and maximum seams $5."
   foreach {
-    nw:=max(1,round(if(${is_percent\ $1},$1*w,$1)))
-    nh:=max(1,round(if(${is_percent\ $2},$2*h,$2)))
+    nw:=max(1,round(ispercentage($1)?$1*w:$1))
+    nh:=max(1,round(ispercentage($2)?$2*h:$2))
     if $nw!=w _seamcarve $nw,$3,$4,$5 fi
     if $nh!=h transpose _seamcarve $nh,$3,$4,$5 transpose fi
   }
@@ -16921,7 +16921,7 @@ seamcarve : check "${2=100%}>=0 && ${5=25%}>=0" skip ${3=0},${4=1}
 # $4 = max number of seams added/removed at once.
 _seamcarve :
   do
-    max_seams:=max(1,round(if(${is_percent\ $4},$4*w,$4)))
+    max_seams:=max(1,round(ispercentage($4)?$4*w:$4))
     ssms:=max(min(round($1-w),w),1-w)
     sms:=min($max_seams,abs($ssms))
 
@@ -17082,8 +17082,8 @@ undistort : check "${1=0.1}>=-1 && $1<=1 && ${6=0}>=0 && $6<=3" skip ${2=0},${3=
   e[^-1] "Undistort barrel/pincushion effect in image$?, with amplitude $1, aspect ratio $2, zoom factor $3,
           center ($4,$5) and "${"arg0 $6,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    center_x:=${"is_percent $4"}?w*$4:$4
-    center_y:=${"is_percent $5"}?h*$5:$5
+    center_x:=ispercentage($4)?w*$4:$4
+    center_y:=ispercentage($5)?h*$5:$5
     f "
       const interpolation = 1;
       const boundary = $6;
@@ -17238,8 +17238,8 @@ blur_bloom : check "${1=1}>=0 && ${2=2}>=0 && isint(${3=5}) && $3>=0 && isint(${
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_linear
 blur_linear : skip ${2=0},${3=0},${4=1}
   e[^-1] "Apply linear blur on image$?, with angle $3 deg. and amplitudes ($1,$2)."
-  std1:=${is_percent\ $1}?$1*max(w,h):$1
-  std2:=${is_percent\ $2}?$2*max(w,h):$2
+  std1:=ispercentage($1)?$1*max(w,h):$1
+  std2:=ispercentage($2)?$2*max(w,h):$2
   stdM:=round(1.25*max($std1,$std2))
   if $stdM<=0 return fi
   foreach {
@@ -18370,7 +18370,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && ${2=75%}>=0 && isint(${3=1}) && $3>=
               and $4 iterations of "${s$3}" diffusion."
   repeat $! { nm={n} pass$1 l[$>,-1] {
     nb_scalesM:=ceil(log2(max(w,h,d)))
-    nb_scales:=round(${"is_percent $2"}?$nb_scalesM*$2:$2)
+    nb_scales:=round(ispercentage($2)?$nb_scalesM*$2:$2)
     nb_scales:=max(1,min($nb_scales,$nb_scalesM))
     nb_iter:=max(5,$4)
 
@@ -18465,7 +18465,7 @@ inpaint_holes : check "${1=4}>=0 && ${2=0}>=0" skip ${3=0}
          ${arg0\ !$3,high,low}" connectivity."
   foreach {
     100%,100%,100%
-    area:=${is_percent\ $1}?$1*w*h*d:$1
+    area:=ispercentage($1)?$1*w*h*d:$1
     repeat s#0 { sh[0] $> +area. $2,$3 <=. $1 -|[1,-1] rm. }
     if im k[0] whd=[w,h,d] r 1,1,1,100%,2 r $whd,100%
     else inpaint[0] [1],0,{2*!$2+!!$3} k[0] fi
@@ -18941,7 +18941,7 @@ opening_circ : check "$1>=0 && isbool(${2=0})"
 #@cli : Default values: 'min_percentile=0' and 'max_percentile=100'.
 #@cli : $ image.jpg shape_circle 11,11 +percentile[0] [1],25,75
 percentile : check ${"is_image_arg $1"}" && inrange(${2=0},0,100) && inrange(${3=100},0,100) && $2<=$3"
-  vmin,vmax={_[${"is_percent $2"}?100*$2:$2,${"is_percent $3"}?100*$3:$3]}
+  vmin,vmax={_[ispercentage($2)?100*$2:$2,ispercentage($3)?100*$3:$3]}
   e[^-1] "Apply percentile averaging filter to image$?, with mask $1, "\
          "min percentile "$vmin"% and max percentile "$vmax"%."
 
@@ -19179,8 +19179,8 @@ remove_pixels : check "$1>=0"
   e[^-1] "Remove $1 of the non-zero pixels in image$?."
   foreach {
     +norm !=. 0
-    N:=is                                 # Number of non-zero pixels.
-    n:=round(${"is_percent $1"}?$N*$1:$1) # Number of pixels to remove.
+    N:=is                               # Number of non-zero pixels.
+    n:=round(ispercentage($1)?$N*$1:$1) # Number of pixels to remove.
     if $n<=0 rm.        # No pixels to remove.
     elif $n>=$N rm. f 0 # All pixels to remove.
     elif $n>int($N/2)   # More pixels to remove than to keep.
@@ -19425,8 +19425,8 @@ split_details : check "isint(${1=4}) && $1>0 && ${2=0}>=0 && ${3=0}>=0"
   else
     e[^-1] "Split image$? using $1 spatial scales with base scale $2 and detail scale $3."
     foreach {
-      ss={max(0.3,if(${is_percent\ $2},$2*max(w,h),$2))}
-      se={max(0.3,if(${is_percent\ $3},$3*max(w,h),$3))}
+      ss={max(0.3,ispercentage($2)?$2*max(w,h):$2)}
+      se={max(0.3,ispercentage($3)?$3*max(w,h):$3)}
       ds={$se-$ss}
       repeat $1-1 { +b. {$ss+$>*$ds/max(1,$1-2)} -.. . rv[-2,-1] }
     }
@@ -19481,8 +19481,8 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
 
     # Prepare input image data.
     mM={[im,iM]} repeat s { sh. $> sum$>={is} var$>={iv} rm. } # Retrieve some stats for post-normalization.
-    nw={if(${is_percent\ $1},$1*w,$1)}
-    nh={if(${is_percent\ $2},$2*h,$2)}
+    nw:=ispercentage($1)?$1*w:$1
+    nh:=ispercentage($2)?$2*h:$2
     repeat s { sum$>*={$nw*$nh/(w*h)} } # Re-estimate output (0,0) frequency.
 
     if $nw>w||$nh>h # Spot extension required when rendering on bigger image.
@@ -19527,8 +19527,8 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
          ${"if $3 u \"$3 \" else u auto- fi"}"scales, $4x$4 patches, blending size $5 and precision $6."
   foreach {
     nb_scales={round(if($3,$3,log2(min(w,h)/16)),1,1)}
-    width={if(${"is_percent $1"},round(w*$1,1,1),$1)}
-    height={if(${"is_percent $2"},round(h*$2,1,1),$2)}
+    width:=ispercentage($1)?round(w*$1,1,1):$1
+    height:=ispercentage($2)?round(h*$2,1,1):$2
 
     repeat $nb_scales {
       scale={100*(0.5^$<)}
@@ -19746,12 +19746,12 @@ area_fg : check "$1>=0" skip ${2=0}
 at_line : check ${7=100%}>=0
   e[^-1] "Retrieve pixels of image$?, belonging to line ($1,$2,$3)-($4,$5,$6)."
   foreach {
-    x0={if(${is_percent\ $1},(w-1)*$1,$1)}
-    y0={if(${is_percent\ $2},(h-1)*$2,$2)}
-    z0={if(${is_percent\ $3},(d-1)*$3,$3)}
-    x1={if(${is_percent\ $4},(w-1)*$4,$4)}
-    y1={if(${is_percent\ $5},(h-1)*$5,$5)}
-    z1={if(${is_percent\ $6},(d-1)*$6,$6)}
+    x0:=ispercentage($1)?(w-1)*$1:$1
+    y0:=ispercentage($2)?(h-1)*$2:$2
+    z0:=ispercentage($3)?(d-1)*$3:$3
+    x1:=ispercentage($4)?(w-1)*$4:$4
+    y1:=ispercentage($5)?(h-1)*$5:$5
+    z1:=ispercentage($6)?(d-1)*$6:$6
     ($x0,$x1^$y0,$y1^$z0,$z1)
     r. {1+max(abs($x1-$x0),abs($y1-$y0),abs($z1-$z0))},1,1,3,3
     round. 1 warp[0] .,0,0,0 rm.
@@ -19768,14 +19768,14 @@ at_quadrangle : check "$#>=8 && $#<=14 && $#!=11"
 
 _at_quadrangle2 : check "${9=1}>=0 && $9<=2 && ${10=0}>=0 && $10<=3"
   foreach {
-    x0={round(${"is_percent $1"}?(w-1)*$1:$1)}
-    y0={round(${"is_percent $2"}?(h-1)*$2:$2)}
-    x1={round(${"is_percent $3"}?(w-1)*$3:$3)}
-    y1={round(${"is_percent $4"}?(h-1)*$4:$4)}
-    x2={round(${"is_percent $5"}?(w-1)*$5:$5)}
-    y2={round(${"is_percent $6"}?(h-1)*$6:$6)}
-    x3={round(${"is_percent $7"}?(w-1)*$7:$7)}
-    y3={round(${"is_percent $8"}?(h-1)*$8:$8)}
+    x0:=round(ispercentage($1)?(w-1)*$1:$1)
+    y0:=round(ispercentage($2)?(h-1)*$2:$2)
+    x1:=round(ispercentage($3)?(w-1)*$3:$3)
+    y1:=round(ispercentage($4)?(h-1)*$4:$4)
+    x2:=round(ispercentage($5)?(w-1)*$5:$5)
+    y2:=round(ispercentage($6)?(h-1)*$6:$6)
+    x3:=round(ispercentage($7)?(w-1)*$7:$7)
+    y3:=round(ispercentage($8)?(h-1)*$8:$8)
     ($x0,$x1;$x3,$x2^$y0,$y1;$y3,$y2)
     r. {P0=[$x0,$y0];P1=[$x1,$y1];P2=[$x2,$y2];P3=[$x3,$y3];\
         1+round([max(norm(P1-P0),norm(P3-P2)),max(norm(P3-P0),norm(P2-P1))])},1,2,3
@@ -19784,18 +19784,18 @@ _at_quadrangle2 : check "${9=1}>=0 && $9<=2 && ${10=0}>=0 && $10<=3"
 
 _at_quadrangle3 : check "${13=1}>=0 && $13<=2 && ${14=0}>=0 && $14<=3"
   foreach {
-    x0={round(${"is_percent $1"}?(w-1)*$1:$1)}
-    y0={round(${"is_percent $2"}?(h-1)*$2:$2)}
-    z0={round(${"is_percent $3"}?(h-1)*$3:$3)}
-    x1={round(${"is_percent $4"}?(w-1)*$4:$4)}
-    y1={round(${"is_percent $5"}?(h-1)*$5:$5)}
-    z1={round(${"is_percent $6"}?(h-1)*$6:$6)}
-    x2={round(${"is_percent $7"}?(w-1)*$7:$7)}
-    y2={round(${"is_percent $8"}?(h-1)*$8:$8)}
-    z2={round(${"is_percent $9"}?(h-1)*$9:$9)}
-    x3={round(${"is_percent $10"}?(w-1)*$10:$10)}
-    y3={round(${"is_percent $11"}?(h-1)*$11:$11)}
-    z3={round(${"is_percent $12"}?(h-1)*$12:$12)}
+    x0:=round(ispercentage($1)?(w-1)*$1:$1)
+    y0:=round(ispercentage($2)?(h-1)*$2:$2)
+    z0:=round(ispercentage($3)?(h-1)*$3:$3)
+    x1:=round(ispercentage($4)?(w-1)*$4:$4)
+    y1:=round(ispercentage($5)?(h-1)*$5:$5)
+    z1:=round(ispercentage($6)?(h-1)*$6:$6)
+    x2:=round(ispercentage($7)?(w-1)*$7:$7)
+    y2:=round(ispercentage($8)?(h-1)*$8:$8)
+    z2:=round(ispercentage($9)?(h-1)*$9:$9)
+    x3:=round(ispercentage($10)?(w-1)*$10:$10)
+    y3:=round(ispercentage($11)?(h-1)*$11:$11)
+    z3:=round(ispercentage($12)?(h-1)*$12:$12)
     ($x0,$x1;$x3,$x2^$y0,$y1;$y3,$y2^$z0,$z1;$z3,$z2)
     r. {P0=[$x0,$y0,$z0];P1=[$x1,$y1,$z1];P2=[$x2,$y2,$z2];P3=[$x3,$y3,$z2];\
         1+round([max(norm(P1-P0),norm(P3-P2)),max(norm(P3-P0),norm(P2-P1))])},1,3,3
@@ -19994,9 +19994,9 @@ fftpolar :
 #@cli : $ image.jpg channels 0,1 +histogram_nd 256
 histogram_nd : check $1>0 skip ${2=0%},${3=100%}
   e[^-1] "Compute histogram of multi-channels image$?, using $1 levels in range [$1,$2]."
-  percent_nblevels=${"is_percent $1"}
-  percent_min=${"is_percent $2"}
-  percent_max=${"is_percent $3"}
+  percent_nblevels:=ispercentage($1)
+  percent_min:=ispercentage($2)
+  percent_max:=ispercentage($3)
   foreach {
     s={s}
     r {w*h*d},{min(3,s)},1,1,-1
@@ -20030,9 +20030,9 @@ histogram_pointwise : skip ${2=0%},${3=100%}
   e[^-1] "Compute the pointwise histogram of vector-valued points in image$?, with $1 levels."
   foreach {
     nm={n}
-    nb_levels={round(if(${is_percent\ $1},(iM-im)*$1,$1))}
-    value0={if(${is_percent\ $2},im+(iM-im)*$2,$2)}
-    value1={if(${is_percent\ $3},im+(iM-im)*$3,$3)}
+    nb_levels:=round(ispercentage($1)?(iM-im)*$1:$1)
+    value0:=ispercentage($2)?im+(iM-im)*$2:$2
+    value1:=ispercentage($3)?im+(iM-im)*$3:$3
     - $value0 * {$nb_levels/max(1,abs($value1-$value0))} c 0,{$nb_levels-1} round
     w={w} h={h} d={d} r {w*h*d},{s},1,1,-1
     i.. (0,{w-1}) r.. .,.,1,1,3 round..
@@ -20082,7 +20082,7 @@ img2patches : check "isint($1) && $1>0 && ${2=0}>=0 && isint(${3=0}) && $3>=0 &&
   foreach {
     if d>1 error[0--4] "Command 'img2patches': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz=$1
-    if ${"is_percent $2"} overlap:=round(lerp(0,$psiz-1,$2)) else overlap:=int($2) fi
+    if ispercentage($2) overlap:=round(lerp(0,$psiz-1,$2)) else overlap:=int($2) fi
     if $overlap<0" || "$overlap>=$psiz
       error[0--4] "Command 'img2patches': Specified overlap $2 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
@@ -20259,10 +20259,9 @@ minimal_path : check "$1>=0 && $2>=0 && $3>=0" skip ${7=0}
     100%,100% = 1,${4-6} distance. 1,[0],{if($7,4,3)} k. channels. 1
     i[0] 0
     eval "
-      is_percent(str) = (unref(_is_pct); _is_pct=['#str']; _is_pct[size(_is_pct) - 1]==_'%');
-      x = round(is_percent($1)?$1*(w - 1):$1);
-      y = round(is_percent($2)?$2*(h - 1):$2);
-      z = round(is_percent($3)?$3*(d - 1):$3);
+      x = round(ispercentage($1)?$1*(w - 1):$1);
+      y = round(ispercentage($2)?$2*(h - 1):$2);
+      z = round(ispercentage($3)?$3*(d - 1):$3);
       da_push(#0,[x,y,z]);
       do (
         p = i(x,y,z);
@@ -20333,7 +20332,7 @@ patches2img : check "isint($1) && $1>0 && isint($2) && $2>0 && ${3=0}>=0 && (${4
   foreach {
     if w!=h error[0--4] "Command 'patches2img': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz:=w W,H:=${1,2}
-    if ${"is_percent $3"} overlap:=round(lerp(0,$psiz-1,$3)) else overlap:=int($3) fi
+    if ispercentage($3) overlap:=round(lerp(0,$psiz-1,$3)) else overlap:=int($3) fi
     if $overlap<0" || "$overlap>=$psiz
       error[0--4] "Command 'patches2img': Specified overlap $3 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
@@ -21032,16 +21031,16 @@ arrow : check "${5=1%}>=0 && ${6=10%}>=0 && ${7=3%}" skip ${8=1}
           head_thickness $7 and opacity $8."
   foreach {
     polygon. 7,{"
-      x0 = "${"is_percent $1"}"?(w-1)*$1:$1;
-      y0 = "${"is_percent $2"}"?(h-1)*$2:$2;
-      x1 = "${"is_percent $3"}"?(w-1)*$3:$3;
-      y1 = "${"is_percent $4"}"?(h-1)*$4:$4;
+      x0 = ispercentage($1)?(w-1)*$1:$1;
+      y0 = ispercentage($2)?(h-1)*$2:$2;
+      x1 = ispercentage($3)?(w-1)*$3:$3;
+      y1 = ispercentage($4)?(h-1)*$4:$4;
       p0 = [x0,y0];
       dp = [x1,y1]-=p0;
-      l = norm(dp);                       # arrow length
-      t = "${"is_percent $5"}"?l*$5:$5;   # thickness
-      hl = "${"is_percent $6"}"?l*$6:$6;  # head length
-      ht = "${"is_percent $7"}"?l*$7:$7;  # head thickness
+      l = norm(dp);                   # arrow length
+      t = ispercentage($5)?l*$5:$5;   # thickness
+      hl = ispercentage($6)?l*$6:$6;  # head length
+      ht = ispercentage($7)?l*$7:$7;  # head thickness
       lmhl = l - hl;
       X = mul([0,-t,lmhl,-t,lmhl,-ht,l,0,lmhl,ht,lmhl,t,0,t],rot(-atan2(dp[1],dp[0])),2);
       X+=[p0,p0,p0,p0,p0,p0,p0]"},${8--1}
@@ -21819,20 +21818,19 @@ grid : check "$1>=0 && $2>=0" skip ${3=0},${4=0},${5=1},${6=0},${7=$6}
     pattern=0xFFFFFFFF color=${6--1}
   fi
   eval "
-    is_percent(str) = (unref(_is_pct); _is_pct=['#str']; _is_pct[size(_is_pct) - 1]==_'%');
     repeat (l,k,
 
       # Horizontal lines.
-      size = is_percent($1)?max(1,w#k*$1):$1;
+      size = ispercentage($1)?max(1,w#k*$1):$1;
       size>=1?(
-        off = (is_percent($3)?size*$3:$3)%size;
+        off = (ispercentage($3)?size*$3:$3)%size;
         for (x = off, x<w#k, x+=size, polygon(#k,-2,x,0,x,h - 1,$5,"$pattern","$color"));
       );
 
       # Vertical lines.
-      size = is_percent($2)?max(1,h#k*$2):$2;
+      size = ispercentage($2)?max(1,h#k*$2):$2;
       size>=1?(
-        off = (is_percent($4)?size*$4:$4)%size;
+        off = (ispercentage($4)?size*$4:$4)%size;
         for (y = off, y<h#k, y+=size, polygon(#k,-2,0,y,w - 1,y,$5,"$pattern","$color"));
       )
     )"
@@ -21886,10 +21884,10 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
   e[^-1] "Draw antialiased line ($1,$2) - ($3,$4) on image$?, with opacity $5 and color (${6--1})."
   if !$5 return fi
   foreach {
-    x0={${"is_percent $1"}?(w-1)*$1:$1}
-    y0={${"is_percent $2"}?(h-1)*$2:$2}
-    x1={${"is_percent $3"}?(w-1)*$3:$3}
-    y1={${"is_percent $4"}?(h-1)*$4:$4}
+    x0:=ispercentage($1)?(w-1)*$1:$1
+    y0:=ispercentage($2)?(h-1)*$2:$2
+    x1:=ispercentage($3)?(w-1)*$3:$3
+    y1:=ispercentage($4)?(h-1)*$4:$4
     if $#>6 eval ${-math_lib}"line_aa($x0,$y0,$x1,$y1,$5,[${6--1}])"
     else eval ${-math_lib}"line_aa($x0,$y0,$x1,$y1,$5,$6)"
     fi
@@ -21903,14 +21901,14 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
 spline : skip ${9=1},${10=0}
   e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, with opacity $9 and color (${10--1})."
   foreach {
-    x0={if(${"is_percent $1"},$1*(w-1),$1)}
-    y0={if(${"is_percent $2"},$2*(h-1),$2)}
-    u0={if(${"is_percent $3"},$3*(w-1),$3)}
-    v0={if(${"is_percent $4"},$4*(h-1),$4)}
-    x1={if(${"is_percent $5"},$5*(w-1),$5)}
-    y1={if(${"is_percent $6"},$6*(h-1),$6)}
-    u1={if(${"is_percent $7"},$7*(w-1),$7)}
-    v1={if(${"is_percent $8"},$8*(h-1),$8)}
+    x0:=ispercentage($1)?$1*(w-1):$1
+    y0:=ispercentage($2)?$2*(h-1):$2
+    u0:=ispercentage($3)?$3*(w-1):$3
+    v0:=ispercentage($4)?$4*(h-1):$4
+    x1:=ispercentage($5)?$5*(w-1):$5
+    y1:=ispercentage($6)?$6*(h-1):$6
+    u1:=ispercentage($7)?$7*(w-1):$7
+    v1:=ispercentage($8)?$8*(h-1):$8
     eval ${-math_lib}"spline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,[${10--1}])"
   }
 
@@ -21922,10 +21920,10 @@ thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
   e[^-1] "Draw thick line ($1,$2) - ($3,$4) on image$?, with thickness $5, opacity $6 and color (${7--1})."
   if !$5 line ${1-4},${6--1}
   else foreach {
-    x0={${"is_percent $1"}?(w-1)*$1:$1}
-    y0={${"is_percent $2"}?(h-1)*$2:$2}
-    x1={${"is_percent $3"}?(w-1)*$3:$3}
-    y1={${"is_percent $4"}?(h-1)*$4:$4}
+    x0:=ispercentage($1)?(w-1)*$1:$1
+    y0:=ispercentage($2)?(h-1)*$2:$2
+    x1:=ispercentage($3)?(w-1)*$3:$3
+    y1:=ispercentage($4)?(h-1)*$4:$4
     coords={"
       const th = "$5";
       P0 = [ "$x0","$y0" ];
@@ -21946,14 +21944,14 @@ thickspline : skip ${9=3},${10=1},${11=0}
   e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, "\
    "with thickness $9, opacity $10 and color (${11--1})."
   foreach {
-    x0={if(${"is_percent $1"},$1*(w-1),$1)}
-    y0={if(${"is_percent $2"},$2*(h-1),$2)}
-    u0={if(${"is_percent $3"},$3*(w-1),$3)}
-    v0={if(${"is_percent $4"},$4*(h-1),$4)}
-    x1={if(${"is_percent $5"},$5*(w-1),$5)}
-    y1={if(${"is_percent $6"},$6*(h-1),$6)}
-    u1={if(${"is_percent $7"},$7*(w-1),$7)}
-    v1={if(${"is_percent $8"},$8*(h-1),$8)}
+    x0:=ispercentage($1)?$1*(w-1):$1
+    y0:=ispercentage($2)?$2*(h-1):$2
+    u0:=ispercentage($3)?$3*(w-1):$3
+    v0:=ispercentage($4)?$4*(h-1):$4
+    x1:=ispercentage($5)?$5*(w-1):$5
+    y1:=ispercentage($6)?$6*(h-1):$6
+    u1:=ispercentage($7)?$7*(w-1):$7
+    v1:=ispercentage($8)?$8*(h-1):$8
     eval ${-math_lib}"thickspline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,$10,[${11--1}])"
   }
 
@@ -22511,7 +22509,7 @@ _text_outline : skip "${1=}"
            color ${7--1}."
   if ['"$1"']==0 return fi
   sepx,sepy={"sx=['$2']; sy=['$3']; [sx[size(sx)-1], sy[size(sy)-1]]"}
-  if !$is_custom_font is_fontpercent=${"is_percent $4"} fi
+  if !$is_custom_font is_fontpercent:=ispercentage($4) fi
   xpos={`s=['"$2"'];$sepx==_'~'||$sepx==_'%'?s[0,size(s)-1]:s`}
   ypos={`s=['"$3"'];$sepy==_'~'||$sepy==_'%'?s[0,size(s)-1]:s`}
   foreach {
@@ -22829,9 +22827,9 @@ array3d : check "isint($1) && $1>0 && isint(${2=1}) && $2>0 && isint(${3=1}) && 
 
     # Retrieve object dimensions.
     +rows 8,{8+3*i[6]} r. 3,{h/3},1,1,-1 s. x,3
-    dx={-3,if(${is_percent\ $4},$4*(iM-im),$4)}
-    dy={-2,if(${is_percent\ $5},$5*(iM-im),$5)}
-    dz={if(${is_percent\ $6},$6*(iM-im),$6)}
+    dx={-3,ispercentage($4)?$4*(iM-im):$4}
+    dy={-2,ispercentage($5)?$5*(iM-im):$5}
+    dz={-1,ispercentage($6)?$6*(iM-im):$6)
     rm[-3--1]
 
     # Duplicate along X.
@@ -22861,10 +22859,10 @@ array3d : check "isint($1) && $1>0 && isint(${2=1}) && $2>0 && isint(${3=1}) && 
   e[^-1] "Input 3D arrow, from (${1-3}) to (${4-6}), with radius $7, head length $8 and head radius $9."
 
   # Create 3D object.
-  L={sqrt(($4-$1)^2+($5-$2)^2+($6-$3)^2)}
-  R={if(${is_percent\ $7},$7*$L,$7)}
-  l={if(${is_percent\ $8},$8*$L,$8)}
-  r={if(${is_percent\ $9},$9*$L,$9)}
+  L:=sqrt(($4-$1)^2+($5-$2)^2+($6-$3)^2)
+  R:=ispercentage($7)?$7*$L:$7
+  l:=ispercentage($8)?$8*$L:$8
+  r:=ispercentage($9)?$9*$L:$9
   L-=$l cylinder3d $R,$L cone3d $r,$l +3d. 0,0,$L +3d[-2,-1]
 
   # Compute rotation matrix for arrow orientation.
@@ -24294,8 +24292,7 @@ projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint
 +projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5}) && $5>0"
   e[^-1] "Generate 3D projection planes (XY,XZ,ZY) from image$?, from point ($1,$2,$3)."
   foreach {
-    w,h,d,x,y,z:="is_percent(str) = (unref(_is_pct); _is_pct=['#str']; _is_pct[size(_is_pct) - 1]==_'%');
-                  [ w, h, d, is_percent($1)?$1*w:$1, is_percent($2)?$2*h:$2, is_percent($3)?$3*h:$3 ]"
+    w,h,d,x,y,z:="[ w, h, d, ispercentage($1)?$1*w:$1, ispercentage($2)?$2*h:$2,ispercentage($3)?$3*h:$3 ]"
     +z. 0,0,$3,100%,100%,$3 # XY
     +z.. 0,$2,100%,$2 permute. xzyc # XZ
     +z... $1,$1 permute. zyxc # ZY
@@ -25563,13 +25560,13 @@ _apply_parallel_overlap1 :
 
 _apply_parallel_overlap2 :
   if w>=h
-    ovx={round(if(${"is_percent $2"},w*$2,$2))} w2={int(w/2)}
+    ovx:=round(ispercentage($2)?w*$2:$2) w2:=int(w/2)
     +z[0] {$w2-$ovx},100% z[0] 0,{$w2+$ovx-1}
     parallel "l[0] { $1 _check1 }","l[1] { $1 _check1 }"
     if narg($__apo_exception) error[0--12] $__apo_exception fi
     z[0] 0,{0,w-1-$ovx} z[1] $ovx,100% a x
   else
-    ovy={round(if(${"is_percent $2"},h*$2,$2))} h2={int(h/2)}
+    ovy:=round(ispercentage($2)?h*$2:$2) h2:=int(h/2)
     +rows[0] {$h2-$ovy},100% rows[0] 0,{$h2+$ovy-1}
     parallel "l[0] { $1 _check1 }","l[1] { $1 _check1 }"
     if narg($__apo_exception) error[0--12] $__apo_exception fi
@@ -25580,8 +25577,8 @@ _apply_parallel_overlap4 :
   if max(w,h)/min(w,h)>=3
     _apply_parallel_overlap2 "_apply_parallel_overlap2 \"$1\",$2",$2
   else
-    ovx={round(if(${"is_percent $2"},w*$2,$2))} w2={int(w/2)}
-    ovy={round(if(${"is_percent $2"},h*$2,$2))} h2={int(h/2)}
+    ovx:=round(ispercentage($2)?w*$2:$2) w2:=int(w/2)
+    ovy:=round(ispercentage($2)?h*$2:$2) h2:=int(h/2)
     +z[0] {$w2-$ovx},0,100%,{$h2+$ovy-1} +z[0] 0,{$h2-$ovy},{$w2+$ovx-1},100%
     +z[0] {$w2-$ovx},{$h2-$ovy},100%,100% z[0] 0,0,{$w2+$ovx-1},{$h2+$ovy-1}
     parallel "l[0] { $1 _check1 }","l[1] { $1 _check1 }","l[2] { $1 _check1 }","l[3] { $1 _check1 }"
@@ -25617,15 +25614,15 @@ _apply_tiles :
   e[0--3] "Apply command '$1' on $2x$3x$4 tiles of image$?, with overlaps ($5,$6,$7) and "\
           ${"arg0 $8,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    bw={cut(round(${"is_percent $2"}?w*$2:$2),1,w)}
-    bh={cut(round(${"is_percent $3"}?h*$3:$3),1,h)}
-    bd={cut(round(${"is_percent $4"}?d*$4:$4),1,d)}
-    ow={round(${"is_percent $5"}?$bw*$5:$5)}
-    oh={round(${"is_percent $6"}?$bh*$6:$6)}
-    od={round(${"is_percent $7"}?$bd*$7:$7)}
-    sw={cut($bw-$ow,1,$bw)}
-    sh={cut($bh-$oh,1,$bh)}
-    sd={cut($bd-$od,1,$bd)}
+    bw:=cut(round(ispercentage($2)?w*$2:$2),1,w)
+    bh:=cut(round(ispercentage($3)?h*$3:$3),1,h)
+    bd:=cut(round(ispercentage($4)?d*$4:$4),1,d)
+    ow:=round(ispercentage($5)?$bw*$5:$5)
+    oh:=round(ispercentage($6)?$bh*$6:$6)
+    od:=round(ispercentage($7)?$bd*$7:$7)
+    sw:=cut($bw-$ow,1,$bw)
+    sh:=cut($bh-$oh,1,$bh)
+    sd:=cut($bd-$od,1,$bd)
     100%,100%,100%,{s+1} # Reconstructed image + weights
     if $ow>0" || "$oh>0" || "$od>0 l[] { # Generate gaussian weight in case of overlap
       $bw,1,1 1,$bh,1 1,1,$bd
@@ -28463,10 +28460,10 @@ nn_reshape : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 nn_resize : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
             check "isvarname('$1') && $3>0 && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0"
             skip ${7=3}
-  if ${"is_percent $3"} w={max(1,round([${_nn_${in}_size}][1]*$3))} else w=$3 fi
-  if ${"is_percent $4"} h={max(1,round([${_nn_${in}_size}][1]*$4))} else h=$4 fi
-  if ${"is_percent $5"} d={max(1,round([${_nn_${in}_size}][2]*$5))} else d=$5 fi
-  if ${"is_percent $6"} s={max(1,round([${_nn_${in}_size}][3]*$6))} else s=$6 fi
+  if ispercentage($3) w:=max(1,round([${_nn_${in}_size}][1]*$3)) else w=$3 fi
+  if ispercentage($4) h:=max(1,round([${_nn_${in}_size}][1]*$4)) else h=$4 fi
+  if ispercentage($5) d:=max(1,round([${_nn_${in}_size}][2]*$5)) else d=$5 fi
+  if ispercentage($6) s:=max(1,round([${_nn_${in}_size}][3]*$6)) else s=$6 fi
   e[^-1] "[nn_lib] Add 'resize' layer '$1', with input '"$in"' and output size ("$w","$h","$d","$s")."
   _nn_modules_names.=$1,
   _nn_modules_types.=resize,
@@ -28484,10 +28481,10 @@ nn_resize : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
 nn_run : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
          check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && ${7=100%}>0"
-  if ${"is_percent $4"} w={max(1,round([${_nn_${in}_size}][0]*$4))} else w=$4 fi
-  if ${"is_percent $5"} h={max(1,round([${_nn_${in}_size}][1]*$5))} else h=$5 fi
-  if ${"is_percent $6"} d={max(1,round([${_nn_${in}_size}][2]*$6))} else d=$6 fi
-  if ${"is_percent $7"} s={max(1,round([${_nn_${in}_size}][3]*$7))} else s=$7 fi
+  if ispercentage($4) w:=max(1,round([${_nn_${in}_size}][0]*$4)) else w=$4 fi
+  if ispercentage($5) h:=max(1,round([${_nn_${in}_size}][1]*$5)) else h=$5 fi
+  if ispercentage($6) d:=max(1,round([${_nn_${in}_size}][2]*$6)) else d=$6 fi
+  if ispercentage($7) s:=max(1,round([${_nn_${in}_size}][3]*$7)) else s=$7 fi
   e[^-1] "[nn_lib] Add 'run' layer '$1', with input '"$in"', command '$3' and output size ("$w","$h","$d","$s")."
   _nn_modules_names.=$1,
   _nn_modules_types.=run,
@@ -28865,8 +28862,8 @@ frame_fuzzy : skip ${2=$1},${3=5},${4=1},${5=255},${6=$5},${7=$6},${8=255}
   to_rgba
   foreach {
     100%,100%,1,1,1
-    padx={if(${"is_percent $1"},$1*(w-1)/2,$1)}
-    pady={if(${"is_percent $2"},$2*(h-1)/2,$2)}
+    padx:=ispercentage($1)?$1*(w-1)/2:$1
+    pady:=ispercentage($2)?$2*(h-1)/2:$2
     rectangle. $padx,$pady,{w-1-$padx},{h-1-$pady}
     spread. $3 b. $4 100%,100%,1,4 fc. ${5-8}
     j[0] [2],0,0,0,0,1,[1] k[0]
@@ -28961,11 +28958,11 @@ frame_round : check "${1=5%}>=0 && ${2=$1}>=0 && ${3=30%}>=0 && ${4=0}>=0" skip 
   if !max($1,$2,$3) return fi
   foreach {
     fwM,fhM:=round([w,h]/2)
-    fw,fh:=round([${is_percent\ $1}?lerp(0,$fwM,$1):$1,${is_percent\ $2}?lerp(0,$fhM,$2):$2])
+    fw,fh:=round([ispercentage($1)?lerp(0,$fwM,$1):$1,ispercentage($2)?lerp(0,$fhM,$2):$2])
     iw,ih:=[w,h]-2*[$fw,$fh]
     if $iw<=0" || "$ih<=0 fc ${5--1}
     else
-      R:=${is_percent\ $3}?max(w,h)*$3:$3
+      R:=ispercentage($3)?max(w,h)*$3:$3
       $iw,$ih
       shape_circle $R shift. 50%,50%,0,0,2 ==. 0
       x0,y0,x1,y1:=w2=round(w/2);h2=round(w/2);[-w2,-h2,w#1-w2,h#1-h2]
@@ -29037,7 +29034,7 @@ frame_y : skip ${2=255},${3=$2},${4=$3},${5=255}
 _frame :
   foreach {
     nm={n}
-    fw,fh,fd:=round([${is_percent\ $1}?w*$1:$1,${is_percent\ $2}?h*$2:$2,${is_percent\ $3}?d*$3:$3])
+    fw,fh,fd:=round([ispercentage($1)?w*$1:$1,ispercentage($2)?h*$2:$2,ispercentage($3)?d*$3:$3])
     1,1,1,100%,${4--1} r. {0,[w,h,d]+2*[$fw,$fh,$fd]},100%
     j. ..,$fw,$fh,$fd
     k. => $nm
@@ -29413,7 +29410,7 @@ taquin : check "isint($1) && $1>0 & isint(${2=$1}) && $2>0"
    nm={n}
    split_tiles $1,$2 r ${-min_wh},100%,100%,0
    100%,100%,1,1,1
-   if ${"is_percent $5"} rectangle. {100*$5/2}%,{100*$5/2}%,{100-50*$5}%,{100-50*$5}%,1,0
+   if ispercentage($5) rectangle. {100*$5/2}%,{100*$5/2}%,{100-50*$5}%,{100-50*$5}%,1,0
    else rectangle. $5,$5,{w-1-$5},{h-1-$5},1,0 fi
    *. '1-2*(x/w<y/h)' *. $4
    repeat $!-1 { l[$>,-1] { split_opacity[0] +[0] . a[^-1] c } } rm. c 0,255
@@ -29587,7 +29584,7 @@ brushify : check ${"is_image_arg $1"}" &&"\         # $1: [brush]
     # Generate set of random points with orientations.
     +diffusiontensors[img] $9,$10,$11,$12 => geometry
     +channels[geometry] 0 sh[geometry] 2 +[-2,-1] ^. 0.3 quantize. $2,0 *. -1 +. $2 -. 1 => contours
-    1,{img,max(1,${"is_percent $8"}?wh*$8:$8)} rand. 0,{img,w-1} +rand. 0,{img,h-1} a[-2,-1] c => pts
+    1,{img,max(1,ispercentage($8)?wh*$8:$8)} rand. 0,{img,w-1} +rand. 0,{img,h-1} a[-2,-1] c => pts
     +to_rgba[img] => res
 
     # Render filter.
@@ -29739,8 +29736,8 @@ drop_shadow : check "isexpr(${1=20}) && isexpr(${2=$1}) && ${3=5}>=0 && isnum(${
     if s>4 error[0--3] "Command 'drop_shadow': Invalid input image (has "{s}" channels)." fi
     to_a
 
-    shiftx,shifty:=round([${"is_percent $1"}?$1*w:$1,${"is_percent $2"}?$2*h:$2])
-    sigma:=${"is_percent $3"}?max(w,h)*$3:$3
+    shiftx,shifty:=round([ispercentage($1)?$1*w:$1,ispercentage($2)?$2*h:$2])
+    sigma:=ispercentage($3)?max(w,h)*$3:$3
 
     # [1] (1xN): crop coordinates of the N connected components.
     +channels. 100% ge. 50% label_fg. 0,1
@@ -29995,7 +29992,7 @@ houghsketchbw : check "${1=100}>=0 && ${2=3}>=0 && ${3=100}>=0 && $3<=100 && ${4
     nm={n}
 
     # Compute normalized Hough transform.
-    res={round(if(${is_percent\ $5},$5*max(w,h),$5))} w={w} h={h} rhomax={sqrt(w^2+h^2)/2}
+    res:=round(ispercentage($5)?$5*max(w,h):$5) w,h:=w,h rhomax:=sqrt(w^2+h^2)/2
     hough $res,$res
 
     # Retrieve coordinates of maximas in hough space.
@@ -30077,8 +30074,8 @@ linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 &
   foreach {
     remove_opacity nm={n}
     100%,100%,1,{s},$6?0:255
-    if {0,w>h} r2dx[0] {${"-is_percent $3"}?max(1,$3*w):min(w,$3)}
-    else r2dy[0] {${"-is_percent $3"}?max(1,$3*h):min(h,$3)}
+    if {0,w>h} r2dx[0] {ispercentage($3)?max(1,$3*w):min(w,$3)}
+    else r2dy[0] {ispercentage($3)?max(1,$3*h):min(h,$3)}
     fi
     n[0] 0,100
     if narg($_debug)" && "!{*,w} w[] ${-fitscreen[]\ {1,[w,h]}} fi
@@ -30234,8 +30231,8 @@ polygonize : check "${1=300}>=0 && ${2=2%}>=0 && ${3=0.1%}>=0 && ${4=10%}>0 && $
   e[^-1] "Polygonize image$? with warp amplitude $1, smoothness $2, minimal area $3 and resolutions ($4,$5)."
    foreach {
      +b $2 gradient_norm. g. a[-2,-1] c channels. 0,2 *. {1/0.1+max(abs(im),abs(iM))}
-     resx={max(1,round(if(${is_percent\ $4},w*$4,w/$4)-1))}
-     resy={max(1,round(if(${is_percent\ $5},h*$5,h/$5)-1))}
+     resx:=max(1,round(ispercentage($4)?w*$4:w/$4)-1)
+     resy:=max(1,round(ispercentage($5)?h*$5,h/$5)-1)
      plane3d 1,1,$resx,$resy *3d. {0,w-1},{0,h-1},1
      s3d. rm.. i.. (0;{h-1}) r.. 3,{h},1,1,3 round.. y..
      [-4] a[-7--2] y r. 3,{h/3},1,1,-1 z. 0,1 permute. yzcx
@@ -30243,7 +30240,7 @@ polygonize : check "${1=300}>=0 && ${2=2%}>=0 && ${3=0.1%}>=0 && ${4=10%}>0 && $
      permute. cxyz z. 0,2 y. j[2] .,0,8 rm[-3,-1]
      [0],[0] j3d. [1],0,0,0,1,2 rm[1]
      if $3>0
-       min_area={0,if(${is_percent\ $3},$3*w*h,$3)}
+       min_area={0,ispercentage($3)?$3*w*h:$3}
        +area. 0,1 >=. $min_area +.. 1 *.. . distance. 1 *. -1 watershed.. . rm.
      fi
      blend shapeaverage
@@ -30445,7 +30442,7 @@ stars : check "${1=10%}>=0 && ${2=1}>=0 && ${3=32}>0 && ${4=5}>=1 && ${5=0.38}>=
 
   # Draw stars on selected images.
   repeat $!-1 { [-4--1] l[$>,-4--1] {
-    N={round(if(${is_percent\ $1},w*h*$1,$1)/4,1,1)}
+    N:=round((ispercentage($1)?w*h*$1:$1)/4,1,1)
     repeat 4 {
       2,$N rand. -1,1 1,$N rand. 0,1 a[-2,-1] x
       i.. ('CImg3d') +.. 0.5 i.. ($N;$N)
@@ -30713,7 +30710,7 @@ euclidean2polar : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3}) && $4>
   e[^-1] "Apply euclidean to polar transform on image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    cx,cy:=${is_percent\ $1}?$1*(w-1):$1,${is_percent\ $2}?$2*(h-1):$2
+    cx,cy:=ispercentage($1)?$1*(w-1):$1,ispercentage($2)?$2*(h-1):$2
     R:=sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))
     f "r = $R*(x/(w-1))^$3;
        a = y*2*pi/(h-1);
@@ -30768,7 +30765,7 @@ fisheye : skip ${1=50},${2=50},${3=50},${4=1.2}
 flower : skip ${1=30},${2=6},${3=0},${4=0},${5=50%},${6=50%},${7=3}
   e[^-1] "Apply flower deformation on image$?, with amplitude $1, frequency $2, offset $3, angle $4 deg. and
           center point ($1,$2)."
-  if ${"is_percent $3"}
+  if ispercentage($3)
     transform_polar "r + (R*$3) + R*$1/100*cos(a*$2+$4*pi/180)","a",$5,$6,$7
   else
     transform_polar "r + $3 + R*$1/100*cos(a*$2+$4*pi/180)","a",$5,$6,$7
@@ -30844,7 +30841,7 @@ polar2euclidean : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3}) && $4>
   e[^-1] "Apply polar to euclidean transform on image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
-    cx,cy:=${is_percent\ $1}?$1*(w-1):$1,${is_percent\ $2}?$2*(h-1):$2
+    cx,cy:=ispercentage($1)?$1*(w-1):$1,ispercentage($2)?$2*(h-1):$2
     R:=sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))
     f "X = sqrt((x - "$cx")^2 + (y - "$cy")^2);
        tmp = atan2(y - "$cy",x - "$cx");
@@ -30912,10 +30909,10 @@ spherize : check "${1=50%}>=0 && ${3=0}>=0 && ${6=1}>0 && isint(${8=1}) && $8>=0
           x/y-ratio $6, angle $7 and "${"arg0 $8,nearest-neighbor,linear,cubic"}" interpolation."
   if !$1||!$2 return fi
   foreach {
-    rmax={${"is_percent $1"}?0.5*sqrt((w-1)^2+(h-1)^2)*$1:$1}
-    centerx={${"is_percent $4"}?(w-1)*$4:$4}
-    centery={${"is_percent $5"}?(h-1)*$5:$5}
-    strength={$2>0?$2:1-exp($2/5)}
+    rmax:=ispercentage($1)?0.5*sqrt((w-1)^2+(h-1)^2)*$1:$1
+    centerx:=ispercentage($4)?(w-1)*$4:$4
+    centery:=ispercentage($5)?(h-1)*$5:$5
+    strength:=$2>0?$2:1-exp($2/5)
     100%,100%,1,2,"
       begin(
         center = [ "$centerx","$centery" ];
@@ -30949,8 +30946,8 @@ symmetrize : skip ${1=50%},${2=50%},${3=90},${4=3},${5=0},${6=0}
   theta={$3*pi/180} u={cos($theta)} v={sin($theta)}
   if $6 symmetry_cond=A<0 else symmetry_cond=A>0 fi
   foreach {
-    x0={if(${is_percent\ $1},w*$1,$1)}
-    y0={if(${is_percent\ $2},h*$2,$2)}
+    x0:=ispercentage($1)?w*$1:$1
+    y0:=ispercentage($2)?h*$2:$2
     if $5 f 'A=($y0-y)*$u-($x0-x)*$v;X=x+2*($x0-x);Y=y+2*($y0-y);if($symmetry_cond,i(X,Y,z,c,1,$4),i)'
     else f 'A=($y0-y)*$u-($x0-x)*$v;X=x-2*$v*A;Y=y+2*$u*A;if($symmetry_cond,i(X,Y,z,c,1,$4),i)'
     fi
@@ -30964,9 +30961,9 @@ symmetrize : skip ${1=50%},${2=50%},${3=90},${4=3},${5=0},${6=0}
 transform_polar : skip "${1=R-r}","${2=a}",${3=50%},${4=50%},${5=3}
   e[^-1] "Apply custom polar transform with 'new_r = $1', 'new_a = $2', center point ($3%,$4%)."
   foreach {
-    cx={if(${is_percent\ $3},$3*(w-1),$3)}
-    cy={if(${is_percent\ $4},$4*(h-1),$4)}
-    R={sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))}
+    cx:=ispercentage($3)?$3*(w-1):$3
+    cy:=ispercentage($4)?$4*(h-1):$4
+    R:=sqrt(max($cx^2,(w-1-$cx)^2)+max($cy^2,(h-1-$cy)^2))
     f "R ="$R";
        r = sqrt((x-"$cx")^2 + (y-"$cy")^2);
        a = atan2(y-"$cy",x-"$cx");
@@ -31114,7 +31111,7 @@ warp_rbf :
   foreach {
     # Retrieve absolute keypoints coordinates.
     4,$N
-    repeat wh { a=${arg{1+$>}} isp=${"is_percent "$a} eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
+    repeat wh { a=${arg{1+$>}} isp:=ispercentage($a) eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
     s. x,2 -. .. a[-2,-1] x permute. yzcx
 
     # Generate warping field by RBF interpolation.
@@ -31681,7 +31678,7 @@ blend_seamless : check "${2=0}>=0 && ${3=100%}>=0" skip ${1=0}
   if ['$3']!='100%' # With outer fading.
     repeat $!-1 { l[0,1] {
       +blend_seamless $1,$2,100% channels.. 100% !=.. 0 distance.. 1
-      iM={-2,iM} ic={if(${is_percent\ $3},2*$3*$iM,1+$3)}
+      iM={-2,iM} ic:=ispercentage($3)?2*$3*$iM:1+$3
       if $ic<=$iM c.. 0,{max(1,$ic)} n.. 0,1
       else n.. 0,{max(0,2-$ic/$iM)}
       fi
@@ -31708,7 +31705,7 @@ blend_seamless : check "${2=0}>=0 && ${3=100%}>=0" skip ${1=0}
       # Compute the desired gradient map.
       if $2
         distance. 0
-        iM={iM} ic={if(${is_percent\ $2},2*$2*$iM,1+$2)}
+        iM:=iM ic:=ispercentage($2)?2*$2*$iM:1+$2
         if $ic<=$iM c. 0,{max(1,$ic)} n. 0,1
         else n. 0,{max(0,2-$ic/$iM)}
         fi
@@ -32180,7 +32177,7 @@ _median_stream :
   fi
 
   # Start median computation.
-  h1={h-1} drows={round(${is_percent\ $5}?$5*h:$5)}
+  h1:=h-1 drows:=round(ispercentage($5)?$5*h:$5)
   nb_iter={round(h/$drows,1,1)}
   repeat $nb_iter {
     row0={$drows*$>} row1={0,min(h,$row0+$drows-1)}
@@ -32337,7 +32334,7 @@ morph_rbf : check "$1>=0.5"
 
     # Retrieve absolute keypoints coordinates.
     4,$N
-    repeat wh { a=${arg{2+$>}} isp=${"is_percent "$a} eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
+    repeat wh { a=${arg{2+$>}} isp:=ispercentage($a) eval i[$>]=$isp?($>%2?w#0:h#0)*$a:$a }
     permute. yzcx
 
     # Generate forward and backward warping fields.
@@ -33109,11 +33106,10 @@ fitscreen : skip "${2=},${3=},${4=},${5=}"
     W,H=${1-2} if narg($3) D=$3 else D=1 fi if narg($4) m=$4 else m=25% fi if narg($5) M=$5 else M=85% fi
   fi
   eval "
-    is_percent(str) = (unref(_is_pct); _is_pct=['#str']; _is_pct[size(_is_pct) - 1]==_'%');
     const u = "{*,u}";
     const v = "{*,v}";
-    ms = round(is_percent("$m")?[ u,v ]*"$m":[ "$m,$m" ]);
-    Ms = round(is_percent("$M")?[ u,v ]*"$M":[ "$M,$M" ]);
+    ms = round(ispercentage("$m")?[ u,v ]*"$m":[ "$m,$m" ]);
+    Ms = round(ispercentage("$M")?[ u,v ]*"$M":[ "$M,$M" ]);
     s = [ "$W,$H" ];
     "$D">1?(s+="$D");
     s[0]<ms[0]?(s = [ ms[0],s[1]*ms[0]/s[0] ]);
@@ -33329,11 +33325,6 @@ is_image_arg : skip "${1=;}"
 #@cli : Return 1 if specified string looks like a drawing pattern '0x......'.
 is_pattern : skip "${1=;}"
   u {"str = ['$1']; size(str)>2 && same(str,'0x',2)"}
-
-#@cli is_percent : string
-#@cli : Return 1 if specified string ends with a '%', 0 otherwise.
-is_percent :
-  u {"s=['$1'];s[size(s)-1]==_'%'"}
 
 #@cli is_varname : string
 #@cli : Return 1 if specified string can be considered as a valid variable name.
@@ -33786,8 +33777,6 @@ math_lib :
     _doi_orientation_val = (qy - py)*(rx - qx) - (qx - px)*(ry - qy);
     _doi_orientation_val==0?0:_doi_orientation_val>0?1:2;
   );
-
-  is_percent(str) = (unref(_is_pct); _is_pct=['#str']; _is_pct[size(_is_pct) - 1]==_'%');
 
   length_spline(P0,T0,P1,T1) = ( # Compute the length of a spline P0-P1 with tangents T0,T1
     _P0 = P0;
@@ -41511,13 +41500,13 @@ fx_gmicky_preview :
 #@gui : - <b>2021/12/09</b> : version <i>3.0.0</i>.\n
 #@gui : - <b>2022/04/06</b> : version <i>3.1.0</i>.\n
 #@gui : - <b>2023/01/16</b> : version <i>3.2.0</i>.\n
-#@gui : - <b>2023/06/26</b> : version <i>3.2.6</i>.\n
-#@gui : - <span foreground="purple"><b>2023/09/04</b> : version <i>3.3.0</i> (Current stable).</span>\n
-#@gui : - <b>2023/09/10</b> : version <i>3.3.1_pre</i> (Current pre-release).\n
+#@gui : - <b>2023/09/04</b> : version <i>3.3.0</i>.\n
+#@gui : - <span foreground="purple"><b>2023/10/02</b> : version <i>3.3.1</i> (Current stable).</span>\n
+##@gui : - <b>2023/11/xx</b> : version <i>3.3.2_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
-#@gui : url = link{"View changelog to upcoming minor version (3.3)","https://discuss.pixls.us/t/on-the-road-to-3-3"}
-#@gui : url = link{"View latest major changelog (3.2)","https://discuss.pixls.us/t/release-of-gmic-3-2"}
+#@gui : url = link{"View changelog for upcoming major version (3.4)","https://discuss.pixls.us/t/on-the-road-to-3-4"}
+#@gui : url = link{"View changelog for latest major version (3.3)","https://discuss.pixls.us/t/release-of-gmic-3-3"}
 
 #@gui What's New? : _none_,fx_whatsnew_preview
 #@gui : note = note("Here you'll find a list of filter additions and deletions in the plug-in, since your last visit.
@@ -54026,7 +54015,7 @@ fx_crystal_preview :
 fx_crystal_background :
   foreach {
     split_opacity l[0] {
-      N={2*max(3,round((${"is_percent $2"}?4*wh*$2:$2)))}
+      N:=2*max(3,round(ispercentage($2)?4*wh*$2:$2))
       if $5 col="u([255,255,255])" else col="u(255)" fi
       srand $3 M={max(w,h)} 2,$N
       repeat $1 { rand. {-$M/2},{3*$M/2} polygon.. $N,{^},{-$4%},{$col} }
