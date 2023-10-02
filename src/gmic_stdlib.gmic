@@ -1112,7 +1112,7 @@ reference : skip "${2=}"
 "### Evaluate a mathematical expression: "\n\
 "\n~~~\n$ gmic echo \"cos(pi/4)^2+sin(pi/4)^2={cos(pi/4)^2+sin(pi/4)^2}\"\n~~~"\n\n\
 "### Plot a 2D function: "\n\
-"\n~~~\n$ gmic 1000,1,1,2 fill \"X=3*(x-500)/500;X^2*sin(3*X^2)+if(c==0,u(0,-1),cos(X*10))\" plot\n~~~"\n\
+"\n~~~\n$ gmic 1000,1,1,2 fill \"X=3*(x-500)/500;X^2*sin(3*X^2)+(c==0?u(0,-1):cos(X*10))\" plot\n~~~"\n\
 "===\n![2D Plot](../img/example_plot.png)\n==="\n\n\
 "### Plot a 3D elevated function in random colors: "\n\
 "\n~~~\n$ gmic 128,128,1,3,\"u(0,255)\" plasma 10,3 blur 4 sharpen 10000 n 0,255 "\
@@ -4111,7 +4111,7 @@ _display_histogram : check "${1=0}>=0 && ${2=0}>=0 && ${3=256}>0" skip ${4=0%},$
 #@cli : 'outline_opacity-1' is used as the actual drawing opacity.
 #@cli : Default values: 'width=512', 'height=width', 'outline_opacity=3', 'vertex_radius=0', 'is_antialiased=1',\
 # 'is_decorated=1', 'xlabel="x-axis"' and 'ylabel="y-axis"'.
-#@cli : $ 1024,1,1,2,'t=x/40;if(c==0,sin(t),cos(t))*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)' display_parametric 512,512
+#@cli : $ 1024,1,1,2,'t=x/40;(c==0?sin(t):cos(t))*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)' display_parametric 512,512
 #@cli : $ 1000,1,1,2,u(-100,100) quantize 4,1 noise 12 channels 0,2 +normalize 0,255 append c \
 # display_parametric 512,512,0.1,8
 display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${5=1},${6=1},"${7=x-axis}","${8=y-axis}"
@@ -4135,7 +4135,7 @@ display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${
     i.. (1,0;1,{$N-1}) r.. 2,$N,1,1,3 round.. 1,$N,1,1,1 # Primitives, colors and opacities.
     y a y c3d n3d *3d 1,-1,1
 
-    {$6?[max(1,$1-32),max(1,$2-32)]:[$1,$2]},1,{if($is_grayscale,1,3)},255
+    {$6?[max(1,$1-32),max(1,$2-32)]:[$1,$2]},1,{$is_grayscale?1:3},255
 
     *3d[0] {0.96*min(w,h)}
     if $6 L:=0.1*max($1,$2) grid[1] $L,$L,0,0,0.25,0xCCCCCCCC,0 fi
@@ -4153,7 +4153,7 @@ display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${
       r[5] 1,{h-1},1,1,0
       if $3>1 r[4] 3,{4,h/3},1,1,-1 r[4] 3,{4,h-1},1,1,2 else rm[4] i[4] 3,{$N-1} fi
       y a y
-    } j3d[1] [0],50%,50%,0,{if($3>1,$3-1,$3)},2,0,0 fi
+    } j3d[1] [0],50%,50%,0,{$3>1?$3-1:$3},2,0,0 fi
 
     rm[0]
     if $5 r. 50%,50%,1,100%,2 fi
@@ -5361,7 +5361,7 @@ output_ggr : skip "${2=}"
   N=$! +foreach {
     r 1,{w*h*d},1,100%,-1 to_rgba / 255
     if narg("$2") name="$2"
-    else l[] { 1 => "$1" ('{b}') f "if(x==0 && i>=_'a' && i<=_'z',i-_'a'+_'A',i)" name={t} rm }
+    else l[] { 1 => "$1" ('{b}') f "x==0 && i>=_'a' && i<=_'z'?i-_'a'+_'A':i" name={t} rm }
     fi
     ('"GIMP Gradient\nName: "$name\n{0,h}\n')
     repeat h#0 {
@@ -12733,7 +12733,7 @@ eigen2tensor :
 #@cli : $ 4,4 fill 1,2,3,4,5,6,7
 #@cli : $ 4,4 (1,2,3,4,5,6,7) fill[-2] [-1]
 #@cli : $ 400,400,1,3 fill "X=x-w/2; Y=y-h/2; R=sqrt(X^2+Y^2); a=atan2(Y,X); \
-# if(R<=180,255*abs(cos(c+200*(x/w-0.5)*(y/h-0.5))),850*(a%(0.1*(c+1))))"
+# R<=180?255*abs(cos(c+200*(x/w-0.5)*(y/h-0.5))):850*(a%(0.1*(c+1)))"
 #@cli : $$
 
 #@cli index : { [palette] | palette_name },0<=_dithering<=1,_map_palette={ 0 | 1 } : (+)
@@ -14620,7 +14620,7 @@ _match_rgb :
   foreach {
     b 0.3%
     r {w*h},3,1,1,-1 * {($res-1)/255}
-    pointcloud 1,$res,$res,$res f 'if(i,i^$gamma,0)' b $smoothness% n 0,1
+    pointcloud 1,$res,$res,$res f i?i^$gamma:0 b $smoothness% n 0,1
   }
 
 #@cli mix_rgb : a11,a12,a13,a21,a22,a23,a31,a32,a33
@@ -15083,10 +15083,10 @@ pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3
   {round(2^$3)},1,1,3,'x'
   if !$1 n. 0,255 return fi
   {$1+1},{$1+1},{$1+1},1,'x' +f. 'y' +f. 'z' a[-3--1] c r. {w*h*d},1,1,3,-1
-  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);if(min(R,G,B),-1,i)'
+  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);min(R,G,B)?-1:i'
   permute. cxyz discard. -1 r. 3,{h/3},1,1,-1 permute. yzcx
   r.. {w*100}% ri. ..,0,2 +[-2,-1]
-  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);if(max(R,G,B)>2^$3-1,-1,i)'
+  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);max(R,G,B)>2^$3-1?-1:i'
   permute. cxyz discard. -1 r. 3,{h/3},1,1,-1 permute. yzcx
   n. 0,255
   +srgb2lab. rv[-2,-1] a[-2,-1] y sort. +,x  # Sort by increasing lightness.
@@ -16125,7 +16125,7 @@ elevate : check "${1=64}>0" skip ${2=1},${3=1}
   r 100%,100%,1,100%
   foreach {
     nm={n}
-    +norm 100%,100%,$1,{if($3,{0,s},1)}
+    +norm 100%,100%,$1,{$3?{0,s}:1}
     m={-2,im} d={-2,iM-$m}
     repeat $1 {
       if $2 +>=[1] {$m+$d*($>+1)/$1}
@@ -16286,15 +16286,15 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
         $N,1,1,1,x s x,-{round(w/$nr,1,1)} foreach { if w>1 i[0] {w-1},1,1,1,-1 a x fi } a x
         if $nr>1 i[0] {$nr-1},1,1,1,-2 a x fi y
       else # Other complex montage.
-        ('"$1"') f "if(i==72 || i==104,-1,
-                    if(i==86 || i==118,-2,
-                    if(i==82 || i==114,-3,
-                    if(i==77 || i==109,-4,
-                    if(i>=48 && i<=57,i-48,-5)))))"
+        ('"$1"') f "i==72 || i==104?-1:
+                    i==86 || i==118?-2:
+                    i==82 || i==114?-3:
+                    i==77 || i==109?-4:
+                    i>=48 && i<=57?i-48:-5"
         s +,-1 s +,-2 s +,-3 s +,-4 s +,-5
         foreach { if im>=0 ++. 48 =.. {t} rm. rows 0 fi } a y discard -5
       fi
-      f 'if(i<0,i,i%$N)'
+      f "i<0?i:i%$N"
     }
     if $!==$N rm return fi  # Empty layout code.
     =>[^-1] 0
@@ -16307,7 +16307,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
     # Determine image positions and sizes.
     N=$! repeat $N { ($>,0,0,{$>,w},{$>,h},0,0,0) }
     l[$N--1] {
-      _p=1 k[${-_montage}] w:=i[3] h:=i[4] f 'if(i(0,y)<0,-1,i)' discard -1 y r 8,{h/8},1,1,-1
+      _p=1 k[${-_montage}] w:=i[3] h:=i[4] f i(0,y)<0?-1:i discard -1 y r 8,{h/8},1,1,-1
       onfail error[0--3] "Too many input images."
     }
 
@@ -16335,7 +16335,7 @@ _montage :
   c:=arg($_p,$_code)
   if $c>=0 _p+=1 u $c # Single index.
   elif $c==-4 # Mirror.
-    _p+=1 l=${-_montage} f[$l] 'a=i(5,y)%2;if((x==7&&a)||(x==6&&!a),!i,if(x==1,i(3,0)-i(3,y)-i,i))' u $l
+    _p+=1 l=${-_montage} f[$l] "a=i(5,y)%2;(x==7&&a)||(x==6&&!a)?!i:x==1?i(3,0)-i(3,y)-i:i" u $l
   elif $c==-3 # Rotation.
     _p+=1 l=${-_montage} l[$l] { s x +[2] [4] rv[1,2] *[1] -1 +[1] {4,@0} rv[3,4] +[5] 1 a x } u $l
   else # Merge.
@@ -16811,8 +16811,8 @@ scale2x :
   foreach {
     r 200%,200%
     f "dx=x&1;dy=y&1;A=j(0,-2,0,0,0,1);B=j(2,0,0,0,0,1);C=j(-2,0,0,0,0,1);D=j(0,2,0,0,0,1);
-       !dy*(!dx*if(C==A&&C!=D&&A!=B,A,i) + dx*if(A==B&&A!=C&&B!=D,B,i)) +
-       dy*(dx*if(B==D&&B!=A&&D!=C,D,i) + !dx*if(D==C&&D!=B&&C!=A,C,i))"
+       !dy*(!dx*(C==A&&C!=D&&A!=B?A:i) + dx*(A==B&&A!=C&&B!=D?B:i)) +
+       dy*(dx*(B==D&&B!=A&&D!=C?D:i) + !dx*(D==C&&D!=B&&C!=A?C:i))"
   }
 
 #@cli scale3x
@@ -16826,12 +16826,12 @@ scale3x :
        A=j(-3,-3,0,0,0,1);B=j(0,-3,0,0,0,1);C=j(3,-3,0,0,0,1);
        D=j(-3,0,0,0,0,1);F=j(3,0,0,0,0,1);
        G=j(-3,3,0,0,0,1);H=j(0,3,0,0,0,1);I=j(3,3,0,0,0,1);
-       !dy*(c0*if(D==B&&D!=H&&B!=F,D,i) + c1*if((D==B&&D!=H&&B!=F&&i!=C)||(B==F&&B!=D&&F!=H&&i!=A),B,i) +
-            c2*if(B==F&&B!=D&&F!=H,F,i)) +
-       (dy==1)*(c0*if((H==D&&H!=F&&D!=B&&i!=A)||(D==B&&D!=H&&B!=F&&i!=G),D,i) + c1*i +
-            c2*if((B==F&&B!=D&&F!=H&&i!=I)||(F==H&&F!=B&&H!=D&&i!=C),F,i)) +
-       (dy==2)*(c0*if(H==D&&H!=F&&D!=B,D,i) + c1*if((F==H&&F!=B&&H!=D&&i!=G)||(H==D&&H!=F&&D!=B&&i!=I),H,i) +
-            c2*if(F==H&&F!=B&&H!=D,F,i))"
+       !dy*(c0*(D==B&&D!=H&&B!=F?D:i) + c1*((D==B&&D!=H&&B!=F&&i!=C)||(B==F&&B!=D&&F!=H&&i!=A)?B:i) +
+            c2*(B==F&&B!=D&&F!=H?F:i)) +
+       (dy==1)*(c0*((H==D&&H!=F&&D!=B&&i!=A)||(D==B&&D!=H&&B!=F&&i!=G)?D:i) + c1*i +
+            c2*((B==F&&B!=D&&F!=H&&i!=I)||(F==H&&F!=B&&H!=D&&i!=C)?F:i)) +
+       (dy==2)*(c0*(H==D&&H!=F&&D!=B?D:i) + c1*((F==H&&F!=B&&H!=D&&i!=G)||(H==D&&H!=F&&D!=B&&i!=I)?H:i) +
+            c2*(F==H&&F!=B&&H!=D?F:i))"
   }
 
 #@cli scale_dcci2x : _edge_threshold>=0,_exponent>0,_extend_1px={ 0:false | 1:true }
@@ -16951,9 +16951,9 @@ _seamcarve :
       # Find optimum matches between two 1D matrices.
       +*[4,5] +shift[4] 1 *. [5] +shift[5] 1 *. [4]
       +[-2,-1] j[5] [4] a[-3--1] c
-      f. ">if(c,i,max(j(-1)+j(0,0,0,1),j(-2)+j(0,0,0,2)))"
+      f. ">c?i:max(j(-1)+j(0,0,0,1),j(-2)+j(0,0,0,2))"
       s. c shift... 1 +.. ... shift... 1 +[-3,-1]
-      >[-2,-1] f. "<if(j(1)<0,1,-i)"
+      >[-2,-1] f. "<j(1)<0?1:-i"
 
       # Add matched row to seams.
       j[seam] .,0,$>
@@ -16968,14 +16968,14 @@ _seamcarve :
     # Add / remove seams.
     max:=iM*2 repeat $sms { =. $max,{xm} }
     j[grad] .,0,100% rm[low,top] a[-2,-1] c
-    f. "<if(c,i,j(j(0,0,0,1),1,0,0,0,1))" channels. 0
+    f. "<c?i:j(j(0,0,0,1),1,0,0,0,1)" channels. 0
     +[0] 0.1 !=. $max
     w:=w h:=h s={0,s}
     if $ssms<0 * discard 0 r {$w-$sms},$h,1,$s,-1  # Remove seams.
     elif $ssms>0 # Add seams.
       -. 2 s[0] c
       repeat $s { if $><($s-1) . fi a[$>,-1] c }
-      permute cxyz a c discard -1 f "if(i<0,j(0,-1),i)"
+      permute cxyz a c discard -1 f "i<0?j(0,-1):i"
       r {$w+$sms},$h,1,$s,-1
     fi
 
@@ -16986,7 +16986,7 @@ _seamcarve :
       j[0] .,0,0,0,0,1,[1] rm[-2,-1]
     fi
 
-    rprogress {a=w/$1;if(a<1,a*100,100/a)}
+    rprogress {a=w/$1;a<1?a*100:100/a}
   while w!=$1
 
 #@cli shift : vx[%],_vy[%],_vz[%],_vc[%],_boundary_conditions,_interpolation={ 0:nearest_neighbor | 1:linear } : (+)
@@ -17636,8 +17636,8 @@ denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) &&
   e[^-1] "Denoise image$? using haar-wavelet thresholding, with threshold $1, "\
           ${arg0\ ($2>0),auto,$2}" scales and $3 spinning cycles."
   foreach {
-    nm={n} nb_scales:=min(if($2,$2,32),int(log2(min(w,h))-1)) w,h,d:=[w,h,d] sigma=${-std_noise}
-    r {round(w,2^($nb_scales+1),1)},{round(h,2^($nb_scales+1),1)},{if(d==1,1,round(d,2^($nb_scales+1),1))},100%,0,0
+    nm={n} nb_scales:=min($2?$2:32,int(log2(min(w,h))-1)) w,h,d:=[w,h,d] sigma=${-std_noise}
+    r {round(w,2^($nb_scales+1),1)},{round(h,2^($nb_scales+1),1)},{d==1?1:round(d,2^($nb_scales+1),1)},100%,0,0
     +f 0
     repeat $3 {
       dx:=round(u(0,{4*$nb_scales}))
@@ -17840,7 +17840,7 @@ dilate_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint
     dz1:=int($3/2) dz2:=$3-$dz1-1
     (-$dx1,$dx1) (-$dy1;$dy1) (-$dz1/$dz1) r $1,$2,$3,1,3 a c round r {w*h*d},3,1,1,-1 transpose.
     i.. 1,100%,1,1,254 1,100%,1,1,255 a x
-    ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);if(abs(v-i)<=$4,v,-1e20))" list={t}
+    ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);abs(v-i)<=$4?v:-1e20)" list={t}
     rm
   }
   f 'max($list)'
@@ -17942,7 +17942,7 @@ erode_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint(
     dz1:=int($3/2) dz2:=$3-$dz1-1
     (-$dx1,$dx1) (-$dy1;$dy1) (-$dz1/$dz1) r $1,$2,$3,1,3 a c round r {w*h*d},3,1,1,-1 transpose.
     i.. 1,100%,1,1,254 1,100%,1,1,255 a x
-    ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);if(abs(v-i)<=$4,v,1e20))" list={t}
+    ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);abs(v-i)<=$4?v:1e20)" list={t}
     rm
   }
   f 'min($list)'
@@ -18510,7 +18510,7 @@ inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9}) && 
 
     # Init variables and images.
     => img,mask
-    nb_scales:=max(1,round(if($2,$2,log2(min(w,h)/16)),1,1))
+    nb_scales:=max(1,round($2?$2:log2(min(w,h)/16),1,1))
     visu_size=${fitscreen[]" "{0,[w,h,1]},25%,50%}
     slices[img] 0 r[mask] [img],[img],1,1,0 !=[mask] 0
     if !$7 inpaint_pde[img] [mask],75% fi # Quick first estimate.
