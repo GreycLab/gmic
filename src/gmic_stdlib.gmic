@@ -4513,7 +4513,7 @@ echo_file : skip "${2='\n'}"
   codes={^} rm.
 
   # Generate HTML page.
-  if "ext = [['"$ext"']]; ext=='ttf' || ext=='otf'" # Font specified as a filename
+  if "isin(['"$ext"'],'ttf','otf')" # Font specified as a filename
     str1=
     str2="@font-face {\n\
            font-family: gmicFont;\n\
@@ -5703,14 +5703,14 @@ _outputx :
       e[0--4] "Output image"$_gmic_s" at same location, with same base filename but extension"${s{$N>1}}" '$*'."
     fi
     foreach {
-      repeat $N { ext=${arg{1+$>}} if ext=lowercase(['$ext']);ext=='jpg'||ext=='jpeg' ext.=,85 fi o {0,f}{0,b}.$ext }
+      repeat $N { ext=${arg{1+$>}} if isin(lowercase(['$ext']),'jpg','jpeg') ext.=,85 fi o {0,f}{0,b}.$ext }
     }
   else
     if $is_last_arg e[0--4] "Output image"$_gmic_s" with same base filename but extension"${s{$N>1}}"' ${^-1}'."
     else e[0--4] "Output image"$_gmic_s" with same base filename but extension"${s{$N>1}}" '$*'."
     fi
     foreach {
-      repeat $N { ext=${arg{1+$>}} if ext=lowercase(['$ext']);ext=='jpg'||ext=='jpeg' ext.=,85 fi o {0,b}.$ext }
+      repeat $N { ext=${arg{1+$>}} if isin(lowercase(['$ext']),'jpg','jpeg') ext.=,85 fi o {0,b}.$ext }
     }
   fi
 
@@ -7305,7 +7305,7 @@ gmd2html : skip "${1=}"
           ind_d>ind_m?( # Check for a video
             ref(crop(#1,0,ind_d + 1,1,3),ext3);
             ref(crop(#1,0,ind_d + 1,1,4),ext4);
-            is_video = ext3=='mp4' || ext3=='ogg' || ext4=='webm'
+            is_video = isin(ext3,'mp4','ogg') || ext4=='webm'
           );
           is_video?(
             write('<video controls loop autoplay muted src=\"');
@@ -9706,7 +9706,7 @@ update_download_version : check "
       p = find(data,'?dwl=gmic_',p);
       p<0?(stop=1):(
         str = data[p + 10,5];
-        is_digit(str[0]) && str[1]==_'.' && is_digit(str[2]) && str[3]=='.' && is_digit(str[4])?(
+        is_digit(str[0]) && str[1]==_'.' && is_digit(str[2]) && str[3]==_'.' && is_digit(str[4])?(
           copy(data[p + 10],ver,size(ver));
           ++N;
         );
@@ -9716,7 +9716,7 @@ update_download_version : check "
     p = find(data,'/source/gmic_',0);
     p>0?(
       str = data[p + 13,5];
-      is_digit(str[0]) && str[1]==_'.' && is_digit(str[2]) && str[3]=='.' && is_digit(str[4])?(
+      is_digit(str[0]) && str[1]==_'.' && is_digit(str[2]) && str[3]==_'.' && is_digit(str[4])?(
         copy(data[p + 13],ver,size(ver));
         ++N;
       );
@@ -10150,7 +10150,7 @@ update_gallery_html : check "isbool(${1=0})"
 
     repeat $nb_categories {
       cat=${arg0\ $>,$categories}
-      if '$cat'=='$category' td_$cat="<td style=\"background-color: \#dddddd\">"
+      if ['$cat']==['$category'] td_$cat="<td style=\"background-color: \#dddddd\">"
       else td_$cat="<td>"
       fi
     }
@@ -10263,7 +10263,7 @@ update_gallery_html : check "isbool(${1=0})"
               l. {
                 s +,{'" "'}
                 repeat $! {
-                  if {$<,crop(0,0,1,5)=='_fps='||crop(0,0,1,7)=='_label='} rm[$<] fi
+                  if {$<,crop(0,0,1,5)=='_fps='" || "crop(0,0,1,7)=='_label='} rm[$<] fi
                 }
                 a y
               }
@@ -11757,11 +11757,11 @@ remove_named :
 #@cli : $ (1;4;7;3;9;2;4;7;6;3;9;1;0;3;3;2) split y sort_list +,i append y
 sort_list : skip ${1=+},${2=i}
   s0="descending" s1="ascending"
-  e[^-1] "Sort list of image$? in "${s{_'+'=='$1'}}" order, according to the image criterion '$2'."
+  e[^-1] "Sort list of image$? in "${s{['$1']=='+'}}" order, according to the image criterion '$2'."
   if $!
     if isin('$2','n','N') # Special case : lexicographic order from image names (n: ignore case, N: consider case)
-      op={`;'$1'=='-'?_'>':_'<'`}
-      if '$2'=='n' fn=lowercase else fn= fi
+      op={`;['$1']=='-'?_'>':_'<'`}
+      if ['$2']=='n' fn=lowercase else fn= fi
       $!,1,1,1,"n = name(#x,1024); find(n,0)%1025" slen:=iM rm. # Largest name length.
       eval "
         const lm1 = l - 1;
@@ -12339,7 +12339,7 @@ compress_clut : check "${1=1.5}>0 && ${2=0.75}>0 && isint(${3=2048}) && (!$3 || 
       if $emax<=$max_error" && "$eavg<=$avg_error rm. break fi
       1,1,1,{0,s+3},{"P = [ xM,yM,zM ]; [ P*255/[max(1,w#0-1),max(1,h#0-1),max(1,d#0-1)], I(#0,P) ]"} rm..
       a[-2,-1] y
-      if $max_keypoints" && "h>=512" && "'$method'=='rbf' method=pde rows. 0,7 fi # RBF failed, switch to PDE method.
+      if $max_keypoints" && "h>=512" && "['$method']=='rbf' method=pde rows. 0,7 fi # RBF failed, switch to PDE method.
     while h<($max_keypoints?$max_keypoints:inf)
 
     # Iteratively remove keypoints.
@@ -12367,7 +12367,7 @@ compress_clut : check "${1=1.5}>0 && ${2=0.75}>0 && isint(${3=2048}) && (!$3 || 
     k.
 
     # Sort keypoints in lexicographic order (increasing order for RBF, decreasing for PDE).
-    1,100%,1,1,"P = I(#0); P[0]*65536 + P[1]*256 + P[2]" rv a x sort {`'$method'=='rbf'?_'+':_'-'`},y z. 1,100%
+    1,100%,1,1,"P = I(#0); P[0]*65536 + P[1]*256 + P[2]" rv a x sort {`['$method']=='rbf'?_'+':_'-'`},y z. 1,100%
 
     strclut $nm => ${}
   }
@@ -16254,7 +16254,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
   to_colormode 0
 
   # Manage automatic layout.
-  if lowercase('"$1"')=='x'
+  if lowercase(['"$1"'])=='x'
     +l {
       foreach { => $> }
       repeat $!-1 {
@@ -30163,8 +30163,8 @@ pencilbw : skip ${1=0.3},${2=60}
 #@cli : <http://satyarth.me/articles/pixel-sorting/>.
 #@cli : Default values: 'ordering=+', 'axis=x' and 'sorting_criterion=mask=(undefined)'.
 #@cli : $ image.jpg +norm +ge[-1] 30% +pixelsort[0] +,y,[1],[2]
-pixelsort : check "(str1='${1=+}'; str1=='+' || str1=='-') && "\
-                  "(str2='${2=x}'; str2=='x' || str2=='y' || str2=='z' || str2=='xy' || str2=='yx') && "\
+pixelsort : check "(str1=['${1=+}']; isin(str1,'+','-')) && "\
+                  "(str2=['${2=x}']; isin(str2,'x','y','z','xy','yx')) && "\
                   "(['${3=}']==0 || "${"is_image_arg $3"}") && "\
                   "(['${4=}']==0 || "${"is_image_arg $4"}")"
   s0="descending" s1="ascending"
@@ -33322,7 +33322,7 @@ is_ext : skip "${1=},${2=}"
 is_image_arg : skip "${1=;}"
   u {"str = ['$1'];
       s1 = size(str) - 1;
-      (str[0]==_'[' && str[s1]==_']') || (str[0]=='.' && str[s1]=='.') && min(str)>=45 && max(str)<=122"}
+      (str[0]==_'[' && str[s1]==_']') || (str[0]==_'.' && str[s1]==_'.') && min(str)>=45 && max(str)<=122"}
 
 #@cli is_pattern : string
 #@cli : Return 1 if specified string looks like a drawing pattern '0x......'.
@@ -33336,7 +33336,7 @@ is_varname : skip "${1=}"
     S = ['$1']; is_varname = 1;
     inrange(S[0],_'0',_'9')?(is_varname = 0):
     repeat(size(S),k, c = S[k];
-      is_varname&=inrange(c,_'0',_'9') || inrange(c,_'a',_'z') || inrange(c,_'A',_'Z') || c=='_';
+      is_varname&=inrange(c,_'0',_'9') || inrange(c,_'a',_'z') || inrange(c,_'A',_'Z') || c==_'_';
       !is_varname?break();
     );
     is_varname"}
@@ -33346,10 +33346,8 @@ is_varname : skip "${1=}"
 is_videofilename : skip "${1=}"
   0 => "_$1" u {"
     ext = lowercase(['"{x}"']);
-    ext=='avi' || ext=='mov' || ext=='asf' || ext=='divx' || ext=='flv' || ext=='mpg' ||
-    ext=='m1v' || ext=='m2v' || ext=='m4v' || ext=='mjp' || ext=='mp4' || ext=='mkv' ||
-    ext=='mpe' || ext=='movie' || ext=='ogm' || ext=='ogg' || ext=='ogv' || ext=='qt' || ext=='rm' ||
-    ext=='vob' || ext=='wmv' || ext=='xvid' || ext=='mpeg'"}
+    isin(ext,'avi','mov','asf','divx','flv','mpg','m1v','m2v','m4v','mjp','mp4','mkv','mpe','movie','ogm','ogg','ogv',
+             'qt','rm','vob','wmv','xvid','mpeg')"}
   rm.
 
 #@cli is_macos
