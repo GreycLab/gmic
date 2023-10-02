@@ -14017,7 +14017,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 } else {
                   if (is_verbose) cimg::strellipsize(varvalues[0],gmic_use_argy,80,true);
                   cimglist_for(varnames,k) {
-                    const int l = k%varvalues_d.height();
+                    const int l = varvalues_d._height==1?0:k;
                     const double vvd = is_rounded?gmic_round(varvalues_d[l]):varvalues_d[l];
                     new_value = set_variable(varnames[k],sep0==':'?'=':sep0,0,vvd,variables_sizes);
                     if (is_verbose) {
