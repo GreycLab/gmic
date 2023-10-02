@@ -3931,13 +3931,13 @@ _display_camera :
 
     # Manage user events.
     if {*,r} w[] {*,d,e}
-    elif {*,-R}" || "{*,-SPACE} angle={($angle+1)%4}
-    elif {*,-ARROWUP} brightness={min(5,$brightness+1)}
-    elif {*,-ARROWDOWN} brightness={max(-5,$brightness-1)}
-    elif {*,-ARROWRIGHT} contrast={min(5,$contrast+1)}
-    elif {*,-ARROWLEFT} contrast={max(-5,$contrast-1)}
+    elif {*,-R}" || "{*,-SPACE} angle:=($angle+1)%4
+    elif {*,-ARROWUP} brightness:=min(5,$brightness+1)
+    elif {*,-ARROWDOWN} brightness:=max(-5,$brightness-1)
+    elif {*,-ARROWRIGHT} contrast:=min(5,$contrast+1)
+    elif {*,-ARROWLEFT} contrast:=max(-5,$contrast-1)
     elif {*,-F}" || "{*,-ENTER}" || "{*,-F5}
-       fullscreen={1-$fullscreen}
+       fullscreen:=1-$fullscreen
        if $fullscreen
          wwnfs,whnfs={*,w,h}
          w[] {*,u,v},0,1
@@ -4013,21 +4013,21 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
     nm={n}
 
     # Determine output size.
-    if $1>0" && "$2>0 w,h=$1,$2 else w,h={{*,u}/2},{{*,v}/2} fi
-    w,h={[max($w,33),max($h,33)]}
+    if $1>0" && "$2>0 w,h=$1,$2 else w,h:=[{*,u,v}]/2 fi
+    w,h:=[max($w,33),max($h,33)]
 
     # Determine xmin,xmax/ymin,ymax.
-    one={$3!=3} siz={w*h*d}
-    if $5==$6 xmin=0 xmax={$siz-$one} else xmin={min($5,$6)} xmax={max($5,$6)} fi
-    if $7==$8 ymin={im-(iM-im)/20} ymax={iM+(iM-im)/20} else ymin={min($7,$8)} ymax={max($7,$8)} fi
-    dx={$xmax-$xmin} dy={$ymax-$ymin}
+    one:=$3!=3 siz:=w*h*d
+    if $5==$6 xmin=0 xmax:=$siz-$one else xmin:=min($5,$6) xmax:=max($5,$6) fi
+    if $7==$8 ymin:=im-(iM-im)/20 ymax:=iM+(iM-im)/20 else ymin:=min($7,$8) ymax:=max($7,$8) fi
+    dx,dy:=$xmax-$xmin,$ymax-$ymin
 
     # Determine number of axes tick marks.
-    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx={arg(1,$u)} deltax={arg(2,$u)}
-    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy={arg(1,$u)} deltay={arg(2,$u)}
+    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg(1,$u) deltax:=arg(2,$u)
+    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg(1,$u) deltay:=arg(2,$u)
 
     # Create plot canvas.
-    gw={$w-32} gh={$h-32} gg={($gw-$one)/($siz-$one)}
+    gw:=$w-32 gh:=$h-32 gg:=($gw-$one)/($siz-$one)
     $gw,$gh,1,3,255
 
     grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
@@ -4081,13 +4081,13 @@ _display_histogram : check "${1=0}>=0 && ${2=0}>=0 && ${3=256}>0" skip ${4=0%},$
  and maximum value $5."
   foreach {
     nm={n}
-    if "ispercentage($4)" m={im+(iM-im)*$4} else m=$4 fi
-    if "ispercentage($5)" M={im+(iM-im)*$5} else M=$5 fi
-    s={s} s c
+    if ispercentage($4) m:=im+(iM-im)*$4 else m=$4 fi
+    if ispercentage($5) M:=im+(iM-im)*$5 else M=$5 fi
+    s:=s s c
     repeat $s { l[{-1-$>}] { s z histogram $3,$m,$M a z } }
-    a c f '"${7--1}"' vM={iM} s z
+    a c f '"${7--1}"' vM:=iM s z
     foreach {
-      if $1>0" && "$2>0 wh=$1,$2 else wh={{*,u}/2},{{*,v}/2} fi
+      if $1>0" && "$2>0 wh=$1,$2 else wh:=[{*,u,v}]/2 fi
       $wh,1,{s},-255
       repeat s { sh[-2,-1] $> graph. ..,3,0,$vM,0,1,0 rm[-2,-1] }
       rm.. + 255
@@ -4119,25 +4119,26 @@ display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${
   e[^-1] "Render $1x$2 parametric graph plot from data of image$?, with "${o{$3>1}}"outline opacity "\
       {$3>1?$3-1:$3}", vertex radius $4, "${s{$5!=0}}"antialiasing and "${s{$6!=0}}"decoration."
   foreach {
-    nm={n} N={w*h*d}
+    nm={n} N:=w*h*d
     i[0] ('CImg3d') +[0] 0.5 i[1] ($N;$N)  # Header + nb of vertices/primitives.
 
     # Calibrate colors of vertices.
     if s==4 +channels. 3,3 r. 100%,100%,1,2 a[-2,-1] c is_grayscale=1
-    else is_grayscale={s<4} channels. 0,5
+    else is_grayscale:=s<4 channels. 0,5
     fi
 
     # Manage coordinates of vertices.
-    sh. 0 xm={im} xM={iM} rm.
-    sh. 1 ym={im} yM={iM} rm.
-    sh. 2 zm={im} zM={iM} rm.
+    sh. 0 xm,xM:=im,iM rm.
+    sh. 1 ym,yM:=im,iM rm.
+    sh. 2 zm,zM:=im,iM rm.
     permute. cxyz s. x,2
     i.. (1,0;1,{$N-1}) r.. 2,$N,1,1,3 round.. 1,$N,1,1,1 # Primitives, colors and opacities.
     y a y c3d n3d *3d 1,-1,1
 
-    {if($6,max(1,$1-32),$1)},{if($6,max(1,$2-32),$2)},1,{if($is_grayscale,1,3)},255
+    {$6?[max(1,$1-32),max(1,$2-32)]:[$1,$2]},1,{if($is_grayscale,1,3)},255
+
     *3d[0] {0.96*min(w,h)}
-    if $6 L={0.1*max($1,$2)} grid[1] $L,$L,0,0,0.25,0xCCCCCCCC,0 fi
+    if $6 L:=0.1*max($1,$2) grid[1] $L,$L,0,0,0.25,0xCCCCCCCC,0 fi
 
     if $5 # Anti-aliased.
       r[1] 200%,200%,1,100%,1 *3d[0] 2
@@ -4158,8 +4159,8 @@ display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${
     if $5 r. 50%,50%,1,100%,2 fi
 
     if $6 # Add decoration.
-      xc={0.5*($xm+$xM)} yc={0.5*($ym+$yM)} dx={0.5*($xM-$xm)/0.96} dy={0.5*($yM-$ym)/0.96}
-      xm={$xc-$dx} xM={$xc+$dx} ym={$yc-$dy} yM={$yc+$dy}
+      xc:=0.5*($xm+$xM) yc:=0.5*($ym+$yM) dx:=0.5*($xM-$xm)/0.96 dy:=0.5*($yM-$ym)/0.96
+      xm,xM,ym,yM:=$xc-$dx,$xc+$dx,$yc-$dy,$yc+$dy
       100%,100%,1,1,255 axes. $xm,$xM,$yM,$ym,14,1,0
       if $xm>0 axes. 0,0,$yM,$ym,14,1,160 fi
       if $xM<0 axes. {w-1},{w-1},$yM,$ym,14,1,160 fi
@@ -4555,7 +4556,7 @@ echo_file : skip "${2='\n'}"
   ({'"<body>\n<table>\n"'})
   ind=0
   repeat 256
-    code={([$codes])[$>]}
+    code:=[$codes][$>]
     bgcolor=${dec2hex\ {16752640+$>}}
     if !($ind%16) ('"<tr>\n"') fi
     ('"<td style=\"background-color: \#"$bgcolor"; \">"')
@@ -4645,7 +4646,7 @@ echo_file : skip "${2='\n'}"
     # Determine spline coefficients for each part of the curve.
     $size,1,1,1,-1
     repeat h#0-1 {
-      x0={0,i(0,$>)} y0={0,i(1,$>)} x1={0,i(0,$>+1)} y1={0,i(1,$>+1)}
+      x0,y0,x1,y1={0,[i(0,$>),i(1,$>),i(0,$>+1),i(1,$>+1)]}
       slope:=($y1-$y0)/max(0.01,$x1-$x0)
       yp0={0,i(2,$>)*$smoothness+(1-$smoothness)*$slope}
       yp1={0,i(2,$>+1)*$smoothness+(1-$smoothness)*$slope}
@@ -5368,7 +5369,7 @@ output_ggr : skip "${2=}"
       end={_($>+1)/{0,h}}
       mid={_0.5*($start+$end)}
       rgba={0,I(0,$>)}
-      r={arg(1,$rgba)} g={arg(2,$rgba)} b={arg(3,$rgba)} a={arg(4,$rgba)}
+      r:=arg(1,$rgba) g:=arg(2,$rgba) b:=arg(3,$rgba) a:=arg(4,$rgba)
       ('$start" "$mid" "$end" "$r" "$g" "$b" "$a" "$r" "$g" "$b" "$a" 0 0\n"')
     }
     rm[0] a x
