@@ -38100,13 +38100,13 @@ x_pacman : check_display $0
       # Precompute valid directions on each map point, and shortest path to the ghost's home.
       +shift[map] -1,0 +shift[map] 0,-1 +shift[map] 1,0 +shift[map] 0,1 a[-4--1] z !=. 1 => can_go
       +==[map] 1 100%,100% =. 1,$mw2,$mh2 distance. 1,..,3 channels. 100%
-      f. 'if(i==2,0,if(i==8,1,if(i==1,2,if(i==4,3,i))))' => path
+      f. "i==2?0:i==8?1:i==1?2:i==4?3:i" => path
       +==[map] 2 pacdots:=is rm.
       level:=-$level
     fi
 
     # Render board gfx.
-    f[map] 'if(i>=4,0,i)' +==[map] 1 expand_xy. 1,0 r. 1600%,1600% erode. 9 b. 2
+    f[map] "i>=4?0:i" +==[map] 1 expand_xy. 1,0 r. 1600%,1600% erode. 9 b. 2
     g. xy abs[-2,-1] +[-2,-1] >=. 80% b. 2 n. 0,1 shrink_xy. 16
     +*. $_glevel +*.. $_blevel *... $_rlevel a[-3--1] c
     16,16,1,1,'x' +-[map] 1 max. 0 *. 16 r. 1600%,1600%
@@ -38127,12 +38127,12 @@ x_pacman : check_display $0
     do
 
       # Display board graphics.
-      t:=int(6*$|)%4 left:=if($pacgum_timer>=0,10-$|+$pacgum_timer,-1)
+      t:=int(6*$|)%4 left:=$pacgum_timer>=0?10-$|+$pacgum_timer:-1
       [visu]
       repeat 4 {
         mg=${mg$>} xg=${xg$>} yg:=${yg$>}+24
         if $mg==0 j. [ghost$>_$t],$xg,$yg,0,0,1,[ghostm_$t]
-        elif $mg==1 t2:=if($left>7,$t,if($left>3,int(12*$|)%4,int(24*$|)%4)) j. [ghosta_$t2],$xg,$yg,0,0,1,[ghostm_$t]
+        elif $mg==1 t2:=$left>7?$t:$left>3?int(12*$|)%4:int(24*$|)%4 j. [ghosta_$t2],$xg,$yg,0,0,1,[ghostm_$t]
         elif $mg==2 j. [ghostd_$t],$xg,$yg,0,0,0.8,[ghostdm]
         else j. [ghost$>_$t],$xg,$yg,0,0,{$mg-2},[ghostm_$t] j. [ghostd_$t],$xg,$yg,0,0,1,[ghostdm]
         fi
@@ -38183,8 +38183,8 @@ x_pacman : check_display $0
         if !($xg&15)" && "!($yg&15) # Check if ghost can take a new direction.
           ({u},{u},{u},{u};0,1,2,3)
           if $mg<2 # Try to chase or escape pacman
-            =. {u(0.6,1)},{if($mg==0,dX0=$xp-$xg;dY0=$yp-$yg;if(abs(dX0)>abs(dY0),if(dX0>0,0,2),if(dY0>0,1,3)),\
-                                     dX1=$xp-$xg;dY1=$yp-$yg;if(abs(dX1)<abs(dY1),if(dX1>0,2,0),if(dY1>0,3,1)))}
+            =. {u(0.6,1)},{$mg==0?(dX0=$xp-$xg;dY0=$yp-$yg;abs(dX0)>abs(dY0)?(dX0>0?0:2):(dY0>0?1:3)):\
+                                  (dX1=$xp-$xg;dY1=$yp-$yg;abs(dX1)<abs(dY1)?(dX1>0?2:0):(dY1>0?3:1))}
             =. 0,{($dg+2)%4}
             if $is_get_ready =. 0.8,{path,i({$xg>>4},{$yg>>4})} fi
           else =. 1,{path,i({$xg>>4},{$yg>>4})} # If dying ghost, follow the best path to home.
@@ -38205,7 +38205,7 @@ x_pacman : check_display $0
 
       # Manage pacman displacement.
       if !$dying_pacman
-        d:=if({*,ARROWRIGHT},1,if({*,ARROWDOWN},2,if({*,ARROWLEFT},3,if({*,ARROWUP},4,$dp))))
+        d:={*,ARROWRIGHT}?1:{*,ARROWDOWN}?2:{*,ARROWLEFT}?3:{*,ARROWUP}?4:$dp
         if !($xp&15)" && "!($yp&15)
           i={map,i({$xp>>4},{$yp>>4})}
           if $i==2 score+=10 pacdots-=1 # Pacdot eaten.
@@ -38214,19 +38214,19 @@ x_pacman : check_display $0
           fi
           =[map] 0,{$xp>>4},{$yp>>4}
           16,16,1,3 j[visu] .,$xp,{24+$yp} rm.
-          d:=if({can_go,i({$xp>>4},{$yp>>4},{abs($d)-1})},$d,$dp)
-          d:=if({can_go,i({$xp>>4},{$yp>>4},{abs($d)-1})},$d,-abs($dp))
+          d={can_go,i($xp>>4,$yp>>4,abs($d)-1)?$d:$dp}
+          d={can_go,i($xp>>4,$yp>>4,abs($d)-1)?$d:-abs($dp)}
           dp=$d
-        else dp:=if(abs($d-$dp)==2,$d,$dp)  # Allow to turn back on non-integer locations.
+        else dp:=abs($d-$dp)==2?$d:$dp # Allow to turn back on non-integer locations.
         fi
-        is_get_ready:=if($dp>0,0,$is_get_ready)
+        is_get_ready:=$dp>0?0:$is_get_ready
         u:=($dp==1)-($dp==3)
         v:=($dp==2)-($dp==4)
         xp:=($xp+2*$u)%(16*$mw)
         yp:=($yp+2*$v)%(16*$mh)
 
         if $pacgum_timer>=0" && "$|>$pacgum_timer+10 # Check if pacgum still has some effect.
-          repeat 4 { xg$>&=-2 yg$>&=-2 mg$>:=if(${mg$>}==1,0,${mg$>}) }
+          repeat 4 { xg$>&=-2 yg$>&=-2 mg$>:=${mg$>}==1?0:${mg$>} }
           pacgum_timer=-1
         fi
 
@@ -38266,7 +38266,7 @@ _pacman_ghost_afraid_gfx :
   map.. . rm. r. 16,16,1,3,2
   line. 4,4,6,6,1,$col,255 line. 4,6,6,4,1,$col,255
   line. 9,4,11,6,1,$col,255 line. 9,6,11,4,1,$col,255
-  f. 'if(y>=9&&y<=10&&x>=2&&x<=13&&((int((x+1)/2)+y)%2),arg(c+1,$col),i)'
+  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg(c+1,$col):i"
 
 _pacman_pacman_gfx :
   32,32,1,1,'X=x-15;Y=y-15;A=atan2(Y,X);R=sqrt(X^2+Y^2);R<15.5&&abs(A)>0.8*0.33*$1'
