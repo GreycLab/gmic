@@ -3792,7 +3792,7 @@ _display_array : check ${1=13}>0" && "${2=$1}>0
 
   foreach {
     if w<128" && "h<128 r 128,128,100%,100%,0,0,0.5,0.5 fi # Manage cases of small and large images.
-    x0=0 y0=0 w,h:=w,h
+    x0,y0,w,h=0,0,{w},{h}
     wmax:=0.9*{*,u} hmax:=0.9*{*,v}
     do
       if w>=$wmax" || "h>=$hmax
@@ -4014,7 +4014,7 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
 
     # Determine output size.
     if $1>0" && "$2>0 w,h=$1,$2 else w,h:=[{*,u,v}]/2 fi
-    w,h:=[max($w,33),max($h,33)]
+    w,h:=max($w,33),max($h,33)
 
     # Determine xmin,xmax/ymin,ymax.
     one:=$3!=3 siz:=w*h*d
@@ -4370,7 +4370,7 @@ _display_voxels3d :
   nb_images=$!
   foreach { nm$>={n} }
   +foreach {
-    w,h,d:=w,h,d
+    w,h,d={w},{h},{d}
     nm=${nm$>} bnm={b} l. { if ['{x}']!=0 bnm.=.{x} fi onfail bnm.=.{x} }
     asiz:=max(w,h,d)/5
     +norm1. !=. 0 nbv:=is rm. # Count voxels
@@ -5346,7 +5346,7 @@ output_cube :
 output_flo :
   e[^-1] "Output optical flow$? as file '"{/"$1"}"'."
   N=$! +foreach {
-   w,h:=[w,h]
+   w,h={w},{h}
    channels 0,1 permute cxyz i[0] (202021.25) i[1] ($w,$h) cast[1] uint32,float32 y a y
    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
    o raw:$fn,float32 rm
@@ -12271,7 +12271,7 @@ cast :
   ssize:=s=['"$1"'];s=='uint8'||s=='int8'?1:s=='uint16'||s=='int16'?2:s=='uint32'||s=='int32'||s=='float32'?4:8
   dsize:=s=['"$2"'];s=='uint8'||s=='int8'?1:s=='uint16'||s=='int16'?2:s=='uint32'||s=='int32'||s=='float32'?4:8
   foreach {
-    w,h,d,s:=[w,h,d,s]
+    w,h,d,s={w},{h},{d},{s}
     serialize $1,0,0
     s -,{'\n$w\ $h\ $d\ $s\n'}
     i[1] ('\n1\ {int($w*$h*$d*$s*$ssize/$dsize)}\ 1\ 1\n') y[1]
@@ -12918,7 +12918,7 @@ noise_poissondisk : check "${1=8}>0 && isint(${2=30}) && $2>0 && ${3=2}>0"
   e[^-1] "Add poisson disk sampling points to image$?, with radius $1, max sample attempts $2 and p-norm $3."
   R0,K,P=${1-3}
   foreach {
-    W,H,D:=[w,h,d]
+    W,H,D={w},{h},{d}
     value:=iM+(im==iM)
     R:=ispercentage($R0)?max(w,h,d)*$R0:$R0
     C:=$R/sqrt(sum([$W,$H,$D]>1)) # Cell size
@@ -14381,7 +14381,7 @@ match_icp : check ${"is_image_arg $1"}" && ${2=1e-2}>0" skip "${3=}"
   e[^-1] "Match vector set$? with reference vector set $1, using ICP with precision $2.\n"
   pass$1
   foreach[^-1] {
-    w,h,d,s:=w,h,d,s
+    w,h,d,s={w},{h},{d},{s}
     pass. mv. 0 # [0]: reference set, [1]: current set
     if "['$3']!=0" +store. img fi
     match_pca. .. # Pre-normalize for better initial estimate
@@ -17125,7 +17125,7 @@ undistort : check "${1=0.1}>=-1 && $1<=1 && ${6=0}>=0 && $6<=3" skip ${2=0},${3=
 upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=1 && ${6=10}>=0"
   e[^-1] "Upscale image$? to $1x$2x$3, with smoothness $4, anisotropy $5 and sharpening $6."
   foreach {
-    w,h:=[w,h]
+    w,h={w},{h}
     +r. $1,$2,$3,1,0 # Compute desired dimensions.
     if w<$w" && "h<$h # Test for downscaling
       rm. r. $1,$2,$3,100%,2
@@ -17360,7 +17360,7 @@ closing : skip "${2=},${3=}"
     fi
   elif ${"is_image_arg $1"}" && narg("${"pass$1 -1"}")==1" # Custom kernel
     pass$1
-    sx,sy,sz:=[w,h,d]
+    sx,sy,sz={w},{h},{d}
     is_kernel,sel,r0,r1,b0,b1,b2,b3=1,^-1,binary,real,dirichlet,neumann,periodic,mirror
     is_real=0
     if ['$2']!=0 boundary:=cut($2,0,3) fi
@@ -17439,7 +17439,7 @@ convolve_fft : check ${is_image_arg\ $1}" && isin(${2=2},0,1,2,3)"
   pass$1 store. kernel
   foreach {
     if w
-      w0,h0,d0:=[w,h,d]
+      w0,h0,d0={w},{h},{d}
       $kernel
       if $2!=2 r[0] {[w#0,h#0,d#0]+2*round([w#1>1?w#1:0,h#1>1?h#1:0,d#1>1?d#1:0]/2)},100%,0,$2,0.5,0.5 fi
       r ${-max_whd},100%,0,0,0.5,0.5 r 100%,100%,100%,${-max_s}
@@ -17639,7 +17639,7 @@ denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) &&
   e[^-1] "Denoise image$? using haar-wavelet thresholding, with threshold $1, "\
           ${arg0\ ($2>0),auto,$2}" scales and $3 spinning cycles."
   foreach {
-    nm={n} nb_scales:=min($2?$2:32,int(log2(min(w,h))-1)) w,h,d:=[w,h,d] sigma=${-std_noise}
+    nm={n} nb_scales:=min($2?$2:32,int(log2(min(w,h))-1)) w,h,d={w},{h},{d} sigma=${-std_noise}
     r {round(w,2^($nb_scales+1),1)},{round(h,2^($nb_scales+1),1)},{d==1?1:round(d,2^($nb_scales+1),1)},100%,0,0
     +f 0
     repeat $3 {
@@ -18471,7 +18471,7 @@ inpaint_holes : check "${1=4}>=0 && ${2=0}>=0" skip ${3=0}
     100%,100%,100%
     area:=ispercentage($1)?$1*w*h*d:$1
     repeat s#0 { sh[0] $> +area. $2,$3 <=. $1 -|[1,-1] rm. }
-    if im k[0] whd=[w,h,d] r 1,1,1,100%,2 r $whd,100%
+    if im k[0] whd={w},{h},{d} r 1,1,1,100%,2 r $whd,100%
     else inpaint[0] [1],0,{2*!$2+!!$3} k[0] fi
   }
 
@@ -18891,7 +18891,7 @@ opening : skip "${2=},${3=}"
     fi
   elif ${"is_image_arg $1"}" && narg("${"pass$1 -1"}")==1" # Custom kernel
     pass$1
-    sx,sy,sz:=[w,h,d]
+    sx,sy,sz={w},{h},{d}
     is_kernel,sel,r0,r1,b0,b1,b2,b3=1,^-1,binary,real,dirichlet,neumann,periodic,mirror
     is_real=0
     if ['$2']!=0 boundary:=cut($2,0,3) fi
@@ -19934,7 +19934,7 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
     C=0.05250053107738495
     to_rgb srgb2rgb rgb2ycbcr channels 1,2
     foreach {
-      whd:=w,h,d r {whd},2,1,1,-1
+      whd={w},{h},{d} r {whd},2,1,1,-1
       s y -[0] $m0 -[1] $m1 a y
       i[0] ($A,$B;$B,$C) +m* rm[0]
       * s y + *. {$1-1} exp.
@@ -19950,7 +19950,7 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
       m0={1,ia} -[1] $m0
       m1={2,ia} -[2] $m1
       M:=h a[1,2] x +transpose[1] rv[1,2] m*[1,2] /[1] $M invert[1]
-      rv whd:=w,h,d r[1] {whd},2,1,1,-1
+      rv whd={w},{h},{d} r[1] {whd},2,1,1,-1
       s[1] y -[1] $m0 -[2] $m1 a[1,2] y +m* rm[0]
       * s y + *. {$1-1} exp.
       r $whd,1,-1
@@ -20038,7 +20038,7 @@ histogram_pointwise : skip ${2=0%},${3=100%}
     value0:=ispercentage($2)?im+(iM-im)*$2:$2
     value1:=ispercentage($3)?im+(iM-im)*$3:$3
     - $value0 * {$nb_levels/max(1,abs($value1-$value0))} c 0,{$nb_levels-1} round
-    w,h,d:=w,h,d r {whd},{s},1,1,-1
+    w,h,d={w},{h},{d} r {whd},{s},1,1,-1
     i.. (0,{w-1}) r.. .,.,1,1,3 round..
     r[-2,-1] 300%,100%,1,1,4 shift. 1 +[-2,-1] y.
     i.. ({'CImg3d'},{h/3},{h/3})
@@ -21223,7 +21223,7 @@ chessboard : check "$1>0 && ${2=$1}>0" skip ${3=0},${4=0},${5=0},${6=1},${7=0},$
           colors (${7--1})."
   i[0] (${7--1}) r[0] {{0,w}/2},1,1,2,-1 permute[0] cyzx
   repeat $!-1 {
-    w,h:=w,h theta:=$5*pi/180
+    w,h={w},{h} theta:=$5*pi/180
     ($3,{$3+$w-1};$3,{$3+$w-1}^$4,$4;{$4+$h-1},{$4+$h-1}) r. $w,$h,1,2,3
     r. {$w*$h},2,1,1,-1
     i.. ({cos($theta)},{-sin($theta)};{sin($theta)},{cos($theta)}) m*[-2,-1]
@@ -21789,7 +21789,7 @@ gaussian : skip ${1=15%},${2=$1},${3=0}
   B:=($l1-$l2)*$u*$v
   C:=$l1*$v*$v+$l2*$u*$u
   foreach {
-    nm={n} w,h:=w,h ds={d},{s} rm
+    nm={n} w,h={w},{h} ds={d},{s} rm
     $w,$h,1,1,'X=x-{($w-1)/2};Y=y-{($h-1)/2};$A*X*X+2*$B*X*Y+$C*Y*Y'
     * -1 exp r $w,$h,$ds => $nm
   }
@@ -22382,7 +22382,7 @@ rorschach : check "${1=5%}>=0 && isint(${2=1}) && $2>=0 && $2<=3"
     }
   elif $2==3 # XY-mirroring.
     foreach {
-      w,h:=w,h
+      w,h={w},{h}
       z 0,0,{w/2-1},{h/2-1} rand -1,1 b $1 >= 0
       +mirror x if $w%2 columns. 1,100% fi a x
       +mirror y if $h%2 rows. 1,100% fi a y
@@ -22570,7 +22570,7 @@ triangle_shade :
 truchet : check "isint(${1=32}) && $1>0 && ${2=3}>=0" skip ${3=1}
   e[^-1] "Render "${arg0\ !$3,curved,straight}" truchet patterns in image$?, with scale $1 and radius $2."
   foreach {
-    nm={n} w,h,s:=w,h,s rm
+    nm={n} w,h,s={w},{h},{s} rm
     $1,$1 = 1,0,0 = 1,100%,100% distance 1,{1+$3} M:=int(iM/2) # Generate truchet pattern and its mirrored version.
     ir {$M-$2/2-($1%2)},{$M+$2/2} +mirror y a x
     {round($w/$1,1,1)},{round($h/$1,1,1)} rand. 0,1 >=. 50% r. {w*$1},{h*$1} *. $1
@@ -23248,7 +23248,7 @@ delaunay3d :
     channels 0 != 0
 
     # Label each point separately
-    whd:=w,h,d +r 1,{whd},1,1,-1 cumulate. *. .. r. $whd,1,-1
+    whd={w},{h},{d} +r 1,{whd},1,1,-1 cumulate. *. .. r. $whd,1,-1
 
     # Compute voronoi diagram of point cloud.
     +distance[0] 1 *[2] -1 watershed[1] [2] rm[2]
@@ -23555,7 +23555,7 @@ image6cube3d :
 imageblocks3d : check ${2=0}>=0 skip ${1=10},${3=0}
   e[^-1] "Generate 3D blocks from image$?, with maximum elevation $1 and smoothness $2."
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     split_opacity to_rgb[0] is_opacity:=$!==2
 
     # Create 3D object template.
@@ -23621,7 +23621,7 @@ imageplane3d :
   e[^-1] "Generate 3D mapped planes from image$?."
   slices 50% to_color
   foreach {
-    w,h,s,w1,h1:=w,h,s,w-1,h-1
+    w,h,s,w1,h1={w},{h},{s},{w-1},{h-1}
     nm={n}
     i.. (67.5;73.5;109.5;103.5;51.5;100.5;\   # Magick number for CImg3d.
          4;1;\                                # Number of vertices and primitives.
@@ -25332,7 +25332,7 @@ _texturize3d :
 volume3d :
   e[^-1] "Transform image$? as 3D parallelepipedic objects."
   foreach {
-    w,h,d:=w,h,d
+    w,h,d={w},{h},{d}
     +slices[0] 0
     +columns[0] 0 permute. zyxc mirror. x
     +slices[0] 100% mirror. x
@@ -28831,7 +28831,7 @@ frame_cube : check "${1=1}>=0" skip ${2=0},${3=0},${4=0},${5=0},${6=0},${7=0}
     nm={n} split_opacity
     if $!==2 frame_cube ${1--1} a c  # Manage image with alpha-channel.
     else
-      m:=max(w,h) w,h,s:=w,h,s
+      m:=max(w,h) w,h,s={w},{h},{s}
       imageplane3d c3d /3d. $w,$h,1
       +_frame_cube[0] $4 r3d. 0,1,0,-90 +3d. -0.5,0,-0.5  # Left side.
       +_frame_cube[0] $5 r3d. 0,1,0,90 +3d. 0.5,0,-0.5  # Right side.
@@ -29233,7 +29233,7 @@ map_sprites : check "isint($1) && $1>0 && isint(${2=0}) && $2>=0 && $2<=2"
     repeat $!-$1 { *[$>] 2 +rand[$>] 0,1 round. +[$>,-1] }
     repeat $1 { l[{1+$<}] { +mirror xy } }
   else N=$1 fi
-  r[-$N--1] 100%,100%,1,${max_s[-$N--1]} w,h:=w,h a[-$N--1] x
+  r[-$N--1] 100%,100%,1,${max_s[-$N--1]} w,h={w},{h} a[-$N--1] x
   r[^-1] ${w}00%,${h}00%,1,1 *[^-1] $w
   (0,{$w-1};0,{$w-1}^0,0;{$h-1},{$h-1}) r. $w,$h,1,2,3 round.
   repeat $!-2 { +r. [$>],[$>],1,2,0,2 r[$>] 100%,100%,1,2,0 +[$>,-1] +warp.. [$>],0,0,1 rv[$>,-1] rm. } rm[-2,-1]
@@ -29563,7 +29563,7 @@ brushify : check ${"is_image_arg $1"}" &&"\         # $1: [brush]
     rm[0] n 0,1 threshold 0.1,1
     autocrop r ${-max_wh},1,1,0,0,0.5,0.5
     a z => brush
-    wb,hb,whb:=w,h,wh ls:=255*$6
+    wb,hb,whb={w},{h},{wh} ls:=255*$6
     if !$5 +f. 0
     elif $5==1 +n. -$ls,0
     elif $5==2 +g xy +[-2,-1] min. 0 n. -$ls,0
@@ -29659,7 +29659,7 @@ cubism : check "${1=50}>=0 && ${2=10}>=0 && $2<=50 && ${5=0}>=0" skip ${3=75},${
           smoothness $5."
   if "!$1 || !$2 || !$3 || !$4" return fi
   foreach {
-    w,h,s:=w,h,s
+    w,h,s={w},{h},{s}
     P:=round($2*max(w,h)/200)
     N:=round(1.5*$1*w*h/(4*$P)/100)
 
@@ -29946,7 +29946,7 @@ hardsketchbw : skip ${1=300},${2=50},${3=0.1},${4=20},${5=0}
       nm={n}
 
       # Isolate starting points and tangents.
-      w,h:=w,h g xy rv *.. -1 a c * $1
+      w,h={w},{h} g xy rv *.. -1 a c * $1
       +norm >=. $4% 100%,100% noise. $2,2 ==. 1 *[-2,-1]
 
       # Retrieve points coordinates and corresponding tangents.
@@ -29995,7 +29995,7 @@ houghsketchbw : check "${1=100}>=0 && ${2=3}>=0 && ${3=100}>=0 && $3<=100 && ${4
     nm={n}
 
     # Compute normalized Hough transform.
-    res:=round(ispercentage($5)?$5*max(w,h):$5) w,h:=w,h rhomax:=sqrt(w^2+h^2)/2
+    res:=round(ispercentage($5)?$5*max(w,h):$5) w,h={w},{h} rhomax:=sqrt(w^2+h^2)/2
     hough $res,$res
 
     # Retrieve coordinates of maximas in hough space.
@@ -30629,7 +30629,7 @@ stylize :
 #@cli : $ image.jpg +tetris 10
 tetris : skip ${1=10}
   e[^-1] "Apply tetris effect on image$?, with scale $1."
-  foreach { wh:=w,h,1,s r $1%,$1%,$1%,100%,2 n 0,255 quantize 10,1,0 r $wh b 2 sharpen 300,1 }
+  foreach { wh={w},{h},1,{s} r $1%,$1%,$1%,100%,2 n 0,255 quantize 10,1,0 r $wh b 2 sharpen 300,1 }
 
 #@cli warhol : _M>0,_N>0,_smoothness>=0,_color>=0
 #@cli : Create MxN Andy Warhol-like artwork from selected images.
@@ -31234,7 +31234,7 @@ noise_hurl : skip ${1=10}
 #@cli : $ image.jpg +pixelize ,
 pixelize : skip ${1=20},${2=$1},${3=$1}
   e[^-1] "Pixelize image$? with scales ($1%,$2%,$3%)."
-  foreach { whd:=w,h,d r $1%,$2%,$3%,100%,2 r $whd }
+  foreach { whd={w},{h},{d} r $1%,$2%,$3%,100%,2 r $whd }
 
 #@cli scanlines : _amplitude,_bandwidth,_shape={ 0:block | 1:triangle | 2:sine | 3:sine+ | 4:random },_angle,_offset
 #@cli : Apply ripple deformation on selected images.
@@ -31666,7 +31666,7 @@ blend_median :
   to_colormode 0 r ${-max_whd},100%,0,0,0.5,0.5,0.5
   if $!==2 + / 2
   else
-    whds:=w,h,d,s r 100%,100%,{d*s},1,-1 a c
+    whds={w},{h},{d},{s} r 100%,100%,{d*s},1,-1 a c
     100%,100%,100%,1,"med(I(#0))" k. r $whds,-1
   fi
 
@@ -32068,7 +32068,7 @@ _fade_stream : skip "${6=}"
 
   l { $1 onfail go_on=0 } # Load first image.
   if !$go_on return fi
-  w,h,s:=w,h,s
+  w,h,s={w},{h},{s}
   if {*} w. ${fitscreen\ $w,$h},0,"[G'MIC]" fi
   pframe=$frame frame+=$5
   do
@@ -32386,7 +32386,7 @@ _morph_stream : skip "${8=}"
 
   l { $1 onfail go_on=0 } # Load first image.
   if !$go_on return fi
-  w,h,s:=w,h,s
+  w,h,s={w},{h},{s}
   if {*} w. ${fitscreen\ $w,$h},0,"[G'MIC]" fi
   pframe=$frame frame+=$7
   do
@@ -32447,7 +32447,7 @@ register_nonrigid : check ${is_image_arg\ $1}" && ${2=0.2}>=0 && ${3=5}>0 && ${4
 register_rigid : check ${is_image_arg\ $1}" && ${2=0.1%}>=0 && isint(${3=0}) && $3>=0 && $3<=3"
   e[^-1] "Register source image$? with destination image $1, using rigid warp with smoothness $2."
   m "_register_rigid : b $2 equalize 256 n 0,1"
-  pass$1 0 W,H,D,S:=w,h,d,s
+  pass$1 0 W,H,D,S={w},{h},{d},{s}
   f:=max(w,h)/1024
   if $f<=1 # Small image: one-step registration
     _register_rigid.
@@ -32735,7 +32735,7 @@ arg2var :
 #@cli : Default value: 'auto'
 autocrop_coords : skip ${1=auto}
   is_auto:=['"$1"']=='auto'
-  w,h,d,value:=w,h,d,i(w-1,h-1,d-1)
+  w,h,d,value={w},{h},{d},{i(w-1,h-1,d-1)}
   +=. {1+$value},100%,100%,100% _autocrop$is_auto. ${1--1} =. $value,100%,100%,100%
   x0,y0,z0:=$w-w,$h-h,$d-d
   _autocrop$is_auto. ${1--1}
@@ -33104,7 +33104,7 @@ fitratio_wh :
 #@cli : Default values: 'depth=1', 'minimal_size=128' and 'maximal_size=85%'.
 fitscreen : skip "${2=},${3=},${4=},${5=}"
   if ${"is_image_arg $1"}
-    l$1 { W,H,D:=w,h,d } if narg($2) m=$2 else m=25% fi if narg($3) M=$3 else M=85% fi
+    l$1 { W,H,D={w},{h},{d} } if narg($2) m=$2 else m=25% fi if narg($3) M=$3 else M=85% fi
   else
     W,H=${1-2} if narg($3) D=$3 else D=1 fi if narg($4) m=$4 else m=25% fi if narg($5) M=$5 else M=85% fi
   fi
@@ -33263,7 +33263,7 @@ img2base64 : check "isbool(${1=0}) && isbool(${2=1})"
 #@cli : Return representation of last image as an hexadecimal-encoded string.
 #@cli : Input image must have values that are integers in [0,255].
 img2hex :
-  whds:=w,h,d,s y. 2,{h}
+  whds={w},{h},{d},{s} y. 2,{h}
   f.. "*
     to_char(x) = x>=0 && x<=9?48 + x:87 + x;
     i(#-1,0,y) = to_char(int(i/16));
@@ -35921,7 +35921,7 @@ _x_colorize :
 
   # Init variables and images.
   name={n} title={b} if narg({x}) title=$title.{x} fi
-  w,h:=w,h
+  w,h={w},{h}
 
   if $1 # Line-art.
     if s==4 sh. 3 if abs(im-iM)>64 +*. -1 rm.. +. 255 else rm. sh. 0 fi
@@ -37467,7 +37467,7 @@ x_mandelbrot : skip ${1=0},${2=0.317},${3=0.03} check_display $0
     $siz,$siz mandelbrot. {0,^},256,$1,{[$1?$2:0,$1?$3:0]} map. [1]                         # Render fractal.
     if $1 w. $siz,$siz,0,"[G"{`39`}"MIC] Julia Set c=("{0,@0-1}")-("{0,@2-3}"), c0=($2,$3)" # Display on window.
     else w. $siz,$siz,0,"[G"{`39`}"MIC] Mandelbrot Set c=("{0,@0-1}")-("{0,@2-3}")" fi
-    w,h:=w,h round. select. 2,0,0,0,1                                                       # Get the user selection.
+    w,h={w},{h} round. select. 2,0,0,0,1                                                    # Get the user selection.
     if i[0]>0                                                                               # If valid selection found.
       M:=max(i[3]-i[0],i[4]-i[1]) # Compute max dimension of selected rectangle.
       if $M<5 _x_mandelbrot_coords $1 rm[1] _x_mandelbrot_palette mv. 1 # If selection too small, reset the view,
@@ -38827,7 +38827,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
 
     # Init variables and images.
     name={0,n} title={0,b} if narg({0,x}) title=$title.{0,x} fi
-    w,h:=w,h fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
     selection=-1 marker_mode=2 xpan=-1 ypan=-1 bg_mode=0 opacity=64
     to_rgb => img
 
@@ -41719,7 +41719,7 @@ fx_asciiart : skip "${10=},${11=},${12=}"
 
 fx_asciiart_preview :
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     fx_asciiart $1,"$2",${3-9},0,foo,foo
     r $w,$h,1,100%,0,0,0.5,0.5
   }
@@ -41956,7 +41956,7 @@ fx_extract_objects :
   foreach {
     to_rgba
     nm=${-gui_layer_name}
-    w,h:=w,h
+    w,h={w},{h}
     x,y:=$1%*(w-1),$2%*(h-1)
     color:=I($x,$y)
     if !$7 # Output: Crop.
@@ -42236,7 +42236,7 @@ fx_ministeck :
 
 fx_ministeck_preview :
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     fx_ministeck $*
     r $w,$h,1,100%,0,0,0.5,0.5
   }
@@ -42295,7 +42295,7 @@ fx_montage : skip "${2=A}"
 
 fx_montage_preview : skip "${2=A}"
   if !$! return fi
-  w,h:=w,h
+  w,h={w},{h}
   if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
   drgba
   code0=X code1="$2" code2=H code3=V code4=A code5=B
@@ -42347,7 +42347,7 @@ fx_montage_preview : skip "${2=A}"
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/06/01</i>.</small>")
 fx_puzzle :
   foreach {
-    w,h:=w,h to_rgb
+    w,h={w},{h} to_rgb
     puzzle $w,$h,$1,$2,$3,$4,$5
     +b. $6%,0 g. xy +[-2,-1] n. -$7,$7 +[0,-1]  # Relief.
     +b. $8%,0 n. 0,1 *. -1 +. 1 n. {(255-$9)/255},1 *[0,-1] c 0,255  # Outline.
@@ -42414,7 +42414,7 @@ fx_shuffle_patches :
   mode,recons,patch_size,overlap,overlap_std,seed=${1-6}
 
   foreach {
-    nm={n} w,h:=w,h
+    nm={n} w,h={w},{h}
     s c foreach { avg$>,std$>:=ia,id } a c
 
     # Shuffle & rotate patches.
@@ -44291,7 +44291,7 @@ fx_charcoal :
   foreach {
     split_opacity l[0] {
       compose_channels max
-      w,h:=w,h
+      w,h={w},{h}
       if $5 r. 150%,150%,1,1,6 fi
       if $4 equalize. n. 0,255 fi
       sharpen {$1*3} cut 0,255
@@ -47010,7 +47010,7 @@ fx_customize_clut_preview :
     rm fx_customize_clut ${1-9},1,0,${12--1}
   elif $11>=8 # 3D CLUT preview
     _N:=$11>=9?64:32
-    k[0] to_rgb w,h:=w,h
+    k[0] to_rgb w,h={w},{h}
     +fx_customize_clut ${1-9},1,0,${12--1} mv. 1
     r. $_N,$_N,$_N,3,-1 pointcloud3d. o3d. $12
     l[] {
@@ -49652,7 +49652,7 @@ fx_seamcarve_preview :
     _fx_seamcarve
   fi
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     seamcarve $1%,$2%,$4,$5,{max($3,10)}%
     if $4 channels 0,{s-2} fi
     to_rgba r $w,$h,1,100%,0,0,0.5,0.5
@@ -50628,7 +50628,7 @@ fx_huffman_glitches :
   noise_level,split_mode,split_size,patch_overlap,colorspace,quantization,seed=${1-7}
 
   foreach {
-    W,H,siz:=w,h,whds
+    W,H,siz={w},{h},{whds}
     cspace=${"arg0 "$colorspace",rgb,cmyk,hcy,hsi,hsl,hsv,jzazbz,lab,lch,oklab,ycbcr,yiq"}
     if $colorspace rgb2$cspace fi
     s c foreach { im$>,iM$>:=im,iM } n 0,255 a c round
@@ -50764,7 +50764,7 @@ fx_jpeg_artefacts :
   repeat $!-3 { l[$>,-3--1] {
 
     # Decompose image into luma/chroma
-    l[0] { w,h:=w,h r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
+    l[0] { w,h={w},{h} r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
 
     repeat 3 {
       # Compute DCT of image with 8x8 blocks.
@@ -51013,7 +51013,7 @@ fx_stripes_y_preview :
 fx_8bits :
   remove_opacity
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     r $1%,$1%,1,100%,2
     +luminance sharpen. $2 otsu. 256 blend[-2,-1] shapeaverage0
     l. { s c quantize $3,1,1 a c }
@@ -52997,7 +52997,7 @@ fx_pack : skip "${8=}"
 
 fx_pack_preview : skip "${8=}"
   if !$! return fi
-  w,h:=w,h
+  w,h={w},{h}
   filled=0 repeat $! { filled={$>,$filled+w*h} }
   fx_pack $1,$2,$3,$4,$5,$6,0
   area:=wh
@@ -53128,7 +53128,7 @@ fx_tones2layers_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2012/24/11</i>.</small>")
 _fx_burn :
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     +norm
     fx_fourier_old. 2
     +rows. 0,{$h-1} r. $2%,$2%,1,100%,0,0,0.5,0.5 b. $3%
@@ -54258,7 +54258,7 @@ fx_marble :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/02/09</i>.</small>")
 fx_maze :
   foreach {
-    w,h:=w,h
+    w,h={w},{h}
     r. {100/$1}%,{100/$1}%,1,100%,2
     if !$3 f. 1
     elif $3==1 negate.
@@ -54353,7 +54353,7 @@ fx_shapes :
               $!" provided)." fi
     to_colormode[0-{$2-1}] ${max_s[0-{$2-1}]} remove_opacity[$2--1]
     repeat $!-$2 { l[0-{$2-1},{$2+$>}] {
-      norm. w,h:=w,h r. $3%,$3%,1,1,2
+      norm. w,h={w},{h} r. $3%,$3%,1,1,2
       s:=$4*max(round($w/w),round($h/h))
       r0,r1:=$s*[$5,$6]%
       repeat $2 { r:=round($r0+$>*($r1-$r0)/($2-1)) if $r +r[$>] $r,$r,1,100%,3 else 1,1 fi }
@@ -54364,12 +54364,12 @@ fx_shapes :
 
 fx_shapes_preview :
   if $1 foreach {
-    w,h:=w,h
+    w,h={w},{h}
     gui_split_preview "fx_shapes ${1-3},1,${5--2}",$-1
     r $w,$h,1,100%,0,0,0.5,0.5
   } else
     if $!>$2 repeat $!-$2 { l[0-{$2-1},{$2+$>}] {
-      w,h:=w,h
+      w,h={w},{h}
       +fx_shapes ${1-3},1,${5--2} rm..
       r. $w,$h,1,100%,0,0,0.5,0.5
     } } rm[0-{$2-1}]
@@ -54378,7 +54378,7 @@ fx_shapes_preview :
   fi
 
 _fx_shapes :
-  norm w,h:=w,h r $3%,$3%,1,1,2
+  norm w,h={w},{h} r $3%,$3%,1,1,2
   s:=(1+$10)*$4*max(round($w/w),round($h/h))
   r0,r1:=$s*[$5,$6]%
   repeat $2 { r:=round($r0+$>*($r1-$r0)/($2-1)) if $r _fx_shapes{$1-1}[] $r,$s else 1,1 fi }
@@ -54623,7 +54623,7 @@ fx_paper_preview :
 fx_pills :
   $=arg n:=$1?4:2
   foreach {
-    w,h:=w,h rm
+    w,h={w},{h} rm
     repeat $1?3:1 {
       $w,$h,1,1,"begin(
           const cyc = "${arg$n}"*pi;
@@ -54659,7 +54659,7 @@ fx_pills_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/16/05</i>.</small>")
 fx_plaid_texture :
   foreach {
-    w,h,s:=w,h,s
+    w,h,s={w},{h},{s}
     rows $1%
     b $5% sharpen $6
     r $w,$h,1,$s,2
@@ -54775,7 +54775,7 @@ fx_syntexturize_preview :
 _fx_syntexturize_matchpatch_preview :
   foreach {
     if $7 +b {20.5-$7/50}% -[0] [1] fc. ${average_vectors.} + c 0,255 fi
-    w,h:=w,h
+    w,h={w},{h}
     syntexturize_matchpatch 100%,100%,${3--1}
     to_rgba r $w,$h,1,4,0,0,0.5,0.5
   }
@@ -56293,7 +56293,7 @@ fx_imageobject3d :
   _fx_imageobject3d "_",$1 fx_render3d ${2--1}
 
 fx_imageobject3d_preview :
-  w,h:=w,h _fx_imageobject3d "_preview_",$1 fx_render3d $w,$h,${4--1}
+  w,h={w},{h} _fx_imageobject3d "_preview_",$1 fx_render3d $w,$h,${4--1}
 
 _fx_imageobject3d_0 : imageplane3d
 _fx_imageobject3d_1 : imagecube3d
@@ -56609,7 +56609,7 @@ fx_circle_art :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/13/11</i>.</small>")
 fx_equation_parametric :
   foreach {
-    w,h:=w,h rm
+    w,h={w},{h} rm
     $5,1,1,2,"t = $3 + x*($4-$3)/($5-1); !c?$1:$2"
     channels. 0,2
     ($8,$11^$9,$12^$10,$13) r. {-2,w},1,1,3,3 a c
@@ -56635,7 +56635,7 @@ fx_equation_parametric :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_equation_plot :
   foreach {
-    w,h:=w,h rm
+    w,h={w},{h} rm
     $4,1,1,$5,"X=$2+($3-$2)*x/($4-1);$1"
     dg $w,$h,$6,$7,$2,$3
   }
@@ -57167,7 +57167,7 @@ fx_memoakten_algorithm_a :
   Rf,Gf,Bf,Rb,Gb,Bb,R0,G0,B0,R1,G1,B1,R2,G2,B2,R3,G3,B3=${1-30}
   fa:=arg0($antialias,1,1.5,2)
   foreach {
-    nm={n} W,H:=w,h rm srand $seed
+    nm={n} W,H={w},{h} rm srand $seed
 
     # Extract non-overlapping points.
     $W,$H noise_poissondisk. {max(8,min(w,h)/max(2,$point_density))}
@@ -58223,7 +58223,7 @@ fx_animate_elevation3d : skip "${4=}"
                       "${7-8},${20-29},$9",$1,$2,{``$filename}
 
 fx_animate_elevation3d_preview : skip "${4=}"
-  w,h:=w,h
+  w,h={w},{h}
   _fx_elevation3d ${5-6},0
   fx_animate_preview fx_render3d,$w","$h",${10-19},$9",\
                                       $w","$h",${20-29},$9",0,$w,$h
@@ -58271,7 +58271,7 @@ fx_animate_extrude3d : skip "${4=}"
                       "${8-9},${21-30},$10",$1,$2,{``$filename}
 
 fx_animate_extrude3d_preview : skip "${4=}"
-  w,h:=w,h
+  w,h={w},{h}
   _fx_extrude3d ${5-7},0
   fx_animate_preview fx_render3d,$w","$h",${11-20},$10",\
                                       $w","$h",${21-30},$10",0,$w,$h
@@ -58317,7 +58317,7 @@ fx_animate_imageobject3d : skip "${4=}"
                       "${6-7},${19-28},$8",$1,$2,{``$filename}
 
 fx_animate_imageobject3d_preview : skip "${4=}"
-  w,h:=w,h
+  w,h={w},{h}
   _fx_imageobject3d "_preview_",$5
   fx_animate_preview fx_render3d,$w","$h",${9-18},$8",\
                                       $w","$h",${19-28},$8",0,$w,$h
@@ -58527,7 +58527,7 @@ fx_lavalampbw :
   if !$! (255;100^64;16^128;0) r. 512,512,1,3,3 fi
   foreach {
     remove_opacity
-    w,h:=w,h
+    w,h={w},{h}
     +r $4%,$4%,1,1,0 [-1]x{$1-1} rand[^0] 0,1 stencil[^0] $5,0
     if $3 [1] fi
     morph[^0] $2,$6,0
@@ -59083,7 +59083,7 @@ fx_custom_code : skip "${1=-skip ,}"
   um _fx_custom_code_start
 
 fx_custom_code_preview : skip "${1=-skip ,}"
-  w,h:=w,h
+  w,h={w},{h}
   l {
     ({'{/"$1"}'}) discard. 92,10 _gcp_arg={t} rm.
     if $6 gui_split_preview "fx_custom_code $_gcp_arg,${2--2}",${-3--1}
@@ -59372,7 +59372,7 @@ fx_image_sample :
   mv. 0
 
 fx_image_sample_preview :
-  w,h:=w,h rm
+  w,h={w},{h} rm
   fx_image_sample $1,{$w>$h?$w:0},{$h>$w?$h:0}
 
 #@gui Solve Maze : fx_solve_maze, fx_solve_maze_preview(1)
