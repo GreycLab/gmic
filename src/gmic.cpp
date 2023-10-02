@@ -13968,41 +13968,38 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 const bool is_rounded = s_equal[1]=='_';
                 s = s_equal + 1 + (is_rounded?1:0);
 
-                if (cimg_sscanf(s,"%lf%c",&value,&end)==1)
-                  varvalues_d.assign(1)[0] = is_rounded?gmic_round(value):value;
-                else { // Evaluate right-hand side as a math expression.
-                  CImg<T> &img = images.size()?images.back():CImg<T>::empty();
-                  double fast_res;
-                  if (img.__eval(s,fast_res)) // Try to get fast approximation for a single scalar first
-                    varvalues_d.assign(1)[0] = fast_res;
-                  else {
-                    if (*s!='[') {
-                      name.assign((unsigned int)std::strlen(s) + 4);
-                      *name = '['; name[1] = ';'; name[name._width - 2] = ']'; name.back() = 0;
-                      std::memcpy(name.data() + 2,s,name.width() - 4);
-                    } else CImg<char>::string(s).move_to(name);
-                    strreplace_fw(name);
+                // Evaluate right-hand side as a math expression.
+                CImg<T> &img = images.size()?images.back():CImg<T>::empty();
+                double fast_res;
+                if (img.__eval(s,fast_res)) // Try to get fast approximation for a single scalar first
+                  varvalues_d.assign(1)[0] = is_rounded?gmic_round(fast_res):fast_res;
+                else {
+                  if (*s!='[') {
+                    name.assign((unsigned int)std::strlen(s) + 4);
+                    *name = '['; name[1] = ';'; name[name._width - 2] = ']'; name.back() = 0;
+                    std::memcpy(name.data() + 2,s,name.width() - 4);
+                  } else CImg<char>::string(s).move_to(name);
+                  strreplace_fw(name);
 
-                    try { img.eval(varvalues_d,name,0,0,0,0,&images); }
-                    catch (CImgException &e) {
-                      name.assign(item,(unsigned int)(s_end_left - item + 1)).back() = 0;
-                      cimg::strellipsize(name,80,true);
-                      const char *const e_ptr = std::strstr(e.what(),": ");
-                      error(true,0,0,
-                            "Operator '%s=' on variable%s '%s': Invalid right-hand side; %s",
-                            s_operation,varnames.width()==1?"":"s",name.data(),e_ptr?e_ptr + 2:e.what());
-                    }
-                    if (varnames.width()>1 && varvalues_d.height()!=1 && varvalues_d.height()!=varnames.width()) {
-                      name.assign(item,(unsigned int)(s_end_left - item + 1)).back() = 0;
-                      cimg::strellipsize(name,80,true);
-                      cimg::strellipsize(s_equal + 1,gmic_use_argx,80,true);
-                      error(true,0,0,
-                            "Operator '%s=' on variable%s '%s': "
-                            "Right-hand side '%s' defines %s%d values for %s%d variables.",
-                            s_operation,varnames.size()!=1?"s":"",name.data(),argx,
-                            varvalues_d.height()<varnames.width()?"only ":"",varvalues_d.height(),
-                            varvalues_d.height()>varnames.width()?"only ":"",varnames.width());
-                    }
+                  try { img.eval(varvalues_d,name,0,0,0,0,&images); }
+                  catch (CImgException &e) {
+                    name.assign(item,(unsigned int)(s_end_left - item + 1)).back() = 0;
+                    cimg::strellipsize(name,80,true);
+                    const char *const e_ptr = std::strstr(e.what(),": ");
+                    error(true,0,0,
+                          "Operator '%s=' on variable%s '%s': Invalid right-hand side; %s",
+                          s_operation,varnames.width()==1?"":"s",name.data(),e_ptr?e_ptr + 2:e.what());
+                  }
+                  if (varnames.width()>1 && varvalues_d.height()!=1 && varvalues_d.height()!=varnames.width()) {
+                    name.assign(item,(unsigned int)(s_end_left - item + 1)).back() = 0;
+                    cimg::strellipsize(name,80,true);
+                    cimg::strellipsize(s_equal + 1,gmic_use_argx,80,true);
+                    error(true,0,0,
+                          "Operator '%s=' on variable%s '%s': "
+                          "Right-hand side '%s' defines %s%d values for %s%d variables.",
+                          s_operation,varnames.size()!=1?"s":"",name.data(),argx,
+                          varvalues_d.height()<varnames.width()?"only ":"",varvalues_d.height(),
+                          varvalues_d.height()>varnames.width()?"only ":"",varnames.width());
                   }
                 }
                 if (sep0==':' && varnames.width()==1) {
