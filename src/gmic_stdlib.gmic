@@ -4085,7 +4085,7 @@ _display_histogram : check "${1=0}>=0 && ${2=0}>=0 && ${3=256}>0" skip ${4=0%},$
     if ispercentage($5) M:=im+(iM-im)*$5 else M=$5 fi
     s:=s s c
     repeat $s { l[{-1-$>}] { s z histogram $3,$m,$M a z } }
-    a c f '"${7--1}"' vM:=iM s z
+    a c f "${7--1}" vM:=iM s z
     foreach {
       if $1>0" && "$2>0 wh=$1,$2 else wh:=[{*,u,v}]/2 fi
       $wh,1,{s},-255
@@ -4641,7 +4641,7 @@ echo_file : skip "${2='\n'}"
     a x
 
     # Compute slopes for splines.
-    +f '(j(0,1,0,0,0,1)-j(0,-1,0,0,0,1))/2' s. x max.. 0.01 /. .. rm.. a x
+    +f "(j(0,1,0,0,0,1) - j(0,-1,0,0,0,1))/2" s. x max.. 0.01 /. .. rm.. a x
 
     # Determine spline coefficients for each part of the curve.
     $size,1,1,1,-1
@@ -12507,7 +12507,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
   foreach {
     nm={n} im:=im header:=w,h,d,s,$im,$1!=0
     - $im y x ({{0,@-1}+1}) a x r 100%,3
-    f '>!y?i:y==1?(i(x,0)==i(x+1,0)?-1:x):(i(x-1,1)==-1?i(x-1,2)+1:1)'
+    f ">!y?i:y==1?(i(x,0)==i(x+1,0)?-1:x):(i(x-1,1)==-1?i(x-1,2)+1:1)"
     if $2 # Constrain maximum sequence length.
       transpose mirror x
       f. '>x==2?i:!x?(j(0,-1)==$2?1:i!=1?j(0,-1)+1:1):(i==-1&&j(-1)==$2?y:i)'
@@ -15175,12 +15175,12 @@ retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5
   skip "${2=hsv}"
   e[^-1] "Apply Retinex color consistency algorithm on image$?, with value offset $1, colorspace '$2', cuts ($3,$4)
           and sigmas (${5-7})."
-  if '$2'=='hsi' mode=hsi_i
-  elif '$2'=='hsv' mode=hsv_v
-  elif '$2'=='lab' mode=lab_l
-  elif '$2'=='rgb' mode=rgb
-  elif '$2'=='lrgb' mode=lrgb
-  elif '$2'=='ycbcr' mode=ycbcr_y
+  if ['$2']=='hsi' mode=hsi_i
+  elif ['$2']=='hsv' mode=hsv_v
+  elif ['$2']=='lab' mode=lab_l
+  elif ['$2']=='rgb' mode=rgb
+  elif ['$2']=='lrgb' mode=lrgb
+  elif ['$2']=='ycbcr' mode=ycbcr_y
   else error[0--2] "Command '$0': Invalid colorspace argument '$2'."
   fi
   ac "_retinex $1,${3--1}",$mode
@@ -17844,7 +17844,7 @@ dilate_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint
     ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);abs(v-i)<=$4?v:-1e20)" list={t}
     rm
   }
-  f 'max($list)'
+  f max($list)
 
 #@cli divergence
 #@cli : Compute divergence of selected vector fields.
@@ -17946,7 +17946,7 @@ erode_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint(
     ('{^}') rm.. replace_str "254,","(v=j(" replace_str ",255",",0,0,$5);abs(v-i)<=$4?v:1e20)" list={t}
     rm
   }
-  f 'min($list)'
+  f min($list)
 
 #@cli fft : _{ x | y | z }...{ x | y | z } : (+)
 #@cli : Compute the direct fourier transform (real and imaginary parts) of selected images,
@@ -18008,7 +18008,7 @@ _gradient :
   axes,scheme,boundary=${1=},${2=},${3=}
 
   # Display log message.
-  if '$axes'!=0 s_axes=" along axes '"$axes"'" fi
+  if ['$axes']!=0 s_axes=" along axes '"$axes"'" fi
   s0,s1,s2,s3,s4,s5,s6=backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet
   s_scheme=${s{$scheme+1}}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -18154,7 +18154,7 @@ hessian : skip "${1=},${2=}"
   }
 
   # Display log message.
-  if '$axes'!=0 s_axes=" along axes '"$axes"'" fi
+  if ['$axes']!=0 s_axes=" along axes '"$axes"'" fi
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   s_boundary=${s$boundary}
   e[^-1] "Compute hessian of image$?"$s_axes", with "$s_boundary" boundary conditions."
@@ -28657,7 +28657,7 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
 
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
-        if '$4'=='rmsprop'
+        if ['$4']=='rmsprop'
           name_g2=${name}_g2
           if !isint(${$name_g2}) +f[$name] 0 => $name_g2 fi
           _nn_trainer_data.=$name_g2,
@@ -30179,27 +30179,27 @@ pixelsort : check "(str1='${1=+}'; str1=='+' || str1=='-') && "\
     e[^-1] "Apply 'pixelsort' effect to image$? in "${s{['$1']=='+'}}" order, along axis $2."
   fi
   repeat $! {
-    if '$3'!=0 pass$3 0 else +compose_channels[$>] + fi
+    if ['$3']!=0 pass$3 0 else +compose_channels[$>] + fi
     if [w#1,h#1,d#1,s#1]!=[w#0,h#0,d#0,1]
       error[0--4] "Command 'pixelsort': Invalid specified sorting criterion (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
-    if '$4'!=0 pass$4 0 else [$>],[$>],[$>],1,1 fi
+    if ['$4']!=0 pass$4 0 else [$>],[$>],[$>],1,1 fi
     if [w#2,h#2,d#2,s#2]!=[w#0,h#0,d#0,1]
       error[0--4] "Command 'pixelsort': Invalid specified mask (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
     l[$>,-2,-1] {
       nm={0,n} >=. 50% mv.. 0 a c
-      if '$2'=='x';
+      if ['$2']=='x';
         _pixelsort $1
-      elif '$2'=='y';
+      elif ['$2']=='y';
         permute yxzc _pixelsort $1 permute yxzc
-      elif '$2'=='z';
+      elif ['$2']=='z';
         permute zxyc _pixelsort $1 permute yzxc
-      elif '$2'=='xy';
+      elif ['$2']=='xy';
         _pixelsort $1 permute yxzc _pixelsort $1 permute yxzc
-      elif '$2'=='yx';
+      elif ['$2']=='yx';
         permute yxzc _pixelsort $1 permute yxzc _pixelsort $1
       fi
       channels 1,{s-2} => $nm
@@ -34396,7 +34396,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
       }
       donation_charged_$e:=${donation_$e}+${charge_paypal_$e}+${charge_lila_$e}
 
-      if '${currency_$e}'=='eur'
+      if ['${currency_$e}']=='eur'
         donation_eur_$e=${donation_$e}
         donation_charged_eur_$e=${donation_charged_$e}
         donation_usd_$e:=${donation_$e}*$eur2usd
@@ -34440,7 +34440,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
           val_charged_usd=${donation_charged_usd_$e}
           nb_sponsors+=1
 
-          if '${currency_$e}'=='eur'
+          if ['${currency_$e}']=='eur'
             all_eur.=$asep_eur$val_eur
             all_charged_eur.=$asep_eur$val_charged_eur
             month_eur.=$msep_eur$val_eur
@@ -53215,7 +53215,7 @@ _fx_drop_shadow3d :
   point3d 0,0,1 r3d. 1,0,0,$1 r3d. 0,1,0,$2 r3d. 0,0,1,$3
   u,v,w:=i(0,8),i(0,9),i(0,10) rm.
   to_a channels 100% if im==iM return fi
-  +f 'X=x/w-0.5;Y=y/h-0.5;A=($7-$4*$7/100)*$w/(X*$u+Y*$v+$7*$w);A<0?1e8:A'
+  +f "X = x/w-0.5; Y = y/h-0.5; A = ($7-$4*$7/100)*$w/(X*$u+Y*$v+$7*$w); A<0?1e8:A"
   +*. 'y/h-0.5' *.. 'x/w-0.5' +.. {0.5-$5/100} +. {0.5-$6/100} *.. {w} *. {h}
   a[-2,-1] c warp[0] .,0,1,0 rm.
   b $8% n 0,$12 i.. ($9^$10^$11) r.. .,.,1,3 a[-2,-1] c
