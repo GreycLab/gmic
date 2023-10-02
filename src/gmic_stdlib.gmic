@@ -10070,7 +10070,7 @@ update_color_presets_html : check "isbool(${1=0})"
           "              <tr><td><span class=\"smaller\">"$title"</span></td></tr>"\n\
           "          </table></td>\n\n"')
       }
-      r={narg({/$presets})%4}
+      r:=narg({/$presets})%4
       if $r%4 ('"          <td colspan=\""{4-$r}"\"></td>\n"') fi
       ('"      </tr></table>"\n\n\
         "      <hr/><p style=\"text-align: center\">"\n\
@@ -10310,7 +10310,7 @@ update_gallery_html : check "isbool(${1=0})"
               if $is_input sp $sample,600 o image.jpg rm fi
 
               db3d m3d md3d f3d l3d sl3d ss3d 0.8 srand 512
-              etime=$| _run etime={_round($|-$etime,0.01)}
+              etime=$| _run etime:=_round($|-$etime,0.01)
 
               if $is_stylization
                 +l { _gallery o $filename_full,70 rm } k.
@@ -12505,7 +12505,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
   if $2 s=", with maximal sequence length "$2 else s="" fi
   e[^-1] "Compress image$? using RLE algorithm"${s{!$1}}$s"."
   foreach {
-    nm={n} im:=im header={w};{h};{d};{s};$im;{$1!=0}
+    nm={n} im:=im header:=w,h,d,s,$im,$1!=0
     - $im y x ({{0,@-1}+1}) a x r 100%,3
     f '>!y?i:y==1?(i(x,0)==i(x+1,0)?-1:x):(i(x-1,1)==-1?i(x-1,2)+1:1)'
     if $2 # Constrain maximum sequence length.
@@ -12519,7 +12519,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
     else # Encode for arbitrary data.
       *. -1 rv a x y discard -1 f '>i(0,y-1)<0&&i==0&&i(0,y+1)<0?-1:i' discard -1
     fi
-    i[0] ($header) a y => $nm
+    i[0] ($header:y) a y => $nm
   }
 
 #@cli cumulate : { x | y | z | c }...{ x | y | z | c } : (no arg) : (+)
@@ -13041,14 +13041,14 @@ _norm2 :
 #@cli : Normalize selected images such that they have a unit L2 norm.
 normalize_l2 :
   e[^-1] "Normalize image$?, s.t they have a unit L2 norm."
-  repeat $! { /[$>] {norm={$>,in};if(norm!=0,norm,1)} }
+  repeat $! { /[$>] {norm={$>,in};norm!=0?norm:1} }
 
 #@cli normalize_sum
 #@cli : Normalize selected images such that they have a unit sum.
 #@cli : $ image.jpg +histogram 256 normalize_sum[-1] display_graph[-1] 400,300
 normalize_sum :
   e[^-1] "Normalize image$?, s.t they have a unit sum."
-  repeat $! { /[$>] {sum={$>,is};if(sum!=0,sum,1)} }
+  repeat $! { /[$>] {sum={$>,is};sum!=0?sum:1} }
 
 #@cli not
 #@cli : Apply boolean not operation on selected images.
@@ -13386,7 +13386,7 @@ _apply_channels : check "isint(${3=0}) && $3>=0 && $3<=2"
   ('$/') id:="h=0;for(k=0,k<w,((h*=31)+=i[k++])%=1048576)" rm.
   _ac_$channels m _ac_precond$id:$_p m _ac_forward$id:$_f m _ac_backward$id:$_b
   foreach {
-    s={s} _ac_precond$id is_alpha:="s==2 || s==4"
+    s:=s _ac_precond$id is_alpha:="s==2 || s==4"
     if $is_alpha s c,{1-s} fi
     _ac_forward$id[0] a c
     sh $_s _ac. "$1"
@@ -13411,7 +13411,7 @@ _ac_list :
   else u "$1" fi
 
 _ac :
-  whds={w},{h},{d},{s} ${1--1} k[0] r $whds,0
+  whds:=w,h,d,s ${1--1} k[0] r $whds,0
 
 _ac_all : _p="" _f="" _b="" _s=0,100%
 
@@ -16038,7 +16038,7 @@ autocrop_seq : skip ${1=auto}
   is_auto:=['"$1"']=='auto'
   if $!==1 _autocrop$is_auto ${1--1} return fi
   coords=${autocrop_coords.\ ${1--1}}
-  x0,y0,z0,x1,y1,z1={[$coords][0,6]}
+  x0,y0,z0,x1,y1,z1:=[$coords][0,6]
   if $x0>$x1" || "$y0>$y1" || "$z0>$z1 i[0--2] 0 rm[1--1:2]
   else z $x0,$y0,$z0,$x1,$y1,$z1
   fi
@@ -16319,7 +16319,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
 
     s=${max_s[^-1]}
     repeat h {
-      i,xi,yi,wi,hi,ai,mxi,myi={crop(0,$>,w,1)}
+      i,xi,yi,wi,hi,ai,mxi,myi:=crop(0,$>,w,1)
       if $3||!$> i.. $w,$h,1,$s fi
       __montage[$i] ${ref$i},$xi,$yi,{max(1,$wi)},{max(1,$hi)},$ai,$mxi,$myi
       j.. [$i],$xi,$yi
@@ -18479,7 +18479,7 @@ inpaint_morpho : check ${is_image_arg\ $1}
   e[^-1] "Inpaint image$? by mask $1, using morphological operators."
   repeat $! {
     pass$1 0 l[$>,-1] {
-      nm={0,n} im={0,im} iM={0,iM} im1:=$im-1 iM1:=$iM+1
+      nm={0,n} im,iM={0,[im,iM]} im1,iM1:=$im-1,$iM+1
       channels. 0 ==. 0
       +f[0] $im1 j. [0],0,0,0,0,1,..
       do
@@ -18942,7 +18942,7 @@ opening_circ : check "$1>=0 && isbool(${2=0})"
 #@cli : Default values: 'min_percentile=0' and 'max_percentile=100'.
 #@cli : $ image.jpg shape_circle 11,11 +percentile[0] [1],25,75
 percentile : check ${"is_image_arg $1"}" && inrange(${2=0},0,100) && inrange(${3=100},0,100) && $2<=$3"
-  vmin,vmax={_[ispercentage($2)?100*$2:$2,ispercentage($3)?100*$3:$3]}
+  vmin,vmax:=_[ispercentage($2)?100*$2:$2,ispercentage($3)?100*$3:$3]
   e[^-1] "Apply percentile averaging filter to image$?, with mask $1, "\
          "min percentile "$vmin"% and max percentile "$vmax"%."
 
@@ -19363,7 +19363,7 @@ solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
   foreach {
     [0]
     repeat if($4,$4,int(max(log2(max(w,h))-1,1))) {
-      f={2^$<}
+      f:=2^$<
       r[1] {0,max(1,w/$f)},{0,max(1,h/$f)},1,100%,3
       +ri[0] [1],2 l. { $1 k[0] }
       repeat $2 { +laplacian.. -. .. *. {$3/max(1e-8,abs(im),abs(iM))} +[-3,-1] }
@@ -19426,9 +19426,9 @@ split_details : check "isint(${1=4}) && $1>0 && ${2=0}>=0 && ${3=0}>=0"
   else
     e[^-1] "Split image$? using $1 spatial scales with base scale $2 and detail scale $3."
     foreach {
-      ss={max(0.3,ispercentage($2)?$2*max(w,h):$2)}
-      se={max(0.3,ispercentage($3)?$3*max(w,h):$3)}
-      ds={$se-$ss}
+      ss:=max(0.3,ispercentage($2)?$2*max(w,h):$2)
+      se:=max(0.3,ispercentage($3)?$3*max(w,h):$3)
+      ds:=$se-$ss
       repeat $1-1 { +b. {$ss+$>*$ds/max(1,$1-2)} -.. . rv[-2,-1] }
     }
   fi
@@ -19481,7 +19481,7 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
   foreach {
 
     # Prepare input image data.
-    mM={[im,iM]} repeat s { sh. $> sum$>={is} var$>={iv} rm. } # Retrieve some stats for post-normalization.
+    mM:=im,iM repeat s { sh. $> sum$>:=is var$>:=iv rm. } # Retrieve some stats for post-normalization.
     nw:=ispercentage($1)?$1*w:$1
     nh:=ispercentage($2)?$2*h:$2
     repeat s { sum$>*={$nw*$nh/(w*h)} } # Re-estimate output (0,0) frequency.
@@ -19513,7 +19513,7 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
     # Get synthetised result and normalize it.
     repeat s { =.. ${sum$>},0,0,0,$> =. 0,0,0,0,$> }
     ifft rm.
-    repeat s { sh. $> avg={ia} -. $avg *. {sqrt(${var$>}/if(iv,iv,1))} +. $avg rm. }
+    repeat s { sh. $> avg:=ia -. $avg *. {sqrt(${var$>}/if(iv,iv,1))} +. $avg rm. }
     c $mM
   }
 
@@ -19527,12 +19527,12 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
   e[^-1] "Resynthetize $1x$2 version(s) of texture$? using a patch-matching algorithm with "\
          ${"if $3 u \"$3 \" else u auto- fi"}"scales, $4x$4 patches, blending size $5 and precision $6."
   foreach {
-    nb_scales={round(if($3,$3,log2(min(w,h)/16)),1,1)}
+    nb_scales:=round(if($3,$3,log2(min(w,h)/16)),1,1)
     width:=ispercentage($1)?round(w*$1,1,1):$1
     height:=ispercentage($2)?round(h*$2,1,1):$2
 
     repeat $nb_scales {
-      scale={100*(0.5^$<)}
+      scale:=100*(0.5^$<)
       +r[0] $scale%,$scale%,1,3,2
 
       if !$>
@@ -19569,7 +19569,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
       # Synthesis.
       psize={-2,min(w,h,$4)}
       repeat 1+$6*$< {
-        psynth={int(max(3,$5*$scale%))}
+        psynth:=int(max(3,$5*$scale%))
         +warp_patch.. .,$psynth
         matchpatch. ...,$psize,$psize,1,4,4,0,0,.. rm..
       }
@@ -19646,7 +19646,7 @@ unsharp_octave : check "${1=4}>0 && ${3=2}>=0" skip ${2=1},${4=0}
     +f 0 weight=0
     repeat $1 {
       +unsharp[0] {$2*2^-$<},$3,$4 *. {2^-$>}
-      weight+={2^-$>}
+      weight+=2^-$>
       +[1,-1]
     }
     rm[0] / $weight => $nm
@@ -19684,7 +19684,7 @@ watermark_fourier : check ${2=33}>0
   e[^-1] "Add textual watermark '$1' with size $2 in the frequency domain of image$?."
   i[0] 0 t[0] "$1",0,0,$2,1,1 >=[0] 0.5 autocrop[0] 0
   repeat $!-1 {
-    w2={int(w/2)} h2={int(h/2)}
+    w2,h2:=int([w,h]/2)
     fft.
     shift[-2,-1] $w2,$h2,0,0,2
     [0],[0],1,{s}
@@ -19737,7 +19737,7 @@ area_fg : check "$1>=0" skip ${2=0}
          ${arg0\ !$2,high,low}" connectivity."
   foreach {
     s c
-    foreach { label_fg $1,$2 nb={1+iM} +histogram $nb,0,{$nb-1} =. 0 map.. . rm. }
+    foreach { label_fg $1,$2 nb:=1+iM +histogram $nb,0,{$nb-1} =. 0 map.. . rm. }
     a c
   }
 
@@ -19811,11 +19811,11 @@ barycenter :
   norm
   foreach {
     nm={0,b}
-    sum={is}
+    sum:=is
     if $sum>0
-      if d>1 +* 'z' z={is} rm. else z=0 fi
-      if h>1 +* 'y' y={is} rm. else y=0 fi
-      * 'x' x={is} rm.
+      if d>1 +* 'z' z:=is rm. else z=0 fi
+      if h>1 +* 'y' y:=is rm. else y=0 fi
+      * 'x' x:=is rm.
       ({$x/$sum};{$y/$sum};{$z/$sum})
     else ({w/2},{h/2},{d/2}) rm..
     fi
@@ -19931,7 +19931,7 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
     C=0.05250053107738495
     to_rgb srgb2rgb rgb2ycbcr channels 1,2
     foreach {
-      whd={w},{h},{d} r {w*h*d},2,1,1,-1
+      whd:=w,h,d r {whd},2,1,1,-1
       s y -[0] $m0 -[1] $m1 a y
       i[0] ($A,$B;$B,$C) +m* rm[0]
       * s y + *. {$1-1} exp.
@@ -19946,8 +19946,8 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
       s[1] c
       m0={1,ia} -[1] $m0
       m1={2,ia} -[2] $m1
-      M={h} a[1,2] x +transpose[1] rv[1,2] m*[1,2] /[1] $M invert[1]
-      rv whd={w},{h},{d} r[1] {w*h*d},2,1,1,-1
+      M:=h a[1,2] x +transpose[1] rv[1,2] m*[1,2] /[1] $M invert[1]
+      rv whd:=w,h,d r[1] {whd},2,1,1,-1
       s[1] y -[1] $m0 -[2] $m1 a[1,2] y +m* rm[0]
       * s y + *. {$1-1} exp.
       r $whd,1,-1
@@ -19999,16 +19999,16 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
   percent_min:=ispercentage($2)
   percent_max:=ispercentage($3)
   foreach {
-    s={s}
-    r {w*h*d},{min(3,s)},1,1,-1
+    s:=s
+    r {whd},{min(3,s)},1,1,-1
     vmin=$2 vmax=$3
     if $percent_min||$percent_max
-      im={im} iM={iM}
-      vmin={if($percent_min,$im+($iM-$im)*$2,$2)}
-      vmax={if($percent_max,$im+($iM-$im)*$3,$3)}
+      im,iM:=im,iM
+      vmin:=if($percent_min,$im+($iM-$im)*$2,$2)
+      vmax:=if($percent_max,$im+($iM-$im)*$3,$3)
     fi
-    dv={$vmax-$vmin}
-    nb_levels={max(1,round(if($percent_nblevels,$1*(1+$vmax-$vmin),$1)))}
+    dv:=$vmax-$vmin
+    nb_levels:=max(1,round(if($percent_nblevels,$1*(1+$vmax-$vmin),$1)))
     f 'if(i>=$vmin&&i<=$vmax,if(i==$vmax,$nb_levels-1,int((i-$vmin)*$nb_levels/($vmax-$vmin))),-1)'
     pointcloud 1,$nb_levels,{if($s>1,$nb_levels,1)},{if($s>2,$nb_levels,1)}
   }
@@ -20035,7 +20035,7 @@ histogram_pointwise : skip ${2=0%},${3=100%}
     value0:=ispercentage($2)?im+(iM-im)*$2:$2
     value1:=ispercentage($3)?im+(iM-im)*$3:$3
     - $value0 * {$nb_levels/max(1,abs($value1-$value0))} c 0,{$nb_levels-1} round
-    w={w} h={h} d={d} r {w*h*d},{s},1,1,-1
+    w,h,d:=w,h,d r {whd},{s},1,1,-1
     i.. (0,{w-1}) r.. .,.,1,1,3 round..
     r[-2,-1] 300%,100%,1,1,4 shift. 1 +[-2,-1] y.
     i.. ({'CImg3d'},{h/3},{h/3})
@@ -20054,7 +20054,7 @@ hough : check "${1=512}>0 && ${2=$1}>0" skip ${3=1}
   slices 50% luminance
   foreach {
     nm={n}
-    rhomax={sqrt(w^2+h^2)/2}
+    rhomax:=sqrt(w^2+h^2)/2
     g (0,{w-1}) (0;{{-2,h}-1}) r[-2,-1] {-3,w},{-3,h},1,1,3 -.. {w/2} -. {h/2}
     complex2polar[-4--1] -. ... polar2complex[-2,-1] rm.
     +<. 0 *. {pi} +[-3,-1] abs. %.. {2*pi}
@@ -20150,7 +20150,7 @@ laar :
   foreach {
     +channels 0 gt. 0 => shape
     +cumulate[shape] xy => cumul
-    val={i[-1,2]}
+    val:=i[-1,2]
     if !$val res.=-1,-1,-1,-1        # All black
     elif $val==wh res.=0,0,{[w,h]-1} # All white
     else
@@ -20159,7 +20159,7 @@ laar :
       Rin,Rout=0,{min(w,h)+1}
       P0,P=
       do
-        Rmid={int(($Rin+$Rout)/2)}
+        Rmid:=int(($Rin+$Rout)/2)
         Q=${_laar\ $Rmid,$Rmid,$P}
         if narg($Q) Rin=$Rmid P0=$Q P=$Q else Rout=$Rmid P= fi
       while $Rin!=$Rout-1
@@ -20169,12 +20169,12 @@ laar :
       maxA,maxW,maxH=0 maxcoords=
       P=$P0 W,H=$Rin
       for $H>0 {
-        A={$W*$H} if $A>$maxA maxA,maxW,maxH=$A,$W,$H maxP={[$P][0,2]} fi
-        nW={$W+1}
+        A:=$W*$H if $A>$maxA maxA,maxW,maxH=$A,$W,$H maxP:=[$P][0,2] fi
+        nW:=$W+1
         Q=${_laar\ $nW,$H,$P}
         if narg($Q) W=$nW P=$Q
         elif $H>1
-          pH={$H-1}
+          pH:=$H-1
           Q=${_laar\ $nW,$pH}
           if narg($Q) W,H=$nW,$pH P=$Q
           else H-=2 P=
@@ -20186,12 +20186,12 @@ laar :
       # Step 3: Compute largest rectangle, for H>W.
       P=$P0 W,H=$Rin
       for $W>0 {
-        A={$W*$H} if $A>$maxA maxA,maxW,maxH=$A,$W,$H maxP={[$P][0,2]} fi
-        nH={$H+1}
+        A:=$W*$H if $A>$maxA maxA,maxW,maxH=$A,$W,$H maxP:=[$P][0,2] fi
+        nH:=$H+1
         Q=${_laar\ $W,$nH,$P}
         if narg($Q) H=$nH P=$Q
         elif $W>1
-          pW={$W-1}
+          pW:=$W-1
           Q=${_laar\ $pW,$nH}
           if narg($Q) W,H=$pW,$nH P=$Q
           else W-=2 P=
@@ -20371,8 +20371,8 @@ patches2img : check "isint($1) && $1>0 && isint($2) && $2>0 && ${3=0}>=0 && (${4
 #@cli : $ image.jpg +patches 64,64,1,153,124,0,184,240,0,217,126,0,275,38,0
 patches : check "isint($1) && $1>0 && isint($2) && $2>0 && isint($3) && $3>0"
   e[^-1] "Extract $1x$2x$3 patches from image$?, at locations (${4--1})."
-  (${4--1}) r. 3,{w/3},1,1,-1 permute. yzcx N={w}
-  H={int(sqrt(w))} W={round(w/$H,1,1)} r. {$W*$H},1,1,3,0 r. $W,$H,1,3,-1
+  (${4--1}) r. 3,{w/3},1,1,-1 permute. yzcx N:=w
+  H:=int(sqrt(w)) W:=round(w/$H,1,1) r. {$W*$H},1,1,3,0 r. $W,$H,1,3,-1
   r. {w*$1},{h*$2},{d*$3}
   $1,$2,$3,1,x-{int($1/2)} +f. y-{int($2/2)} +f. z-{int($3/2)} a[-3--1] c ri. ..,0,2 +[-2,-1]
   repeat $!-1 { warp[$>] .,0,0,0 } rm.
@@ -20437,9 +20437,9 @@ pointcloud : check "${1=0}<=3 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
       # Retrieve coordinates and color info.
       if s<3 channels 0,2 fi
       if s<4 100%,1,1,1,1 a[-2,-1] c fi
-      sh. 0   round. siz_x={!$2?iM+1:$2}
-      sh.. 1  round. siz_y={!$3?iM+1:$3}
-      sh... 2 round. siz_z={!$4?iM+1:$4}
+      sh. 0   round. siz_x:=!$2?iM+1:$2
+      sh.. 1  round. siz_y:=!$3?iM+1:$3
+      sh... 2 round. siz_z:=!$4?iM+1:$4
       rm[-3--1]
 
       # Draw point cloud.
@@ -20520,7 +20520,7 @@ psnr_matrix : check "${1=255}>0"
 segment_watershed : check "${1=2}>=0"
   e[^-1] "Apply watershed segmentation on image$?, with edge threshold $1."
   foreach {
-    min={im}
+    min:=im
     + {1+$min} +gradient_norm
     +f. "i<$1 && i<j(1) && i<j(-1) && i<j(0,1) && i<j(0,-1) && (d<=1?1:i<j(0,0,1) && i<j(0,0,-1))"
     *[-3,-1] *. -1 watershed.. . rm.
@@ -20535,7 +20535,7 @@ shape2bump : check "isint(${1=256}) && $1>=0 && ${2=0.75}>=0 && $2<=1 && isnum($
          ${"if $1 u \"resolution $1\" else u \"full resolution\" fi"}", avg/max weight $2, dilation $3
           and smoothness $4."
   foreach {
-    slices 0 channels 100% > 0 siz={[w,h]}
+    slices 0 channels 100% > 0 siz:=w,h
 
     # Generate skeleton (fast method).
     distance 0 + $3
@@ -20757,7 +20757,7 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
   repeat $! { pass$1 0 l[$>,-1] {
     r 100%,100%,100%,${-max_s} s c
     repeat $!/2 { l[$>,{-1-$<}] {
-      +sqr[1] val={is} rm. # Sum J(p,q)^2
+      +sqr[1] val:=is rm. # Sum J(p,q)^2
       +sqr[0] +f[1] 1
       if $2
         convolve_fft.. . rm. # Sum I(x+p,y+q)^2
@@ -21066,21 +21066,21 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
     pattern=0xFFFFFFFF color=${7--1}
   fi
   if !$5" || "!$6 return fi
-  mx={min($1,$2)} Mx={max($1,$2)}
-  my={min($3,$4)} My={max($3,$4)}
+  mx:=min($1,$2) Mx:=max($1,$2)
+  my:=min($3,$4) My:=max($3,$4)
 
   # Start drawing axes on selected images.
   foreach {
-    w1={0,w-1} h1={0,h-1}
+    w1,h1={0,[w,h]-1}
 
     # Determine number of axes tick marks.
-    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx={arg(1,$u)} deltax={arg(2,$u)} fi
-    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy={arg(1,$u)} deltay={arg(2,$u)} fi
+    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg(1,$u) deltax:=arg(2,$u) fi
+    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg(1,$u) deltay:=arg(2,$u) fi
 
     # Draw x-axis.
     is_0x=0
-    if $3==$4 y0=$3 else y0={v=-($my)*$h1/($My-$my);if($4>=$3,v,$h1-v)} fi
-    sty={if($y0>$h1-$5,-1,1)}
+    if $3==$4 y0=$3 else y0:=v=-($my)*$h1/($My-$my);if($4>=$3,v,$h1-v) fi
+    sty:=if($y0>$h1-$5,-1,1)
 
     if $1!=$2" && "$y0>=0" && "$y0<=$h1
       line 0,$y0,$w1,$y0,$6,$pattern,$color
@@ -21091,9 +21091,9 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
       rm[-2,-1]
 
       i=0 do
-        val={_$offx+$i*$deltax} i+=1
+        val:=_$offx+$i*$deltax i+=1
         if $val>=$mx" && "$val<=$Mx
-          x={v=($val-$mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v)}
+          x:=v=($val-$mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v)
           line $x,{$y0-1},$x,{$y0+1},$6,$pattern,$color
           if $val
             0 t. $val,0,0,$5,1,1 100%,100%,1,[0] fc. $color
@@ -21106,8 +21106,8 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
 
     # Draw y-axis.
     is_0y=0
-    if $1==$2 x0=$1 else x0={v=-($mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v)} fi
-    stx={if($x0>$w1-$5,-1,1)}
+    if $1==$2 x0=$1 else x0:=v=-($mx)*$w1/($Mx-$mx);if($2>=$1,v,$w1-v) fi
+    stx:=if($x0>$w1-$5,-1,1)
 
     if $3!=$4" && "$x0>=0" && "$x0<=$w1
       line $x0,0,$x0,$h1,$6,$pattern,$color
@@ -21118,9 +21118,9 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
       rm[-2,-1]
 
       i=0 do
-        val={_$offy+$i*$deltay} i+=1
+        val:=_$offy+$i*$deltay i+=1
         if $val>=$my" && "$val<=$My
-          y={v=($val-$my)*$h1/($My-$my);if($4>=$3,v,$h1-v)}
+          y:=v=($val-$my)*$h1/($My-$my);if($4>=$3,v,$h1-v)
           line {$x0-1},$y,{$x0+1},$y,$6,$pattern,$color
           if $val
             0 t. $val,0,0,$5,1,1 100%,100%,1,[0] fc. $color
@@ -21141,12 +21141,12 @@ axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
 # Return optimal (offset0,scale) to display input (min,max) values.
 # $1 = min value, $2 = max value, $3 = max number of tags(>=1).
 _axes :
-  n={max(1,round($3))}
-  d={abs($2-$1)/($n-1)}
-  s={10^round(log10($d))}
-  m={round(min($1,$2),$s,-1)}
-  M={round(max($1,$2),$s,1)}
-  do N={1+round(($M-$m)/$s,1,1)} s={2*$s} while $N>$n
+  n:=max(1,round($3))
+  d:=abs($2-$1)/($n-1)
+  s:=10^round(log10($d))
+  m:=round(min($1,$2),$s,-1)
+  M:=round(max($1,$2),$s,1)
+  do N:=1+round(($M-$m)/$s,1,1) s:=2*$s while $N>$n
   u $m,{$s/2}
 
 #@cli ball : _size>0, _R,_G,_B,0<=_specular_light<=8,0<=_specular_size<=8,_shadow>=0
@@ -21220,7 +21220,7 @@ chessboard : check "$1>0 && ${2=$1}>0" skip ${3=0},${4=0},${5=0},${6=1},${7=0},$
           colors (${7--1})."
   i[0] (${7--1}) r[0] {{0,w}/2},1,1,2,-1 permute[0] cyzx
   repeat $!-1 {
-    w={w} h={h} theta={$5*pi/180}
+    w,h:=w,h theta:=$5*pi/180
     ($3,{$3+$w-1};$3,{$3+$w-1}^$4,$4;{$4+$h-1},{$4+$h-1}) r. $w,$h,1,2,3
     r. {$w*$h},2,1,1,-1
     i.. ({cos($theta)},{-sin($theta)};{sin($theta)},{cos($theta)}) m*[-2,-1]
@@ -21302,14 +21302,14 @@ close_binary :
           ${"arg0 !$8,allowed,\"not allowed\""}"."
 
   # Set algorithm parameters.
-  endpoint_threshold={100-$1}       # in [0,100]
-  endpoint_connectivity={round($2)}
+  endpoint_threshold:=100-$1        # in [0,100]
+  endpoint_connectivity:=round($2)
   spline_distmax=$3                 # in px
   segment_distmax=$4                # in px
   spline_anglemax=$5                # in deg
   spline_roundness=$6
   area_min=$7                       # in px
-  allow_self_intersections={!!$8}   # 0 or 1
+  allow_self_intersections:=!!$8    # 0 or 1
 
   # Define useful functions to navigate through edgels.
   _edgel_lib="
@@ -21519,7 +21519,7 @@ close_binary :
 
       # Find and connect splines.
       [strokes] => new_strokes
-      ind_strokes={$allow_self_intersections?$strokes:$new_strokes}
+      ind_strokes:=$allow_self_intersections?$strokes:$new_strokes
 
       if narg($keypairs)
         f[keypairs] ">"$_edgel_lib"
@@ -21775,18 +21775,18 @@ close_binary :
 #@cli : $$ https://gmic.eu/oldtutorial/_gaussian
 gaussian : skip ${1=15%},${2=$1},${3=0}
   e[^-1] "Draw centered gaussian on image$? with standard deviations ($1,$2) and angle $3 deg."
-  u={cos($3*pi/180)}
-  v={sin($3*pi/180)}
-  dmax={max(w,h)}
-  if isnum($1) l1=$1 else l1={${1}10000*$dmax/100} fi
-  if isnum($2) l2=$2 else l2={${2}10000*$dmax/100} fi
-  l1={1/(2*max(1/3,$l1)^2)}
-  l2={1/(2*max(1/3,$l2)^2)}
-  A={$l1*$u*$u+$l2*$v*$v}
-  B={($l1-$l2)*$u*$v}
-  C={$l1*$v*$v+$l2*$u*$u}
+  u:=cos($3*pi/180)
+  v:=sin($3*pi/180)
+  dmax:=max(w,h)
+  if isnum($1) l1=$1 else l1:=${1}10000*$dmax/100 fi
+  if isnum($2) l2=$2 else l2:=${2}10000*$dmax/100 fi
+  l1:=1/(2*max(1/3,$l1)^2)
+  l2:=1/(2*max(1/3,$l2)^2)
+  A:=$l1*$u*$u+$l2*$v*$v
+  B:=($l1-$l2)*$u*$v
+  C:=$l1*$v*$v+$l2*$u*$u
   foreach {
-    nm={n} w={w} h={h} ds={d},{s} rm
+    nm={n} w,h:=w,h ds={d},{s} rm
     $w,$h,1,1,'X=x-{($w-1)/2};Y=y-{($h-1)/2};$A*X*X+2*$B*X*Y+$C*Y*Y'
     * -1 exp r $w,$h,$ds => $nm
   }
@@ -21925,14 +21925,14 @@ thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
     y0:=ispercentage($2)?(h-1)*$2:$2
     x1:=ispercentage($3)?(w-1)*$3:$3
     y1:=ispercentage($4)?(h-1)*$4:$4
-    coords={"
+    coords:="
       const th = "$5";
       P0 = [ "$x0","$y0" ];
       P1 = [ "$x1","$y1" ];
       dP = P1 - P0;
       n = [ -dP[1],dP[0] ]/max(1e-8,norm(dP))*th/2;
       round([ P0 - n, P0 + n, P1 + n, P1 - n ]);
-    "}
+    "
     polygon 4,$coords,${6--1}
   } fi
 
@@ -21971,7 +21971,7 @@ thickspline : skip ${9=3},${10=1},${11=0}
 marble : skip ${1=0.2},${2=0.1},${3=45},${4=0},${5=0.4},${6=0.8},${7=0.6},${8=1.1},${9=0%},${10=100%}
   e[^-1] "Render marble like pattern on image$?, with image weight $1, pattern weight $2, angle $3 deg.,
           amplitude $4, sharpness $5, anisotropy $6, alpha $7, sigma $8, and cut ($9,$10)."
-  sx={$2*sin($3*pi/180)} sy={$2*cos($3*pi/180)} f sin(x*$sx+y*$sy+i*$1)
+  sx:=$2*sin($3*pi/180) sy:=$2*cos($3*pi/180) f sin(x*$sx+y*$sy+i*$1)
   if $4 smooth $4,$5,$6,$7,$8 fi
   c $9,$10 n 0,255
 
@@ -22135,7 +22135,7 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
                       isint(${4=1}) && isint(${5=7}) && $5>=0 && isint(${6=256}) && $6>=0"
   e[^-1] "Randomly pack image$? with $1 scales, minimum scale $2%, "${arg0\ $3,no,180\"\ \"deg.,90\"\ \"deg.,any}\
          " rotation, spacing $4, precision $5 and $6 maximum iterations."
-  N={$!-1} is_first_time=1
+  N:=$!-1 is_first_time=1
   foreach { r 100%,100%,1,{max(2,s)} } # Ensure all images have a binary shape mask.
 
   # Start iterations over scales.
@@ -22146,9 +22146,9 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
     # Generate all sprites for current scale.
     ratio={if($1>1,$2+(100-$2)*$</($1-1),100)}%
     repeat $N { +l[{1+$>}] {
-      w={w*$ratio} h={h*$ratio}
+      w,h:=[w,h]*$ratio
       if $w<1||$h<1 rm
-      else r $w,$h,1,100%,2 sh. 100% !=. 0 area{1+$>}={is} rm.
+      else r $w,$h,1,100%,2 sh. 100% !=. 0 area{1+$>}:=is rm.
       fi
     } }
 
@@ -22156,11 +22156,11 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
     l[0,{$N+1}--1] { repeat $6 {
 
       # Compute reference sprite.
-      ind={1+($>%$N)} area=${area$ind}
+      ind:=1+($>%$N) area=${area$ind}
       if $3==0 [$ind]
       elif $3==1 +rotate[$ind] {round(u)*180}
       elif $3==2 +rotate[$ind] {round(u(3))*90}
-      else +rotate[$ind] {u*360} sh. 100% !=. 0 area={is} rm.
+      else +rotate[$ind] {u*360} sh. 100% !=. 0 area:=is rm.
       fi
 
       # Get binary map of possible locations.
@@ -22245,18 +22245,18 @@ piechart : check $1>=0
     (${6--1:5}) normalize_sum.
     theta=0
     if w>1 repeat w {
-      xe={0.5*{-2,w}*(1+cos($theta))}
-      ye={0.5*{-2,h}*(1+sin($theta))}
+      xe:=0.5*{-2,w}*(1+cos($theta))
+      ye:=0.5*{-2,h}*(1+sin($theta))
       line.. 50%,50%,$xe,$ye
-      theta-={2*pi*i($>)}
+      theta-=2*pi*i($>)
     } fi
     theta=0
     repeat w { if i($>)
-      ntheta={$theta-2*pi*i($>)}
-      xc={0.5*{-2,w}*(1+0.5*cos(0.5*($ntheta+$theta)))}
-      yc={0.5*{-2,h}*(1+0.5*sin(0.5*($ntheta+$theta)))}
-      xf={0.5*{-2,w}*(1+0.8*cos(0.5*($ntheta+$theta)))}
-      yf={0.5*{-2,h}*(1+0.8*sin(0.5*($ntheta+$theta)))}
+      ntheta:=$theta-2*pi*i($>)
+      xc:=0.5*{-2,w}*(1+0.5*cos(0.5*($ntheta+$theta)))
+      yc:=0.5*{-2,h}*(1+0.5*sin(0.5*($ntheta+$theta)))
+      xf:=0.5*{-2,w}*(1+0.8*cos(0.5*($ntheta+$theta)))
+      yf:=0.5*{-2,h}*(1+0.8*sin(0.5*($ntheta+$theta)))
       flood.. $xf,$yf,0,0,0,1,${arg{7+5*$>}},${arg{8+5*$>}},${arg{9+5*$>}}
       if abs($ntheta-$theta)>0.1
         0 t. ${arg{5+5*$>}},0,0,$1,1,1
@@ -22289,10 +22289,10 @@ piechart : check $1>=0
 polka_dots : check $1>=0 skip ${2=20},${3=50},${4=50},${5=0},${6=10},${7=1},${8=1},${9=255}
   e[^-1] "Draw polka dots on image$?, with diameter $1, density $2, angle $3 deg., shift ($4,$5), aliasing $6 and
           shading $7."
-  theta={$5*pi/180} ct={cos($theta)} st={sin($theta)} mid1={$1/2} mid2={$2/2}
+  theta:=$5*pi/180 ct:=cos($theta) st:=sin($theta) mid1:=$1/2 mid2:=$2/2
   i[0] (${9--1}) y[0] c
   repeat $!-1 {
-    WH={max(w,h)}
+    WH:=max(w,h)
     100%,100%,100%,1,"xn = 100*x/"$WH"-$3; yn = 100*y/"$WH"-$4; \
                       xr = xn*"$ct"-yn*"$st"; yr = xn*"$st"+yn*"$ct"; \
                       xc = xr%$2-"$mid2"; yc = yr%$2-"$mid2"; \
@@ -22367,19 +22367,19 @@ rorschach : check "${1=5%}>=0 && isint(${2=1}) && $2>=0 && $2<=3"
    rand -1,1 b $1 >= 0
   elif $2==1 # X-mirroring.
     foreach {
-      w={w}
+      w:=w
       columns 0,{w/2-1} rand -1,1 b $1 >= 0
       +mirror x if $w%2 columns. 1,100% fi a x
     }
   elif $2==2 # Y-mirroring.
     foreach {
-      h={h}
+      h:=h
       rows 0,{h/2-1} rand -1,1 b $1 >= 0
       +mirror y if $h%2 rows. 1,100% fi a y
     }
   elif $2==3 # XY-mirroring.
     foreach {
-      w={w} h={h}
+      w,h:=w,h
       z 0,0,{w/2-1},{h/2-1} rand -1,1 b $1 >= 0
       +mirror x if $w%2 columns. 1,100% fi a x
       +mirror y if $h%2 rows. 1,100% fi a y
@@ -22425,9 +22425,9 @@ tetraedron_shade :
   e[^-1] "Draw tetraderon ($1,$2,$3)-($4,$5,$6)-($7,$8,$9)-($10,$11,$12) with interpolated colors in image$?."
 
   # Find bounding box.
-  xm={round(min($1,$4,$7,$10),1,-1)} xM={round(max($1,$4,$7,$10),1,1)}
-  ym={round(min($2,$5,$8,$11),1,-1)} yM={round(max($2,$5,$8,$11),1,1)}
-  zm={round(min($3,$6,$9,$12),1,-1)} zM={round(max($3,$6,$9,$12),1,1)}
+  xm:=round(min($1,$4,$7,$10),1,-1) xM:=round(max($1,$4,$7,$10),1,1)
+  ym:=round(min($2,$5,$8,$11),1,-1) yM:=round(max($2,$5,$8,$11),1,1)
+  zm:=round(min($3,$6,$9,$12),1,-1) zM:=round(max($3,$6,$9,$12),1,1)
 
   # Find color mapping coefficients for each vertex.
   l[] { (${1-3},1;${4-6},1;${7-9},1;${10-12},1) (${13--1}) r. {w/4},4,1,1,-1 s. x solve[^0] [0] rm[0] a c }
@@ -22509,7 +22509,7 @@ _text_outline : skip "${1=}"
   e[0--3] "Draw outlined text '$1' at position ($2,$3) on image$?, with font "$str", outline $5, opacity $6 and
            color ${7--1}."
   if ['"$1"']==0 return fi
-  sepx,sepy={"sx=['$2']; sy=['$3']; [sx[size(sx)-1], sy[size(sy)-1]]"}
+  sepx,sepy:="sx=['$2']; sy=['$3']; [sx[size(sx)-1], sy[size(sy)-1]]"
   if !$is_custom_font is_fontpercent:=ispercentage($4) fi
   xpos={`s=['"$2"'];$sepx==_'~'||$sepx==_'%'?s[0,size(s)-1]:s`}
   ypos={`s=['"$3"'];$sepy==_'~'||$sepy==_'%'?s[0,size(s)-1]:s`}
@@ -22541,15 +22541,15 @@ triangle_shade :
   l[] { ($1,$2,1;$3,$4,1;$5,$6,1) (${7--1}) r. {w/3},3,1,1,-1 s. x solve[^0] [0] rm[0] a c }
 
   # Pre-compute coefs to test point inside triangle.
-  invarea={(-$4*$5+$2*(-$3+$5)+$1*($2-$6)+$3*$6)^-1}
-  s1={$2*$5-$1*$6} s2={$6-$2} s3={$1-$5}
-  t1={$1*$4-$2*$3} t2={$2-$4} t3={$3-$1}
+  invarea:=(-$4*$5+$2*(-$3+$5)+$1*($2-$6)+$3*$6)^-1
+  s1:=$2*$5-$1*$6 s2:=$6-$2 s3:=$1-$5
+  t1:=$1*$4-$2*$3 t2:=$2-$4 t3:=$3-$1
 
   # Begin drawing on each selected image.
   repeat $!-1 {
     l[$>,-1] {
       repeat s#0 {
-        a={i(0,0,0,$>)} b={i(0,1,0,$>)} c={i(0,2,0,$>)}
+        a:=i(0,0,0,$>) b:=i(0,1,0,$>) c:=i(0,2,0,$>)
         sh[0] $>
         f. "s = "$invarea"*("$s1" + "$s2"*x + "$s3"*y);
             t = "$invarea"*("$t1" + "$t2"*x + "$t3"*y);
@@ -22567,8 +22567,8 @@ triangle_shade :
 truchet : check "isint(${1=32}) && $1>0 && ${2=3}>=0" skip ${3=1}
   e[^-1] "Render "${arg0\ !$3,curved,straight}" truchet patterns in image$?, with scale $1 and radius $2."
   foreach {
-    nm={n} w={w} h={h} s={s} rm
-    $1,$1 = 1,0,0 = 1,100%,100% distance 1,{1+$3} M={int(iM/2)} # Generate truchet pattern and its mirrored version.
+    nm={n} w,h,s:=w,h,s rm
+    $1,$1 = 1,0,0 = 1,100%,100% distance 1,{1+$3} M:=int(iM/2) # Generate truchet pattern and its mirrored version.
     ir {$M-$2/2-($1%2)},{$M+$2/2} +mirror y a x
     {round($w/$1,1,1)},{round($h/$1,1,1)} rand. 0,1 >=. 50% r. {w*$1},{h*$1} *. $1
     channels. 0,1 (0,{$1-1}) r. $1,$1,1,1,3 +transpose. a[-2,-1] c ri. ..,0,2 +[-2,-1]
@@ -22612,8 +22612,8 @@ yinyang :
   e[^-1] "Draw yin-yang symbol on image$?."
   f 0
   foreach {
-    s={s} channels 0
-    r={round(0.95*min(w,h)/4)}
+    s:=s channels 0
+    r:=round(0.95*min(w,h)/4)
     +line 50%,0,50%,50%,1,2 ellipse. 50%,{h/2-$r},$r,$r,0,1,2
     line. 50%,50%,50%,100%,1,1 ellipse. 50%,{h/2+$r},$r,$r,0,1,1
     flood. {w/2-$r},50%,0,0,0,1,2
@@ -22815,7 +22815,7 @@ _cross3d :
 #@cli : $ torus3d 10,1 +apply_matrix3d {mul(rot(1,0,1,-15°),[1,0,0,0,2,0,0,0,8],3)} double3d 0
 apply_matrix3d :
   e[^-1] "Apply 3x3 matrix (${1-3};${4-6};${7-9}) to 3D object$?."
-  foreach { nbp={i[6]} sh 8,{8+3*$nbp-1},0,0 r. 3,$nbp,1,1,-1 3,3,1,1,$* transpose. m*[-2,-1] rm. }
+  foreach { nbp:=i[6] sh 8,{8+3*$nbp-1},0,0 r. 3,$nbp,1,1,-1 3,3,1,1,$* transpose. m*[-2,-1] rm. }
 
 #@cli array3d : size_x>=1,_size_y>=1,_size_z>=1,_offset_x[%],_offset_y[%],_offset_y[%]
 #@cli : Duplicate a 3D object along the X,Y and Z axes.
@@ -22836,26 +22836,26 @@ array3d : check "isint($1) && $1>0 && isint(${2=1}) && $2>0 && isint(${3=1}) && 
     # Duplicate along X.
     off=0 repeat int(log2($1)) {
       ++3d. {2^$>*$dx} +3d. ..
-      if !($1&(2^$>)) rm.. else +3d.. $off off+={2^$>*$dx} fi
+      if !($1&(2^$>)) rm.. else +3d.. $off off+=2^$>*$dx fi
     } +3d. $off +3d
 
     # Duplicate along Y.
     off=0 repeat int(log2($2)) {
       ++3d. 0,{2^$>*$dy} +3d. ..
-      if !($2&(2^$>)) rm.. else +3d.. 0,$off off+={2^$>*$dy} fi
+      if !($2&(2^$>)) rm.. else +3d.. 0,$off off+=2^$>*$dy fi
     } +3d. 0,$off +3d
 
     # Duplicate along Z.
     off=0 repeat int(log2($3)) {
       ++3d. 0,0,{2^$>*$dz} +3d. ..
-      if !($3&(2^$>)) rm.. else +3d.. 0,0,$off off+={2^$>*$dz} fi
+      if !($3&(2^$>)) rm.. else +3d.. 0,0,$off off+=2^$>*$dz fi
     } +3d. 0,0,$off +3d
   }
 
 #@cli arrow3d : x0,y0,z0,x1,y1,z1,_radius[%]>=0,_head_length[%]>=0,_head_radius[%]>=0
 #@cli : Input 3D arrow with specified starting and ending 3D points.
 #@cli : Default values: 'radius=5%', 'head_length=25%' and 'head_radius=15%'.
-#@cli : $ repeat 10 { a={$>*2*pi/10} arrow3d 0,0,0,{cos($a)},{sin($a)},-0.5 } +3d
+#@cli : $ repeat 10 { a:=$>*2*pi/10 arrow3d 0,0,0,{cos($a)},{sin($a)},-0.5 } +3d
 +arrow3d : check "${7=5%}>=0 && ${8=25%}>=0 && ${9=15%}>=0"
   e[^-1] "Input 3D arrow, from (${1-3}) to (${4-6}), with radius $7, head length $8 and head radius $9."
 
@@ -22883,7 +22883,7 @@ array3d : check "isint($1) && $1>0 && isint(${2=1}) && $2>0 && isint(${3=1}) && 
 +axes3d : check "${4=23}>0 && isbool(${8=1})" skip ${1=1},${2=$1},${3=$2},"${5=X},${6=Y},${7=Z}"
   e[^-1] "Input 3D axes with sizes ($1,$2,$3)."
   l[] {
-    m={max(abs($1),abs($2),abs($3))/40} m2={2*$m} m3={1.2*$m2}
+    m:=max(abs($1),abs($2),abs($3))/40 m2:=2*$m m3:=1.2*$m2
     if $1 line3d 0,0,0,$1,0,0 fi
     if $2 line3d 0,0,0,0,$2,0 fi
     if $3 line3d 0,0,0,0,0,$3 fi
@@ -22993,10 +22993,10 @@ chainring3d : check "isint(${1=16}) && $1>=3 && ${2=0.5}>0 && ${3=1}>0 && ${4=1}
 #@cli circle3d : _x0,_y0,_z0,_radius>=0
 #@cli : Input 3D circle at specified coordinates.
 #@cli : Default values: 'x0=y0=z0=0' and 'radius=1'.
-#@cli : $ repeat 500 { a={$>*pi/250} circle3d {cos(3*$a)},{sin(2*$a)},0,{$a/50} color3d[-1] ${-rgb},0.4 } add3d
+#@cli : $ repeat 500 { a:=$>*pi/250 circle3d {cos(3*$a)},{sin(2*$a)},0,{$a/50} color3d[-1] ${-rgb},0.4 } add3d
 +circle3d : skip ${1=0},${2=0},${3=0},${4=1}
   e[^-1] "Input 3D circle at position ($1,$2,$3) with radius $4."
-  r={$4/sqrt(3)}
+  r:=$4/sqrt(3)
   1,24,1,1,\
   67.5,73.5,109.5,103.5,51.5,100.5,2,1,\
   {$1-$r},{$2-$r},{$3-$r},\
@@ -23124,7 +23124,7 @@ cubes3d : check ${1=1}>=0
       l[1] { = {8*i[0]} = {6*i[1]},0,1 }  # Header
       l[2] { # Vertices
         r 3,{h/3},1,1,-1
-        half={$1/2}
+        half:=$1/2
         - '$half,0,0' ++ '$1,0,0' a x
         - '0,$half,0' ++ '0,$1,0' a x
         - '0,0,$half' ++ '0,0,$1' a x
@@ -23194,7 +23194,7 @@ cubes3d : check ${1=1}>=0
         !$is_closed?da_push(P0[0],P0[1],P0[2],P[0],P[1],P[2]);
         da_freeze();
       )" rm[-5--3,-1]
-    nbv:={h/3}
+    nbv:=h/3
 
     0 $nb_sides,{$resolution-1+$is_closed},1,1,"begin(nbp = 0);
       b0 = y*$nb_sides; b1 = ((y + 1)%$resolution)*$nb_sides; nx = (x+1)%$nb_sides;
@@ -23222,8 +23222,8 @@ cubes3d : check ${1=1}>=0
 +cylinder3d : check ${3=24}>0 skip ${1=1},${2=1}
   e[^-1] "Input 3D cylinder, with radius $1, height $2 and $3 subdivisions."
   l[] {
-    N={round($3)}
-    nbv,nbp={[2*$N+2,3*$N]}
+    N:=round($3)
+    nbv,nbp:=2*$N+2,3*$N
     ({0.5+[{'CImg3d'}]})
     ($nbv,$nbp)
     1,$nbv,1,3,"Z = (y<="$N"?0:$2); ang = ((y%("$N"+1))-1)*2*pi/"$N";
