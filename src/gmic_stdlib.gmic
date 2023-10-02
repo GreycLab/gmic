@@ -43325,7 +43325,7 @@ fx_paint_with_brush :
     # Compute contour map and sequence of brush strokes.
     +gradient_norm.. 100%,100%,1,2,[x,y] a[-2,-1] c r. {wh},1,1,3,-1 sort. +,x
     r. {max(0.01,$precision)}%,1,1,3 z. {(100-$background_threshold)*$details_threshold%}%,$details_threshold%
-    if $painting_order==0 100% rand. 0,100 rv[-2,-1] a[-2,-1] c sort. +,x channels. 1,100%
+    if !$painting_order 100% rand. 0,100 rv[-2,-1] a[-2,-1] c sort. +,x channels. 1,100%
     elif $painting_order==2 mirror. x
     fi
 
@@ -43695,7 +43695,7 @@ fx_quadtree :
     permute. cyzx
     channels[0] 0,3 f[0] 0
 
-    if $mode==0 # Squares
+    if !$mode # Squares
       f. ">
         rectangle(ind,P0,P1,opacity,color) = (
           _P0 = P0;
@@ -44080,7 +44080,7 @@ fx_stylize :
   # Insert style image at the end of the list.
   if $1<2 # Custom style (top or bottom layer)
     if $!<2 error "At least two layers are required in this mode." fi
-    ind_first:=$1==0?1:0 ind_style:=$1==0?0:-1 N:=$!-1 sh[$ind_style]
+    ind_first:=!$1 ind_style:=$1?-1:0 N:=$!-1 sh[$ind_style]
   else
     ind_first=0 N=$! ind_style= _fx_stylize {$1-2}
   fi
@@ -44108,7 +44108,7 @@ fx_stylize :
 fx_stylize_preview :
   if $1<2 # Custom style (top or bottom layer)
     if $!<2 gui_warning_preview "At least two layers are required when specifying a custom style." return fi
-    ind_first:=$1==0?1:0 ind_style:=$1==0?0:-1 N:=$!-1 sh[$ind_style]
+    ind_first:=!$1 ind_style:=$1?-1:0 N:=$!-1 sh[$ind_style]
   else
     ind_first=0 N=$! ind_style= _fx_stylize {$1-2}
   fi
@@ -44463,7 +44463,7 @@ fx_recolorize_preview :
 fx_bwrecolorize :
   remove_opacity
   if $4 n 0,255 fi
-  if $5==0   # User-defined gradient
+  if !$5   # User-defined gradient
     (${9--2}) r. 4,$8,1,1,-1 permute. yzcx
   elif $5==1 # Black to white
     (0,255^0,255^0,255^255,255)
@@ -44474,7 +44474,7 @@ fx_bwrecolorize :
   else       # Solarize
     (0,359^1,1^1,1^255,255) r. 256,1,1,4,3 sh. 0,2 hsv2rgb. rm.
   fi
-  if $6==0 r. 256,1,1,4,1
+  if !$6 r. 256,1,1,4,1
   elif $6==1 r. 256,1,1,4,3
   elif $6==2 r. 256,1,1,4,5 c. 0,255
   else r. 256,1,1,4,6
@@ -44616,10 +44616,10 @@ _fx_colorize_lineart_smart :
     => strokes
 
     # Retrieve closed binary shape.
-    _keep_keycoords:=$-1==0
+    _keep_keycoords:=!$-1
     [strokes] close_binary. ${9-14},$min_color_area,$16 => new_strokes
 
-    if $-1==0 # Render estimated geometry
+    if !$-1 # Render estimated geometry
       +negate[strokes] *. 255 to_rgb.
       +-[new_strokes] [strokes] dilate. 2
       100%,100%,1,3,[0,128,255] j... .,0,0,0,0,1,.. rm[-2,-1]
@@ -44699,7 +44699,7 @@ _fx_colorize_lineart_smart :
         fi
       } fi
 
-    elif $-1==0 # Preview : Colored geometry
+    elif !$-1 # Preview : Colored geometry
       if $is_alpha channels[$ind_lineart] 100% negate[$ind_lineart] fi to_rgb[$ind_lineart]
       n[$ind_lineart] 180,255
       blend[$ind_lineart,$ind_colors] multiply
@@ -44748,7 +44748,7 @@ fx_colorize_lineart :
   l[$selection] {
 
     # Format input layers.
-    if $1==0            # Color strokes + drawing
+    if !$1              # Color strokes + drawing
     elif $1==1 rv       # Drawing + color strokes
     elif $1==2 rm[1]    # Color strokes + extrapolated colors + drawing
     elif $1==3 rm[2] rv # Drawing + color strokes + extrapolated colors.
@@ -44763,7 +44763,7 @@ fx_colorize_lineart :
     # Here we have 'color strokes + drawing + extrapolated colors'.
 
     # Format output layers.
-    if $2==0 rm[0] rv blend[0,1] multiply ind=-1
+    if !$2 rm[0] rv blend[0,1] multiply ind=-1
     elif $2==1 rm[0] rv ind=0
     elif $2==2 rm[0] ind=1
     elif $2==3 rv[1,2] ind=1
@@ -44980,7 +44980,7 @@ fx_ink_wash :
     split_opacity l[0] {
       fx_pencilbw. $1,$2,0,0,0
       if $3==1 continue
-      elif $3==0 fx_smooth_anisotropic. 60,$4,$5,$6,1.1,0.8,30,2,0,1,1,0,1,16
+      elif !$3 fx_smooth_anisotropic. 60,$4,$5,$6,1.1,0.8,30,2,0,1,1,0,1,16
       fi
       if $7==1 normalize_local. 2,6,5,24,1,0,255
       elif $7==2 normalize_local. 2,6,5,24,1,0,255 fx_contrast_swm 2,0,0.512
@@ -45247,7 +45247,7 @@ fx_boost_chroma :
         lab2rgb. rgb2srgb
       else
         rgb2ycbcr.
-        if $2==0 sh. 1 sh.. 2 equalize[-2,-1] rm[-2,-1]
+        if !$2 sh. 1 sh.. 2 equalize[-2,-1] rm[-2,-1]
         else sh. 1,2 equalize. rm.
         fi
         ycbcr2rgb.
@@ -45342,7 +45342,7 @@ fx_channel_processing_preview :
 fx_channels2layers :
   foreach {
     nm=${-gui_layer_name} to_rgb
-    if $1==0 # RGB
+    if !$1 # RGB
       s[0] c
       r[0] 100%,100%,1,3,0,0,0,0,0,0 =>[0] "name("$nm" [red]),mode(add)"
       r[1] 100%,100%,1,3,0,0,0,0,0,0.5 =>[1] "name("$nm" [green]),mode(add)"
@@ -46232,7 +46232,7 @@ fx_color_presets_preview :
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_color_presets $*",${39-41}
   fi
-  u "{$1}{$2}_"{2*($1==0)}\
+  u "{$1}{$2}_"{2*!$1}\
         "{$3}_"{2*($1==1)}\
         "{$4}_"{2*($1==2)}\
         "{$5}_"{2*($1==3)}\
@@ -46264,7 +46264,7 @@ fx_color_presets_preview :
         "{$31}_"{1+!$index}\
         "{$32}{$33}{$34}{$35}{$36}{$37}{$38}{$39}{$40,$41}"\
         "{0}_"{2*($1!=28)}\
-        "{0}_"{2*($1==0)}\
+        "{0}_"{2*!$1}\
         "{0}_"{2*($1==1)}\
         "{0}_"{2*($1==2)}\
         "{0}_"{2*($1==3)}\
@@ -46755,7 +46755,7 @@ fx_colormap :
 
 fx_colormap_preview :
   gui_split_preview "fx_colormap $*",${-3--1}
-  is_ad,is_cu:=2*[$1==0||$1==1,$1==1]
+  is_ad,is_cu:=2*[isbool($1),$1==1]
   u "{$1}{$2}"\
     "{$3}_"$is_ad\
     "{$4}_"$is_cu\
@@ -47221,7 +47221,7 @@ fx_hsv_equalizer :
 
 fx_hsv_equalizer_preview :
   l. {
-    if $1==0 fx_hsv_equalizer $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+    if !$1 fx_hsv_equalizer $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
     else
       to_rgb rgb2hsv s c
       (0,359) r. ..,{{0,h}/10},1,1,3 . f. 1       #create lower band
@@ -47793,7 +47793,7 @@ fx_select_color :
     select_color[1] $2%,$color
     if $4 +area. 0,0 <=. {round($4^1.5)} inpaint.. .,0,3 rm. fi # Fill holes.
     b[1] $3 n[1] 0,255
-    if $9==0 sh[0] 100% &. [1]                      # Selected colors.
+    if !$9 sh[0] 100% &. [1]                        # Selected colors.
     elif $9==1 rm[0]                                # Selected mask.
     elif $9==2 -[1] 255 *[1] -1 sh[0] 100% &. [1]   # Rejected colors.
     elif $9==3 rm[0] - 255 * -1                     # Rejected mask.
@@ -47830,7 +47830,7 @@ fx_selective_desaturation :
       c[1] 0,1
       rgb2hsl[0] s[0] c
       mM:=im,iM repeat $6 { guided. [2],1,0.1 } n. $mM # Regularization step.
-      if $7==0 *[1,-1]
+      if !$7 *[1,-1]
       elif $7==1 ($1^$2^$3) rgb2hsl. *[1] {i[1]} rm[-2,-1]
       else rv[1,-1] rm.
       fi
@@ -48039,7 +48039,7 @@ fx_simulate_film_preview :
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_simulate_film $*",${19-21}
   fi
-  u "{$1}{$2}_"{2*($1==0)}\
+  u "{$1}{$2}_"{2*!$1}\
         "{$3}_"{2*($1==1)}\
         "{$4}_"{2*($1==2)}\
         "{$5}_"{2*($1==3)}\
@@ -48493,7 +48493,7 @@ fx_custom_transform :
     f. "$1"
     s. c a[-4--2] c f.. "$2"
     s.. c f[-4] "$3" f... "$4" f.. "$5" f. "$6"
-    if $7==0 a[-4--1] c c. 0,255
+    if !$7 a[-4--1] c c. 0,255
     elif $7==1 a[-4--2] c n.. 0,255 c. 0,255 a[-2,-1] c
     else a[-4--1] c n. 0,255
     fi
@@ -48659,7 +48659,7 @@ fx_distance :
   foreach {
     split_opacity l[0] {
       distance $1,$2
-      if $3==0 c 0,255
+      if !$3 c 0,255
       elif $3==1 n 0,255
       else % $4 n 0,255
       fi
@@ -48942,7 +48942,7 @@ fx_morphological_preview :
 
 _fx_morphological :
   ('"$4"') f. "(i>=_'0' && i<=_'9') || i==_',' || i==_';'?i:-1" discard. -1 ckernel={t} rm.
-  if $2==0
+  if !$2
     m "my_erode: erode $""1"
     m "my_dilate: dilate $""1"
     m "my_opening : opening $""1"
@@ -48964,7 +48964,7 @@ _fx_morphological :
     m "my_closing : skip $""1 ("$ckernel") closing[^-1] . rm."
   fi
   # Erosion
-  if $1==0 m "my_action : my_erode $3"
+  if !$1 m "my_action : my_erode $3"
   # Dilation
   elif $1==1 m "my_action : my_dilate $3"
   # Opening
@@ -49144,7 +49144,7 @@ fx_custom_deformation :
 fx_circle_transform :
   foreach {
     to_rgba r:=dx=($3-$1)*(w-1)%;dy=($4-$2)*(h-1)%;norm(dx,dy)
-    if $7==0 cond="i(X,Y,z,c,$8,$9)"
+    if !$7 cond="i(X,Y,z,c,$8,$9)"
     elif $7==1 cond="N<$r?i(X,Y,z,c,$8,$9):i"
     else cond="N>$r?i(X,Y,z,c,$8,$9):i"
     fi
@@ -49528,7 +49528,7 @@ fx_warp_perspective :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_transform_polar :
   if !$6 to_a fi
-  if $1==0
+  if !$1
     transform_polar "$4","$5",$2%,$3%,$6
   elif $1==1
     transform_polar R-r,a,$2%,$3%,$6
@@ -50497,7 +50497,7 @@ fx_chromatic_aberrations :
   }
 
 _fx_chromatic_aberrations :
-  if $1==0 # Shift
+  if !$1 # Shift
     100%,100%,1,2,[$2,$3]
   elif $1==1 # Radial
     100%,100%,1,2,"
@@ -51048,8 +51048,8 @@ fx_pixelsort :
   _fx_pixelsort ${1-8},0
 
 _fx_pixelsort :
-  foreach[0-{$4==0?-2:-1}] {
-    if $3==0 +to_rgb channels. 0             # Red
+  foreach[0-{$4?-1:-2}] {
+    if !$3 +to_rgb channels. 0               # Red
     elif $3==1 +to_rgb channels. 1           # Green
     elif $3==2 +to_rgb channels. 2           # Blue
     elif $3==3 +compose_channels +           # Intensity
@@ -51061,7 +51061,7 @@ _fx_pixelsort :
     elif $3==9 +compose_channels max         # Maximum
     else 100%,100%,1,1 rand. 0,100           # Random
     fi
-    if $4==0 pass. 0 norm.
+    if !$4 pass. 0 norm.
     elif $4==1 .
     elif $4==2 +gradient_norm[0]
     else +rand. 0,100
@@ -51069,7 +51069,7 @@ _fx_pixelsort :
     b. $7% ir. $5%,{$6+0.01}%
     if $8 ==. 0 fi
     if $9 k. * 255
-    else pixelsort[0] {`$1?_'+':_'-'`},{`$2==0?'x':$2==1?'y':$2==2?'xy':'yx'`},[1],[2] k[0]
+    else pixelsort[0] {`$1?_'+':_'-'`},{`!$2?'x':$2==1?'y':$2==2?'xy':'yx'`},[1],[2] k[0]
     fi
   }
 
@@ -51245,7 +51245,7 @@ _fx_self_glitching :
        const boundary = $7;
      );
      val = sign*((2^$1)*j(shift) + $2);
-     ($4==0?(val + i):
+     (!$4?(val + i):
       $4==1?(val * i):
       $4==2?(val & i):
       $4==3?(val | i):
@@ -51282,7 +51282,7 @@ fx_streak :
         if ($7>=1, while (i(#-1,ixf=round(xf),iyf=round(yf)), ++lf; xf-=dx; yf-=dy)); # Forward
         ixb = xb = x; iyb = yb = y; lb = 0;
         if ($7!=1, while (i(#-1,ixb=round(xb),iyb=round(yb)), ++lb; xb+=dx; yb+=dy)); # Backward
-        $7==0?I(ixb,iyb):
+        !$7?I(ixb,iyb):
         $7==1?I(ixf,iyf):
         $7==2?(lf<lb?I(ixf,iyf):I(ixb,iyb)):
         (lb*lb*I(ixf,iyf) + lf*lf*I(ixb,iyb))/(lb^2+lf^2);
@@ -51407,7 +51407,7 @@ _fx_equalize_details :
 
 __fx_equalize_details :
   threshold $1,1
-  if $3==0 b {$2*$5/2}
+  if !$3 b {$2*$5/2}
   elif $3==1
     if $2>0
       m,M:=im,iM n. 0,255
@@ -51961,7 +51961,7 @@ fx_sharpen_texture_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 _fx_unsharp :
   repeat $! { repeat $8 {
-    if $1==0 +b. $2 else +bilateral. $2,$3 fi
+    if !$1 +b. $2 else +bilateral. $2,$3 fi
     -. .. *. -$4
     +norm. >=. $5% ri. .. *[-2,-1]
     if $9 *. -1 fi
@@ -52174,13 +52174,13 @@ fx_droste :
       rm.
       xshift,yshift,alpha:=w*$10/100,h*$11/100,-$12*pi/180
       ca,sa,w2,h2:=cos($alpha)/$13,sin($alpha)/$13,w/2,h/2
-      f. 'i==-32767?i:(X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;c==0?$w2-$xshift+X*$ca-Y*$sa:$h2-$yshift+X*$sa+Y*$ca)'
-      if $14==0 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:i' rm.
+      f. 'i==-32767?i:(X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;!c?$w2-$xshift+X*$ca-Y*$sa:$h2-$yshift+X*$sa+Y*$ca)'
+      if !$14 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:i' rm.
       elif $14==1 sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:i' rm.
       elif $14==2 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
       else sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
       fi
-      if $16<2 warp.. .,0,{$16==0},$15 rm.
+      if $16<2 warp.. .,0,{!$16},$15 rm.
       else
         +warp.. .,0,1,$15 rm..
         if $16==3 rv[-2,-1] fi
@@ -52583,7 +52583,7 @@ fx_fourier_old : skip ${2=0}
     if !$is_ifft
       l[$i] {
         fftpolar +.. 1 log.. m0,M0,m1,M1:=im#0,iM#0,im#1,iM#1 n[-2,-1] 0,255
-        if $1==0 ({'$magic,$m0,$M0,$m1,$M1'},0) y. a x
+        if !$1 ({'$magic,$m0,$M0,$m1,$M1'},0) y. a x
         elif $1==1 ({'$magic,$m0,$M0,$m1,$M1'},0) a y
         else ({'$magic,$m0,$M0'},0) a[-3,-1] y ({'$magic,$m1,$M1'},0) a[-2,-1] y
         fi
@@ -52710,7 +52710,7 @@ fx_blend_fade :
   if $!==1 return fi
   to_colormode 4
   _gb_fwd $7
-  if $1==0 [0],[0],1,1,"$11"
+  if !$1 [0],[0],1,1,"$11"
   else _fx_blend_fade$1 $8,$9,$10 r. [0],[0],1,1,3
   fi
   n. {-($!-2)*$3},{($!-2)*(1+$3)}
@@ -52817,7 +52817,7 @@ fx_blend :
        softburn,softdodge,softlight,screen,stamp,subtract,value,\
        vividlight,xor}
   m "_blend_custom_formula : f. \"a = i#0/255; b = i#1/255; 255*cut(($5),0,1)\""
-  if $2==0 repeat int($!/2) { l[$>,{$>+1}] { rv blend $mode,{$3%} } } # Two-by-two.
+  if !$2 repeat int($!/2) { l[$>,{$>+1}] { rv blend $mode,{$3%} } } # Two-by-two.
   elif $2==1" && "$!>1 blend[^0] [0],$mode,{$3%},0 rm[0]  # Top layer is top for all blends.
   elif $2==2" && "$!>1 blend[^-1] .,$mode,{$3%},1 rm. # Bottom layer is bottom for all blends.
   fi
@@ -53161,7 +53161,7 @@ fx_contrast_swm :
     split_opacity l[0] {
      +luminance to_rgb
       blur_xy[1] $1,$1
-      if $2==0 negate[1] fi
+      if !$2 negate[1] fi
       rv blend hardlight,$3
     }
     a c
@@ -53394,7 +53394,7 @@ fx_illuminate_shape2d :
       if !$preview_shapes" || "0$_is_preview!=1
         gui_set_layer_mode[0] $blending_mode
         gui_set_layer_opacity[0] $opacity
-        if $!>1" && "(0$_output_mode==0" || "0$_is_preview==1)
+        if $!>1" && "(!0$_output_mode" || "0$_is_preview==1)
           if $keep_input_bg" && "!0$_is_preview . fi
           gui_merge_layers[0,1]
         else k[0] fi
@@ -53509,7 +53509,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
 
   # Generate 2D binary shape and corresponding bumpmap
   nm={n}
-  if $input_type==0 # Single opaque shape
+  if !$input_type # Single opaque shape
     to_rgba
     +channels. 100% >. 0 .
     select_color... 0,$gR,$gG,$gB,$gA
@@ -53541,7 +53541,7 @@ _fx_illuminate_shape2d : # Input selection must contains a single image. Output 
   if 0$_is_preview" && "$preview_shapes
     if $input_type==3 k[0] else k. fi
     +dilate. 3
-    label_fg.. 0 srand 0 {-2,iM+1},1,1,3,'x==0?[0,0,0]:x==1?[255,255,255]:u([255,255,255])' map... . rm.
+    label_fg.. 0 srand 0 {-2,iM+1},1,1,3,'!x?[0,0,0]:x==1?[255,255,255]:u([255,255,255])' map... . rm.
     *. 255 a c
     return
   fi
@@ -53835,7 +53835,7 @@ fx_slice_luminosity_preview :
   foreach {
     to_rgb
     _fx_slice_luminosity $*
-    if $3==0 rm[0] channels {s-1}
+    if !$3 rm[0] channels {s-1}
     elif $3==1 100%,100%,1,1,128 a[0,-1] c r. 100%,100%,1,4 blend alpha
     elif $3==2 a c
     else +. 96 c. 0,255 a c
@@ -53843,7 +53843,7 @@ fx_slice_luminosity_preview :
   }
 
 _fx_slice_luminosity :
-  if $1==0 +compose_channels + /. 3
+  if !$1 +compose_channels + /. 3
   elif $1==1 +luminance
   elif $1==2 +srgb2lab8. channels. 0
   else +compose_channels max
@@ -54088,7 +54088,7 @@ fx_generic_halftone :
     ws,hs:=round([w,h]*$afact)
     delta:=max(2,round($afact*(100-$shape_density))) # Inter-shape distance
 
-    if $shape==0 # Custom (top layer)
+    if !$shape # Custom (top layer)
       pass[0] 0
       if {s==2||s==4} channels. 100% else l. { s c + } fi
       r. {0,[w,h]},1,1,0,0 r. $ws,$hs,1,1,3
@@ -54097,7 +54097,7 @@ fx_generic_halftone :
       if $shape_density distance. 1 round. mod. $delta ==. 0 fi
 
     elif $shape==1 # Dots
-      if $shape_layout==0 # Layout: Regular
+      if !$shape_layout # Layout: Regular
         {round([$ws,$hs]/$delta)},1,1,1 r. $ws,$hs,1,1,4,0,0.5,0.5
       elif $shape_layout==1 # Layout: Semi-Regular
         $ws,$hs noise_poissondisk $delta
@@ -54260,7 +54260,7 @@ fx_maze :
   foreach {
     w,h:=w,h
     r. {100/$1}%,{100/$1}%,1,100%,2
-    if $3==0 f. 1
+    if !$3 f. 1
     elif $3==1 negate.
     fi
     maze_mask. $1 dilate. $2 *. 255
@@ -54281,7 +54281,7 @@ fx_mineral_mosaic :
     to_rgb
     +b $3 segment_watershed. $1 +norm.
     area. 0 +<=. {$2^2} inpaint.. . rm. label.
-    +f[0] 'c==0?x:y' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
+    +f[0] '!c?x:y' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
     -[-3,-1] rm[0,-2] channels. 0,1
     alpha:=$5*pi/180 sh. 0 *. {cos($alpha)} rm. sh. 1 *. {sin($alpha)} rm. compose_channels. +
     normalize_local. 1000 n. -$4,$4
@@ -54479,7 +54479,7 @@ fx_pack_ellipses :
     if $isotropy_levels quantize.. $isotropy_levels,0,-1 fi
     n.. $isotropy_min,$isotropy_max =>.. isotropy
 
-    if $orientation_ellipse==0 f[isotropy] 1 .
+    if !$orientation_ellipse f[isotropy] 1 .
     elif $orientation_ellipse==1 +f. "[ atan2(-i0,i1),0 ]"
     else +f. "[ atan2(i1,i0),0 ]"
     fi
@@ -54792,7 +54792,7 @@ fx_syntexturize_matchpatch_preview :
 fx_rorschach :
   foreach {
     remove_opacity
-    if $3==0 norm rorschach $1%,$2 * 255
+    if !$3 norm rorschach $1%,$2 * 255
     elif $3==1 to_rgb rorschach $1%,$2 * 255
     else +norm rorschach. $1%,$2 blend shapeaverage0
     fi
@@ -54977,7 +54977,7 @@ fx_stars :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_stencil :
-  if $5==0 norm stencil $1,$2,$3
+  if !$5 norm stencil $1,$2,$3
   elif $5==1 stencil $1,$2,$3
   else repeat $! {
     +norm. stencil. $1,$2,$3 >=. 50% blend[-2,-1] shapeaverage0
@@ -55037,7 +55037,7 @@ fx_triangular_pattern :
       is_hole = u<=$8%;
       repeat(da_size(),k,
         F = I[k]; P0 = F[0,2]; P1 = F[2,2]; P2 = F[4,2];
-        n==0?(
+        !n?(
           P = lerp(P1,P2,0.5);
           da_push([ P0,P,P1 ]);
           I[k] = [ P0,P,P2 ];
@@ -55125,7 +55125,7 @@ fx_voronoi :
 
     # Flat.
     if $5<3
-      1,1,1,4,"$5==0?[0,0,0,255]:$5==1?[255,255,255,255]:$5==2?[128,128,128,0]"
+      1,1,1,4,"!$5?[0,0,0,255]:$5==1?[255,255,255,255]:$5==2?[128,128,128,0]"
       r. [0],[0],1,4 rv[0,-1] rm.
     else
       blend[0] .,shapeaverage
@@ -55529,7 +55529,7 @@ fx_smooth_guided : skip ${6=0},${7=0}
     if $!<2 gui_warning_preview "Missing guide layer" return fi
     store[{$1==1?0:-1}] _guide
   fi
-  if $1==0 # Self-guide
+  if !$1 # Self-guide
     ac "repeat $4 { guided $2,$3 }",$5
   elif $1==1 # Guide as top layer
     ac "$_guide r. ..,..,1,100%,0,0,0.5,0.5 repeat $4 { guided[0] [1],$2,$3 } rm.",$5
@@ -55829,7 +55829,7 @@ fx_smooth_skin :
 
       # Skin detection step.
       if $5 +balance_gamma 128,128,128 else [0] fi
-      if $1==0 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
+      if !$1 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
       M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
 
       # Details smoothing step.
@@ -55842,7 +55842,7 @@ fx_smooth_skin :
   }
 
 _fx_smooth_skin :
-  if $1==0 b {$2/8}%
+  if !$1 b {$2/8}%
   else
     if $2>0
       m,M:=im,iM n 0,255
@@ -55853,8 +55853,8 @@ _fx_smooth_skin :
   fi
 
 fx_smooth_skin_preview :
-  if $14==0
-    gui_split_preview "if $5 balance_gamma 128,128,128 fi if $1==0 f 1 elif $1==2 detect_skin $2 "\
+  if !$14
+    gui_split_preview "if $5 balance_gamma 128,128,128 fi if !$1 f 1 elif $1==2 detect_skin $2 "\
      "else detect_skin $2,$6%,$7%,$8% fi M:=iM b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
   elif $14==1
     gui_split_preview "b $9%",${-3--1}
@@ -55998,7 +55998,7 @@ fx_scalenx :
     if $2==1 rgb2ycbcr[0] round[0]
     elif $2==2 rgb2lab8[0] round[0]
     fi
-    if $1==0 scale2x
+    if !$1 scale2x
     elif $1==1 scale3x
     elif $1==2 scale2x scale2x
     elif $1==3 scale3x scale2x
@@ -56554,16 +56554,16 @@ fx_ball_preview :
 fx_circle_art :
   if !$2 f 0 return fi
   # Generate object coordinates.
-  if $1==0 # Random.
+  if !$1 # Random
     {round(2*($2^1.5))}
     rand. -1,1 +rand. -1,1 +rand. -$3,$3 a[-3--1] y
-  else # Spiral.
+  else # Spiral
     {max(1,round($2*$7))}
     t0:=$8*2*pi/180
     rows. 0,2
     f. "r = x/(w-1);
         t = 2*pi*x/$2;
-        y==0?(r^$11)*cos("$t0"+$13*t):
+        !y?(r^$11)*cos("$t0"+$13*t):
         y==1?(r^$12)*sin("$t0"+$14*t):
              max(0,$3*($9+($10-$9)*r))"
   fi
@@ -56773,7 +56773,7 @@ __fx_custom_gradient0 :
 # Extract shape from image.
 _fx_custom_gradient1 :
   b $2%
-  if $1==0 # Auto-mode.
+  if !$1 # Auto-mode
     to_a split_opacity
     if iM>im+32
       rm.. >=[0] {100-$3}%
@@ -56781,11 +56781,11 @@ _fx_custom_gradient1 :
       rm. norm n 0,1
       if ia>0.5 <=[0] $3% else >=[0] {100-$3}% fi
     fi
-  elif $1==1 # Dark pixels.
+  elif $1==1 # Dark pixels
     remove_opacity norm <= $3%
-  elif $1==2 # Bright pixels.
+  elif $1==2 # Bright pixels
     remove_opacity norm >= {100-$3}%
-  else # Opaque pixels.
+  else # Opaque pixels
     to_a channels 100% >= {100-$3}%
   fi
 
@@ -57442,8 +57442,8 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   }
 
 fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
-  is_custom_expression:=$5==0?2:1
-  is_color_by_custom:=$12==0?2:0
+  is_custom_expression:=$5?1:2
+  is_color_by_custom:=$12?0:2
   is_color_by_iter:=$12==1?2:0
   is_color_by_value:=$12==2?2:0
   _size0:=min(${-gui_preview_wh})
@@ -57498,7 +57498,7 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
     "{$25}_"$is_color_by_custom\
     "{$26}_"$is_color_by_custom\
     "{$27}{$28}{$29}{$30}{$31}{$32}{$33}"\
-    "{$34}"_{$33==0?0:2}\
+    "{$34}"_{$33?2:0}\
     "{"$px,$py"}{$37}{"$angle"}{0}{0}{0}{0}{$43}{$44}"
 
 #@gui Plasma : fx_plasma, fx_plasma(0)
@@ -57531,7 +57531,7 @@ fx_quick_copyright :
   i[1] 0 t[1] "$1",0,0,$2,1,1 autocrop[1] 0 r[1] {{1,w}+2*$7},{{1,h}+2*$7},1,1,0,0,0.5,0.5 dilate[1] {1+2*$7}
   rotate[0,1] {90*($10-1)}
   repeat $!-2 {
-    if $8==0 j. [0],$9,$9,0,0,{$6/255},[1]
+    if !$8 j. [0],$9,$9,0,0,{$6/255},[1]
     elif $8==1 j. [0],{w-1-{0,w}-$9},$9,0,0,{$6/255},[1]
     elif $8==2 j. [0],$9,{h-1-{0,h}-$9},0,0,{$6/255},[1]
     else j. [0],{w-1-{0,w}-$9},{h-1-{0,h}-$9},0,0,{$6/255},[1]
@@ -57709,7 +57709,7 @@ fx_sine_curve :
     # Set specific values for each preset.
 
     # Default (circle)
-    if $preset==0
+    if !$preset
       ratx,raty,ratz=0 zoom=1
     # Alien Rasta
     elif $preset==1
@@ -57879,7 +57879,7 @@ fx_sine_curve :
   if 0$_output_mode k[0] fi
 
   # Update parameter values.
-  r,m,o,p,s,a:=d=$dp;[d==0?2:0,d==1?2:0,d==2?2:0,d==3?2:0,d==4?2:0,d==5?2:0]
+  r,m,o,p,s,a:=d=$dp;[!d?2:0,d==1?2:0,d==2?2:0,d==3?2:0,d==4?2:0,d==5?2:0]
   u "{"$preset"}{"$preset"}{"$resolution"}{"$periods"}{"$dp"}"\
     "{"$ratx"}_"$r"{"$raty"}_"$r"{"$ratz"}_"$r\
     "{"$mxa"}_"$m"{"$mya"}_"$m"{"$mza"}_"$m"{"$mxb"}_"$m"{"$myb"}_"$m"{"$mzb"}_"$m\
@@ -58769,7 +58769,7 @@ fx_animate_glow_preview : skip "${4=}"
 fx_spatial_transition :
   to_rgba r ${-max_wh},1,100%,0,0,0.5,0.5
   shape=-1 formula=
-  if $3==0 # Do nothing.
+  if !$3 # Do nothing.
   elif $3==1 shape=0
   elif $3==2 formula="$4"
   elif $3==3 formula="sin(x*0.5*pi/w*(1+100*A))"
@@ -58781,8 +58781,8 @@ fx_spatial_transition :
   if narg($formula)
     {w},{h},1,1,"A=$5;"$formula fi
   if $-1 # Preview mode.
-    if $6==0 k[$shape] norm n 0,255
-    elif $6==1" && "$7==0 rm[$shape] rm.
+    if !$6 k[$shape] norm n 0,255
+    elif $6==1" && "!$7 rm[$shape] rm.
     elif $6==1" && "$7==1 rm[$shape] rm[0]
     elif $6==1
       transition[^$shape] [$shape],$1,$2,$7*($1-1) rm[$shape] rm[0--1:2]
@@ -59344,7 +59344,7 @@ fx_intarsia_preview :
 
 _fx_intarsia :
   if $3" && "$2 transpose fi
-  if $1==0 # Start from top left.
+  if !$1 # Start from top left.
   elif $1==1 # Start from top right.
     mirror x
   elif $1==2 # Start from bottom left.
