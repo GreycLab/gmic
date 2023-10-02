@@ -38826,7 +38826,7 @@ x_segment : check "${1=1024}==0 || $1>=128" check_display $0
 
     # Init variables and images.
     name={0,n} title={0,b} if narg({0,x}) title=$title.{0,x} fi
-    w={w} h={h} fdim=${fitscreen[]\ $w,$h} ww={arg(1,$fdim)} wh={arg(2,$fdim)} x0=0 y0=0 x1={w-1} y1={h-1}
+    w,h:=w,h fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
     selection=-1 marker_mode=2 xpan=-1 ypan=-1 bg_mode=0 opacity=64
     to_rgb => img
 
@@ -38839,29 +38839,29 @@ x_segment : check "${1=1024}==0 || $1>=128" check_display $0
     # Compute potential map.
     if $1>0 if $w>$h +r2dx[img] {min($1,$w)},2 else +r2dy[img] {min($1,$h)},2 fi else [img] fi
     _x_segment.
-    pw={potential,w} ph={potential,h}
+    pw,ph={potential,[w,h]}
 
     # Start event loop.
     do
 
       # Handle user events for zoom/navigation/resizing.
       wait
-      x={*,x} y={*,y} b={*,b} o={*,-o}
-      is_ctrl={{*,CTRLLEFT}" || "{*,CTRLRIGHT}}
-      is_shift={{*,SHIFTLEFT}" || "{*,SHIFTRIGHT}}
-      is_mouseout={$x<0" || "$y<0}
-      x={$x0+$x*($x1-$x0+1)/$ww} y={$y0+$y*($y1-$y0+1)/$wh}
+      x,y,b,o={*,x,y,b,-o}
+      is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+      is_shift:={*,SHIFTLEFT}" || "{*,SHIFTRIGHT}
+      is_mouseout:=$x<0" || "$y<0
+      x:=$x0+$x*($x1-$x0+1)/$ww y:=$y0+$y*($y1-$y0+1)/$wh
       oww=$ww owh=$wh ox0=$x0 oy0=$y0 ox1=$x1 oy1=$y1
 
       if {*,r} # When window resized.
-        nww={*,d} nwh={*,e} m={min($nww,$nwh)}
-        cx={($x0+$x1)/2} cy={($y0+$y1)/2} dx={$nww*($x1-$x0+1)/$ww} dy={$nwh*($y1-$y0+1)/$wh}
-        x0={$cx-$dx/2} x1={$cx+$dx/2}
-        y0={$cy-$dy/2} y1={$cy+$dy/2}
+        nww,nwh={*,d,e} m:=min($nww,$nwh)
+        cx:=($x0+$x1)/2 cy:=($y0+$y1)/2 dx:=$nww*($x1-$x0+1)/$ww dy:=$nwh*($y1-$y0+1)/$wh
+        x0:=$cx-$dx/2 x1:=$cx+$dx/2
+        y0:=$cy-$dy/2 y1:=$cy+$dy/2
         ww=$nww wh=$nwh
       elif $is_ctrl" && "{*,-D} # Increase window size.
-        nww={min({*,u},$ww*1.25)} nwh={min({*,v},$wh*1.25)} m={min($nww,$nwh)}
-        if $m==$nww ww=$m wh={$h*$m/$w} else ww={$w*$m/$h} wh=$m fi
+        nww:=min({*,u},$ww*1.25) nwh:=min({*,v},$wh*1.25) m:=min($nww,$nwh)
+        if $m==$nww ww=$m wh:=$h*$m/$w else ww:=$w*$m/$h wh=$m fi
       elif $is_ctrl" && "{*,-C} # Decrease window size.
         nww={$ww/1.25} nwh={$wh/1.25}
         if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
