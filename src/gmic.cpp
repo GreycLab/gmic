@@ -13972,7 +13972,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 CImg<T> &img = images.size()?images.back():CImg<T>::empty();
                 double fast_res;
                 if (img.__eval(s,fast_res)) // Try to get fast approximation for a single scalar first
-                  varvalues_d.assign(1)[0] = is_rounded?gmic_round(fast_res):fast_res;
+                  varvalues_d.assign(1)[0] = fast_res;
                 else {
                   if (*s!='[') {
                     name.assign((unsigned int)std::strlen(s) + 4);
