@@ -33199,8 +33199,8 @@ font2cimgh :
 #@cli : Useful to display the framerate when displaying animations.
 fps :
   if narg($_fps_fps)
-    dt={$|-$_fps_time}
-    if $dt>1 _fps_fps={round($_fps_nbframes/$dt)} _fps_time=$| _fps_nbframes=0 fi
+    dt:=$|-$_fps_time
+    if $dt>1 _fps_fps:=round($_fps_nbframes/$dt) _fps_time=$| _fps_nbframes=0 fi
     u $_fps_fps
     _fps_nbframes+=1
   else _fps_nbframes=0 _fps_time=$| _fps_fps=-1 u -1
@@ -33212,7 +33212,7 @@ gcd : check "isint($1) && isint($2) && $1*$2!=0"
   _gcd {max(abs($1),abs($2))},{min(abs($1),abs($2))}
 
 _gcd :
-  r={$1%$2} if $r u ${_gcd\ $2,$r} else u $2 fi
+  r:=$1%$2 if $r u ${_gcd\ $2,$r} else u $2 fi
 
 #@cli hex : hexadecimal_int1,...
 #@cli : Print specified hexadecimal integers into their binary, octal, decimal and string representations.
@@ -33260,7 +33260,7 @@ img2base64 : check "isbool(${1=0}) && isbool(${2=1})"
 #@cli : Return representation of last image as an hexadecimal-encoded string.
 #@cli : Input image must have values that are integers in [0,255].
 img2hex :
-  whds={w},{h},{d},{s} y. 2,{h}
+  whds:=w,h,d,s y. 2,{h}
   f.. "*
     to_char(x) = x>=0 && x<=9?48 + x:87 + x;
     i(#-1,0,y) = to_char(int(i/16));
@@ -33358,7 +33358,7 @@ is_macos :
 #@cli is_windows
 #@cli : Return 1 if current computer OS is Windows, 0 otherwise.
 is_windows :
-  if !narg($_is_windows) _is_windows={['$OS']!=0" && "['$WINDIR']!=0} fi
+  if !narg($_is_windows) _is_windows:=['$OS']!=0" && "['$WINDIR']!=0 fi
   u $_is_windows
 
 #@cli lof : feature
@@ -34105,7 +34105,7 @@ ovh2stats : skip "${1=gmic.eu-*-*-*.log.gz}"
 
   repeat narg(${}) {
     arg0 $>,$files file=${}
-    day,month,year={"str = ['"$file"'];
+    day,month,year:="str = ['"$file"'];
       t1 = find(str,_'-') + 1;
       t2 = find(str,_'-',t1) + 1;
       t3 = find(str,_'-',t2) + 1;
@@ -34114,7 +34114,7 @@ ovh2stats : skip "${1=gmic.eu-*-*-*.log.gz}"
         month = s2v(str,t2);
         year = s2v(str,t3);
         [ day,month,year ];
-      ):[0,0,0]"}
+      ):[0,0,0]"
     if !$day&&!$month&&!$year day,month,year=n.a fi
     e "  > "$year/$month/$day:" "$_vt100_g$file$_vt100_n
     it $file
@@ -34270,8 +34270,8 @@ _ovh2stats :
 _ovh2stats_versions :
   v + +rows. 100%
   l. {
-    ips={is}
-    +f x a y sort -,x eo0={min(9,find(crop(),0))}
+    ips:=is
+    +f x a y sort -,x eo0:=min(9,find(crop(),0))
     if $eo0
       str= v=0 c=
       for i($v,0)>0" && "$v<9 {
@@ -34369,14 +34369,14 @@ remove_copymark :
 # $2 = number of latest months.
 render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations.csv}",${2=0}
   use_vt100
-  nb_months={$2?$2:4}
+  nb_months:=$2?$2:4
   l[] {
     # Parse CSV data.
     "$1"
-#    eur2usd={1/0.7988} # Change rate from EUR to USD (Paypal conversion rate in 2020).
-#    eur2usd={1/0.8568} # Change rate from EUR to USD (Paypal conversion rate in 2021).
-    eur2usd={1/0.873824} # Change rate from EUR to USD (Paypal conversion rate in 2023/01).
-    nb_entries={h}
+#    eur2usd:=1/0.7988 # Change rate from EUR to USD (Paypal conversion rate in 2020).
+#    eur2usd:=1/0.8568 # Change rate from EUR to USD (Paypal conversion rate in 2021).
+    eur2usd:=1/0.873824 # Change rate from EUR to USD (Paypal conversion rate in 2023/01).
+    nb_entries:=h
     repeat $nb_entries { e=$>
       date_$e={`I(0,$e)`}
       name_$e={`I(1,$e)`}
@@ -34391,20 +34391,20 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
       # Deduced values.
       l[] {
         ('${date_$e}') s -,{'/'} day_$e,month_$e,year_$e={0,t},{1,t},{2,t} rm
-        edate_$e={${day_$e}+100*(${month_$e}+100*${year_$e})}
+        edate_$e:=${day_$e}+100*(${month_$e}+100*${year_$e})
       }
-      donation_charged_$e={${donation_$e}+${charge_paypal_$e}+${charge_lila_$e}}
+      donation_charged_$e:=${donation_$e}+${charge_paypal_$e}+${charge_lila_$e}
 
       if '${currency_$e}'=='eur'
         donation_eur_$e=${donation_$e}
         donation_charged_eur_$e=${donation_charged_$e}
-        donation_usd_$e={${donation_$e}*$eur2usd}
-        donation_charged_usd_$e={${donation_charged_$e}*$eur2usd}
+        donation_usd_$e:=${donation_$e}*$eur2usd
+        donation_charged_usd_$e:=${donation_charged_$e}*$eur2usd
       else
         donation_usd_$e=${donation_$e}
         donation_charged_usd_$e=${donation_charged_$e}
-        donation_eur_$e={${donation_$e}/$eur2usd}
-        donation_charged_eur_$e={${donation_charged_$e}/$eur2usd}
+        donation_eur_$e:=${donation_$e}/$eur2usd
+        donation_charged_eur_$e:=${donation_charged_$e}/$eur2usd
       fi
 
       # Print infos.
@@ -34423,10 +34423,10 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     e ""
     all_eur,all_usd,all_charged_eur,all_charged_usd,asep_eur,asep_usd=
     repeat $nb_months {
-      edate={y=date(0);m=date(1)-1-$>;while(m<=0,--y;m+=12);100*y+m}
+      edate:=y=date(0);m=date(1)-1-$>;while(m<=0,--y;m+=12);100*y+m
       s_month=${"arg "$edate%100",January,February,March,April,May,June,July,August,\
                                   September,October,November,December"}
-      s_year={int($edate/100)}
+      s_year:=int($edate/100)
 
       month_eur,month_charged_eur,month_usd,month_charged_usd,msep_eur,msep_usd=
       nb_sponsors=0
@@ -34455,8 +34455,8 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
         fi
       }
 
-      month_sum_eur={sum(0$month_eur)+sum(0$month_usd)/$eur2usd}
-      month_sum_charged_eur={sum(0$month_charged_eur)+sum(0$month_charged_usd)/$eur2usd}
+      month_sum_eur:=sum(0$month_eur)+sum(0$month_usd)/$eur2usd
+      month_sum_charged_eur:=sum(0$month_charged_eur)+sum(0$month_charged_usd)/$eur2usd
 
       e "* "$_vt100_c$_vt100_b$s_month" "$s_year": "$_vt100_n\
         $_vt100_b{_$month_sum_eur}" eur"$_vt100_n" (charged: "{_$month_sum_charged_eur}" eur)"\
@@ -34476,14 +34476,14 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     }
     rv
 
-    all_max={max($all_eur,[$all_usd]/$eur2usd)}
-    all_min={min($all_eur,[$all_usd]/$eur2usd)}
-    all_sum_eur={sum($all_eur)}
-    all_sum_usd={sum($all_usd)}
-    all_sum_charged_eur={sum($all_charged_eur)}
-    all_sum_charged_usd={sum($all_charged_usd)}
-    all_avg={avg($all_eur,[$all_usd]/$eur2usd)}
-    all_med={med($all_eur,[$all_usd]/$eur2usd)}
+    all_max:=max($all_eur,[$all_usd]/$eur2usd)
+    all_min:=min($all_eur,[$all_usd]/$eur2usd)
+    all_sum_eur:=sum($all_eur)
+    all_sum_usd:=sum($all_usd)
+    all_sum_charged_eur:=sum($all_charged_eur)
+    all_sum_charged_usd:=sum($all_charged_usd)
+    all_avg:=avg($all_eur,[$all_usd]/$eur2usd)
+    all_med:=med($all_eur,[$all_usd]/$eur2usd)
 
     0 t. "Avg: "{_max(0.1,round($all_avg,0.1))}"\37 / "\
          "Med: "{_max(0.1,round($all_med,0.1))}"\37 / "\
@@ -34495,8 +34495,8 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     if $2==0 o $HOME/work/src/gmic/html/img/donations_latest_months.png fi
   }
 
-  total_eur={$all_sum_eur+$all_sum_usd/$eur2usd}
-  total_charged_eur={$all_sum_charged_eur+$all_sum_charged_usd/$eur2usd}
+  total_eur:=$all_sum_eur+$all_sum_usd/$eur2usd
+  total_charged_eur:=$all_sum_charged_eur+$all_sum_charged_usd/$eur2usd
   e "\n==> "$_vt100_c${_vt100_b}"TOTAL : "$_vt100_n\
     $_vt100_b{_floor($total_eur)}" eur"$_vt100_n" (charged : "{_floor($total_charged_eur)}" eur)"\
     " = "{_floor($all_sum_eur)}" eur (charged: "{_floor($all_sum_charged_eur)}" eur)"\
@@ -34505,7 +34505,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
   # Generate report image for Twitter.
   sp gmicky,{h}
   l[-2,-1] {
-    rgb={I(w-1)} to_rgba rv
+    rgb:=I(w-1) to_rgba rv
     frame 10,10,0,0,0,0
     drgba $rgb a x
     shape_heart 82 +r. 100%,100%,1,3 hsv2rgb. rv[-2,-1] *. 255 a[-2,-1] c
@@ -34529,7 +34529,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     repeat $N { +l[0] {
       frame. 10,10,0,0,0,0
       sh. 0,2
-      (${r$>}^${g$>}^${b$>}) rgb2hsl[-2,-1] H,S={[R,G]} rm.
+      (${r$>}^${g$>}^${b$>}) rgb2hsl[-2,-1] H,S:=R,G rm.
       l. { s c -[0] {ia#0-$H} %[0] 360 -[1] {ia#1-$S} +[2] 0.1 /[1] 2 c[1,2] 0,1 a c }
       hsl2rgb. rm.
       sh. 100% dilate_circ. 10 rm.
@@ -34668,7 +34668,7 @@ strlen : skip "${1=}"
 strreplace : skip "${3=}"
   if narg("$3")
     ls=${strlen\ "$2"}
-    lr={${strlen\ "$3"}-1}
+    lr:=${strlen\ "$3"}-1
     l[] {
       ('"$1"':y) s +,{'"$2"'} s y,-$ls
       repeat $! { if [{$>,^}]==['"$2"'] rows[$>] 0,$lr f[$>] {'"$3"'} fi }
@@ -34706,7 +34706,7 @@ _strvar :
                           inrange(c,_'A',_'Z') || c==_'_'?"$_strvar_fn":_'_'"
     rows. 0,{min(h,128)-1} autocrop. {'_'}
     if inrange(i,_'0',_'9') i.. ('_') a[-2,-1] y fi
-    do h={h} replace_str. "__","_" while h!=$h
+    do h:=h replace_str. "__","_" while h!=$h
     u {t} rm
   }
 
@@ -34787,8 +34787,8 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
            x_light,x_mandelbrot,x_metaballs3d,x_minesweeper,x_minimal_path,x_pacman,x_paint,\
            x_plasma,x_quantize_rgb,x_reflection3d,x_rubber3d,x_shadebobs,x_spline,x_starfield3d,\
            x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves
-  nb_entries={narg($entries)}
-  parallel_mode={1-if($1!=2,$1,$_cpus>=2)}
+  nb_entries:=narg($entries)
+  parallel_mode:=1-if($1!=2,$1,$_cpus>=2)
 
   # Generate menu graphics.
   l[] {
@@ -34843,7 +34843,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
     n=16
     chromeball64x64[] 200,100,64 n. 0,230 s. c,-3
     rgb2hsv.. r.. 100%,100%,$n,3 f.. "[z*360/d,G,B]" hsv2rgb..
-    N={6*$n} P={2*$N-1}
+    N:=6*$n P:=2*$N-1
     i[0] ('CImg3d') i[1] ($N,$P) i[2] 3,$N # Header, points
     i[3] 2,$N,1,1,"x?y:1" i[4] 3,{$N-1},1,1,"x==0?2:x==1?y:y+1" y[3,4] a[3,4] y # Primitives
     l[4] { # Colors
@@ -34867,7 +34867,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
 
   # Enter event loop.
   omb,ind_clicked,cfx,cfy,cfz,alpha=0
-  nfx,nfy,nfz={[g,g,g]} time0={$|-4}
+  nfx,nfy,nfz:=g,g,g time0:=$|-4
   do
     mx,my,mb={menu_fgcol,x={*,x};y={*,y};[x<0?-1:x*(w-1)/({*,w}-1),y<0?-1:y*(h-1)/({*,h}-1),{*,b}]}
     ind={menu_ind,i($mx,$my)}
@@ -34885,7 +34885,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
     +r3d[background3d] 1,2,3,{20*$|} *3d. {menu_fgcol,[w,h]/2-30},300 +3d. 0,0,300
     j3d.. .,50%,50%,0,1,1,0,0,200 rm.
     if $|-$time0>5 alpha+=0.02 fi
-    if $alpha>1 alpha-=1 cfx,cfy,cfz=$nfx,$nfy,$nfz nfx,nfy,nfz={[g,g,g]} time0={$|-u*3} fi
+    if $alpha>1 alpha-=1 cfx,cfy,cfz=$nfx,$nfy,$nfz nfx,nfy,nfz:=g,g,g time0:=$|-u*3 fi
 
     if $ind>0 +==[menu_ind] # Draw selection background
       $ind j.. [menu_bgcol],0,0,0,0,{$mb" && "$ind_clicked==$ind?0.6:1},. rm.
@@ -35331,22 +35331,22 @@ tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
   do
 
     # Manage user-events.
-    is_ctrl={{*,CTRLLEFT}" || "{*,CTRLRIGHT}}
+    is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
     if $is_ctrl" && "{*,-D} w[] {1.25*[{*,w,h}]} rmn formula,mformula
     elif $is_ctrl" && "{*,-C} w[] {0.8*[{*,w,h}]} rmn formula,mformula
     elif $is_ctrl" && "{*,R} w[] 400,400 rmn formula,mformula
-    elif {*,-A} is_antialias={!$is_antialias}
-    elif {*,-F} is_formula={!$is_formula}
+    elif {*,-A} is_antialias:=!$is_antialias
+    elif {*,-F} is_formula:=!$is_formula
     elif {*,R} t0=$|
     elif {*,-SPACE}
       if $is_recording o[] $basename.mp4,15,0,0 nb_frames=0
       else t0=$| fi
-      is_recording={!$is_recording}
+      is_recording:=!$is_recording
     elif {*,-ENTER} is_screenshot=1
     fi
 
     # Render animation frame.
-    m={min({*,w,h})} _is_antialias={$is_antialias" && "$m<512}
+    m:=min({*,w,h}) _is_antialias:=$is_antialias" && "$m<512
     {m=$m*($_is_antialias?2:1);[m,m]},1,3
 
     16,16,1,1,">begin(
@@ -35403,12 +35403,12 @@ x_2048 : check_display $0
   l[] {
   score=0 f3d 50 m3d 0
   m "_x_2048_setrandom : +==[0] 0 f. 'if(i,4*y+x,-1)' discard. -1
-     off={i[round(u(h-1))]} rm. x={$off&3} y={$off>>2} n={if(u<0.75,1,2)}
+     off:=i[round(u(h-1))] rm. x:=$off&3 y:=$off>>2 n:=if(u<0.75,1,2)
      =[0] $n,$x,$y [{2+$n}] c3d.
      repeat 6 { j3d[1] .,{78+$x*121},{190+$y*121},{10*$<},{(1+$>)/6} w[1] wait 20 }
      rm."
   m "_x_2048_object3d : +f[0] 'if(i,i*16+4*y+x,-1)' discard. -1
-     N={h} repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} }
+     N:=h repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} }
      +3d[-$N--1] rm.."
   i[0] 4,4
 
@@ -35422,7 +35422,7 @@ x_2048 : check_display $0
   rectangle. 422,20,501,75,1,187,173,160 t. "SCORE",439,25,15,1,238,228,218
   repeat 12 {
     107,107,1,3 fc. ${b{min($>,7)}} +fc. ${c{$>>2}}
-    s1={2^$>} 0 t. ${s{$>>0}},0,0,52,1,1
+    s1:=2^$> 0 t. ${s{$>>0}},0,0,52,1,1
     r. ..,..,1,1,0,0,0.5,0.5 dilate_circ. 3 b. 0.5
     j... ..,0,0,0,0,1,.,1 rm[-2,-1]
   }
@@ -35485,7 +35485,7 @@ x_2048 : check_display $0
         # Tile shifts.
         _x_2048_object3d
         +s[0] y discard[-4--1] 0 y[-4--1] x r[-4--1] 4,1,1,1,0,0 a[-4--1] y
-        +==[0,-1] insert_new={$insert_new||!im} rm.
+        +==[0,-1] insert_new:=$insert_new||!im rm.
         +f[0,-1] 'if(i,x,-1)' discard[-2,-1] -1 rv[-2,-1] -[-2,-1] rv[0,-2] rm..
 
         if (im||iM)&&!{*,k} # Render animation for shift.
@@ -35502,9 +35502,9 @@ x_2048 : check_display $0
         if !$> dscore=0
           [0] +f[0] 'if(i,i*16+4*y+x,-1)' discard. -1
           repeat h {
-            x={i[$>]&3} y={(i[$>]>>2)&3} n={i[$>]>>4}
+            x:=i[$>]&3 y:=(i[$>]>>2)&3 n:=i[$>]>>4
             if $x>0" && "{0,i($x-1,$y)}==$n
-              =[0] 0,$x,$y =[0] {$n+1},{$x-1},$y =.. 0,$x,$y insert_new=1 dscore+={2^($n+1)}
+              =[0] 0,$x,$y =[0] {$n+1},{$x-1},$y =.. 0,$x,$y insert_new=1 dscore+=2^($n+1)
             else =. -1,0,$>
             fi
           }
@@ -35515,7 +35515,7 @@ x_2048 : check_display $0
             discard. -1
             rv[0,-2] _x_2048_object3d rv[0,-3] vshift2048. *3d. 121 # Only tiles that do not move in this step.
             j[1] [2],18,130 j3d[1] .,78,190 rm[-3,-1]
-            N={h} repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} } # Only tiles that move.
+            N:=h repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} } # Only tiles that move.
             +3d[-$N--1] rm..
             0 t. +$dscore,0,0,33,1,1 100%,100%,1,3 fc. $c0
             repeat 6 { # Render animation for fusion.
@@ -35560,8 +35560,8 @@ x_blobs : check_display $0
   # Start event loop.
   moving=-1
   do
-    x={{*,x}*{0,w}/{*,w}}
-    y={{*,y}*{0,h}/{*,h}}
+    x:={*,x}*{0,w}/{*,w}
+    y:={*,y}*{0,h}/{*,h}
     b={*,b} nearest=-1
     fps=${-fps}
 
@@ -35571,7 +35571,7 @@ x_blobs : check_display $0
       repeat h#1 {
         r={1,i[2]*(1+i[3]*cos(i[4]+i[5]*$|*1000))}
         ellipse. {1,@0,1},$r,$r,0,1,{1,@6-7}
-        d={sqrt(($x-{1,@0})^2+($y-{1,@1})^2)}
+        d:=sqrt(($x-{1,@0})^2+($y-{1,@1})^2)
         if $d<$r nearest=$> fi
         shift[1] 0,-1,0,0,2
       }
@@ -35604,7 +35604,7 @@ x_blobs : check_display $0
         =[1] $x,0,$moving =[1] $y,1,$moving
         else # Insert new blob.
           ($x,$y,{u(20,50)},{u(-0.3,0.3)},{u(0,pi/2)},{u(0,0.009)},{u(64,255)},{u(64,255)}) a[^0] y
-          moving={h-1}
+          moving:=h-1
         fi
     elif $b&2 # Remove existing blob.
       if $nearest>=0 l[1] { s y rm[$nearest] a y } nearest=-1 fi
@@ -35634,7 +35634,7 @@ x_bouncing : check_display $0
   N=12
   repeat $N {
     ball[] {round(u(32,80))},${-rgb}
-    t$>={u(200)} x$>={0,u(10,w-10)} h$>={u(150,300)} vx$>={if(u<0.5,1,-1)*u(1,8)}
+    t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=if(u<0.5,1,-1)*u(1,8)
   }
   mv[0] $!
   w. {f=w<0.5*{*,u}?1.5:1;[w,h]*=f},0,"[G"{`39`}"MIC] Bouncing Balls"
@@ -35643,22 +35643,22 @@ x_bouncing : check_display $0
   do
     [$N]
     repeat $N {
-      bw={$>,w} bh={$>,h}
-      y={${h$>}*abs(cos(${t$>}*pi/60))-$bh/2}
+      bw,bh={$>,[w,h]}
+      y:=${h$>}*abs(cos(${t$>}*pi/60))-$bh/2
       dt=1
-      if $y<0 d={-$y} y=0 bh-=$d bw+=$d dt={max(0.2,1-($d/$bh)^2)} else dt=1 fi
+      if $y<0 d:=-$y y=0 bh-=$d bw+=$d dt:=max(0.2,1-($d/$bh)^2) else dt=1 fi
       if ${x$>}+$bw/2>w
-        d={${x$>}+$bw/2-w} bw-=$d bh+={0.5*$d}
-        if ${x$>}+$bw/4>w vx$>={-${vx$>}} fi
+        d:=${x$>}+$bw/2-w bw-=$d bh+=0.5*$d
+        if ${x$>}+$bw/4>w vx$>:=-${vx$>} fi
       fi
       if ${x$>}-$bw/2<0
-        d={$bw/2-${x$>}} bw-=$d bh+={0.5*$d}
-        if ${x$>}-$bw/4<0 vx$>={-${vx$>}} fi
+        d:=$bw/2-${x$>} bw-=$d bh+=0.5*$d
+        if ${x$>}-$bw/4<0 vx$>:=-${vx$>} fi
       fi
       +r[$>] $bw,$bh,1,4,3 s. c,-3
       j... ..,{max(0,min({$N,w-$bw},${x$>}-$bw/2))},{{$N,h}-{h}-$y-70},0,0,1,.,255 rm[-2,-1]
       t$>+=$dt
-      x$>+={$dt*${vx$>}}
+      x$>+=$dt*${vx$>}
     }
 
     +rows. {h-2*70},{h-1-70} mirror. y *. [{$N+1}]
@@ -35754,19 +35754,19 @@ _x_color_curves :
     wait 100 need_refresh=0
 
     # Manage user events.
-    oviewmode=$viewmode is_ctrl={{*,CTRLLEFT}" || "{*,CTRLRIGHT}} x={*,x} y={*,y}
+    oviewmode=$viewmode is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT} x,y={*,x,y}
     if {*,r} need_refresh=1 # Window resize.
     elif $is_ctrl" && "{*,-D} w[] {{*,w}*125%},{{*,h}*125%} need_refresh=1 # Increase window size.
     elif $is_ctrl" && "{*,-C} w[] {{*,w}*80%},{{*,h}*80%} need_refresh=1 # Decrease window size.
     elif $is_ctrl" && "{*,-R} w[] {w},{h} need_refresh=1 # Reset window size.
-    elif {*,b}&1 viewmode={x={*,x};if(x<w/3,1,if(x<2*w/3,2,3))} # Change viewmode.
+    elif {*,b}&1 viewmode:=x={*,x};if(x<w/3,1,if(x<2*w/3,2,3)) # Change viewmode.
     elif {*,b}&2" && "$x>=0" && "$y>=0 # Add control point from picked color.
-      xc={$x*w/{*,w}} yc={$y*h/{*,h}} +z[0] $xc,$yc,$xc,$yc
+      xc:=$x*w/{*,w} yc:=$y*h/{*,h} +z[0] $xc,$yc,$xc,$yc
       repeat s { (${__C$>},{i[$>]/255%},{i[$>]/255%}) r. 2,{w/2},1,1,-1 sort. +,y __C$>={^} rm. }
       rm. wait -1
     else viewmode=0
     fi
-    need_refresh={$need_refresh||$oviewmode!=$viewmode}
+    need_refresh:=$need_refresh||$oviewmode!=$viewmode
 
     # Update result.
     repeat s { if ['_${oC$>}']!=['_${__C$>}'] # Channel must be updated.
@@ -35780,7 +35780,7 @@ _x_color_curves :
       if $viewmode==0 # Modified view.
         +xcc_backto[1]
       elif $viewmode%2 # Split view.
-        w2={0,int(w/2)} b={$viewmode==1} +z[{!$b}] 0,{$w2-1} +z[$b] $w2,100%
+        w2={0,int(w/2)} b:=$viewmode==1 +z[{!$b}] 0,{$w2-1} +z[$b] $w2,100%
         xcc_backto.. xcc_backto. a[-2,-1] x line. 50%,0,50%,100%,1,0
       else # Original view.
         +xcc_backto[0]
@@ -35920,7 +35920,7 @@ _x_colorize :
 
   # Init variables and images.
   name={n} title={b} if narg({x}) title=$title.{x} fi
-  w={w} h={h}
+  w,h:=w,h
 
   if $1 # Line-art.
     if s==4 sh. 3 if abs(im-iM)>64 +*. -1 rm.. +. 255 else rm. sh. 0 fi
@@ -35935,7 +35935,7 @@ _x_colorize :
 
   => img
 
-  fdim=${fitscreen[]\ $w,$h} ww={arg(1,$fdim)} wh={arg(2,$fdim)} x0=0 y0=0 x1={w-1} y1={h-1}
+  fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
   selection=-1 view_markers=2 contrast=9 xpan=-1 ypan=-1 replace_color= current_replace_color=
 
   if narg($_gui_control_points)>=6 # Import list of control points from plug-in GUI.
@@ -35947,7 +35947,7 @@ _x_colorize :
   # Compute potential map.
   if $2>0 if $w>$h +r2dx[img] {min($2,$w)},2 else +r2dy[img] {min($2,$h)},2 fi else [img] fi
   __x_colorize. $1
-  pw={potential,w} ph={potential,h}
+  pw,ph={potential,[w,h]}
 
   # Start event loop.
   do
@@ -35955,58 +35955,58 @@ _x_colorize :
     # Handle user events for zoom/navigation/resizing.
     if narg($replace_color)" && "{*,x}<0" && "{*,y}<0 wait 200 else wait fi
     x={*,x} y={*,y} b={*,b} o={*,-o}
-    is_ctrl={{*,CTRLLEFT}" || "{*,CTRLRIGHT}}
-    is_shift={{*,SHIFTLEFT}" || "{*,SHIFTRIGHT}}
-    is_mouseout={$x<0" || "$y<0}
-    x={$x0+$x*($x1-$x0+1)/$ww} y={$y0+$y*($y1-$y0+1)/$wh}
+    is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+    is_shift:={*,SHIFTLEFT}" || "{*,SHIFTRIGHT}
+    is_mouseout:=$x<0" || "$y<0
+    x:=$x0+$x*($x1-$x0+1)/$ww y:=$y0+$y*($y1-$y0+1)/$wh
     oww=$ww owh=$wh ox0=$x0 oy0=$y0 ox1=$x1 oy1=$y1
 
     if {*,r} # When window resized.
-      nww={*,d} nwh={*,e} m={min($nww,$nwh)}
-      cx={($x0+$x1)/2} cy={($y0+$y1)/2} dx={$nww*($x1-$x0+1)/$ww} dy={$nwh*($y1-$y0+1)/$wh}
-      x0={$cx-$dx/2} x1={$cx+$dx/2}
-      y0={$cy-$dy/2} y1={$cy+$dy/2}
+      nww={*,d} nwh={*,e} m:=min($nww,$nwh)
+      cx:=($x0+$x1)/2 cy:=($y0+$y1)/2 dx:=$nww*($x1-$x0+1)/$ww dy:=$nwh*($y1-$y0+1)/$wh
+      x0:=$cx-$dx/2 x1:=$cx+$dx/2
+      y0:=$cy-$dy/2 y1:=$cy+$dy/2
       ww=$nww wh=$nwh
     elif $is_ctrl" && "{*,-D} # Increase window size.
-      nww={min({*,u},$ww*1.25)} nwh={min({*,v},$wh*1.25)} m={min($nww,$nwh)}
-      if $m==$nww ww=$m wh={$h*$m/$w} else ww={$w*$m/$h} wh=$m fi
+      nww:=min({*,u},$ww*1.25) nwh:=min({*,v},$wh*1.25) m:=min($nww,$nwh)
+      if $m==$nww ww=$m wh:=$h*$m/$w else ww:=$w*$m/$h wh=$m fi
     elif $is_ctrl" && "{*,-C} # Decrease window size.
-      nww={$ww/1.25} nwh={$wh/1.25}
+      nww:=$ww/1.25 nwh:=$wh/1.25
       if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
     elif $is_ctrl" && "{*,R} # Reset window size.
-      fdim=${fitscreen[]\ $w,$h} ww={arg(1,$fdim)} wh={arg(2,$fdim)}
-      x0=0 y0=0 x1={$w-1} y1={$h-1}
+      fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim)
+      x0=0 y0=0 x1:=$w-1 y1:=$h-1
     elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left.
-      dx={($x1-$x0)/6} x0-=$dx x1-=$dx
+      dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
     elif ($is_shift" && "$o>0)" || "{*,ARROWRIGHT} # Go right.
-      dx={($x1-$x0)/6} x0+=$dx x1+=$dx
+      dx:=($x1-$x0)/6 x0+=$dx x1+=$dx
     elif ($is_ctrl" && "$o>0)" || "({*,ARROWUP}" && "!$is_ctrl) # Go up.
-      dy={($y1-$y0)/6} y0-=$dy y1-=$dy
+      dy:=($y1-$y0)/6 y0-=$dy y1-=$dy
     elif ($is_ctrl" && "$o<0)" || "({*,ARROWDOWN}" && "!$is_ctrl) # Go down.
-      dy={($y1-$y0)/6} y0+=$dy y1+=$dy
+      dy:=($y1-$y0)/6 y0+=$dy y1+=$dy
     elif $o>0" || "($is_ctrl" && "{*,ARROWUP}) # Zoom in.
       if $x1-$x0>16" && "$y1-$y0>16
-        cx={if($x>=0" && "!{*,ARROWUP},$x,($x0+$x1)/2)}
-        cy={if($y>=0" && "!{*,ARROWUP},$y,($y0+$y1)/2)}
-        x0={$cx+($x0-$cx)*0.75} y0={$cy+($y0-$cy)*0.75}
-        x1={$cx+($x1-$cx)*0.75} y1={$cy+($y1-$cy)*0.75}
+        cx:=if($x>=0" && "!{*,ARROWUP},$x,($x0+$x1)/2)
+        cy:=if($y>=0" && "!{*,ARROWUP},$y,($y0+$y1)/2)
+        x0:=$cx+($x0-$cx)*0.75} y0={$cy+($y0-$cy)*0.75
+        x1:=$cx+($x1-$cx)*0.75} y1={$cy+($y1-$cy)*0.75
       fi
     elif $o<0" || "($is_ctrl" && "{*,ARROWDOWN}) # Zoom out.
-      zfactor={max(($x1-$x0+1)/$w,($y1-$y0+1)/$h)}
+      zfactor:=max(($x1-$x0+1)/$w,($y1-$y0+1)/$h)
       if $zfactor<1.3
-        cx={if($x>=0" && "!{*,ARROWDOWN},$x,($x0+$x1)/2)}
-        cy={if($y>=0" && "!{*,ARROWDOWN},$y,($y0+$y1)/2)}
-        x0={$cx+($x0-$cx)/0.75} y0={$cy+($y0-$cy)/0.75}
-        x1={$cx+($x1-$cx)/0.75} y1={$cy+($y1-$cy)/0.75}
-        dx={$zfactor^2*($w-$x0-$x1)/2} dy={$zfactor^2*($h-$y0-$y1)/2}
+        cx:=if($x>=0" && "!{*,ARROWDOWN},$x,($x0+$x1)/2)
+        cy:=if($y>=0" && "!{*,ARROWDOWN},$y,($y0+$y1)/2)
+        x0:=$cx+($x0-$cx)/0.75} y0={$cy+($y0-$cy)/0.75
+        x1:=$cx+($x1-$cx)/0.75} y1={$cy+($y1-$cy)/0.75
+        dx:=$zfactor^2*($w-$x0-$x1)/2} dy={$zfactor^2*($h-$y0-$y1)/2
         x0+=$dx x1+=$dx y0+=$dy y1+=$dy
       else
-        dx={($w-$x0-$x1)/2} dy={($h-$y0-$y1)/2}
+        dx:=($w-$x0-$x1)/2 dy:=($h-$y0-$y1)/2
         x0+=$dx x1+=$dx y0+=$dy y1+=$dy
       fi
     elif $b&4" && "!$is_mouseout # Pan.
       if $panx<0" && "$pany<0 panx=$x pany=$y
-      else dx={round($panx-$x)} dy={round($pany-$y)} x0+=$dx y0+=$dy x1+=$dx y1+=$dy
+      else dx:=round($panx-$x) dy:=round($pany-$y) x0+=$dx y0+=$dy x1+=$dx y1+=$dy
       fi
     else panx=-1 pany=-1
     fi
@@ -36017,13 +36017,13 @@ _x_colorize :
     if narg($baseview)" && "($b&3" || "{*,X}" || "{*,P})" && "$x>=0" && "$y>=0" && "$x<$w" && "$y<$h
       if $selection==-1" && "$N # Check for selection of an existing point.
         ($x;$y) r. $N,2 -. [points] *. {max($ww,$wh)/max($x1-$x0,$y1-$y0)} sqr. s. y +[-2,-1]
-        dmin={im} selection={if($dmin>25,-1,xm)} rm.
+        dmin:=im selection:=if($dmin>25,-1,xm) rm.
       fi
       if narg($replace_color) # Go back from 'Replace color' mode.
         replace_color= wait -1
       elif $selection>=0
         if $b&1" && "$view_markers # Move existing point.
-          +columns[points] $selection ox={i[0]} oy={i[1]} =. $x =. $y,0,1 j[points] .,$selection rm.
+          +columns[points] $selection ox:=i[0] oy:=i[1] =. $x =. $y,0,1 j[points] .,$selection rm.
           rm[view]
         elif ($b&2" || "{*,X})" && "$view_markers # Remove existing point.
           if $N>1 +z[points] {$selection+1},100% j[points] .,$selection rm. r[points] {$N-1},100%,1,1,0
@@ -36039,12 +36039,12 @@ _x_colorize :
       fi
     else selection=-1
       if {*,-SPACE}" && "narg($colors) replace_color= rm[colors] # Update color map.
-      elif {*,-TAB} view_markers={($view_markers-1)%3} rm[view] wait -1 # Toggle markers.
+      elif {*,-TAB} view_markers:=($view_markers-1)%3 rm[view] wait -1 # Toggle markers.
       elif !$is_ctrl" && "{*,-R}  # Switch color replace mode.
         if narg($replace_color) replace_color= else replace_color=$__color fi
         rm[baseview] wait -1
-      elif {*,PAGEDOWN} contrast={max(0,$contrast-1)} rm[view] wait -1 # Decrease contrast.
-      elif {*,PAGEUP} contrast={min(9,$contrast+1)} rm[view] wait -1 # Increase contrast.
+      elif {*,PAGEDOWN} contrast:=max(0,$contrast-1) rm[view] wait -1 # Decrease contrast.
+      elif {*,PAGEUP} contrast:=min(9,$contrast+1) rm[view] wait -1 # Increase contrast.
       elif {*,BACKSPACE}" && "$N # Remove last point.
         if $N>1 z[points] 0,{$N-2} else i=$points rm[points] i[$i] 0 =>[$i] points fi
         rm[view] wait -1
@@ -36052,11 +36052,11 @@ _x_colorize :
     fi
 
     # Manage zoomed view bounds.
-    w2={round(($x1-$x0)/2)} h2={round(($y1-$y0)/2)}
-    if $x0<-$w2 x1-={$x0+$w2} x0=-$w2 fi
-    if $y0<-$h2 y1-={$y0+$h2} y0=-$h2 fi
-    if $x1>=$w+$w2 x0+={$w-1+$w2-$x1} x1={$w-1+$w2} fi
-    if $y1>=$h+$h2 y0+={$h-1+$h2-$y1} y1={$h-1+$h2} fi
+    w2,h2:=round(([$x1-$x0,$y1-$y0])/2)
+    if $x0<-$w2 x1-=$x0+$w2 x0=-$w2 fi
+    if $y0<-$h2 y1-=$y0+$h2 y0=-$h2 fi
+    if $x1>=$w+$w2 x0+=$w-1+$w2-$x1 x1:=$w-1+$w2 fi
+    if $y1>=$h+$h2 y0+=$h-1+$h2-$y1 y1:=$h-1+$h2 fi
 
     # Render color map.
     if !narg($colors)
@@ -36097,8 +36097,8 @@ _x_colorize :
 
     # Render base image.
     if !narg($baseview)
-      nx0={$x0*$pw/$w} ny0={$y0*$ph/$h}
-      nx1={$x1*$pw/$w} ny1={$y1*$ph/$h}
+      nx0:=$x0*$pw/$w ny0:=$y0*$ph/$h
+      nx1:=$x1*$pw/$w ny1:=$y1*$ph/$h
       +z[img] $x0,$y0,$x1,$y1
       r. $ww,$wh,1,100%,{if($ww<w" && "$wh<h,2,1)}
       if narg($replace_color)" && "{points,w} icolors=$colors_replaced else icolors=$colors fi
@@ -36120,9 +36120,9 @@ _x_colorize :
         if narg($replace_color)" && "{points,w} ipoints=$points_replaced else ipoints=$points fi
         repeat w#$ipoints {
           +columns[$ipoints] $>
-          x={(i[0]-$x0)*$ww/(1+$x1-$x0)}
-          y={(i[1]-$y0)*$wh/(1+$y1-$y0)}
-          col={i[3]-1},{i[4]-1},{i[5]-1}
+          x:=(i[0]-$x0)*$ww/(1+$x1-$x0)
+          y:=(i[1]-$y0)*$wh/(1+$y1-$y0)
+          col:=i[3]-1,i[4]-1,i[5]-1
           rm.
           circle. $x,$y,$rad1,1,0 circle. $x,$y,$rad2,1,$col
         }
@@ -36149,7 +36149,7 @@ _x_colorize :
     [img] __x_colorize. $1
     pointcloud[points] -1,$w,$h
     +compose_channels[points] max !=. 0 distance. 1 *. 0.02 +. 1 ^. -1 +[potential,-1]
-    if !$1 zfact={{img,max(w,h)}/{potential,max(w,h)}} dilate[points] {int(3*$zfact)} fi
+    if !$1 zfact:={img,max(w,h)}/{potential,max(w,h)} dilate[points] {int(3*$zfact)} fi
     watershed[points] [potential] -[points] 1 =>[points] colors
   else [img],[img],1,3,255 => colors
   fi
@@ -36259,7 +36259,7 @@ x_connect4 : check_display $0
 
     if narg($winner) # End of game animation
       [visu] => tmpvisu
-      x={arg(1,$winner)} y={arg(2,$winner)} c={arg(3,$winner)}
+      x:=arg(1,$winner) y:=arg(2,$winner) c:=arg(3,$winner)
       if $x<0 # Draw game
         if !narg($text)
           0 t. "Draw game",0,0,57,1,1 r2dx. {tmpvisu,w/2} expand_xy. 3,0 +dilate. 5 n.. 0,255 to_rgb..
@@ -36272,7 +36272,7 @@ x_connect4 : check_display $0
           rgb2hsv. sh. 1,2 +. {0.4*sin(5*$|)} c. 0,1 rm. hsv2rgb.
           j. [cache],0,0,0,0,1,[cachem],255
           j[tmpvisu] .,{$R*[$x,$y]},0,0,1 rm.
-          x+={$c!=2?1:0} y+={$c==1?0:$c==4?-1:1}
+          x+=$c!=2?1:0 y+=$c==1?0:$c==4?-1:1
         }
       fi
       w[tmpvisu] 100%,100% rm[tmpvisu] wait 20
@@ -36285,7 +36285,7 @@ x_connect4 : check_display $0
 
       if !${autoplayer$turn}
         x={visu,X={*,x};X<0?X:int(X*w#$board/w)}
-        yM={i("#"$ymax,$x)}
+        yM:=i("#"$ymax,$x)
         if {board,$x<0" || "$x>=w} w[visu] 100%,100%
         else
           [visu] $R,100%,1,3,($yM>=0?1:0)*($turn?[255,255,0]:[255,0,0])
@@ -36300,17 +36300,17 @@ x_connect4 : check_display $0
         if {*,-ENTER} autoplayer$turn=1 fi
         max_score=-inf max_col=
         repeat w#$board { move1=$>
-          yM1={i("#"$ymax,$move1)}
+          yM1:=i("#"$ymax,$move1)
           if $yM1>=0
             +=[board] {1+$turn},$move1,$yM1 => board1
             {board,w},1,1,1,"y = -1; repeat (h#"$board1",k, if(!i(#"$board1",x,k),y = k)); y" => ymax1
             opp_max_score=-inf opp_max_board={board,^}
-            opp_turn={($turn+1)%2}
+            opp_turn:=($turn+1)%2
             repeat w#$board { move2=$>
-              yM2={i("#"$ymax1,$move2)}
+              yM2:=i("#"$ymax1,$move2)
               if $yM2>=0
                 +=[board1] {1+$opp_turn},$move2,$yM2
-                +f. "const p = 1 + "$opp_turn"; "$evalf score={is+u} rm.
+                +f. "const p = 1 + "$opp_turn"; "$evalf score:=is+u rm.
                 if $score>$opp_max_score opp_max_score=$score opp_max_board={^} fi
                 rm.
               fi
@@ -36318,7 +36318,7 @@ x_connect4 : check_display $0
             rm[board1,ymax1]
 
             {board,[w,h,1,1]},$opp_max_board
-            f. "const p = 1 + "$turn"; "$evalf score={is+u} rm.
+            f. "const p = 1 + "$turn"; "$evalf score:=is+u rm.
             if $score>$max_score max_score=$score max_col=$move1 fi
           fi
         }
@@ -36332,7 +36332,7 @@ x_connect4 : check_display $0
         => column
       fi
 
-      yM={i("#"$ymax,$x)}
+      yM:=i("#"$ymax,$x)
       [column]
       j. [token$turn],0,$yv,0,0,1,[tokenm],255
       j. [cache],0,0,0,0,1,[cachem],255
@@ -36350,13 +36350,13 @@ x_connect4 : check_display $0
                       case_d1 = i==j(1,1) && i==j(2,2) && i==j(3,3);
                       case_d2 = i==j(1,-1) && i==j(2,-2) && i==j(3,-3);
                       case_h?1:case_v?2:case_d1?3:case_d2?4)"
-        if iM winner={[xM,yM,i(xM,yM)]} # Player won !
-        else turn={($turn+1)%2}
+        if iM winner:=xM,yM,i(xM,yM) # Player won !
+        else turn:=($turn+1)%2
         fi
         rm.
       fi
       rm[tmpvisu]
-      yv={min($yM*$R,$yv+$dyv)} dyv+={visu,h/100}
+      yv:=min($yM*$R,$yv+$dyv) dyv+={visu,h/100}
       wait 20
     fi
 
@@ -36399,9 +36399,9 @@ x_cut :
 
       mx,my,mb={*,x,y,b}
       if $mb" && "$mx>=0" && "$my>=0
-        value0,value1={"dw1 = "{*,w}" - 1; value0 = "$mx"*100/dw1;
+        value0,value1:="dw1 = "{*,w}" - 1; value0 = "$mx"*100/dw1;
                         dh1 = "{*,h}" - 1; value1 = "$my"*100/dh1;
-                        [ value0,value1 ];"}
+                        [ value0,value1 ];"
         update_view=1
       fi
 
@@ -36505,23 +36505,23 @@ x_fireworks : check_display $0
             {30+u(20)},\    # Time of explosion
             1.5,\           # Radius
             255,255,255)    # Color
-      time={u(20)}          # Elapsed time until next rocket.
+      time:=u(20)           # Elapsed time until next rocket.
     fi
     *. 0.99                 # Create fading effect with previous frames.
     j. ..,0,0,0,0,0.2       # Add background.
     i=0
     repeat $!-2 {
       to_be_removed=0
-      radius={if({$i,@4}>0,{$i,@5}/3,{$i,@5}*(1+2*({$i,@4}+2)/120))}
+      radius:=if({$i,@4}>0,{$i,@5}/3,{$i,@5}*(1+2*({$i,@4}+2)/120))
       ellipse. {$i,@0},{$i,@1},{$i,@5},{max(1,$radius)},{atan2({$i,@3},{$i,@2})*180/pi},0.6,{$i,@6-8}  # Draw rocket.
       ({$i,@2},{$i,@3},0,0.09,-1,0,0,0,0) +[$i,-1] # Compute new position of the rocket.
       if {$i,@0}<0\ ||\ {$i,@0}>=w\ ||\ {$i,@1}>=h\ ||\ $radius<0 to_be_removed=1 fi # Discard if rocket disappear.
       if {$i,@4}<0\ &&\ {$i,@4}>=-1 # In case of explosion -> Split current rocket into several colorful rockets.
-        color={min(255,80+u(200))},{min(255,80+u(200))},{min(255,80+u(200))}
-        radius={u(10)}
-        N={5+u(10)}
+        color:=min(255,80+u(200)),min(255,80+u(200)),min(255,80+u(200))
+        radius:=u(10)
+        N:=5+u(10)
         repeat $N {
-          angle={$>*2*pi/$N}
+          angle:=$>*2*pi/$N
           i... ({$i,@0,1},{2*cos($angle)+{$i,@2}/1.5},{2*sin($angle)+{$i,@3}/1.5},-2,$radius,$color)
         }
         to_be_removed=1
@@ -36560,8 +36560,8 @@ x_fisheye : check_display $0
   w.. {1.25*{-2,w}},{1.25*{-2,h}},0,"[G"{`39`}"MIC] Fish-Eye Effect"
   do
     wait 40
-    if {*,b}==1 R={min(80,$R+8)} fi
-    if {*,b}==2 R={max(3,$R-8)} fi
+    if {*,b}==1 R:=min(80,$R+8) fi
+    if {*,b}==2 R:=max(3,$R-8) fi
     +j3d.. .,{50+30*cos($|*2.5)}%,{50+30*sin($|*1.6)}%,{80+230*sin($|*2.6)},0.7,3,0,0 r3d.. 1,0.2,0.6,3
     if {*,x}>=0
     fisheye. {{*,x}*100/{*,w}},{{*,y}*100/{*,h}},$R
@@ -36628,8 +36628,8 @@ x_fourier : check_display $0
 
         # Generated filtering mask.
         [logmag],[logmag] => mask
-        r={sqrt(w^2+h^2)*$freqmax/200} ellipse[mask] 50%,50%,$r,$r,0,1,1
-        r={max(0,sqrt(w^2+h^2)*$freqmin/200-1)} if $r ellipse[mask] 50%,50%,$r,$r,0,1,0 fi
+        r:=sqrt(w^2+h^2)*$freqmax/200 ellipse[mask] 50%,50%,$r,$r,0,1,1
+        r:=max(0,sqrt(w^2+h^2)*$freqmin/200-1) if $r ellipse[mask] 50%,50%,$r,$r,0,1,0 fi
 
         # Compute filtered log-magnitude.
         +*[logmag] [mask] +. [mask] /. 2 n. 0,255
@@ -36654,10 +36654,10 @@ x_fourier : check_display $0
       wait
 
       if {*,b}" && "{*,x}>={*,w}/2  # If mouse button pressed on the right pane.
-        r={200*sqrt(({*,x}-3*{*,w}/4)^2+({*,y}-{*,h}/2)^2)/\ # Compute selected radius (in %).
-           sqrt(({*,w}/2)^2+{*,h}^2)}
+        r:=200*sqrt(({*,x}-3*{*,w}/4)^2+({*,y}-{*,h}/2)^2)/\ # Compute selected radius (in %).
+           sqrt(({*,w}/2)^2+{*,h}^2)
         if {*,b}&1 freqmax=$r        # Update max freq. if left button.
-        else freqmin={max(0,$r-3)}   # Update min freq. if other button.
+        else freqmin:=max(0,$r-3)    # Update min freq. if other button.
         fi
         if $freqmin>=$freqmax freqmin=$freqmax fi   # Check that the min/max freq. are ordered.
         need_update=1                               # Tell that the image must be updated.
@@ -36701,8 +36701,8 @@ x_grab_color : skip ${1=xgc_variable} check_display $0
       +r[img] {*,w},{*,h},1,100%,2 drgba. w. => visu0
     fi
 
-    x={*,x} y={*,y} b={*,b} mouse_over={$x>=0" && "$y>=0}
-    hc={narg($$1)?40:24}
+    x,y,b={*,x,y,b} mouse_over={$x>=0" && "$y>=0}
+    hc:=narg($$1)?40:24
     yc={visu0,nhc=h-$hc-8;!$mouse_over?$yc:$y<$hc||$yc+$hc>=h?nhc:$y>=nhc?5:$yc}
 
     if [0$ox,0$oy,0$ob,0$ohc,0$oyc,0$ocolor,0${o$1}]!=[$x,$y,$b,$hc,$yc,0$color,0$$1]
@@ -36782,7 +36782,7 @@ x_hanoi : check_display $0
     6,1,1,3,'[360*x/w,0.9*(1-(x/w)^0.5),0.9]' hsi2rgb.
     ytop0=0
     repeat w#0 {
-      R,r={3-0.3*$>},{1.6-0.22*$>}
+      R,r:=3-0.3*$>,1.6-0.22*$>
       torus3d $R,$r,36,10
       300,300 plasma. 1,1,3 b. 20 sharpen. 300 n. 150,255 1,1,1,3,{0,I[$>]} r. ..,..,1,3 rv[-2,-1] blend[-2,-1]
       luminance,0.75 # Marble texture
@@ -36810,7 +36810,7 @@ x_hanoi : check_display $0
     [background] j3d. ..,50%,70%,10,1,5,0,1,800,200,0,-3000,0.15,0.2
     t. "#Moves: "$nb_moves,2%,92%,20,1,255
 
-    if $error (255^0^0) ri. .. j.. .,0,0,0,0,$error error={max(0,$error-0.2)} rm. fi
+    if $error (255^0^0) ri. .. j.. .,0,0,0,0,$error error:=max(0,$error-0.2) rm. fi
     if $|-$fading<1  *. {$|-$fading} fi
     w. wait 40
     if {*,CTRLLEFT}" && "{*,D} w[] {w*1.5},{h*1.5} elif {*,CTRLLEFT}" && "{*,C} w[] {w},{h} fi
@@ -36819,51 +36819,51 @@ x_hanoi : check_display $0
     # Get index of top disk for each rod.
     top0,top1,top2,ytop0,ytop1,ytop2=-1
     repeat 6 {
-      rod={round(${x$>})}
-      if $selected!=$>" && "${y$>}+${h$>}>${ytop$rod} ytop$rod={${y$>}+${h$>}} top$rod=$> fi
+      rod:=round(${x$>})
+      if $selected!=$>" && "${y$>}+${h$>}>${ytop$rod} ytop$rod:=${y$>}+${h$>} top$rod=$> fi
     }
 
     # Manage user events.
     prev_buttons=$buttons
-    mouse_x,mouse_y,buttons={*,x},{*,y},{*,b}
-    if $mouse_x>=0 x={2.6*($mouse_x/{*,w}-0.5)+1} rod={round($x)} fi
+    mouse_x,mouse_y,buttons={*,x,y,b}
+    if $mouse_x>=0 x:=2.6*($mouse_x/{*,w}-0.5)+1 rod:=round($x) fi
 
     if $mouse_x>=0" && "$buttons&2 # Right mouse button
-      motion3d_x,motion3d_y={([$mouse_x,$mouse_y]/[{*,w},{*,h}]-0.5)*90}
+      motion3d_x,motion3d_y:=([$mouse_x,$mouse_y]/[{*,w},{*,h}]-0.5)*90
 
     elif $mouse_x>=0" && "$buttons&1 # Left mouse button
       if $selected<0 # Select a disk
         selected=${top$rod}
-        rod_source={$selected<0?-1:$rod}
+        rod_source:=$selected<0?-1:$rod
       fi
       if $selected>=0" && "$rod>=0 # Move a selected disk
-        if ${y$selected}<11 y$selected={min(11,${y$selected}+3)}
+        if ${y$selected}<11 y$selected:=min(11,${y$selected}+3)
         else
-          x$selected+={d=$rod-${x$selected};sign(d)*min(0.3,abs(d))}
-          y$selected={x=${x$selected};11+1.5*sin(pi*abs(x-round(x)))}
-          a$selected={x=${x$selected};45*sin(pi*abs(x-round(x)))}
+          x$selected+=d=$rod-${x$selected};sign(d)*min(0.3,abs(d))
+          y$selected:=x=${x$selected};11+1.5*sin(pi*abs(x-round(x)))
+          a$selected:=x=${x$selected};45*sin(pi*abs(x-round(x)))
         fi
       fi
 
     elif !$buttons # No mouse button
       if $rod>=0" && "$selected>=0
         if $rod_target<0
-          if ${top$rod}<$selected rod_target=$rod nb_moves+={$rod_target!=$rod_source} # Allowed move
+          if ${top$rod}<$selected rod_target=$rod nb_moves+=$rod_target!=$rod_source # Allowed move
           else rod_target=$rod_source error=0.8 # Forbidden move
           fi
         fi
         x$selected=$rod_target
         a$selected=0
-        ytop={max(0,${ytop$rod_target})}
-        if ${y$selected}>$ytop y$selected={max($ytop,${y$selected}-3)}
+        ytop:=max(0,${ytop$rod_target})
+        if ${y$selected}>$ytop y$selected:=max($ytop,${y$selected}-3)
         else x,rod,rod_source,rod_target,selected=-1
         fi
       fi
     fi
 
     if !($buttons&2) # Slowly go back to initial 3D view
-      motion3d_x-={sign($motion3d_x)*min(1,abs($motion3d_x))}
-      motion3d_y-={sign($motion3d_y)*min(1,abs($motion3d_y))}
+      motion3d_x-=sign($motion3d_x)*min(1,abs($motion3d_x))
+      motion3d_y-=sign($motion3d_y)*min(1,abs($motion3d_y))
     fi
 
   while {*}" && "!{*,ESC}" && "!{*,Q}
