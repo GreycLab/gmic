@@ -30277,7 +30277,7 @@ poster_hope : check "${1=3}>=0"
   foreach {
     to_rgb
     apc "smooth 200,0,1,$1,1"
-    quantize 7,0 f 'if(i!=5,i,i+1-2*(y%2))'
+    quantize 7,0 f i!=5?i:i+1-2*(y%2)
     (0,32,47;0,32,47;209,1,23;209,1,23;90,141,145;-1,-1,-1;253,221,138) permute. yzcx
     map[0] [1] rm[1]
   }
@@ -30881,7 +30881,7 @@ ripple : skip ${1=10},${2=20},${3=2},${4=0},${5=0}
   }
 
 _ripple0 : f {$1/2}*"(1-2*(i%"{2*$2}"<$2))"
-_ripple1 : f "I=(i%$2)/$2;$1*(2*if(I<0.5,I,1-I)-0.5)"
+_ripple1 : f "I=(i%$2)/$2;$1*(2*(I<0.5?I:1-I)-0.5)"
 _ripple2 : f {-$1/2}*"cos(i*"{2*pi/$2}")"
 _ripple3 : f {-$1/2}*"abs(cos(i*"{2*pi/$2}"))"
 _ripple4 : skip $* n 0,{h-1} 1,{h} rand. {-$1/2},{$1/2} m,M:=im,iM b. {$2/10} n. $m,$M map.. . rm.
@@ -30948,8 +30948,8 @@ symmetrize : skip ${1=50%},${2=50%},${3=90},${4=3},${5=0},${6=0}
   foreach {
     x0:=ispercentage($1)?w*$1:$1
     y0:=ispercentage($2)?h*$2:$2
-    if $5 f 'A=($y0-y)*$u-($x0-x)*$v;X=x+2*($x0-x);Y=y+2*($y0-y);if($symmetry_cond,i(X,Y,z,c,1,$4),i)'
-    else f 'A=($y0-y)*$u-($x0-x)*$v;X=x-2*$v*A;Y=y+2*$u*A;if($symmetry_cond,i(X,Y,z,c,1,$4),i)'
+    if $5 f "A=($y0-y)*$u-($x0-x)*$v;X=x+2*($x0-x);Y=y+2*($y0-y);$symmetry_cond?i(X,Y,z,c,1,$4):i"
+    else f "A=($y0-y)*$u-($x0-x)*$v;X=x-2*$v*A;Y=y+2*$u*A;$symmetry_cond?i(X,Y,z,c,1,$4):i"
     fi
   }
 
@@ -30989,7 +30989,7 @@ twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
 #@cli : 'interpolation' can be { 0:nearest-neighbor | 1:linear | 2:cubic }.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'mode=0', 'interpolation=1', 'boundary_conditions=0' and 'nb_frames=1'.
-#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*if(c==0,cos(4*A),sin(8*A))' \
+#@cli : $ image.jpg 100%,100%,1,2,'X=x/w-0.5;Y=y/h-0.5;R=(X*X+Y*Y)^0.5;A=atan2(Y,X);130*R*(c==0?cos(4*A):sin(8*A))' \
 # warp[-2] [-1],1,1,0 quiver[-1] [-1],10,1,1,1,100
 #@cli : $$ https://gmic.eu/oldtutorial/_warp
 
@@ -32672,7 +32672,7 @@ alert : skip "${1=[G"{`39`}"MIC Alert]},${2=This is an alert box.},${3=OK}"
     repeat 9 { if !{*$>} disp=$> break fi } # Find available display window.
     if !narg($disp) error[0--4] "Command '$0': Cannot open display window for alert box." fi
 
-    selected:=if($#==3,0,-1) clicked=-1
+    selected:=$#==3?0:-1 clicked=-1
     do
 
       # Render current view.
@@ -32839,7 +32839,7 @@ _check120 :
   it[] "$1" s +,10
   if !$! return fi
   1,$!,1,2,">begin(line = 1); is_lines=i[#y,0]==10; line+=is_lines?h#y:0; [is_lines || h#y<=120?-1:y,line]"
-  lines={{@-1}-1} f. "I = I; if(I[0]<0,I[1]=-1); I"
+  lines={{@-1}-1} f. "I = I; I[0]<0?(I[1]=-1); I"
   discard. -1
   if w
     r. 1,{h/2},1,2,-1
@@ -33031,7 +33031,7 @@ _dec2oct :
 #@cli : $ echo ${"fibonacci 10"}
 #@cli : \n~~~\n[gmic]-0./ Start G'MIC interpreter.\n[gmic]-0./ 55\n[gmic]-0./ End G'MIC interpreter.\n~~~\n
 fibonacci : check "$1>=0"
-  u {N=$1;if(N<2,N,for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2))}
+  u {N=$1;N<2?N:for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2)}
 
 #@cli file_mv : filename_src,filename_dest
 #@cli : Rename or move a file from a location $1 to another location $2.
@@ -33245,7 +33245,7 @@ _hex2dec :
 hex2str : skip ${1=""}
   if !narg("$1") u "" return fi
   ('$*') if w<2 rm. u "" return fi
-  f. 'v=i-if(i>=97,87,48);if(x%2,v,v*16)' r. 2,{int(w/2)},1,1,-1 cumulate. x z. 1,1
+  f. 'v=i-(i>=97?87:48);x%2?v:v*16' r. 2,{int(w/2)},1,1,-1 cumulate. x z. 1,1
   u {t} rm.
 
 #@cli img2base64 : _encoding={ 0:base64 | 1:base64url },_store_names={ 0 | 1 }
@@ -34068,7 +34068,7 @@ narg :
 #@cli normalize_filename : filename
 #@cli : Return a "normalized" version of the specified filename, without spaces and capital letters.
 normalize_filename :
-  ('"$1"') f. 'if(i>=65&&i<=90,i+32,if(i==32,95,i))' u {t} rm.
+  ('"$1"') f. "i>=65 && i<=90?i+32:i==32?95:i" u {t} rm.
 
 #@cli oct : octal_int1,...
 #@cli : Print specified octal integers into their binary, decimal, hexadecimal and string representations.
@@ -34616,7 +34616,7 @@ strbuffer :
 #@cli : \n~~~\n[gmic]-0./ Start G'MIC interpreter.\n[gmic]-0./ 48656c6c6f206d7920667269656e6473\n\
 # [gmic]-0./ End G'MIC interpreter.\n~~~\n
 str2hex :
-  ('"$*"') y. r. 2,100% f. 'v=if(x,i%16,int(i/16));if(v<=9,48+v,87+v)' u {t} rm.
+  ('"$*"') y. r. 2,100% f. "v = x?i%16:int(i/16); v<=9?48 + v:87 + v" u {t} rm.
 
 #@cli strcapitalize : string
 #@cli : Capitalize specified string.
@@ -34715,7 +34715,7 @@ _strvar :
 #@cli : Default value: 'version=$_version' and 'prerelease='.
 strver : skip "${1=},${2=}"
   if isnum("$1")" && $1>0" ver="$1" else ver=$_version noarg fi
-  ('$ver') r. {2*w-1} f. 'if(x%2,_'.',i)' u {t} rm.
+  ('$ver') r. {2*w-1} f. "x%2?_'.':i" u {t} rm.
   if s=['$2'];s!=0&&s!='0' u ${}" (pre-release \#"$2")" fi
 
 #@cli tic
@@ -34788,7 +34788,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
            x_plasma,x_quantize_rgb,x_reflection3d,x_rubber3d,x_shadebobs,x_spline,x_starfield3d,\
            x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves
   nb_entries:=narg($entries)
-  parallel_mode:=1-if($1!=2,$1,$_cpus>=2)
+  parallel_mode:=1-($1!=2?$1:$_cpus>=2)
 
   # Generate menu graphics.
   l[] {
@@ -35402,12 +35402,12 @@ x_2048 : check_display $0
 --------------------------------------------------------------"
   l[] {
   score=0 f3d 50 m3d 0
-  m "_x_2048_setrandom : +==[0] 0 f. 'if(i,4*y+x,-1)' discard. -1
-     off:=i[round(u(h-1))] rm. x:=$off&3 y:=$off>>2 n:=if(u<0.75,1,2)
+  m "_x_2048_setrandom : +==[0] 0 f. 'i?4*y+x:-1' discard. -1
+     off:=i[round(u(h-1))] rm. x:=$off&3 y:=$off>>2 n:=u<0.75?1:2
      =[0] $n,$x,$y [{2+$n}] c3d.
      repeat 6 { j3d[1] .,{78+$x*121},{190+$y*121},{10*$<},{(1+$>)/6} w[1] wait 20 }
      rm."
-  m "_x_2048_object3d : +f[0] 'if(i,i*16+4*y+x,-1)' discard. -1
+  m "_x_2048_object3d : +f[0] 'i?i*16+4*y+x:-1' discard. -1
      N:=h repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} }
      +3d[-$N--1] rm.."
   i[0] 4,4
@@ -35486,7 +35486,7 @@ x_2048 : check_display $0
         _x_2048_object3d
         +s[0] y discard[-4--1] 0 y[-4--1] x r[-4--1] 4,1,1,1,0,0 a[-4--1] y
         +==[0,-1] insert_new:=$insert_new||!im rm.
-        +f[0,-1] 'if(i,x,-1)' discard[-2,-1] -1 rv[-2,-1] -[-2,-1] rv[0,-2] rm..
+        +f[0,-1] "i?x:-1" discard[-2,-1] -1 rv[-2,-1] -[-2,-1] rv[0,-2] rm..
 
         if (im||iM)&&!{*,k} # Render animation for shift.
           /. 5 z. 0,2 y.
@@ -35500,7 +35500,7 @@ x_2048 : check_display $0
 
         # Tile fusions.
         if !$> dscore=0
-          [0] +f[0] 'if(i,i*16+4*y+x,-1)' discard. -1
+          [0] +f[0] "i?i*16+4*y+x:-1" discard. -1
           repeat h {
             x:=i[$>]&3 y:=(i[$>]>>2)&3 n:=i[$>]>>4
             if $x>0" && "{0,i($x-1,$y)}==$n
@@ -35634,7 +35634,7 @@ x_bouncing : check_display $0
   N=12
   repeat $N {
     ball[] {round(u(32,80))},${-rgb}
-    t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=if(u<0.5,1,-1)*u(1,8)
+    t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=(u<0.5?1:-1)*u(1,8)
   }
   mv[0] $!
   w. {f=w<0.5*{*,u}?1.5:1;[w,h]*=f},0,"[G"{`39`}"MIC] Bouncing Balls"
@@ -35759,7 +35759,7 @@ _x_color_curves :
     elif $is_ctrl" && "{*,-D} w[] {{*,w}*125%},{{*,h}*125%} need_refresh=1 # Increase window size.
     elif $is_ctrl" && "{*,-C} w[] {{*,w}*80%},{{*,h}*80%} need_refresh=1 # Decrease window size.
     elif $is_ctrl" && "{*,-R} w[] {w},{h} need_refresh=1 # Reset window size.
-    elif {*,b}&1 viewmode:=x={*,x};if(x<w/3,1,if(x<2*w/3,2,3)) # Change viewmode.
+    elif {*,b}&1 viewmode:=x={*,x};x<w/3?1:x<2*w/3?2:3 # Change viewmode.
     elif {*,b}&2" && "$x>=0" && "$y>=0 # Add control point from picked color.
       xc:=$x*w/{*,w} yc:=$y*h/{*,h} +z[0] $xc,$yc,$xc,$yc
       repeat s { (${__C$>},{i[$>]/255%},{i[$>]/255%}) r. 2,{w/2},1,1,-1 sort. +,y __C$>={^} rm. }
@@ -35818,38 +35818,38 @@ __x_color_curves :
     _color0="255,220,220" _color1="220,220,220" _color2="180,180,180" _color3="220,220,220"
     _title0=Hue _title1=Saturation _title2=Intensity _title3=Alpha
     m "xcc_goto: s c,-3 rgb2hsi8[0] a c" m "xcc_backto: s c,-3 hsi82rgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,128) 256,1,1,3,if(!c,0,if(c==1,x,128)) 256,1,1,3,if(!c,0,if(c==1,0,x))
+    m "xcc_info: 256,1,1,3,!c?x:128 256,1,1,3,!c?0:c==1?x:128 256,1,1,3,!c?0:c==1?0:x
        hsi82rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   elif ['"$1"']=='hsl'
     _color0="255,220,220" _color1="220,220,220" _color2="180,180,180" _color3="220,220,220"
     _title0=Hue _title1=Saturation _title2=Lightness _title3=Alpha
     m "xcc_goto: s c,-3 rgb2hsl8[0] a c" m "xcc_backto: s c,-3 hsl82rgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,128) 256,1,1,3,if(!c,0,if(c==1,x,128)) 256,1,1,3,if(!c,0,if(c==1,0,x))
+    m "xcc_info: 256,1,1,3,!c?x:128 256,1,1,3,!c?0:c==1?x:128 256,1,1,3,!c?0:c==1?0:x
        hsl82rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   elif ['"$1"']=='hsv'
     _color0="255,220,220" _color1="220,220,220" _color2="180,180,180" _color3="220,220,220"
     _title0=Hue _title1=Saturation _title2=Value _title3=Alpha
     m "xcc_goto: s c,-3 rgb2hsv8[0] a c" m "xcc_backto: s c,-3 hsv82rgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,255) 256,1,1,3,if(!c,0,if(c==1,x,128)) 256,1,1,3,if(!c,0,if(c==1,0,x))
+    m "xcc_info: 256,1,1,3,!c?x:255 256,1,1,3,!c?0:c==1?x:128 256,1,1,3,!c?0:c==1?0:x
        hsv82rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   elif ['"$1"']=='lab'
     _color0="180,180,180" _color1="220,180,220" _color2="220,220,180" _color3="220,220,220"
     _title0=Lightness _title1=Chroma-A _title2=Chroma-B _title3=Alpha
     m "xcc_goto: s c,-3 srgb2rgb[0] apo[0] rgb2lab8,0,4 a c" m "xcc_backto: s c,-3 apo[0] lab82rgb,0,4 rgb2srgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,128) 256,1,1,3,if(!c,240,if(c==1,x,128)) 256,1,1,3,if(!c,240,if(c==1,128,x))
+    m "xcc_info: 256,1,1,3,!c?x:128 256,1,1,3,!c?240:c==1?x:128 256,1,1,3,!c?240:c==1?128:x
        lab82rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   elif ['"$1"']=='lch'
     _color0="180,180,180" _color1="220,180,220" _color2="255,220,220" _color3="220,220,220"
     _title0=Lightness _title1=Chroma _title2=Hue _title3=Alpha
     m "xcc_goto: s c,-3 srgb2rgb[0] apo[0] rgb2lch8[0],0,4 a c" m "xcc_backto: s c,-3 apo[0] lch82rgb[0],0,4
        rgb2srgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,0) 256,1,1,3,if(!c,255,if(c==1,x,128)) 256,1,1,3,if(!c,220,if(c==1,128,x))
+    m "xcc_info: 256,1,1,3,!c?x:0 256,1,1,3,!c?255:c==1?x:128 256,1,1,3,!c?220:c==1?128:x
        lch82rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   elif ['"$1"']=='ycbcr'
     _color0="180,180,180" _color1="220,220,255" _color2="255,220,220" _color3="220,220,220"
     _title0=Luma _title1=Blue\ chroma _title2=Red\ chroma _title3=Alpha
     m "xcc_goto: s c,-3 rgb2ycbcr[0] a c" m "xcc_backto: s c,-3 ycbcr2rgb[0] a c"
-    m "xcc_info: 256,1,1,3,if(!c,x,128) 256,1,1,3,if(!c,128,if(c==1,x,128)) 256,1,1,3,if(!c,128,if(c==1,128,x))
+    m "xcc_info: 256,1,1,3,!c?x:128 256,1,1,3,!c?128:c==1?x:128 256,1,1,3,!c?128:c==1?128:x
        ycbcr2rgb[-3--1] permute[-3--1] xcyz a[0,-3] y a[1,-2] y a[2,-1] y"
   else error[0--3] "Command 'x_color_curves': Unknown specified color space '$1'."
   fi
@@ -35986,16 +35986,16 @@ _x_colorize :
       dy:=($y1-$y0)/6 y0+=$dy y1+=$dy
     elif $o>0" || "($is_ctrl" && "{*,ARROWUP}) # Zoom in.
       if $x1-$x0>16" && "$y1-$y0>16
-        cx:=if($x>=0" && "!{*,ARROWUP},$x,($x0+$x1)/2)
-        cy:=if($y>=0" && "!{*,ARROWUP},$y,($y0+$y1)/2)
+        cx:=$x>=0" && "!{*,ARROWUP}?$x:($x0+$x1)/2)
+        cy:=$y>=0" && "!{*,ARROWUP}?$y:($y0+$y1)/2)
         x0:=$cx+($x0-$cx)*0.75} y0={$cy+($y0-$cy)*0.75
         x1:=$cx+($x1-$cx)*0.75} y1={$cy+($y1-$cy)*0.75
       fi
     elif $o<0" || "($is_ctrl" && "{*,ARROWDOWN}) # Zoom out.
       zfactor:=max(($x1-$x0+1)/$w,($y1-$y0+1)/$h)
       if $zfactor<1.3
-        cx:=if($x>=0" && "!{*,ARROWDOWN},$x,($x0+$x1)/2)
-        cy:=if($y>=0" && "!{*,ARROWDOWN},$y,($y0+$y1)/2)
+        cx:=$x>=0" && "!{*,ARROWDOWN}?$x:($x0+$x1)/2)
+        cy:=$y>=0" && "!{*,ARROWDOWN}?$y:($y0+$y1)/2)
         x0:=$cx+($x0-$cx)/0.75} y0={$cy+($y0-$cy)/0.75
         x1:=$cx+($x1-$cx)/0.75} y1={$cy+($y1-$cy)/0.75
         dx:=$zfactor^2*($w-$x0-$x1)/2} dy={$zfactor^2*($h-$y0-$y1)/2
@@ -36017,7 +36017,7 @@ _x_colorize :
     if narg($baseview)" && "($b&3" || "{*,X}" || "{*,P})" && "$x>=0" && "$y>=0" && "$x<$w" && "$y<$h
       if $selection==-1" && "$N # Check for selection of an existing point.
         ($x;$y) r. $N,2 -. [points] *. {max($ww,$wh)/max($x1-$x0,$y1-$y0)} sqr. s. y +[-2,-1]
-        dmin:=im selection:=if($dmin>25,-1,xm) rm.
+        dmin:=im selection:=$dmin>25?-1:xm rm.
       fi
       if narg($replace_color) # Go back from 'Replace color' mode.
         replace_color= wait -1
@@ -36100,10 +36100,10 @@ _x_colorize :
       nx0:=$x0*$pw/$w ny0:=$y0*$ph/$h
       nx1:=$x1*$pw/$w ny1:=$y1*$ph/$h
       +z[img] $x0,$y0,$x1,$y1
-      r. $ww,$wh,1,100%,{if($ww<w" && "$wh<h,2,1)}
+      r. $ww,$wh,1,100%,{$ww<w" && "$wh<h?2:1}
       if narg($replace_color)" && "{points,w} icolors=$colors_replaced else icolors=$colors fi
       +z[$icolors] $nx0,$ny0,$nx1,$ny1
-      r. $ww,$wh,1,100%,{if($ww<w" && "$wh<h,2,3)}
+      r. $ww,$wh,1,100%,{$ww<w" && "$wh<h?2:3}
       if $1 *.. -1 +.. 255 channels.. -3,0 blend. ..,alpha rm..
       else rgb2ycbcr. j. ..,0,0,0,0 rm.. ycbcr2rgb.
       fi
@@ -36253,7 +36253,7 @@ x_connect4 : check_display $0
 
     # Estimate ymax for each column.
     if !narg($ymax)
-      {board,w},1,1,1,"y = -1; repeat (h#"$board",k, if(!i(#"$board",x,k),y = k)); y" => ymax
+      {board,w},1,1,1,"y = -1; repeat (h#"$board",k, !i(#"$board",x,k)?(y = k)); y" => ymax
       if iM<0 winner=-1,-1,-1 fi # Draw game
     fi
 
@@ -36303,7 +36303,7 @@ x_connect4 : check_display $0
           yM1:=i("#"$ymax,$move1)
           if $yM1>=0
             +=[board] {1+$turn},$move1,$yM1 => board1
-            {board,w},1,1,1,"y = -1; repeat (h#"$board1",k, if(!i(#"$board1",x,k),y = k)); y" => ymax1
+            {board,w},1,1,1,"y = -1; repeat (h#"$board1",k, !i(#"$board1",x,k)?(y = k)); y" => ymax1
             opp_max_score=-inf opp_max_board={board,^}
             opp_turn:=($turn+1)%2
             repeat w#$board { move2=$>
@@ -36512,7 +36512,7 @@ x_fireworks : check_display $0
     i=0
     repeat $!-2 {
       to_be_removed=0
-      radius:=if({$i,@4}>0,{$i,@5}/3,{$i,@5}*(1+2*({$i,@4}+2)/120))
+      radius:={$i,@4}>0?{$i,@5}/3:{$i,@5}*(1+2*({$i,@4}+2)/120)
       ellipse. {$i,@0},{$i,@1},{$i,@5},{max(1,$radius)},{atan2({$i,@3},{$i,@2})*180/pi},0.6,{$i,@6-8}  # Draw rocket.
       ({$i,@2},{$i,@3},0,0.09,-1,0,0,0,0) +[$i,-1] # Compute new position of the rocket.
       if {$i,@0}<0\ ||\ {$i,@0}>=w\ ||\ {$i,@1}>=h\ ||\ $radius<0 to_be_removed=1 fi # Discard if rocket disappear.
@@ -37117,7 +37117,7 @@ x_jawbreaker : check "${1=12}>0 && $1<20 && ${2=13}>0 && $2<20 && ${3=5}>0 && $3
     else wait fi
 
     # Check for the end of the game.
-    +f[board] "if(i,j(-1)==i || j(1)==i || j(0,1)==i || j(0,-1)==i,0)"
+    +f[board] "i?j(-1)==i || j(1)==i || j(0,1)==i || j(0,-1)==i:0"
     if !is rm. break fi rm.
 
     # Manage user-events
@@ -37139,7 +37139,7 @@ x_jawbreaker : check "${1=12}>0 && $1<20 && ${2=13}>0 && $2<20 && ${3=5}>0 && $3
       if {{board,i($x,$y)}>0}
         abs[board] flood[board] $x,$y,0,0,0,1,-{board,i($x,$y)}
         +>=[board] 0 -. 1
-        shapescore:=(is+1)^2 shapescorey:=if($shapescore,32,0) rm.
+        shapescore:=(is+1)^2 shapescorey:=$shapescore?32:0 rm.
 
       # When confirming selection of a ball -> remove set of connected balls.
       elif {board,i($x,$y)}
@@ -37159,7 +37159,7 @@ x_jawbreaker : check "${1=12}>0 && $1<20 && ${2=13}>0 && $2<20 && ${3=5}>0 && $3
             l. { s -,0 a y if $! r 1,$h,1,1,0 mirror y else i 1,$h fi }
             j[board] .,$> rm.
           }
-          rows[board] -1,100% f[board] "if(y==0,if(i(x,h-1),x,w),i)" sort[board] +,x rows[board] 1,100%
+          rows[board] -1,100% f[board] "!y?(i(x,h-1)?x:w):i" sort[board] +,x rows[board] 1,100%
 
           # Update score.
           score+=int((is-1)^2)
@@ -37199,9 +37199,9 @@ _x_jawbreaker_ball :
   mwh:=min(w,h)
   sh 3 f. 0 rm.
   ellipse {0.5*$mwh},{0.5*$mwh},{0.5*$mwh-4},{0.5*$mwh-4},0,1,240,240,240,1
-  sh 0,2 *. '($mwh+y-x)/(2*w)' rm.
+  sh 0,2 *. "($mwh+y-x)/(2*w)" rm.
   sh 3 *.. . dilate. 5 rm.
-  sh 0,2 +. 'if(i&&(!j(-1)||!j(1)||!j(0,-1)||!j(0,1)),240/6,0)' rm.
+  sh 0,2 +. "i && (!j(-1) || !j(1) || !j(0,-1) || !j(0,1))?240/6:0" rm.
   ellipse {$mwh*0.7},{$mwh*0.3},{min(30,$mwh*$mwh/512)},{min(30,$mwh*$mwh/512)},0,{min($mwh/64,1)},255,255,255,1
 
 #@cli x_landscape
@@ -37230,12 +37230,12 @@ x_landscape : check_display $0
   +. .. rm.. c. 0,255 => colors # Colors.
 
   # Pre-compute some images used on each frame.
-  $W,$H,1,1,'x' y. x => x # Increasing x.
-  $W,$H,1,1,'1+x+y*w' y. x => offsets # Offsets (+1).
-  $W,$H,1,1,'0.5*y' => gmap Mgmap:=iM # Z-increment for altitude map.
+  $W,$H,1,1,x y. x => x # Increasing x.
+  $W,$H,1,1,"1 + x + y*w" y. x => offsets # Offsets (+1).
+  $W,$H,1,1,"0.5*y" => gmap Mgmap:=iM # Z-increment for altitude map.
   $W,$H,1,3 fc. 60,80,135 => ccolors # Color for the horizon.
-  $W,$H,1,1,'(y/$H)^2' => mcolors # Mask for the horizon.
-  $W,400,1,1,'b=h-1-$Mgmap;if(y>=b,256+(y-b)*255/(h-1-b),y*255/b)' round. # Background.
+  $W,$H,1,1,"(y/$H)^2" => mcolors # Mask for the horizon.
+  $W,400,1,1,"b=h-1-$Mgmap;y>=b?256+(y-b)*255/(h-1-b):y*255/b" round. # Background.
 
   (96^16^128) (0^200^255) a[-2,-1] x r. 256,1,1,3,3
   (0^32^0) (0^64^128) a[-2,-1] x r. 256,1,1,3,3
@@ -37251,10 +37251,10 @@ x_landscape : check_display $0
 
     # Get part of the map to display.
     t:=$|*0.03
-    xm:=map,w/2+(w-$H/2)/2*cos(3.1*$t)
-    ym:=map,h/2+(h-$H/2)/2*sin(2.8*$t)
-    u:=map,(w-$H/2)*cos(2.5*$t)
-    v:=map,(h-$H/2)*sin(9.7*$t)
+    xm={map,w/2+(w-$H/2)/2*cos(3.1*$t)}
+    ym={map,h/2+(h-$H/2)/2*sin(2.8*$t)}
+    u={map,(w-$H/2)*cos(2.5*$t)}
+    v={map,(h-$H/2)*sin(9.7*$t)}
     a:=atan2($v,$u)*180/pi
     +r3d[viewrange3d] 0,0,1,$a y. x
     ({$xm+i[8]},{$xm+i[11]};{$xm+i[17]},{$xm+i[14]}^{$ym+i[9]},{$ym+i[12]};{$ym+i[18]},{$ym+i[15]}) rm..
