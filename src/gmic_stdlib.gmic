@@ -22144,7 +22144,7 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
     nb_attempts=0
 
     # Generate all sprites for current scale.
-    ratio={if($1>1,$2+(100-$2)*$</($1-1),100)}%
+    ratio={$1>1?$2+(100-$2)*$</($1-1):100}%
     repeat $N { +l[{1+$>}] {
       w,h:=[w,h]*$ratio
       if $w<1||$h<1 rm
@@ -22310,13 +22310,13 @@ polka_dots : check $1>=0 skip ${2=20},${3=50},${4=50},${5=0},${6=10},${7=1},${8=
 #@cli : Default values: 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
 #@cli : $ image.jpg polygon 4,20%,20%,80%,30%,80%,70%,20%,80%,0.3,0,255,0 \
 # polygon 4,20%,20%,80%,30%,80%,70%,20%,80%,1,0xCCCCCCCC,255
-#@cli : $ image.jpg 2,16,1,1,'u(if(x,{h},{w}))' polygon[-2] {h},{^},0.6,255,0,255 remove[-1]
+#@cli : $ image.jpg 2,16,1,1,'u(x?{h}:{w})' polygon[-2] {h},{^},0.6,255,0,255 remove[-1]
 
 #@cli quiver : [function_image],_sampling[%]>0,_factor>=0,_is_arrow={ 0 | 1 },_opacity,_color1,...
 #@cli : Draw specified 2D vector/orientation field on selected images.
 #@cli : Default values: 'sampling=5%', 'factor=1', 'is_arrow=1', 'opacity=1', 'pattern=(undefined)'
 #@cli : and 'color1=0'.
-#@cli : $ 100,100,1,2,'if(c==0,x-w/2,y-h/2)' 500,500,1,3,255 quiver[-1] [-2],10
+#@cli : $ 100,100,1,2,'c==0?x-w/2:y-h/2' 500,500,1,3,255 quiver[-1] [-2],10
 #@cli : $ image.jpg +resize2dy 600 luminance[0] gradient[0] mul[1] -1 reverse[0,1] append[0,1] c \
 # blur[0] 8 orientation[0] quiver[1] [0],20,1,1,0.8,255
 quiver : check ${"is_image_arg $1"}" && ${2=5%}>0 && ${3=1}>=0 && isbool(${4=1})" skip "${5=1},${6=0}"
@@ -22727,7 +22727,7 @@ meigen : check "isint($1) && $1>0"
 
 #@cli svd : (+)
 #@cli : Compute SVD decomposition of selected matrices.
-#@cli : $ 10,10,1,1,'if(x==y,x+u(-0.2,0.2),0)' +svd
+#@cli : $ 10,10,1,1,'x==y?x+u(-0.2,0.2):0' +svd
 
 #@cli transpose
 #@cli : Transpose selected matrices.
@@ -23267,7 +23267,7 @@ delaunay3d :
 
 _delaunay3d :
   f. "A=j($1,$2,$3,0,0,1); B=j($4,$5,$6,0,0,1);
-      if(i!=A && i!=B && A!=B, kth(1+c,i,A,B),0)"
+      i!=A && i!=B && A!=B?kth(1+c,i,A,B):0"
   discard. 0 r. {h/3},3,1,1,-1
 
 #@cli distribution3d
@@ -23421,8 +23421,8 @@ extrude3d : check "${1=16}>0 && ${2=1024}>0 && ${3=0.5%}>=0"
   norm n 0,1 autocrop 0
   foreach {
     nm={n}
-    wr:=round(max(1,if(w>h,min($2,w),min($2,h)*w/h)))
-    hr:=round(max(1,if(w>h,min($2,w)*h/w,min($2,h))))
+    wr:=round(max(1,w>h?min($2,w):min($2,h)*w/h))
+    hr:=round(max(1,w>h?min($2,w)*h/w:min($2,h)))
     fact:=$1/max(w/$wr,h/$hr)
     b $3,0 r $wr,$hr,1,1,2 expand_xyz 1,0
     isosurface3d 50% *3d 1,1,$fact rv3d => $nm
@@ -23785,10 +23785,10 @@ lathe3d : check "${1=128}>0 && ${2=0.5%}>=0 && ${3=361}>=0"
   e[^-1] "Generate lathed 3D object from XY-profile$?, with resolution $1, smoothness $2 and maximum angle $3 deg."
   tmax:=($3-180)*pi/180 round norm n 0,1 autocrop 0
   foreach {
-    wr:=max(1,w2=2*w;if(w2>h,min($1,w2),min($1,h)*w2/h))
-    hr:=max(1,w2=2*w;if(w2>h,min($1,w2)*h/w2,min($1,h)))
+    wr:=max(1,w2=2*w;w2>h?min($1,w2):min($1,h)*w2/h)
+    hr:=max(1,w2=2*w;w2>h?min($1,w2)*h/w2:min($1,h))
     rmax:=sqrt(($wr)^2+($hr)^2)/2
-    $wr,1,$wr,1,"xc = x - w/2; zc = z - d/2; t = atan2(zc,xc); if(t>"$tmax","$rmax",sqrt(xc*xc+zc*zc))"
+    $wr,1,$wr,1,"xc = x - w/2; zc = z - d/2; t = atan2(zc,xc); t>"$tmax"?"$rmax":sqrt(xc*xc+zc*zc)"
     *. {2*({-2,w}-1)/(w-1)} r. $wr,$hr,$wr
     (0;{{-2,h}-1}) r. $wr,$hr,$wr,1,3 a[-2--1] c
     warp.. .,0,1,0 rm.
@@ -23891,7 +23891,7 @@ _normalize3d :
   check3d foreach {
     if i[6]
       s3d r[2] 3,{2,h/3},1,1,-1 s[2] x
-      factor:=v=max({2,iM-im},{3,iM-im},{4,iM-im});if(v,v,1)
+      factor:=v=max({2,iM-im},{3,iM-im},{4,iM-im});v?v:1
       a[2-4] x /[2] $factor y[2] a y
     fi
   }
@@ -23931,7 +23931,7 @@ _opacity3d :
   e[^-1] "Input 3D object from parametric surface ($1,$2,$3)."
   # Compute (x(a,b),y(a,b),z(a,b)) and normalize it.
   ($4,$5;$4,$5^$6,$6;$7,$7) r. $8,$9,1,2,3 channels. 0,2
-  f. "a=i(x,y,0,0);b=i(x,y,0,1);if(c==0,$1,if(c==1,$2,$3))"
+  f. "a=i(x,y,0,0);b=i(x,y,0,1);c==0?$1:c==1?$2:$3"
   sh. 0 xmin,xmax:=im,iM n. 16,{$10-17} rm.
   sh. 1 ymin,ymax:=im,iM n. 16,{$11-17} rm.
   sh. 2 zmin,zmax:=im,iM n. 16,{$12-17} rm.
@@ -23989,14 +23989,14 @@ pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(
     rows[2--1] 2,100%                                   # Colors
     if $s!=3
       r[2--1] $1,$1,1,{min(3,$s)},-1
-      r[2--1] $1,$1,1,3,{if($s!=1,0,1)}
+      r[2--1] $1,$1,1,3,{$s!=1?0:1}
       y[2--1]
     fi
     i[2--2] (-128;$1;$1;3) a[2--1] y
     rm[0]                                               # Remove input image (now useless).
     i[0] ('CImg3d')                                     # Header.
     i[1] ($3;$3)                                        # Geometry.
-    i[3] 2,$3,1,1,if(x==0,1,y)                          # Primitives.
+    i[3] 2,$3,1,1,x==0?1:y                              # Primitives.
     1,$3,1,1,1                                          # Opacities.
     y a[-6--1] y                                        # Merge as a 3D object.
     => $nm
@@ -25163,11 +25163,11 @@ tensors3d : check "${1=1}>=0 && isint(${2=2}) && $2>=0 && ${3=0.05}>=0"
   expand_xy[-2,-1] 2,0 dilate[-2,-1] 2
   permute. zyxc r[-2,-1] ${-max_whd} &[-2,-1]
 
-  100%,100% rand. 0,{{-2,d}-1} round. ri. .. f. 'if(z==i,1,0)'
+  100%,100% rand. 0,{{-2,d}-1} round. ri. .. f. z==i
   distance. 1 +. 1 +f. 1 rv[-2,-1] /[-2,-1] *. ..
   +dilate. 0,0,{d} ==[-2,-1] *. ..
 
-  1,100%,100% rand. 0,{{-2,w}-1} round. ri. .. f. 'if(x==i,1,0)'
+  1,100%,100% rand. 0,{{-2,w}-1} round. ri. .. f. x==i
   distance. 1 +. 1 +f. 1 rv[-2,-1] /[-2,-1] *. ...
   +dilate. 0,0,{d} ==[-2,-1] *[-3,-1]
 
@@ -25547,7 +25547,7 @@ apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
   _gmic_s="$?" v + _$0 "$1",${2--1}
 
 _apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
-  N:=if($3,max(1,round($3)),$_cpus) N:=2^int(log2(min(16,$N)))
+  N:=$3?max(1,round($3)):$_cpus N:=2^int(log2(min(16,$N)))
   e[0--3] "Apply parallelized command '$1' on image"$_gmic_s", with overlap $2 and "$N" threads."
   __apo_exception=""
   m "_check1 : if $!!=1 rm 0 __apo_exception=\"Command 'apply_parallel_overlap': Specified command '$1' changes the
@@ -25865,7 +25865,7 @@ rprogress : skip ${2=""}
   m:=arg(-2,$_progress_bounds) M:=arg(-1,$_progress_bounds)
   if $#==2&&!narg($2) # 1 argument -> Set progress bar.
     e[0--3] "Set relative progress index to $1%."
-    progress {if($1<0,-1,min(100,max(0,$m+($M-$m)*$1%)))}
+    progress {$1<0?-1:min(100,max(0,$m+($M-$m)*$1%))}
   elif $#==3 # 3 arguments -> Call command with specified bounds.
     nm:=min($2,$-1) nM:=max($2,$-1)
     e[0--3] "Call command '$1' with progress bounds ["$nm,$nM"]."
@@ -28839,7 +28839,7 @@ frame_cube : check "${1=1}>=0" skip ${2=0},${3=0},${4=0},${5=0},${6=0},${7=0}
       cx=$2*$w/2*($f+$m*$1)/$f
       cy=$3*$h/2*($f+$m*$1)/$f
       s3d r[2] 3,{{2,h}/3},1,1,-1
-      f[2] "if(i(2,y)<0.5,i,i+if(x==0,"$cx",if(x==1,"$cy",($1-1)*"$m")))"
+      f[2] "i(2,y)<0.5?i:i+(x==0?"$cx":x==1?"$cy":($1-1)*"$m")"
       y[2] a y
       *3d 2 {2*$w},{2*$h},1,$s f3d {2*$f}
       j3d. ..,50%,50%,0,1,2,0,0 rm..
@@ -29294,8 +29294,8 @@ pack : skip ${1=0},${2=max(w,h)}
         metric_h:=abs($w1+$w2-max($h1,$h2))
         metric_v:=abs($h1+$h2-max($w1,$w2))
       else
-        metric_h:=if($h2<$h1,$w2*($h1-$h2),$w1*($h2-$h1))
-        metric_v:=if($w2<$w1,($w1-$w2)*$h2,($w2-$w1)*$h1)
+        metric_h:=$h2<$h1?$w2*($h1-$h2):$w1*($h2-$h1)
+        metric_v:=$w2<$w1?$h2*($w1-$w2):$h1*($w2-$w1)
       fi
 
       if $metric_h<=$metric_v # Append horizontally.
@@ -29344,7 +29344,7 @@ _puzzle :
   repeat $2 {
     ({'CImg3d'},$R,{$R-1})
     repeat $1 {
-      sign:=if(u<=0.5,-1,1)
+      sign:=u<=0.5?-1,1
       center:=$4*u(-0.25,0.25)
       knob:=$5*u(-0.05,0.12)
       ($>,0;\
