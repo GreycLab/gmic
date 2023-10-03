@@ -19375,26 +19375,31 @@ solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
     rm[0]
   }
 
-#@cli split_alpha : _nb_scales={ 0:auto | N>0 },_subsample={ 0:no | 1:yes }
+#@cli split_alpha : _nb_scales[%]={ 0:auto | -S<0 | N>0 },_subsample={ 0:no | 1:yes }
 #@cli : Split selected images into alpha detail scales.
+#@cli : If 'nb_scales==-S', the lowest scale has a size of at least 'SxS'.
 #@cli : Image reconstruction is done with command ''merge_alpha''.
 #@cli : Default values: 'nb_scales=0' and 'subsample=1'.
-split_alpha : check "isint(${1=0}) && $1>=0 && isbool(${2=1})"
+split_alpha : check "(isint(${1=0}) || ispercentage($1)) && isbool(${2=1})"
   s= if $1 s="$1 " fi s0,s1="out",
   e[^-1] "Split image$? into "${s}"alpha detail scales, with"$s$2" subsampling."
-  if $1==1 return fi
   foreach {
     bm={f}{b} ext={x} if ['$ext']!=0 ext..=. fi
-    nb_scales_max:=round(log2(min(w,h)))
-    nb_scales:=$1?min($nb_scales_max,$1):$nb_scales_max
-    repeat $nb_scales-1 {
-      if $2 # With cubic subsampling
-        +r. 50%,50%,1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... . rm.
-      else # Without subsampling
-        +b. {0.25+2^$>} sub_alpha.. .
-      fi
-    }
-    rv foreach { => ${bm}_$>$ext }
+    nb_scales_max:=int(log2(min(w,h)))
+    nb_scales:=cut(ispercentage($1)?round($nb_scales_max*$1):\
+                   $1<0?int(log2(min(w,h)/(-$1)))+1:\
+                   $1?$1:$nb_scales_max,\
+                   1,$nb_scales_max)
+    if $nb_scales>1
+      repeat $nb_scales-1 {
+        if $2 # With cubic subsampling
+          +r. {int([w,h]/2)},1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... . rm.
+        else # Without subsampling
+          +b. {0.25+2^$>} sub_alpha.. .
+        fi
+      }
+      rv foreach { => ${bm}_$>$ext }
+    fi
   }
 
 #@cli split_details : _nb_scales>0,_base_scale[%]>=0,_detail_scale[%]>=0
