@@ -4149,7 +4149,7 @@ display_parametric : check "${1=512}>0 && ${2=$1}>0 && ${4=0}>=0" skip ${3=3},${
 
     # Convert point cloud to connected segments.
     if $3 l[0] {
-      s3d f[1] 'i-y' rm[3] i[3] (2,0,1;2,{$N-2},{$N-1}) r[3] 3,{$N-1},1,1,3 round[3]
+      s3d f[1] "i-y" rm[3] i[3] (2,0,1;2,{$N-2},{$N-1}) r[3] 3,{$N-1},1,1,3 round[3]
       r[5] 1,{h-1},1,1,0
       if $3>1 r[4] 3,{4,h/3},1,1,-1 r[4] 3,{4,h-1},1,1,2 else rm[4] i[4] 3,{$N-1} fi
       y a y
@@ -11791,7 +11791,7 @@ sort_list : skip ${1=+},${2=i}
         quicksort(0,lm1)"
 
     else # Generic case
-      i=$! repeat $! { ({$>,$2}) } a[$i--1] y +f. 'y' a[-2,-1] x sort. $1,y z. 1,1
+      i=$! repeat $! { ({$>,$2}) } a[$i--1] y +f. y a[-2,-1] x sort. $1,y z. 1,1
       repeat h { nm$>={$>,n} =>[$>] sortlist$> }
       repeat h { mv[sortlist{i(0,$>)}] -1 }
       repeat h { =>[$>] ${nm{i(0,$>)}} }
@@ -12512,7 +12512,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
     f ">!y?i:y==1?(i(x,0)==i(x+1,0)?-1:x):(i(x-1,1)==-1?i(x-1,2)+1:1)"
     if $2 # Constrain maximum sequence length.
       transpose mirror x
-      f. '>x==2?i:!x?(j(0,-1)==$2?1:i!=1?j(0,-1)+1:1):(i==-1&&j(-1)==$2?y:i)'
+      f. ">x==2?i:!x?(j(0,-1)==$2?1:i!=1?j(0,-1)+1:1):(i==-1&&j(-1)==$2?y:i)"
       mirror x transpose
     fi
     z 0,{w-2} s y,3 y[1] discard[1] -1 warp[0,2] [1],0,0 rm[1]
@@ -15085,11 +15085,11 @@ pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3
   # Generate all possible sRGB colors with given increments.
   {round(2^$3)},1,1,3,'x'
   if !$1 n. 0,255 return fi
-  {$1+1},{$1+1},{$1+1},1,'x' +f. 'y' +f. 'z' a[-3--1] c r. {w*h*d},1,1,3,-1
-  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);min(R,G,B)?-1:i'
+  {$1+1},{$1+1},{$1+1},1,"x" +f. "y" +f. "z" a[-3--1] c r. {w*h*d},1,1,3,-1
+  f. "R = i(x,0,0,0); G = i(x,0,0,1); B = i(x,0,0,2); min(R,G,B)?-1:i"
   permute. cxyz discard. -1 r. 3,{h/3},1,1,-1 permute. yzcx
   r.. {w*100}% ri. ..,0,2 +[-2,-1]
-  f. 'R=i(x,0,0,0);G=i(x,0,0,1);B=i(x,0,0,2);max(R,G,B)>2^$3-1?-1:i'
+  f. "R = i(x,0,0,0); G = i(x,0,0,1); B = i(x,0,0,2); max(R,G,B)>2^$3-1?-1:i"
   permute. cxyz discard. -1 r. 3,{h/3},1,1,-1 permute. yzcx
   n. 0,255
   +srgb2lab. rv[-2,-1] a[-2,-1] y sort. +,x  # Sort by increasing lightness.
@@ -17819,7 +17819,7 @@ _kr_circle :
 _jf_circle :
   {round($1)},{round($1)}
   center:=0.5*(w-1)
-  f. 'sqrt((x-$center)^2+(y-$center)^2)'
+  f. "sqrt((x - $center)^2 + (y - $center)^2)"
   if !(w%2)
     round. 0.0001,-1
     t1:=sqrt(((round($1)-1)/2)^2+0.25)
@@ -18983,13 +18983,13 @@ peronamalik_flow : check "${1=20}>0 && ${2=5}>=0" skip ${3=5},${4=0}
   e[^-1] "Apply $2 iterations of the Perona-Malik flow on image$?, with K factor $1 and time step $3."
   m "_peronamalik_flow :
    +gradient xy,0 a[-2,-1] c norm. b. 0.8 /. $1 sqr. *. -1 exp. a[-2,-1] c
-   f. '\"s1=s-1;
-          C=i(x,y,z,s-1);
-          c>=s1?0:
-           (C+i(x+1,y,z,s-1,0,1))*(j(1,0,0,0,0,1)-i) -
-           (C+i(x-1,y,z,s-1,0,1))*(i-j(-1,0,0,0,0,1)) +
-           (C+i(x,y+1,z,s-1,0,1))*(j(0,1,0,0,0,1)-i) -
-           (C+i(x,y-1,z,s-1,0,1))*(i-j(0,-1,0,0,0,1))\"'"
+   f. \"s1 = s-1;
+       C = i(x,y,z,s-1);
+       c>=s1?0:
+         (C+i(x+1,y,z,s-1,0,1))*(j(1,0,0,0,0,1)-i) -
+         (C+i(x-1,y,z,s-1,0,1))*(i-j(-1,0,0,0,0,1)) +
+         (C+i(x,y+1,z,s-1,0,1))*(j(0,1,0,0,0,1)-i) -
+         (C+i(x,y-1,z,s-1,0,1))*(i-j(0,-1,0,0,0,1))\""
   pde_flow $2,$3,_peronamalik_flow,$4
   um _peronamalik_flow
 
@@ -30673,8 +30673,8 @@ weave : check "${1=6}>=0 && ${2=65}>=0 && $2<=100 && ${3=40}>=0 && $3<=100 && ${
 
     amp_x:=$8*($w-w)/2 amp_y:=$9*($w-w)/2
     r[-4--1] $w,$h,1,100%,0,0,0.5,0.5
-    f[-4] 'i(x+$amp_x*sin(y/h*pi),y,0,c,1,2)' f. 'i(x-$amp_x*sin(y/h*pi),y,0,c,1,2)'
-    f... 'i(x,y+$amp_y*sin(x/w*pi),0,c,1,2)' f.. 'i(x,y-$amp_y*sin(x/w*pi),0,c,1,2)'
+    f[-4] i(x+$amp_x*sin(y/h*pi),y,0,c,1,2) f. i(x-$amp_x*sin(y/h*pi),y,0,c,1,2)
+    f... i(x,y+$amp_y*sin(x/w*pi),0,c,1,2) f.. i(x,y-$amp_y*sin(x/w*pi),0,c,1,2)
     blend[-4,-3] alpha blend[-2,-1] alpha c[-2,-1] 0,255
 
     # Render full pattern and merge.
@@ -30863,7 +30863,7 @@ polar2euclidean : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3}) && $4>
 raindrops : check "${2=0.1}>=0 && ${3=1}>=0 && isint(${4=0}) && $4>=0" skip ${1=80}
   e[^-1] "Apply raindrops deformation on image$?, with amplitude $1, density $2, wavelength $3 and $4 merging steps."
   foreach {
-    100%,100% noise. $2,2 ==. 1 distance. 1 f. 'cos(i)/(1+i/(1e-8+$3))'
+    100%,100% noise. $2,2 ==. 1 distance. 1 f. "cos(i)/(1+i/(1e-8+$3))"
     if $4
       i.. (0,1,0;1,0,1;0,1,0) /.. 2 .
       repeat $4 { +convolve. ...,1 -. ... rm... } rm[-3,-2]
@@ -32503,7 +32503,7 @@ transition : check ${is_image_arg\ $1}" && $2>=0 && ${3=0}>=0 && $3<=100" skip $
     if $3 repeat $2 { if $4<0" || "$>==$frame
       val0:=($>+0.5)/$2-$3%
       val1:=($>+0.5)/$2+$3%
-      +f[0] '(i-$val0)/($val1-$val0)' c. 0,1
+      +f[0] "(i - $val0)/($val1 - $val0)" c. 0,1
       +j[2] [1],0,0,0,0,1,. rm..
       => $nm0\ ""#{1+$>}
     fi } else repeat $2 { if $4<0" || "$>==$frame
@@ -33252,7 +33252,7 @@ _hex2dec :
 hex2str : skip ${1=""}
   if !narg("$1") u "" return fi
   ('$*') if w<2 rm. u "" return fi
-  f. 'v=i-(i>=97?87:48);x%2?v:v*16' r. 2,{int(w/2)},1,1,-1 cumulate. x z. 1,1
+  f. "v = i - (i>=97?87:48); x%2?v:v*16" r. 2,{int(w/2)},1,1,-1 cumulate. x z. 1,1
   u {t} rm.
 
 #@cli img2base64 : _encoding={ 0:base64 | 1:base64url },_store_names={ 0 | 1 }
@@ -35407,12 +35407,12 @@ x_2048 : check_display $0
 --------------------------------------------------------------"
   l[] {
   score=0 f3d 50 m3d 0
-  m "_x_2048_setrandom : +==[0] 0 f. 'i?4*y+x:-1' discard. -1
+  m "_x_2048_setrandom : +==[0] 0 f. i?4*y+x:-1 discard. -1
      off:=i[round(u(h-1))] rm. x:=$off&3 y:=$off>>2 n:=u<0.75?1:2
      =[0] $n,$x,$y [{2+$n}] c3d.
      repeat 6 { j3d[1] .,{78+$x*121},{190+$y*121},{10*$<},{(1+$>)/6} w[1] wait 20 }
      rm."
-  m "_x_2048_object3d : +f[0] 'i?i*16+4*y+x:-1' discard. -1
+  m "_x_2048_object3d : +f[0] i?i*16+4*y+x:-1 discard. -1
      N:=h repeat h { v={-{1+$>},@$>} ++3d[{2+($v>>4)}] {$v&3},{($v>>2)&3} }
      +3d[-$N--1] rm.."
   i[0] 4,4
@@ -35450,7 +35450,7 @@ x_2048 : check_display $0
     fi
 
     # Check for the end of the game.
-    ++[0] 1 f. 'j(-1)==i||j(1)==i||j(0,-1)==i||j(1,0)==i||i==1'
+    ++[0] 1 f. j(-1)==i||j(1)==i||j(0,-1)==i||j(1,0)==i||i==1
     if {0,iM==11} # Game won.
       alert "Game Over","\nCongratulations! You got the 2048 title!\n\n   Your score: "$score,"OK"
       break
@@ -36777,7 +36777,7 @@ x_hanoi : check_display $0
     ++3d 10,0,0  +-3d.. 10,0,0
     box3d 30,1,10 -3d. 15,0,5
     +3d => rods3d
-    400,400 noise. 1 fftpolar. f.. 'r=sqrt((x-w/2)^2+.01*(y-h/2)^2);i/(1+r)' ifftpolar[-2,-1] n. 0,31
+    400,400 noise. 1 fftpolar. f.. "r = sqrt((x - w/2)^2 + .01*(y - h/2)^2);i/(1 + r)" ifftpolar[-2,-1] n. 0,31
     (86,50,50;132,36,12;218,109,66;231,207,180;255,193,140) permute. yzcx r. 32,1,1,3,3
     map.. . rm. b. 2% b. x,1% sharpen. 100 c. 0,255
     r3d.. 1,0,0,-90 texturize3d.. . r3d.. 1,0,0,90 rm.
@@ -37271,7 +37271,7 @@ x_landscape : check_display $0
     +[lmap] [gmap]
     j[lcolors] [ccolors],0,0,0,0,1,[mcolors]
     j[lcolors] [groundcolor]
-    +round[lmap] f. '>m=abs(j(0,-1));i>m?i:-m' => y0  # Compute visible top points.
+    +round[lmap] f. ">m = abs(j(0,-1)); i>m?i:-m" => y0  # Compute visible top points.
     +shift. 0,1 abs. +. 1 => y1 # Compute visible bottom points.
     *[y0,y1] [ground] rm[ground]
     r[lcolors,y0,y1] {$W*$H},1,1,100%,-1
@@ -39021,7 +39021,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
 
 # Compute potential function.
 _x_segment :
-  b. 0.2% gradient_norm. f. '1/(1+i^2)'
+  b. 0.2% gradient_norm. f. 1/(1+i^2)
   => potential
 
 #@cli x_select_color : _variable_name
@@ -39271,7 +39271,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
       is_inside:=$X>=0" && "$Y>=0" && "$X<=100" && "$Y<=100
 
       # Check for a point selection.
-      if $selected<0 +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=im>8?-1:ym rm. fi
+      if $selected<0 +f[points] "sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%" z. 0,0 selected:=im>8?-1:ym rm. fi
 
       if $x>=0" && "$b&1" && "$selected>=0 # Move an existing point.
         if {*,SHIFTLEFT}" || "{*,SHIFTRIGHT} X={points,i(0,$selected)} fi
@@ -39283,7 +39283,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
 
       elif $b&1" && "$is_inside # Create new point.
         ($X,$Y) a[points,-1] y sort[points] +,y
-        +f[points] 'sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%' z. 0,0 selected:=im>8?-1:ym $1={points,^} rm[view,-1]
+        +f[points] "sqrt((i-$X)^2+(j(1)-$Y)^2)*{*,w}%" z. 0,0 selected:=im>8?-1:ym $1={points,^} rm[view,-1]
       elif $b&2" && "$selected>0" && "$selected<{points,h-1}" && "$is_inside # Delete an existing point.
         l[points] { s y rm[$selected] a y } wait -1 selected=-1 $1={points,^} rm[view]
       fi
@@ -42228,7 +42228,7 @@ fx_ministeck :
       +colormap. $1 index.. .
       [0],[0],1,1 rand[2] 0,1 dilate[2] $4 +[0,2]
       r[0] $3""00%,$3""00%
-      +g[0] xy,1 !=[-2,-1] 0 +f[0] 'i(x+1,y+1)-i(x,y)' !=[-3--1] 0 -|[-3--1]
+      +g[0] xy,1 !=[-2,-1] 0 +f[0] "i(x+1,y+1)-i(x,y)" !=[-3--1] 0 -|[-3--1]
       z[0,-1] 0,0,{w-2},{h-2}
       if $7 . fi
       +shift. 1,1 *.. -1 +[-2,-1] b. {$6*$3/5} n. -$5,$5
@@ -50817,9 +50817,9 @@ fx_lomo :
   foreach {
     to_rgb +gaussian {100-$1}%,{100-$1}% n. 0,1 *
     s c
-    f[0] '255*atan((i-128)/128)'
-    f[1] '255*tan((i-128)/128)'
-    f[2] '255*atan((i-128)/255)'
+    f[0] "255*atan((i-128)/128)"
+    f[1] "255*tan((i-128)/128)"
+    f[2] "255*atan((i-128)/255)"
     a c
     sharpen 1
     normalize 0,255
@@ -52178,11 +52178,11 @@ fx_droste :
       rm.
       xshift,yshift,alpha:=w*$10/100,h*$11/100,-$12*pi/180
       ca,sa,w2,h2:=cos($alpha)/$13,sin($alpha)/$13,w/2,h/2
-      f. 'i==-32767?i:(X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;!c?$w2-$xshift+X*$ca-Y*$sa:$h2-$yshift+X*$sa+Y*$ca)'
-      if !$14 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:i' rm.
-      elif $14==1 sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:i' rm.
-      elif $14==2 sh. 0 f. 'i==-32767?x:i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
-      else sh. 0 f. 'i==-32767?x:w-1-i' rm. sh. 1 f. 'i==-32767?y:h-1-i' rm.
+      f. i==-32767?i:(X=i(x,y,0,0)-$w2;Y=i(x,y,0,1)-$h2;!c?$w2-$xshift+X*$ca-Y*$sa:$h2-$yshift+X*$sa+Y*$ca)
+      if !$14 sh. 0 f. i==-32767?x:i rm. sh. 1 f. i==-32767?y:i rm.
+      elif $14==1 sh. 0 f. i==-32767?x:w-1-i rm. sh. 1 f. i==-32767?y:i rm.
+      elif $14==2 sh. 0 f. i==-32767?x:i rm. sh. 1 f. i==-32767?y:h-1-i rm.
+      else sh. 0 f. i==-32767?x:w-1-i rm. sh. 1 f. i==-32767?y:h-1-i rm.
       fi
       if $16<2 warp.. .,0,{!$16},$15 rm.
       else
@@ -52233,7 +52233,7 @@ fx_frame_blur :
     z[1] {$3/2}%,{$3/2}%,{100-$3/2}%,{100-$3/2}%
     to_rgba[1]
 
-    if $5 r:=1+1/$5 sh[1] 100% f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
+    if $5 r:=1+1/$5 sh[1] 100% f. 1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)
       v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))
       c. $v,{$v+0.5/max(w,h)} n. 0,255 rm. fi
 
@@ -52241,7 +52241,7 @@ fx_frame_blur :
     r[1] {w+$s},{h+$s},1,4,0,0,0.5,0.5
     i[1] 100%,100%,1,3 fc[1] ${12-14} blend[1,2] alpha to_a.
 
-    if $5 sh[1] 100% f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
+    if $5 sh[1] 100% f. 1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)
       v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2))
       c. $v,{$v+0.5/max(w,h)} n. 0,255 rm. fi
     rotate[1] $21,1,0
@@ -52416,7 +52416,7 @@ fx_frame_smooth :
   foreach {
      sx,sy:=[$1%,$2%]*max(w,h)
      100%,100%,1,1,0
-     if $3 r:=1+1/$3 f. '1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)'
+     if $3 r:=1+1/$3 f. 1-(abs(x/w-0.5)^$r+abs(y/h-0.5)^$r)^(1/$r)
        v:=min(i(w/2,0),i(w-1,h/2),i(w/2,h-1),i(0,h/2)) <=. $v
      fi
      frame $sx,$sy,1
@@ -53682,7 +53682,7 @@ fx_light_leaks :
   repeat $!-1 { l[0,{1+$<}] {
     +r[0] {1,w},{1,h},1,3,5
     rotate. $2,1,1,50%,50%
-    if $3>1" || "$4>1 f. 'w2=w/2;h2=h/2;X=x-w2;Y=y-h2;i(w2+X/$3,h2+Y/$4,0,c,1,0)' fi
+    if $3>1" || "$4>1 f. "w2 = w/2; h2 = h/2; X = x - w2; Y = y - h2; i(w2+X/$3,h2+Y/$4,0,c,1,0)" fi
     c. 0,255
     if $5 rgb2hsv. sh. 0 +. $5 rm. hsv2rgb. fi
     if $8
@@ -53993,7 +53993,7 @@ fx_crystal :
       do
         +b. $sigma sigma*=(1+$2)
         sh[0,-1] $s max. .. rm[-2,-1]
-        f. 'W=i(x,y,z,$s);W<0.001||W>=1?0:c<$s?i/W:1'
+        f. "W = i(x,y,z,$s); W<0.001 || W>=1?0:c<$s?i/W:1"
         if !iM rm[1] break fi
         sh. $s
         j[0] [1],0,0,0,0,1,[2] k[0]
@@ -54285,7 +54285,7 @@ fx_mineral_mosaic :
     to_rgb
     +b $3 segment_watershed. $1 +norm.
     area. 0 +<=. {$2^2} inpaint.. . rm. label.
-    +f[0] '!c?x:y' rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
+    +f[0] "!c?x:y" rv[-2,-1] +blend[-2,-1] shapeaverage,1,1
     -[-3,-1] rm[0,-2] channels. 0,1
     alpha:=$5*pi/180 sh. 0 *. {cos($alpha)} rm. sh. 1 *. {sin($alpha)} rm. compose_channels. +
     normalize_local. 1000 n. -$4,$4
@@ -59242,7 +59242,7 @@ fx_intarsia :
     round[1] index[0] [1]
 
     # Output header and title.
-    0 => $nm ('{b}') f. 'x?i:i>=97&&i<=122?i-32:i' image_basename={t} rm[-2,-1]
+    0 => $nm ('{b}') f. "x?i:i>=97 && i<=122?i - 32:i" image_basename={t} rm[-2,-1]
     ('"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n\
        \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n\
        <html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">\n\
