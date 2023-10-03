@@ -19388,11 +19388,10 @@ split_alpha : check "isint(${1=0}) && $1>=0 && isbool(${2=1})"
     nb_scales_max:=round(log2(min(w,h)))
     nb_scales:=$1?min($nb_scales_max,$1):$nb_scales_max
     repeat $nb_scales-1 {
-      if $2 # With subsampling
+      if $2 # With cubic subsampling
         +r. 50%,50%,1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... . rm.
       else # Without subsampling
-        ratio:=100/(2^($>+1))
-        +r. $ratio%,$ratio%,1,100%,2 r. ..,..,1,100%,5 c. 0,255 sub_alpha.. .
+        +b. {0.25+2^$>} sub_alpha.. .
       fi
     }
     rv foreach { => ${bm}_$>$ext }
