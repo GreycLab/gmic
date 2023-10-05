@@ -30949,13 +30949,15 @@ spherize : check "${1=50%}>=0 && ${3=0}>=0 && ${6=1}>0 && isint(${8=1}) && $8>=0
 #@cli : $ image.jpg +symmetrize 50%,50%,45 +symmetrize[-1] 50%,50%,-45
 symmetrize : skip ${1=50%},${2=50%},${3=90},${4=3},${5=0},${6=0}
   e[^-1] "Symmetrize image$?, regarding axis ($1,$2,$3 deg.)."
-  theta:=$3*pi/180 u:=cos($theta) v:=sin($theta)
+  theta:=deg2rad($3) u,v:=cos($theta),sin($theta)
   if $6 symmetry_cond=A<0 else symmetry_cond=A>0 fi
   foreach {
     x0:=ispercentage($1)?w*$1:$1
     y0:=ispercentage($2)?h*$2:$2
-    if $5 f "A=($y0-y)*$u-($x0-x)*$v;X=x+2*($x0-x);Y=y+2*($y0-y);$symmetry_cond?i(X,Y,z,c,1,$4):i"
-    else f "A=($y0-y)*$u-($x0-x)*$v;X=x-2*$v*A;Y=y+2*$u*A;$symmetry_cond?i(X,Y,z,c,1,$4):i"
+    if $5
+      f "A = ($y0 - y)*$u - ($x0 - x)*$v; X = x + 2*($x0 - x); Y = y + 2*($y0 - y); "$symmetry_cond"?i(X,Y,z,c,1,$4):i"
+    else
+      f "A = ($y0 - y)*$u - ($x0 - x)*$v; X = x - 2*$v*A; Y = y + 2*$u*A; "$symmetry_cond"?i(X,Y,z,c,1,$4):i"
     fi
   }
 
