@@ -1807,8 +1807,8 @@ d :
 #@cli :   - '_display_cursor' can be { 0:off | 1:on (2D only) | 2:on (+3D volumetric images) } (default value: '1').
 #@cli :   - '_display_is_grid' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_is_info' can be { 0:off | 1:on } (default value: '1').
-#@cli :   - '_display_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global } \
-# (default value: '-1').
+#@cli :   - '_display_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global | \
+# 4: stretch (global once) } (default value: '-1').
 #@cli :   - '_display_print_images' can be { 0:off | N>0 } (default value: '5'). It sets the max number 'N' of images \
 # whose information is initially printed on `stderr` or `stdout`.
 #@cli :   - '_display_3d_is_rendered' can be { 0:off | 1:on } (default value: '1').
@@ -1856,7 +1856,7 @@ _display : skip ${1=},${3=}
   setting_cursor:=narg($_display_cursor)?cut(int(0$_display_cursor),0,2):1
   setting_is_grid:=narg($_display_is_grid)?cut(int(0$_display_is_grid),0,1):1
   setting_is_info:=narg($_display_is_info)?cut(int(0$_display_is_info),0,1):1
-  setting_normalization:=narg($_display_normalization)?cut(int(0$_display_normalization),-1,3):-1
+  setting_normalization:=narg($_display_normalization)?cut(int(0$_display_normalization),-1,4):-1
   setting_print_images:=narg($_display_print_images)?max(0,$_display_print_images):5
   setting_3d_is_rendered:=narg($_display_3d_is_rendered)?cut(int(0$_display_3d_is_rendered),0,1):1
   setting_3d_rendering_mode:=narg($_display_3d_rendering_mode)?\
@@ -1912,12 +1912,12 @@ _display : skip ${1=},${3=}
   if {*}
     window_width,window_height={*,d,e}
     window_previous_normalization,windows_previous_fullscreen={*,n,f}
-    if $setting_normalization<0 setting_normalization:={*,n}?3:0 fi
+    if $setting_normalization<0 setting_normalization:={*,n}?4:0 fi
     w[] $window_width,$window_height,0,$window_title
   else
     window_width,window_height=\
       ${"$0_default_window_size[0-"{$nb_images-1}"] "$thumb_height_factor,$thumb_min_ratio}
-    if $setting_normalization<0 setting_normalization=3 fi
+    if $setting_normalization<0 setting_normalization=4 fi
     w[] $window_width,$window_height,0,$window_title
   fi
   window_nonfullscreen_width,window_nonfullscreen_height={*,w,h}
@@ -2299,18 +2299,31 @@ _display : skip ${1=},${3=}
             fi
           fi
 
-          if !$setting_normalization # Normalize image values
+          if !$setting_normalization # Normalization: none
             and. 255
-          elif $setting_normalization==1
+          elif $setting_normalization==1 # Normalization: cut
             c. 0,255
           else
             if {is_infnan,i[$selected]<0} =[is_infnan] ${$0_is_infnan[$selected]},0,$selected fi
-            if $setting_normalization==2 # Channel-wise normalization
+            if $setting_normalization==2 # Normalization: stretch (channelwise)
               if {is_infnan,i[$selected]} l. { s c $0_normalize_infnan a c }
               else l. { s c n 0,255 a c }
               fi
-            else # Global normalization
+            elif $setting_normalization==3 # Normalization: stretch (global)
               if {is_infnan,i[$selected]} $0_normalize_infnan. else n. 0,255 fi
+            else # Normalization: stretch (global once)
+              if !narg(${$0_range_global$selected})
+                if {is_infnan,i[$selected]} $0_range_global$selected=${-_display_minmax_infnan}
+                else $0_range_global$selected={$selected,[im,iM]}
+                fi
+              fi
+              im,iM:=${$0_range_global$selected}
+              if $im==$iM
+                f. 0
+              else
+                if {is_infnan,i[$selected]} $0_normalize_infnan.
+                else -. $im *. {255/($iM-$im)} c. 0,255 fi
+              fi
             fi
           fi
 
@@ -3307,9 +3320,10 @@ _display : skip ${1=},${3=}
         view_center_x,view_center_y,view_center_z={$selected,1-0.5/[w,h,d]}
         $0_rmn canvas_base,area_3d_mesh
       elif {*,-N} # N: Switch normalization mode
-        setting_normalization:=($setting_normalization+1)%4
+        setting_normalization:=($setting_normalization+1)%5
         notification="Normalization: "${"arg0 "$setting_normalization,\
-                                        "Off,Cut,\"Stretch (channel-wise)\",\"Stretch (global)\""}
+                                        "Off,Cut,\"Stretch (channel-wise)\",\
+                                        \"Stretch (global)\",\"Stretch (global once)\""}
         $0_flush_thumb_cache
         $0_rmn canvas_base,canvas_label_notification
       elif {*,-R} # Rotate view
@@ -3724,9 +3738,12 @@ _display_minmax_infnan :
     )"
 
 # Normalize selected image without considering inf and NaN values.
-_display_normalize_infnan :
+# Optional arguments: min-max values.
+_display_normalize_infnan : skip "${1=none},${2=none}"
+  is_minmax:="isnum($1) && isnum($2)"
+  if !$is_minmax noarg fi
   foreach {
-    val_min,val_max=${-_display_minmax_infnan}
+    if $is_minmax val_min,val_max:=$1,$2 else val_min,val_max=${-_display_minmax_infnan} fi
     f "
       const min = $val_min; const max = $val_max; const delta = max - min;
       const epsilon = delta>0?delta:1;
