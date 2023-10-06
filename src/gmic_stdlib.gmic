@@ -51986,19 +51986,20 @@ fx_unsharp_preview :
   gui_split_preview "fx_unsharp $*",${-3--1}
 
 #@gui Split Details [Alpha] : fx_split_details_alpha, fx_split_details_alpha_preview(0)
-#@gui : Number of Levels = int(6,2,8)
-#@gui : Base Scale = float(10,0,30)
-#@gui : Details Scale = float(1,0,20)
+#@gui : Number of Levels = int(6,2,16)
+#@gui : Scale Mode = choice("Auto","User-defined")
+#@gui : Base Scale = float(10,0,30)_1
+#@gui : Details Scale = float(1,0,20)_1
 #@gui : sep = separator()
 #@gui : Preview Without Alpha = bool(0)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/22/04</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/10/06</i>.</small>")
 fx_split_details_alpha :
   remove_opacity
   foreach {
     repeat $1-1 {
-      s:=$3+($2-$3)*$>/($1-2>0?$1-2:1)
-      +_fx_split_details_alpha_blur. $s
+      sigma:=$2?lerp($4,$3,$>/($>+$<)):0.25+2^$>
+      +_fx_split_details_alpha_blur. $sigma
       sub_alpha.. .
     }
   }
@@ -52013,12 +52014,13 @@ _fx_split_details_alpha_blur :
 
 fx_split_details_alpha_preview :
   foreach {
-    fx_split_details_alpha ${1-3}
-    if $4 remove_opacity[^-1] else to_rgba. fi
+    fx_split_details_alpha ${1-4}
+    if $5 remove_opacity[^-1] else to_rgba. fi
     N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
+  u "{$1}{$2}{$3}_"{$2?2:1}"{$4}_"{$2?2:1}"{$5}"
 
 #@gui Split Details [Gaussian] : fx_split_details_gaussian, fx_split_details_gaussian_preview(0)
 #@gui : Number of Scales = int(6,3,12)
