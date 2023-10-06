@@ -2062,17 +2062,17 @@ _display : skip ${1=},${3=}
               if d>1 +volumetric2d. 50%,50%,50%,2 rm.. fi
               if w>$w" || "h>$h +r. $w,$h else . fi rm..
               if {is_rotated,i[$ind]} rotate. {is_rotated,-90*i[$ind]} fi
-              if !$setting_normalization # Normalize image values
+              if !$setting_normalization # Normalize thumb: none
                 and. 255
-              elif $setting_normalization==1
+              elif $setting_normalization==1 # Normalize thumb: cut
                 c. 0,255
               else
                 if {is_infnan,i[$ind]<0} =[is_infnan] ${_display_is_infnan[$ind]},0,$ind fi
-                if $setting_normalization==2 # Channel-wise normalization
+                if $setting_normalization==2 # Normalize thumb: stretch (channelwise)
                   if {is_infnan,i[$ind]} l. { s c $0_normalize_infnan a c }
                   else l. { s c n 0,255 a c }
                   fi
-                else # Global normalization
+                else # Normalization thumb: stretch (global and global-once)
                   if {is_infnan,i[$ind]} $0_normalize_infnan. else n. 0,255 fi
                 fi
               fi
@@ -2299,19 +2299,19 @@ _display : skip ${1=},${3=}
             fi
           fi
 
-          if !$setting_normalization # Normalization: none
+          if !$setting_normalization # Normalize: none
             and. 255
-          elif $setting_normalization==1 # Normalization: cut
+          elif $setting_normalization==1 # Normalize: cut
             c. 0,255
           else
             if {is_infnan,i[$selected]<0} =[is_infnan] ${$0_is_infnan[$selected]},0,$selected fi
-            if $setting_normalization==2 # Normalization: stretch (channelwise)
+            if $setting_normalization==2 # Normalize: stretch (channelwise)
               if {is_infnan,i[$selected]} l. { s c $0_normalize_infnan a c }
               else l. { s c n 0,255 a c }
               fi
-            elif $setting_normalization==3 # Normalization: stretch (global)
+            elif $setting_normalization==3 # Normalize: stretch (global)
               if {is_infnan,i[$selected]} $0_normalize_infnan. else n. 0,255 fi
-            else # Normalization: stretch (global once)
+            else # Normalize: stretch (global once)
               if !narg(${$0_range_global$selected})
                 if {is_infnan,i[$selected]} $0_range_global$selected=${-_display_minmax_infnan}
                 else $0_range_global$selected={$selected,[im,iM]}
@@ -3322,7 +3322,7 @@ _display : skip ${1=},${3=}
       elif {*,-N} # N: Switch normalization mode
         setting_normalization:=($setting_normalization+1)%5
         notification="Normalization: "${"arg0 "$setting_normalization,\
-                                        "Off,Cut,\"Stretch (channel-wise)\",\
+                                        "Off,Cut,\"Stretch (channelwise)\",\
                                         \"Stretch (global)\",\"Stretch (global once)\""}
         $0_flush_thumb_cache
         $0_rmn canvas_base,canvas_label_notification
