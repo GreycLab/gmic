@@ -19406,17 +19406,26 @@ split_alpha : check "(isint(${1=0}) || ispercentage($1)) && isbool(${2=0}) && in
     fi
   }
 
-#@cli split_details : _nb_scales>0,_base_scale[%]>=0,_detail_scale[%]>=0
+#@cli split_details : _nb_scales[%]={ 0:auto | -S<0 | N>0 },_base_scale[%]>=0,_detail_scale[%]>=0
 #@cli : Split selected images into 'nb_scales' detail scales.
 #@cli : If 'base_scale' = 'detail_scale' = 0, the image decomposition is done with 'a trous' wavelets.
 #@cli : Otherwise, it uses laplacian pyramids with linear standard deviations.
-#@cli : Default values: 'nb_scales=4', 'base_scale=0' and 'detail_scale=0'.
+#@cli : Default values: 'nb_scales=0', 'base_scale=0' and 'detail_scale=0'.
 #@cli : $ image.jpg split_details ,
-split_details : check "isint(${1=4}) && $1>0 && ${2=0}>=0 && ${3=0}>=0"
-  if !$2" && "!$3
-    e[^-1] "Split image$? using $1 spatial scales and 'a trous' wavelets."
-    foreach {
-      repeat $1-1 {
+split_details : check "(isint(${1=0}) || ispercentage($1)) && ${2=0}>=0 && ${3=0}>=0"
+  if !max($2,$3)
+    e[0--3] "Split image$? using $1 scales and 'a trous' wavelets."
+  else
+    e[0--3] "Split image$? using $1 scales, with base scale $2 and detail scale $3."
+  fi
+  foreach {
+    nb_scales_max:=int(log2(min(w,h)))
+    nb_scales:=cut(ispercentage($1)?round($nb_scales_max*$1):\
+                   $1<0?int(log2(min(w,h)/(-$1)))+1:\
+                   $1?$1:$nb_scales_max,\
+                   1,$nb_scales_max)
+    if !max($2,$3)
+      repeat $nb_scales-1 {
         +f. "begin(interpolation = 0; boundary = 1; d = 2^"$>"; d2 = d*2);
               i(x - d2) + i(x + d2) + 4*i(x - d) + 4*i(x + d) + 6*i;"
         /. 16
@@ -19432,17 +19441,16 @@ split_details : check "isint(${1=4}) && $1>0 && ${2=0}>=0 && ${3=0}>=0"
         fi
         -.. .
       }
-      rv
-    }
-  else
-    e[^-1] "Split image$? using $1 spatial scales with base scale $2 and detail scale $3."
-    foreach {
+    else
       ss:=max(0.25,ispercentage($2)?$2*max(w,h):$2)
       se:=max(0.25,ispercentage($3)?$3*max(w,h):$3)
-      ds:=$se-$ss
-      repeat $1-1 { +b. {lerp($ss,$se,$>/($>+$<))} -.. . rv[-2,-1] }
-    }
-  fi
+      repeat $nb_scales-1 {
+        +b. {lerp($ss,$se,$>/($>+$<))}
+        -.. .
+      }
+    fi
+    rv
+  }
 
 #@cli structuretensors : _scheme={ 0:centered | 1:forward/backward }
 #@cli : Compute the structure tensor field of selected images.
