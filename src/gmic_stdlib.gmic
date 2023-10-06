@@ -51986,8 +51986,10 @@ fx_unsharp_preview :
   gui_split_preview "fx_unsharp $*",${-3--1}
 
 #@gui Split Details [Alpha] : fx_split_details_alpha, fx_split_details_alpha_preview(0)
-#@gui : Number of Levels = int(6,2,16)
-#@gui : Scale Mode = choice("Auto","User-defined")
+#@gui : Number of Levels = int(0,0,16)
+#@gui : note = note("<small>Set <b>Number of Levels</b> to <b>0</b> for automatic setting from image resolution.</small>")
+#@gui : sep = separator()
+#@gui : Set Scales = choice("Auto","User-defined")
 #@gui : Base Scale = float(10,0,30)_1
 #@gui : Details Scale = float(1,0,20)_1
 #@gui : sep = separator()
@@ -51997,7 +51999,9 @@ fx_unsharp_preview :
 fx_split_details_alpha :
   remove_opacity
   foreach {
-    repeat $1-1 {
+    nb_scales_max:=int(log2(min(w,h)))
+    nb_scales:=$1?$1:$nb_scales_max
+    repeat $nb_scales-1 {
       sigma:=$2?lerp($4,$3,$>/($>+$<)):0.25+2^$>
       +_fx_split_details_alpha_blur. $sigma
       sub_alpha.. .
