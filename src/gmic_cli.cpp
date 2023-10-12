@@ -83,7 +83,10 @@ int _CRT_glob = 0; // Disable globbing for msys
 int main(int argc, char **argv) {
 
   // Set default output messages stream.
-  const bool is_debug = cimg_option("-debug",false,0) || cimg_option("debug",false,0);
+  const bool
+    is_debug = cimg_option("-debug",false,0) || cimg_option("debug",false,0),
+    is_help = (argc==2 || argc==3) && (!std::strcmp(argv[1],"help") || !std::strcmp(argv[1],"-help") ||
+                                       !std::strcmp(argv[1],"h") || !std::strcmp(argv[1],"-h"));
   cimg::output(is_debug?stdout:stderr);
 
   // Set fallback for segfault signals.
@@ -197,9 +200,7 @@ int main(int argc, char **argv) {
     // Determine initial verbosity.
     const char *const s_verbosity = std::getenv("GMIC_VERBOSITY");
     if (!s_verbosity || std::sscanf(s_verbosity,"%d%c",&gmic_instance.verbosity,&sep)!=1)
-      gmic_instance.verbosity = gmic_instance.allow_main_?0:
-        (argc==2 || argc==3) && (!std::strcmp(argv[1],"help") || !std::strcmp(argv[1],"-help") ||
-                                 !std::strcmp(argv[1],"h") || !std::strcmp(argv[1],"-h"))?0:
+      gmic_instance.verbosity = gmic_instance.allow_main_?0:is_help?0:
         argc==2 && (!std::strcmp(argv[1],"version") || !std::strcmp(argv[1],"-version"))?0:1;
   }
 
