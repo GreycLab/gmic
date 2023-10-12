@@ -116,12 +116,10 @@ int main(int argc, char **argv) {
   gmic_instance.set_variable("_host",0,"cli");
   gmic_instance.add_commands("cli_start:");
 
-  // Load startup command files.
-  CImg<char> commands_user, commands_update, filename_update;
-  bool is_invalid_userfile = false, is_invalid_updatefile = false;
-  char sep = 0;
-
   // Import update file (from resources directory).
+  CImg<char> filename_update, commands_update;
+  bool is_invalid_updatefile = false;
+  char sep = 0;
   filename_update.assign(1024);
   cimg_snprintf(filename_update,filename_update.width(),"%supdate%u.gmic",
                 gmic::path_rc(),gmic_version);
@@ -139,6 +137,8 @@ int main(int argc, char **argv) {
   commands_update.assign();
 
   // Import user file (in parent of resources directory).
+  CImg<char> commands_user;
+  bool is_invalid_userfile = false;
   const char *const filename_user = gmic::path_user();
   try { commands_user.load_raw(filename_user); }
   catch (...) {}
