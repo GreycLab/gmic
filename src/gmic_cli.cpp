@@ -231,6 +231,7 @@ int main(int argc, char **argv) {
   try {
     CImgList<gmic_pixel_type> images;
     CImgList<char> images_names;
+    if (is_help) { images.insert(gmic::stdlib); CImg<char>::string("stdlib").move_to(images_names); }
     gmic_instance.run(commands_line.data(),images,images_names);
   } catch (gmic_exception &e) {
     int error_code = 0;
