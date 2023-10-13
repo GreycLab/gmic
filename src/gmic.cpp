@@ -7134,17 +7134,17 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
         // Echo.
         if (is_command_echo) {
-          if (verbosity>=0 || is_debug || is_get) {
+          if (verbosity>=0 || is_debug || is_get || !is_selection) {
             gmic_substitute_args(false);
             name.assign(argument,(unsigned int)std::strlen(argument) + 1);
             cimg::strunescape(name);
-            const int _verbosity = ++verbosity;
+            const int _verbosity = verbosity;
             std::FILE *_file = 0;
-            if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); }
+            if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); } else ++verbosity;
             if (is_selection) print(&selection,"%s",name.data());
-            else print(&CImg<unsigned int>::empty(),"%s",name.data());
-            if (is_get) { verbosity = _verbosity; cimg::output(_file); }
-            --verbosity;
+            else { verbosity = 1; print(&CImg<unsigned int>::empty(),"%s",name.data()); }
+            if (is_get) cimg::output(_file);
+            verbosity = _verbosity;
           }
           ++position;
           continue;
@@ -12717,7 +12717,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
         // Warning.
         if (is_command_warn) {
-          if (verbosity>=0 || is_debug || is_get) {
+          if (verbosity>=0 || is_debug || is_get || !is_selection) {
             gmic_substitute_args(false);
             bool force_visible = false;
             if ((*argument=='0' || *argument=='1') && argument[1]==',') {
@@ -12729,7 +12729,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             std::FILE *_file = 0;
             if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); }
             if (is_selection) warn(&selection,force_visible,"%s",name.data());
-            else warn(&CImg<unsigned int>::empty(),force_visible,"%s",name.data());
+            else {
+              verbosity = 1;
+              warn(&CImg<unsigned int>::empty(),force_visible,"%s",name.data());
+              verbosity = _verbosity;
+            }
             if (is_get) { verbosity = _verbosity; cimg::output(_file); }
             --verbosity;
           }
