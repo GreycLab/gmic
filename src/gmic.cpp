@@ -3101,9 +3101,9 @@ gmic& gmic::print(const CImg<unsigned int> *const callstack_selection, const cha
 
 // Print warning message.
 //-----------------------
-gmic& gmic::warn(const CImg<unsigned int> *const callstack_selection, const bool force_visible,
+gmic& gmic::warn(const CImg<unsigned int> *const callstack_selection,
                  const char *const format, ...) {
-  if (!force_visible && verbosity<1 && !is_debug) return *this;
+  if (verbosity<1 && !is_debug) return *this;
   va_list ap;
   va_start(ap,format);
   CImg<char> message(1024);
@@ -4229,8 +4229,7 @@ gmic& gmic::display_plots(CImgList<T>& images, CImgList<char>& images_names,
   if (empty_indices && is_verbose) {
     CImg<char> eselec;
     selection2string(empty_indices>'y',images_names,1,eselec);
-    warn(0,false,
-         "Command 'plot': Image%s %s empty.",
+    warn(0,"Command 'plot': Image%s %s empty.",
          eselec.data(),empty_indices.size()>1?"are":"is");
   }
 
@@ -8226,8 +8225,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                                                                             g_img_uc(2,k)));
                 }
                 if (!vertices)
-                  warn(0,false,
-                       "Command 'isoline3d': Isovalue %g%s not found in image [%u].",
+                  warn(0,"Command 'isoline3d': Isovalue %g%s not found in image [%u].",
                        value,sep=='%'?"%":"",uind);
                 vertices.object3dtoCImg3d(primitives,g_list_uc,false);
                 gmic_apply(replace(vertices),false);
@@ -8322,12 +8320,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 }
                 if (!vertices) {
                   if (img.depth()>1)
-                    warn(0,false,
-                         "Command 'isosurface3d': Isovalue %g%s not found in image [%u].",
+                    warn(0,"Command 'isosurface3d': Isovalue %g%s not found in image [%u].",
                          value,sep=='%'?"%":"",uind);
                   else
-                    warn(0,false,
-                         "Command 'isosurface3d': Image [%u] has a single slice, "
+                    warn(0,"Command 'isosurface3d': Image [%u] has a single slice, "
                          "isovalue %g%s not found.",
                          uind,value,sep=='%'?"%":"");
                 }
@@ -9785,8 +9781,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -9859,8 +9854,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -9924,8 +9918,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -9964,8 +9957,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -10002,8 +9994,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -10040,8 +10031,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -10210,8 +10200,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
             if (empty_indices && is_verbose) {
               selection2string(empty_indices>'y',images_names,1,eselec);
-              warn(0,false,
-                   "Command 'output': Image%s %s empty.",
+              warn(0,"Command 'output': Image%s %s empty.",
                    eselec.data(),empty_indices.size()>1?"are":"is");
             }
             cimg_forY(selection,l)
@@ -10223,8 +10212,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
 #ifndef cimg_use_opencv
             if (keep_open)
-              warn(0,false,
-                   "Command 'output': Cannot output streamed video, as this requires features from the "
+              warn(0,"Command 'output': Cannot output streamed video, as this requires features from the "
                    "OpenCV library (not enabled at compilation time).");
 #endif
             g_list.save_video(filename,(unsigned int)fps,name,(bool)keep_open);
@@ -10253,8 +10241,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 CImg<unsigned int>::vector(selection(l)).move_to(empty_indices);
               if (empty_indices && is_verbose) {
                 selection2string(empty_indices>'y',images_names,1,eselec);
-                warn(0,false,
-                     "Command 'output': Image%s %s empty.",
+                warn(0,"Command 'output': Image%s %s empty.",
                      eselec.data(),empty_indices.size()>1?"are":"is");
               }
               cimg_forY(selection,l)
@@ -12130,8 +12117,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 g_list_uc.assign(primitives.size(),1,3,1,1,200);
               } else {
                 vertices.assign();
-                warn(0,false,
-                     "Command 'streamline3d': Empty streamline starting from "
+                warn(0,"Command 'streamline3d': Empty streamline starting from "
                      "(%g%s,%g%s,%g%s) in image [%u].",
                      x,sepx=='%'?"%":"",
                      y,sepy=='%'?"%":"",
@@ -12169,8 +12155,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               g_list_uc.assign(primitives.size(),1,3,1,1,200);
             } else {
               vertices.assign();
-              warn(0,false,
-                   "Command 'streamline3d': Empty streamline starting from (%g,%g,%g) "
+              warn(0,"Command 'streamline3d': Empty streamline starting from (%g,%g,%g) "
                    "in expression '%s'.",
                    x,y,z,formula);
             }
@@ -12719,23 +12704,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         if (is_command_warn) {
           if (verbosity>=0 || is_debug || is_get || !is_selection) {
             gmic_substitute_args(false);
-            bool force_visible = false;
-            if ((*argument=='0' || *argument=='1') && argument[1]==',') {
-              force_visible = *argument=='1'; argument+=2;
-            }
             name.assign(argument,(unsigned int)std::strlen(argument) + 1);
             cimg::strunescape(name);
-            const int _verbosity = ++verbosity;
+            const int _verbosity = verbosity;
             std::FILE *_file = 0;
-            if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); }
-            if (is_selection) warn(&selection,force_visible,"%s",name.data());
-            else {
-              verbosity = 1;
-              warn(&CImg<unsigned int>::empty(),force_visible,"%s",name.data());
-              verbosity = _verbosity;
-            }
-            if (is_get) { verbosity = _verbosity; cimg::output(_file); }
-            --verbosity;
+            if (is_get) { _file = cimg::output(); verbosity = 1; cimg::output(stdout); } else ++verbosity;
+            if (is_selection) warn(&selection,"%s",name.data());
+            else { verbosity = 1; warn(&CImg<unsigned int>::empty(),"%s",name.data()); }
+            if (is_get) cimg::output(_file);
+            verbosity = _verbosity;
           }
           ++position;
           continue;

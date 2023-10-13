@@ -424,7 +424,7 @@ struct gmic {
 
   gmic& print(const gmic_image<unsigned int> *const callstack_selection,
               const char *format, ...);
-  gmic& warn(const gmic_image<unsigned int> *const callstack_selection, const bool force_visible,
+  gmic& warn(const gmic_image<unsigned int> *const callstack_selection,
              const char *format, ...);
   gmic& debug(const char *format, ...);
   gmic& error(const bool output_header, const char *format, ...);
