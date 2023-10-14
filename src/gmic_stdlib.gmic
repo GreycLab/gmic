@@ -19406,10 +19406,12 @@ solve_poisson : check "${2=60}>=0 && ${3=5}>0 && ${4=0}>=0"
 #@cli : If 'nb_scales==-S', the lowest scale has a size of at least 'SxS'.
 #@cli : Parameter 'anisotropy' is only considered when 'subsample=0'.
 #@cli : Image reconstruction is done with command ''merge_alpha''.
-#@cli : Default values: 'nb_scales=0', 'subsample=0' and 'anisotropy=0'.
-split_alpha : check "(isint(${1=0}) || ispercentage($1)) && isbool(${2=0}) && inrange(${3=0},0,1)"
+#@cli : Default values: 'nb_scales=0', 'subsample=0', 'anisotropy=0' and 'minimize_alpha=1'.
+split_alpha : check "(isint(${1=0}) || ispercentage($1)) && isbool(${2=0}) && inrange(${3=0},0,1) && "\
+                    "inrange(${4=1},0,1)"
   s= if $1 s="$1 " fi s0,s1="out",
-  e[^-1] "Split image$? into "${s}"alpha detail scales, with"$s$2" subsampling and anisotropy $3."
+  e[^-1] "Split image$? into "${s}"alpha detail scales, with"$s$2" subsampling, anisotropy $3 "\
+         "and alpha minimization factor $4."
   foreach {
     bm={f}{b} ext={x} if ['$ext']!=0 ext..=. fi
     nb_scales_max:=int(log2(min(w,h)))
@@ -19420,12 +19422,12 @@ split_alpha : check "(isint(${1=0}) || ispercentage($1)) && isbool(${2=0}) && in
     if $nb_scales>1
       repeat $nb_scales-1 {
         if $2 # With cubic subsampling
-          +r. {int([w,h]/2)},1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... . rm.
+          +r. {int([w,h]/2)},1,100%,2 +r. ..,..,1,100%,5 c. 0,255 sub_alpha... .,$4 rm.
         else # Without subsampling
           if $3 +bilateral. {0.25+2^$>},{(1-$3)*100} b. {0.5+$3}
           else +b. {0.25+2^$>}
           fi
-          sub_alpha.. .
+          sub_alpha.. .,$4
         fi
       }
       rv foreach { => ${bm}_$>$ext }
