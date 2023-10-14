@@ -19344,15 +19344,15 @@ sharpen : check "$1>=0 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
     }
   fi
 
-#@cli sharpen_alpha : _amplitude[%]>=0,_nb_scales>0,0<=_anisotropy<=1
+#@cli sharpen_alpha : _amplitude[%]>=0,_nb_scales>0,0<=_anisotropy<=1,0<=_minimize_alpha<=1
 #@cli : Sharpen selected images using a multi-scale and alpha boosting algorithm.
-#@cli : Default values: 'amplitude=1', 'nb_scales=5' and 'anisotropy=0'.
-sharpen_alpha : check "${1=1}>=0 && isint(${2=5}) && $2>0 && inrange(${3=0},0,1)"
-  e[^-1] "Sharpen image$? with a multi-scale and alpha boosting algorithm, with amplitude $1, $2 scales "\
-    "and anisotropy $3."
+#@cli : Default values: 'amplitude=1', 'nb_scales=5', 'anisotropy=0' and 'minimize_alpha=1'.
+sharpen_alpha : check "${1=1}>=0 && isint(${2=5}) && $2>0 && inrange(${3=0},0,1) && inrange(${4=1},0,1)"
+  e[^-1] "Sharpen image$? with a multi-scale and alpha boosting algorithm, with amplitude $1, $2 scales, "\
+    "anisotropy $3 and alpha minimization factor $4."
   foreach {
     split_opacity l[0] {
-      split_alpha $2,0,$3
+      split_alpha $2,0,$3,$4
       foreach[^0] { sh 100% *. {$<?lerp(1,1+$1,$>/($>+$<)):(1+$1)} c. 0,255 rm. }
       merge_alpha
     } a c
@@ -51723,6 +51723,7 @@ fx_mighty_details_preview :
 #@gui : Amplitude (%) = float(100,0,400)
 #@gui : Number of Scales = int(5,1,10)
 #@gui : Anisotropy (%) = float(50,0,100)
+#@gui : Minimize Alpha (%) = float(100,0,100)
 #@gui : sep = separator()
 #@gui : Channel(s) = choice(0,"All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
 #@gui : "Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [Luminance]",
@@ -51737,9 +51738,9 @@ fx_mighty_details_preview :
 #@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/10/07</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/10/14</i>.</small>")
 fx_sharpen_alpha :
-  ac "sharpen_alpha {$1%},$2,{$3%}",$4,1
+  ac "sharpen_alpha {$1%},$2,{$3%},{$4%}",$5,1
 
 fx_sharpen_alpha_preview :
   gui_split_preview "fx_sharpen_alpha $*",${-3--1}
