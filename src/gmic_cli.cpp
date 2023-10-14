@@ -261,6 +261,7 @@ int main(int argc, char **argv) {
         CImgList<gmic_pixel_type> images;
         CImgList<char> images_names;
         images.insert(gmic::stdlib);
+        CImg<char>::string("stdlib").move_to(images_names);
         CImg<char> tmp_line(1024);
         cimg_snprintf(tmp_line,tmp_line.width(),
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
