@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
   // Convert 'argv' into G'MIC command line.
   CImgList<char> items;
   if (argc==1) // When no args have been specified
-    CImg<char>::string("l[] cli_noarg onfail done").move_to(items);
+    CImg<char>::string("l[] { cli_noarg onfail }").move_to(items);
   else {
     for (int l = 1; l<argc; ++l) { // Split argv as items
       if (std::strchr(argv[l],' ')) {
@@ -231,7 +231,9 @@ int main(int argc, char **argv) {
   try {
     CImgList<gmic_pixel_type> images;
     CImgList<char> images_names;
-    if (is_help) { images.insert(gmic::stdlib); CImg<char>::string("stdlib").move_to(images_names); }
+    if (is_help && !cimg::is_file(filename_update.data())) {
+      images.insert(gmic::stdlib); CImg<char>::string("stdlib").move_to(images_names);
+    }
     gmic_instance.run(commands_line.data(),images,images_names);
   } catch (gmic_exception &e) {
     int error_code = 0;
@@ -261,8 +263,8 @@ int main(int argc, char **argv) {
         images.insert(gmic::stdlib);
         CImg<char> tmp_line(1024);
         cimg_snprintf(tmp_line,tmp_line.width(),
-                      "l[] i raw:\"%s\",uint8 m \"%s\" onfail rm done "
-                      "l[] i raw:\"%s\",uint8 m \"%s\" onfail rm done "
+                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
+                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
                       "rv help \"%s\",0",
                       filename_update.data(),filename_update.data(),
                       filename_user,filename_user,
