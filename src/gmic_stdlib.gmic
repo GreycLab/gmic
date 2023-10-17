@@ -19471,8 +19471,8 @@ split_details : check "(isint(${1=0}) || ispercentage($1)) && ${2=0}>=0 && ${3=0
         -.. .
       }
     else
-      ss:=max(0.25,ispercentage($2)?$2*max(w,h):$2)
-      se:=max(0.25,ispercentage($3)?$3*max(w,h):$3)
+      ss:=max(0.25,ispercentage($3)?$3*max(w,h):$3)
+      se:=max(0.25,ispercentage($2)?$2*max(w,h):$2)
       repeat $nb_scales-1 {
         +b. {lerp($ss,$se,$>/($>+$<))}
         -.. .
@@ -55879,23 +55879,20 @@ fx_smooth_selective_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/20/12</i>.</small>")
 fx_smooth_skin :
-  foreach {
-    split_opacity l[0] {
-      to_rgb
+  foreach { split_opacity l[0] {
+    to_rgb
 
-      # Skin detection step.
-      if $5 +balance_gamma 128,128,128 else [0] fi
-      if !$1 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
-      M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
+    # Skin detection step.
+    if $5 +balance_gamma 128,128,128 else [0] fi
+    if !$1 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
+    M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
 
-      # Details smoothing step.
-      split_details[0] 4,$9%,$10%
-      +_fx_smooth_skin[2] $12,$11
-      j[2] .,0,0,0,0,1,.. rm[-2,-1]
-      *. {10^$13} + c 0,255
-    }
-    a c
-  }
+    # Details smoothing step.
+    split_details[0] 4,$9%,$10%
+    +_fx_smooth_skin[2] $12,$11
+    j[2] .,0,0,0,0,1,.. rm[-2,-1]
+    *. {10^$13} + c 0,255
+  } a c }
 
 _fx_smooth_skin :
   if !$1 b {$2/8}%
