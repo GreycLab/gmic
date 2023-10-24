@@ -9444,15 +9444,18 @@ _random_pattern_check_image :
   } fi
   => "[2D $2-polygon Shape]"
 
-#@cli shape_rays : _size>=0,_xcenter[%],_ycenter[%],_branches>0,_angle[%],_twist,0<=_focale<=1,_is_antialias={ 0 | 1 }
+#@cli shape_rays : _size>=0,_xcenter[%],_ycenter[%],_branches>0,_angle[%],_twist,0<=_perspective<=1,\
+# _is_antialias={ 0 | 1 }
 #@cli : Input a 3D binary spiral with specified size and attributes.
-#@cli : Default values: 'size=512', 'xcenter=50%', 'ycenter=50%', 'branches=7', 'angle=50%', 'twist=0', 'focale=0.35' \
+#@cli : Default values: 'size=512', 'xcenter=50%', 'ycenter=50%', 'branches=7', 'angle=50%', 'twist=0', \
+# 'perspective=0.35' \
 # and 'is_antialias=0'.
 #@cli : $ shape_spiral 400,7 shape_spiral 400,3,0,3
-+shape_rays : check "isint(${1=512}) && $1>=0 && ${4=7} && $4>0 && inrange(${7=0.35},0,1) && isbool(${8=0})"
++shape_rays : check "isint(${1=512}) && $1>=0 && ${4=7} && $4>0 && inrange(${7=0.35},-1,1) && isbool(${8=0})"
               skip "${2=50%},${3=50%},${5=50%},${6=0}"
   s0,s1=out,
-  e[^-1] "Input a $1x$1 image of binary rays, with $2 branches, angle $3, twist $4, focale $5 with"$s$6" antialiasing."
+  e[^-1] "Input a $1x$1 image of binary rays, with $2 branches, angle $3, twist $4, perspective $5 "\
+         "with"$s$6" antialiasing."
   if !$1 0
   else
     $1,$1,1,1,"
@@ -9462,7 +9465,7 @@ _random_pattern_check_image :
       const theta_mod = pi/branches;
       const theta_off = ispercentage($5)?2*theta_mod*lerp(0,1,$5):$5°;
       const twist = $6*2*pi;
-      const focale = $7;
+      const perspective = $7>=0?$7:10*$7;
       const is_antialias = $8;
       const rho_max = 0.5*norm(w,h);
       spiral(x,y) = (
@@ -9470,7 +9473,7 @@ _random_pattern_check_image :
         cy = y - ycenter;
         theta = (theta_off + atan2(cy,cx))%(2*pi);
         rho = norm(cx,cy)/rho_max;
-        phi = theta + twist/rho^focale;
+        phi = theta + twist/rho^perspective;
         int(phi/theta_mod)%2;
       );
       X = w%2?x:(x + 0.5); # Make sure image center is symmetric
@@ -58265,7 +58268,7 @@ fx_turbulence :
 #@gui : Branches = int(9,1,64)
 #@gui : Angle (%) = float(50,0,100)
 #@gui : Twist (%) = float(50,0,400)
-#@gui : Focale (%) = float(25,0,100)
+#@gui : Perspective (%) = float(25,-100,100)
 #@gui : Color = color(255,255,0,255)
 #@gui : Anti-aliasing = bool(1)
 #@gui : sep = separator()
