@@ -9444,6 +9444,47 @@ _random_pattern_check_image :
   } fi
   => "[2D $2-polygon Shape]"
 
+#@cli shape_rays : _size>=0,_xcenter[%],_ycenter[%],_branches>0,_angle[%],_twist,0<=_focale<=1,_is_antialias={ 0 | 1 }
+#@cli : Input a 3D binary spiral with specified size and attributes.
+#@cli : Default values: 'size=512', 'xcenter=50%', 'ycenter=50%', 'branches=7', 'angle=50%', 'twist=0', 'focale=0.35' \
+# and 'is_antialias=0'.
+#@cli : $ shape_spiral 400,7 shape_spiral 400,3,0,3
++shape_rays : check "isint(${1=512}) && $1>=0 && ${4=7} && $4>0 && inrange(${7=0.35},0,1) && isbool(${8=0})"
+              skip "${2=50%},${3=50%},${5=50%},${6=0}"
+  s0,s1=out,
+  e[^-1] "Input a $1x$1 image of binary rays, with $2 branches, angle $3, twist $4, focale $5 with"$s$6" antialiasing."
+  if !$1 0
+  else
+    $1,$1,1,1,"
+      const xcenter = ispercentage($2)?w*$2:$2;
+      const ycenter = ispercentage($3)?h*$3:$3;
+      const branches = $4;
+      const theta_mod = pi/branches;
+      const theta_off = ispercentage($5)?2*theta_mod*lerp(0,1,$5):$5°;
+      const twist = $6*2*pi;
+      const focale = $7;
+      const is_antialias = $8;
+      const rho_max = 0.5*norm(w,h);
+      spiral(x,y) = (
+        cx = x - xcenter;
+        cy = y - ycenter;
+        theta = (theta_off + atan2(cy,cx))%(2*pi);
+        rho = norm(cx,cy)/rho_max;
+        phi = theta + twist/rho^focale;
+        int(phi/theta_mod)%2;
+      );
+      X = w%2?x:(x + 0.5); # Make sure image center is symmetric
+      Y = h%2?y:(y + 0.5);
+      is_antialias?(
+        pX = X - 0.25;
+        pY = Y - 0.25;
+        nX = X + 0.25;
+        nY = Y + 0.25;
+        0.25*(spiral(pX,pY) + spiral(nX,pY) + spiral(nX,nY) + spiral(pX,nY))
+      ):spiral(X,Y)"
+  fi
+  => "[2D rays shape]"
+
 #@cli shape_snowflake : size>=0,0<=_nb_recursions<=6
 #@cli : Input a 2D snowflake binary shape with specified size.
 #@cli : Default values: 'size=512' and 'nb_recursions=5'.
