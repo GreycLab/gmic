@@ -33468,52 +33468,41 @@ lof :
 math_lib :
   u "
 
-  # Return number of elements in min-heap #ind.
-  heap_size(ind) = i[#ind,whd(#ind)-1];
+  # Functions to deal with min-heap.
+  heap_size(ind) = da_size(#ind);
+  heap_size() = da_size();
 
-  # Insert new element 'elt' into min-heap #ind.
-  heap_insert(ind,elt) = (
-    _heap_siz = heap_size(#ind);
-    _heap_siz>=h(#ind) - 1?resize(#ind,1,_heap_siz*2 + 2,1,s#ind,0);
-    hind = h(#ind);
-    unref(_heap_elt);
-    _heap_elt = [ elt ];
-    _heap_eltsiz = max(1,size(_heap_elt));
-
-    copy(i[#ind,_heap_siz],_heap_elt[0],_heap_eltsiz,hind,1);
-    for (_heap_pos = _heap_siz,
-         _heap_pos && (_heap_par = int((_heap_pos + 1)/2) - 1; _heap_elt[0]<i[#ind,_heap_par]),
-         _heap_pos = _heap_par,
-      copy(i[#ind,_heap_pos],i[#ind,_heap_par],_heap_eltsiz,hind,hind);
-      copy(i[#ind,_heap_par],_heap_elt,_heap_eltsiz,hind,1);
-    );
-    (heap_size(#ind)) = ++_heap_siz;
-  );
-
-  # Remove root element from min-heap #ind.
-  heap_remove(ind) = (
-    _heap_siz = heap_size(#ind) - 1;
-    hind = h(#ind);
-    _heap_eltsiz = max(1,s#ind);
-
-    copy(i[#ind,0],i[#ind,_heap_siz],_heap_eltsiz,hind,hind);
-    _heap_pos = 0;
-    do (
-      _heap_left = 2*_heap_pos + 1;
-      _heap_right = _heap_left + 1;
-      value = i[#ind,_heap_pos];
-      _heap_right<_heap_siz && value>i[#ind,_heap_right]?(
-        _heap_swap = i[#ind,_heap_left]<i[#ind,_heap_right]?_heap_left:_heap_right;
-      ):_heap_left<_heap_siz && value>i[#ind,_heap_left]?(
-        _heap_swap = _heap_left;
+  heap_push(ind,elt) = (
+    _hp_index = da_size(#ind);
+    da_push(#elt);
+    while (_hp_index>0,
+      _hp_index_parent = (_hp_index - 1)/2;
+      i[#ind,_hp_index]<i[#ind,_hp_index_parent]?(
+        swap(I[#ind,_hp_index],I[#ind,_hp_index_parent]);
+        _hp_index = _hp_index_parent;
       ):break();
-      copy(i[#ind,_heap_siz],i[#ind,_heap_swap],_heap_eltsiz,hind,hind); # Use previous last elt as temporary for swap.
-      copy(i[#ind,_heap_swap],i[#ind,_heap_pos],_heap_eltsiz,hind,hind);
-      copy(i[#ind,_heap_pos],i[#ind,_heap_siz],_heap_eltsiz,hind,hind);
-      _heap_pos = _heap_swap;
     );
-    (heap_size(#ind)) = _heap_siz;
   );
+
+  heap_push(elt) = heap_push(#-1,elt);
+
+  heap_pop(ind) = (
+    _hp_index = 0;
+    unref(_hp_root_elt); _hp_root_elt = I[#ind,0];
+    I[#ind,0] = da_pop();
+    _hp_siz = da_size();
+    while (1,
+      _hp_child_left = 2*_hp_index + 1;
+      _hp_child_right = _hp_child_left + 1;
+      _hp_smallest = _hp_index;
+      _hp_child_left<_hp_siz && i[#ind,_hp_child_left]<i[#ind,_hp_smallest]?(_hp_smallest = _hp_child_left);
+      _hp_child_right<_hp_siz && i[#ind,_hp_child_right]<i[#ind,_hp_smallest]?(_hp_smallest = _hp_child_right);
+      _hp_smallest!=_hp_index?(swap(I[#ind,_hp_index],I[#ind,_hp_smallest]); _hp_index = _hp_smallest):break();
+    );
+    _hp_root_elt;
+  );
+
+  heap_pop() = heap_pop(#-1);
 
   # Distance from point A to point B
   dist(A,B) = (
