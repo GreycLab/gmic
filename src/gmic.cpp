@@ -2478,7 +2478,7 @@ const char *gmic::builtin_commands_names[] = {
   "acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh","autocrop",
   "bilateral","blur","boxfilter","break",
   "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
-  "debug","delete","denoise","deriche","dijkstra","dilate","discard","displacement","distance","div3d","done",
+  "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","eikonal","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
   "graph","guided",
@@ -6947,42 +6947,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             if (sep=='%') sigma = -sigma;
             cimg_forY(selection,l) gmic_apply(deriche(sigma,order,axis,boundary),true);
           } else arg_error("deriche");
-          is_change = true;
-          ++position;
-          continue;
-        }
-
-        // Dijkstra algorithm.
-        if (!std::strcmp("dijkstra",command)) {
-          gmic_substitute_args(false);
-          double snode = 0, enode = 0;
-          if (cimg_sscanf(argument,"%lf,%lf%c",&snode,&enode,&end)==2 &&
-              snode>=0 && enode>=0) {
-            snode = cimg::round(snode);
-            enode = cimg::round(enode);
-            print(0,"Compute minimal path from adjacency matri%s%s with the "
-                  "Dijkstra algorithm.",
-                  selection.height()>1?"ce":"x",gmic_selection.data());
-            unsigned int off = 0;
-            cimg_forY(selection,l) {
-              uind = selection[l] + off;
-              CImg<T> path;
-              if (is_get) {
-                CImg<T> dist = gmic_check(images[uind]).get_dijkstra((unsigned int)snode,
-                                                                     (unsigned int)enode,
-                                                                     path);
-                dist.move_to(images);
-                path.move_to(images);
-                images_names[uind].get_copymark().move_to(images_names);
-                images_names.back().get_copymark().move_to(images_names);
-              } else {
-                gmic_check(images[uind]).dijkstra((unsigned int)snode,(unsigned int)enode,path);
-                path.move_to(images,uind + 1);
-                images_names[uind].get_copymark().move_to(images_names,uind + 1);
-                ++off;
-              }
-            }
-          } else arg_error("dijkstra");
           is_change = true;
           ++position;
           continue;

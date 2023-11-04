@@ -22729,8 +22729,48 @@ yinyang :
 #
 #---------------------------------
 
-#@cli dijkstra : starting_node>=0,ending_node>=0 : (+)
-#@cli : Compute minimal distances and paths from specified adjacency matrices by the Dijkstra algorithm.
+#@cli dijkstra : starting_vertex>=0
+#@cli : Compute minimal distances/paths in selected graphs, from specified 'starting_vertex' to all other vertices.
+#@cli : A graph of 'N' vertices is specified as a 'NxN' adjacency matrix giving the weights of all edges \
+# connecting vertices (set to 'inf' when two vertices are not connected).
+#@cli : This command return a '1xNx1x2' image containing the '[distance,parent]' information :
+#@cli :   - 'distance' is the minimal distance from vertex '#y' to the 'starting_vertex' (i.e. the sum \
+# of edge weights composing the minimal path between these two vertices).
+#@cli :   - 'parent' is the index of the next vertex that must be followed to reaches the 'starting_vertex' \
+# through the minimal path.
+dijkstra2 : check "isint($1) && $1>=0"
+  s0,s1=x,ces
+  e[^-1] "Compute minimal distances/path from node $1, for adjacency matri"${s{$!>1}}" [$[]]."
+  foreach {
+    nm={n}
+    if !w" || "w!=h" || "d>1" || "s>1
+      error[0--4] "Command 'dijkstra': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
+                  "is not an adjacency matrix."
+    fi
+    N:=w # Number of nodes
+    1,$N,1,2,[inf,-1] =. 0,0,$1 # [1]: Resulting image [ dist,parent ]
+    1,{$N+1},1,2,[inf,y] eval "swap(I[0],I[$1]); i[0] = 0; I[h - 1] = [$N,0]" # [2]: Heap [ dist,index ]
+    eval "
+      while (da_size(),
+        C = da_pop_heap();
+        repeat (da_size(),q,
+          N = I[q];
+          edge = i(#0,C[1],N[1]);
+          !isinf(edge)?( # Neighbor found
+            dist = C[0] + edge;
+            dist<N[0]?( # New better distance
+              i(#1,0,N[1],0,0) = i[q] = N[0] = dist; # Update best distance
+              i(#1,0,N[1],0,1) = C[1]; # Update best parent
+              for (index = q, index>0, # Update heap
+                parent = (index - 1)>>1;
+                N[0]<i[parent]?(swap(I[index],I[parent]); index = parent):break();
+              );
+            );
+          );
+        );
+      )"
+    k[1] => $nm
+  }
 
 #@cli eigen : (+)
 #@cli : Compute the eigenvalues and eigenvectors of selected symmetric matrices or matrix fields.
