@@ -22729,8 +22729,9 @@ yinyang :
 #
 #---------------------------------
 
-#@cli dijkstra : starting_vertex>=0
-#@cli : Compute minimal distances/paths in selected graphs, from specified 'starting_vertex' to all other vertices.
+#@cli dijkstra : starting_vertex>=0,_ending_vertex={ -1:none | >=0 }
+#@cli : Compute minimal distances/paths in selected graphs, from specified 'starting_vertex' to all other vertices \
+# (opt. only until 'ending_vertex' has been reached).
 #@cli : A graph of 'N' vertices is specified as a 'NxN' adjacency matrix giving the weights of all edges \
 # connecting vertices (set to 'inf' when two vertices are not connected).
 #@cli : This command return a '1xNx1x2' image containing the '[distance,parent]' information :
@@ -22738,9 +22739,10 @@ yinyang :
 # of edge weights composing the minimal path between these two vertices).
 #@cli :   - 'parent' is the index of the next vertex that must be followed to reaches the 'starting_vertex' \
 # through the minimal path.
-dijkstra : check "isint($1) && $1>=0"
-  s0,s1=x,ces
-  e[^-1] "Compute minimal distances/path from node $1, for adjacency matri"${s{$!>1}}" [$[]]."
+#@cli : Default value: 'ending_vertex=-1'
+dijkstra : check "isint($1) && $1>=0 && isint(${2=-1}) && $2>=-1"
+  s0,s1=x,ces t0,t1=," to vertex \#$2"
+  e[^-1] "Compute minimal distances/path from vertex \#$1"${t{$2>=0}}", for adjacency matri"${s{$!>1}}" [$[]]."
   foreach {
     nm={n}
     if !w" || "w!=h" || "d>1" || "s>1
