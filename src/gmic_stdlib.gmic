@@ -22740,12 +22740,12 @@ yinyang :
 #@cli :   - 'parent' is the index of the next vertex that must be followed to reaches the 'starting_vertex' \
 # through the minimal path.
 #@cli : Default value: 'ending_vertex=-1'
-dijkstra : check "isint($1) && $1>=0 && isint(${2=-1}) && $2>=-1"
++dijkstra : check "isint($1) && $1>=0 && isint(${2=-1}) && $2>=-1"
   s0,s1=x,ces t0,t1=," to vertex \#$2"
   e[^-1] "Compute minimal distances/path from vertex \#$1"${t{$2>=0}}", for adjacency matri"${s{$!>1}}" [$[]]."
   if $2!=-1 str_check_end_vertex="C[1]==$2?break();" fi
   foreach {
-    nm={n}
+    nm={n} 0 => $nm . nnm={n} k[0] # Get copymarked name
     if !w" || "w!=h" || "d>1" || "s>1
       error[0--4] "Command 'dijkstra': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
                   "is not an adjacency matrix."
@@ -22773,8 +22773,12 @@ dijkstra : check "isint($1) && $1>=0 && isint(${2=-1}) && $2>=-1"
           );
         );
       )"
-    k[1] => $nm
+    rm. => $nnm
   }
+  mv[1--1:2] $!
+
+dijkstra :
+  foreach { nm={n} +dijkstra $* k. => $nm }
 
 #@cli eigen : (+)
 #@cli : Compute the eigenvalues and eigenvectors of selected symmetric matrices or matrix fields.
