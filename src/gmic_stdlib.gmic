@@ -20084,6 +20084,19 @@ fftpolar :
 #@cli : Default values: 'min_value=0%' and 'max_value=100%'.
 #@cli : $ image.jpg +histogram 64 display_graph[-1] 400,300,3
 
+#@cli histogram_masked : [mask],nb_levels>0[%],_min_value[%],_max_value[%]
+#@cli : Compute the masked histogram of selected images.
+#@cli : Default values: 'min_value=0%' and 'max_value=100%'.
+histogram_masked : check ${"is_image_arg $1"}" && isint($2) && $2>0" skip ${3=0%},${4=100%}
+  e[^-1] "Compute histogram of image$?, with mask $1, $2 levels in range [$3,$4]."
+  pass$1
+  foreach[^-1] {
+    vmin,vmax:="1 + (ispercentage($3)?$3:($3 - im)/(iM - im)),"\
+               "1 + (ispercentage($4)?$4:($4 - im)/(iM - im))"
+    n 1,2 pass$1 !=. 0 * discard 0 histogram $2,$vmin,$vmax
+  }
+  rm.
+
 #@cli histogram_nd : nb_levels>0[%],_value0[%],_value1[%]
 #@cli : Compute the 1D,2D or 3D histogram of selected multi-channels images (having 1,2 or 3 channels).
 #@cli : If value range is set, the histogram is estimated only for pixels in the specified
