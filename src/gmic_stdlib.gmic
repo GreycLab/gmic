@@ -20105,15 +20105,26 @@ histogram_masked : check ${"is_image_arg $1"}" && isint($2) && $2>0" skip ${3=0%
 #@cli : $ image.jpg channels 0,1 +histogram_nd 256
 histogram_nd : check $1>0 skip ${2=0%},${3=100%}
   e[^-1] "Compute histogram of multi-channels image$?, using $1 levels in range [$1,$2]."
-  foreach {
-    s:=s
-    r {whd},{min(3,s)},1,1,-1
+  foreach { nm={n}
     vmin,vmax:="const a = ispercentage($2)?lerp(im,iM,$2):$2;
                 const b = ispercentage($3)?lerp(im,iM,$3):$3;
                 [ min(a,b), max(a,b) ]"
     nb_levels:=max(1,round(ispercentage($1)?(1+$vmax-$vmin)*$1:$1))
-    f "inrange(i,$vmin,$vmax)?cut(int($nb_levels*(i - $vmin)/($vmax - $vmin)),0,$nb_levels-1):-1"
-    pointcloud 1,$nb_levels,{$s>1?$nb_levels:1},{$s>2?$nb_levels:1}
+    r {whd},1,1,{min(3,s)},-1
+    if s==1 # 1d
+      histogram $nb_levels,$vmin,$vmax
+    elif s==2 # 2d
+      $nb_levels,$nb_levels
+      eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
+              inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax)?
+              ++i(#-1,ind(i0),ind(i1),0,0); I"
+    else # 3d
+      $nb_levels,$nb_levels,$nb_levels
+      eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
+              inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax) && inrange(i2,$vmin,$vmax)?
+              ++i(#-1,ind(i0),ind(i1),ind(i2),0); I"
+    fi
+    k. => $nm
   }
 
 #@cli histogram_cumul : _nb_levels>0,_is_normalized={ 0 | 1 },_val0[%],_val1[%]
