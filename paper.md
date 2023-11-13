@@ -38,7 +38,7 @@ image retouching applications, such as _GIMP_, _Krita_, _Photoshop_, _Affinity P
 
 Image Analysis, Processing and Filtering, Computer Graphics, Scripting Language, User Interfaces, Creative Coding.
 
-# 1. Introduction
+# 1. Statement of need
 
 ## 1.1. Context
 
@@ -51,7 +51,7 @@ Intrinsic to `G'MIC`'s design are means to map pipelines to commands, advancing 
 `G'MIC` is distributed under the CeCILL free software licenses (GPL-compatible). The core language projects several user interfaces to convert, process or visualize generic *image datasets*. Allied with pipeline toolset, `G'MIC` embodies a highly flexible image model, ranging from 1D scalar signals to 3D+t sequences of multi-spectral volumetric images, hence including 2D color images.
 This makes it a versatile tool for image processing, with a wide range of applications in research, industry and graphic design.
 
-## 1.2. Statement of Need
+## 1.2. History and Motivation
 
 The `G'MIC` project was started in mid-2008 by [David Tschumperlé](https://tschumperle.users.greyc.fr), a research scientist working in the IMAGE team of the _GREYC_, a public research laboratory affiliated with the CNRS institute in France.
 David's area of research is the study and elaboration of image processing algorithms.
@@ -192,28 +192,12 @@ Last but not least, the project provides regular updates on new developments on 
 To illustrate the high degree of genericity of the `G'MIC` framework, we list a selection of a few image processing research projects
 carried out in the [IMAGE team](https://www.greyc.fr/equipes/image) at the [_GREYC_ laboratory](https://www.greyc.fr) (UMR CNRS 6072),
 which have used `G'MIC` for algorithm development, prototyping, testing and result generation.
-The resulting algorithms, presented below, have all been integrated into the `G'MIC` framework, and can now be freely used by users
-(in particular, artists), e.g. via the _G'MIC-Qt_ plug-in.
-This demonstrates the potential of `G'MIC` not only in developing new image processing algorithms,
-but also as a software platform for disseminating these new algorithms to professionals and the general public.
 
 ## 3.1. Patch-Based Image Inpainting
 
-Image _inpainting_ is the name given to the process of replacing part of an image, defined in the form of a user-drawn mask,
-with algorithmically synthesized content.
-This type of algorithms can be used in a number of ways: for example, to remove a distracting element from a photograph (wire, person, vehicle, etc.), or to correct defects in images (scratches, compression noise, etc.).
-The problem of image inpainting has attracted growing interest in recent years, and a number of different algorithmic techniques have been developed
-in an attempt to address the issue.
-Some of these, namely "patch-based" techniques, have proved their effectiveness for the reconstruction of complex patterns, such as textures,
-while maintaining a reasonable algorithmic complexity that allows these algorithms to run on mid-range machines.
-
-Between 2011 and 2015, this problem was studied by researchers Maxime Daisy, Pierre Buyssens, David Tschumperlé, Olivier Le Meur and Olivier Lézoray,
-and this led to the development of new, original image inpainting algorithms, described in detail
+Between 2011 and 2015, the problem of Image _inpainting_ was studied by researchers Maxime Daisy, Pierre Buyssens, David Tschumperlé, Olivier Le Meur and Olivier Lézoray, and this led to the development of new, original image inpainting algorithms, described in detail
 in a publication in _IEEE Transaction on Image Processing_ [@buyssens2015exemplar].
-
-In _G'MIC-Qt_, the _Inpaint [Multi-Scale]_ and _Inpaint [Patch-Based]_ filters implement different patch-based image inpainting algorithms.
-The user provides a mask drawn in a solid color to the algorithm, which tries to "guess" the pixels that best reconstruct the content of the masked regions.
-As illustrated in Fig. 11, the algorithms are able to reconstruct complex portions of images, containing textures (in this case, trees and clouds), from the geometric analysis of known portions of the input image.
+In _G'MIC-Qt_, the _Inpaint [Multi-Scale]_ and _Inpaint [Patch-Based]_ filters implement different patch-based image inpainting algorithms (Fig. 6).
 
 ![Patch-based image inpainting with `G'MIC`. Left: input image. Middle: user-defined mask. Right: inpainting result.](images/inpaint.png)
 
@@ -227,19 +211,9 @@ The relatively large size of these models leads to high data storage requirement
 In the context of `G'MIC`, it was important to be able to provide users with as many color transformation filters as possible,
 without considerably increasing the size of the framework.
 To that purpose, in 2018, researchers David Tschumperlé, Amal Mahboubi and Christine Porquet have proposed a dedicated method
-for compressing _CLUTs_, which delivers good performance (generally over 95% space saving).
-Their algorithm is based on the search for a set of color key points such that, when interpolated anisotropically in the RGB cube,
-the resulting _CLUT_ is perceptually equivalent to the original _CLUT_ one is trying to compress (Fig. 12).
+for compressing _CLUTs_ [@tschumperle2020reconstruction], which delivers good performance (generally over 95% space saving) (Fig. 7).
 
 ![Principle of the `G'MIC` color _LUT_ compression algorithm. An input _CLUT_ (a) is analyzed and relevant color keypoints are deduced (b) and stored as a small image (c). A perceptual metric is used to ensure that the application of the compressed _CLUT_ on an image is visually similar to the application of the original one.](images/clut_compression2.png)
-
-The method has been described in the article [@tschumperle2020reconstruction] published in the SIAM Journal of Imaging Science, in 2020.
-
-The proposed compression/decompression technique has been extensively used in `G'MIC` to provide color grading filters, such as **Color Presets** or
-**Simulate Film** (Fig. 13). There are currently 1105 different _CLUTs_ compressed this way in `G'MIC`, for a storage size of just under 4 MiB
-(which would have taken up several hundred MiB with a conventional CLUT representation).
-
-![Color Presets filter in _G'MIC-Qt_.](images/color_presets.jpg)
 
 ## 3.3. Semi-automatic Colorization of Line Arts
 
@@ -256,7 +230,7 @@ generate a layer of colorization from an input line art.
 The resulting algorithm analyzes the geometry of the line art contours and automatically deduces a reasonable flat-colored layer,
 filled with colors which are randomly chosen, but that can be easily modified subsequently by the artist to give them the desired color
 (for example, using the _Bucket Fill_ tool on the colorization layer thus generated).
-This is the process illustrated in Fig. 14, where the input line art (_left_) is automatically colorized with random colors (_middle left_), which
+This is the process illustrated in Fig. 9, where the input line art (_left_) is automatically colorized with random colors (_middle left_), which
 are modified by the artist (_middle right_), before going to the illumination task (_right_).
 
 ![Principle of the semi-automatic line art colorization algorithm.](images/lineart_colorization.jpg)
@@ -264,21 +238,11 @@ are modified by the artist (_middle right_), before going to the illumination ta
 The proposed method has been described in a conference paper,
 published in the EUROGRAPHICS International Symposium on Vision, Modeling and Visualization, in 2018 [@fourey2018fast].
 
-Within the `G'MIC` framework, the corresponding algorithm is available in the form of the *Colorize Line Art [Smart Coloring]* filter (Fig. 15).
-
-![Filter **Colorize Line Art [Smart Coloring]** in the _G'MIC-Qt_ plug-in.](images/lineart1.png)
-
 This filter offers three variants that can be used to colorize line arts. In addition to the mode of generating a layer containing random colors,
 the filter offers a mode of intelligent extrapolation of color spots placed on a transparent layer above the original drawing,
-as illustrated in Fig. 16.
+as illustrated in Fig. 9.
 
 ![Color spot extrapolation for automatic lineart colorization.](images/lineart_cat.png)
-
-A third mode, named _Auto-Clean_, allows the artist to quickly scribble over a coloring layer, without worrying about being very precise
-(especially with regard to not overflowing the outlines). The filter then takes care of cleaning this layer automatically,
-to make the colors stick to the different contours of the input line art (Fig. 17).
-
-![Auto-clean mode for the lineart colorization algorithm.](images/dog_colorize.png)
 
 Note that the colorization algorithm resulting from this research work was the subject of an external implementation in the GIMP software,
 to enrich the "Bucket Fill" tool with a specialized "Line Art" mode for the colorization of line drawings [@jehan18].
@@ -291,13 +255,11 @@ This method has been published and presented at the IEEE International Conferenc
 
 The main idea behind the algorithm is the analysis of the different silhouettes composing the drawing, such that plausible 3D elevation maps
 are built. A Phong lightling model that relies on the corresponding normal maps is then applied to generate the illumination layer
-(Fig. 18).
+(Fig. 10).
 
 ![Principle of the Shape Illumination Algorithm. Left: input image, middle-left: estimated 3D normal map. Right: two examples of different illuminations obtained with the Phong lighting model applied with different parameters.](images/illumination.png)
 
-In the _G'MIC-Qt_ plug-in, this illumination algorithm can be applied via the filter **Illuminate 2D Shape** (Fig. 19).
-
-![Filter **Illuminate 2D Shape** in the _G'MIC-Qt_ plug-in.](images/illumination2.png)
+In the _G'MIC-Qt_ plug-in, this illumination algorithm can be applied via the filter **Illuminate 2D Shape**.
 
 ## 3.5. Patch-Based Image Style Transfer
 
@@ -312,7 +274,7 @@ They were able to develop a multi-scale algorithm based solely on copying patche
 with low algorithmic cost.
 
 This patch-based style transfer algorithm has been published and presented at the IEEE International Conference on Image Processing, in 2022 [@samuth2022patch].
-It has been implemented in `G'MIC`, as command `stylize`, and its associated _G'MIC-Qt_ filter **Stylize** (Fig. 20).
+It has been implemented in `G'MIC`, as command `stylize`, and its associated _G'MIC-Qt_ filter **Stylize** (Fig. 11).
 
 ![Examples of application of the `G'MIC` style transfer method. An input image (top left) is stylized according to a set of different style images (top row).](images/style_transfer.png)
 
@@ -326,7 +288,7 @@ One interesting algorithm for getting rid of band noise in `G'MIC` is implemente
 
 For instance, the use of `G'MIC` is mentionned in the article [@ray2023outflows],
 where images from protostar _HH211_ have been processed with it.
-One of those made the cover of _Nature_ magazine (October 5, 2023, Volume 622 Issue 7981) (Fig. 21).
+One of those made the cover of _Nature_ magazine (October 5, 2023, Volume 622 Issue 7981) (Fig. 12).
 
 ![Left: image of protostar _HH211_, partially processed with `G'MIC` (cover of Nature, courtesy of [Mark McCaughrean/ESA](https://mastodon.social/@markmccaughrean)). Right: an example of the effect of the `G'MIC` **Banding Denoise** filter on an image of the _IC4553_ galaxy (acquired by the JWST, courtesy of [Judy Schmidt](https://astrodon.social/@spacegeck)).](images/nature.png)
 
