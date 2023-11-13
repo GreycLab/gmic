@@ -35,9 +35,9 @@ image retouching applications, such as _GIMP_, _Krita_, _Photoshop_, _Affinity P
 
 Image Analysis and Processing, Scripting Language, User Interfaces.
 
-# 1. Statement of Need
+# Statement of Need
 
-## 1.1. Context
+## Context
 
 Intrinsic to `G'MIC`'s design are means to map image processing pipelines to commands, advancing the tool as a self-extending language.
 Primal command pipelines may be further assembled into those having wider remits, these suitably named to bespeak their extended purposes
@@ -48,7 +48,7 @@ process or visualize *image datasets*. Allied with pipeline toolset, `G'MIC` emb
 ranging from 1D signals to 3D+t sequences of multi-spectral volumetric images, hence including 2D color images.
 This makes it a versatile tool for image processing, with a wide range of applications in research, industry and graphic design.
 
-## 1.2. History and Motivation
+## History and Motivation
 
 The `G'MIC` project was initiated in 2008 by research scientists of the IMAGE team at the _GREYC_ laboratory, a public research lab in France.
 Their area of research focuses on development of image processing algorithms.
@@ -73,7 +73,7 @@ These objectives, in combination with a desire to write new image processing pip
 gave rise to the idea of _self-extension_. All these objectives led initially to the development of a specialized scripting language:
 the `G'MIC` language, and its associated interpreter.
 
-## 1.4. Related Software
+## Related Software
 
 - **Command-line Interfaces:**
 
@@ -91,9 +91,9 @@ Popular examples are Mathmap [@mathmap], Filter Forge [@filterforge] and Pixelit
 While these software somehow allows the user to create its own image processing pipeline, their use case is restricted
 to the provided graphical user interfaces, with limited scripting possibilities.
 
-# 2. Framework Environment
+# Framework Environment
 
-## 2.1. Core Components
+## Core Components
 
 The current `G'MIC` framework architecture is depicted below.
 
@@ -108,7 +108,7 @@ More than 1000 distinct commands are currently implemented, covering a large por
 The interpreter lets the user implements their own scripts, for tasks as varied as writing image filters or generative algorithms,
 or creating user interfaces for image manipulation.
 
-## 2.2. User Interfaces
+## User Interfaces
 
 On top of the interpreter are the user interfaces. Several types of UI are implemented, adapted to varying degrees of user's expertise:
 
@@ -126,7 +126,7 @@ On top of the interpreter are the user interfaces. Several types of UI are imple
 
 ![The _G'MIC-Qt_ plug-in.](images/gmic_qt_330.jpg)
 
-## 2.3. Visibility and Community
+## Visibility and Community
 
 `G'MIC` has been developed since 2008, at the _GREYC_ laboratory.
 The project web page is [https://gmic.eu](https://gmic.eu).
@@ -142,7 +142,7 @@ The `G'MIC` source code is available on these various github repositories:
 [`gmic`](https://github.com/GreycLab/gmic/) (interpreter), [`gmic-qt`](https://github.com/c-koi/gmic-qt/) (plug-in) and
 [`gmic-community`](https://github.com/GreycLab/gmic-community/) (external contributions, documentation).
 
-# 3. Examples of Research Work Conducted With `G'MIC`
+# Examples of Research Work Conducted With `G'MIC`
 
 To demonstrate the utility of `G'MIC` for research, we provide several examples of image processing tasks conducted
 using `G'MIC` for algorithm development and prototyping. For each example, we reference its associated research publication.
