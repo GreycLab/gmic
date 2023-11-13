@@ -30,7 +30,7 @@ bibliography: paper.bib
 
 We present `G'MIC`, an open-source self-extending framework that defines an original, concise, scripting language for the writing of possibly complex
 image processing operators and pipelines.
-`G'MIC` also provides several user interfaces allowing for the manipulation of digital images, adapted to different levels of user expertise,
+`G'MIC` provides several user interfaces allowing for the manipulation of digital images, adapted to different levels of user expertise,
 either from the command line, or as a _C/C`++`_ library, or as a user-friendly graphical plug-in that extends the capabilities of popular digital
 image retouching applications, such as _GIMP_, _Krita_, _Photoshop_, _Affinity Photo_ and others.
 
@@ -42,9 +42,8 @@ Image Analysis, Processing and Filtering, Computer Graphics, Scripting Language,
 
 ## 1.1. Context
 
-Intrinsic to `G'MIC`'s design are means to map image processing pipelines to commands, advancing the tool as a self-extending language
-and fortifying how users' conduct their work. Primal command pipelines may be further assembled into those having wider remits, these suitably
-named to bespeak their extended purposes and available for succeeding command prototyping.
+Intrinsic to `G'MIC`'s design are means to map image processing pipelines to commands, advancing the tool as a self-extending language.
+Primal command pipelines may be further assembled into those having wider remits, these suitably named to bespeak their extended purposes and available for succeeding command prototyping.
 
 `G'MIC` is distributed under the CeCILL free software licenses (GPL-compatible). The core language projects several user interfaces to convert,
 process or visualize generic *image datasets*. Allied with pipeline toolset, `G'MIC` embodies a highly flexible image model,
@@ -53,16 +52,17 @@ This makes it a versatile tool for image processing, with a wide range of applic
 
 ## 1.2. History and Motivation
 
-The `G'MIC` project was started in mid-2008 by [David Tschumperlé](https://tschumperle.users.greyc.fr), a research scientist working in the IMAGE team of the _GREYC_, a public research laboratory affiliated with the CNRS institute in France.
-David's area of research is the study and elaboration of image processing algorithms.
+The `G'MIC` project was started in mid-2008 by research scientists working in the IMAGE team of the _GREYC_ (public research laboratory in France),.
+whose area of research is the elaboration of image processing algorithms.
 
-To that end, he first began developing [`CImg`](http://cimg.eu) [@cimg], beginning in 1999 and continuing to the present. `CImg` is  an open-source _C`++`_ library for generic image processing. Here, _generic_ implies a library that addresses structurally diverse imagery: photographs, multi-spectral images (e.g. from satellites), medical images (MRI, X-ray, tomography, etc.) and technical animations, among others.
+To that end, they first began developing [`CImg`](http://cimg.eu) [@cimg], beginning in 1999 and continuing to the present.
+`CImg` is an open-source _C`++`_ library for generic image processing. Here, _generic_ implies a library that addresses structurally diverse imagery: photographs, multi-spectral images (e.g. from satellites), medical images (MRI, X-ray, tomography, etc.) and technical animations, among others.
 
 That said, `CImg` exhibits certain limitations for everyday research work:
 
-1. When one simply wants to apply a predefined algorithm from `CImg` to an image, one needs to write a small, _C`++`_ program. Perhaps it is only a few lines long, but still it must be compiled and linked — and possibly debugged — before it can be executed. In the context of research work, such mechanics are just so many distractions. The idea of being able to run those algorithms directly from the command line is tempting.
+1. When one simply wants to apply a predefined algorithm from `CImg` to an image, one needs to write a small, _C`++`_ program. It is only a few lines long, but still it must be compiled before it can be executed. In the context of research work, such mechanics are just so many distractions. The idea of being able to run those algorithms directly from the command line is tempting.
 
-2. Over time, a large number of these small, but purpose-specific, programs has accumulated. They solve specific problems but rarely see follow-on use. They are not broadly useful for integration into the `CImg` library and have become an unruly "collection" of specialized algorithms. By design, they cannot be easily distributed and are difficult to maintain (as opposed to a language having package managers, like Python).
+2. Over time, a large number of these small, but purpose-specific, programs has accumulated. They are not broadly useful for integration into the `CImg` library and have become an unruly "collection" of specialized algorithms. By design, they cannot be easily distributed and are difficult to maintain (as opposed to a language having package managers, like Python).
 
 These limitations motivated `G'MIC`'s development, beginning in 2008. Two design objectives came to the fore:
 
@@ -70,20 +70,20 @@ These limitations motivated `G'MIC`'s development, beginning in 2008. Two design
 
 2. Gather the implementation of specialized algorithms in a single location, facilitating their evolution, maintenance and distribution.
 
-These objectives, in combination with a desire to write new image processing pipelines and algorithms in the most flexible and concise way possible, gave rise to the idea of _self-extension_. All these objectives led initially to the development of a specialized scripting language: the `G'MIC` language, and its associated interpreter, distributed as free software.
+These objectives, in combination with a desire to write new image processing pipelines and algorithms in the most flexible and concise way possible,
+gave rise to the idea of _self-extension_. All these objectives led initially to the development of a specialized scripting language:
+the `G'MIC` language, and its associated interpreter, distributed as free software.
 
 ## 1.4. Related Software
 
 - **Command-line Interfaces:**
 
-The command line interface `gmic` has been originally inspired by [_ImageMagick_](https://imagemagick.org/index.php) [@imagemagick] and [_GraphicsMagick_](http://www.graphicsmagick.org/) [@graphicsmagick], particularly the idea of being able to manipulate digital images from a shell. What all these projects have
-in common is that they define distinct command languages, enabling the creation of image processing pipelines of varying complexity.
+The command line interface `gmic` has been originally inspired by _ImageMagick_ [@imagemagick] and _GraphicsMagick_ [@graphicsmagick], particularly the idea of being able to manipulate digital images from a shell.
+The main differences between `G'MIC` and _ImageMagick_/_GraphicsMagick_ are that :
 
-The main differences between `G'MIC` and _ImageMagick_/_GraphicsMagick_ are as follows:
+1. The type of images processed is more diverse in `G'MIC`.
 
-1. The type of images processed is more diverse in `G'MIC`. Although _ImageMagick_ and _GraphicsMagick_ are capable to a certain extent of loading volumetric or hyperspectral images, the possibilities for processing these generic images is limited to the use of certain filters only
-
-2. The possibilities offered by the scripting languages associated with each project, for writing image processing pipelines, are more extensive in `G'MIC`. In particular, `G'MIC`'s scripting language makes it possible to write conditions, loops and multi-threaded pipelines, without having to resort to an external scripting language (such as `sh` or `bash`, which are typically used in conjunction with _ImageMagick_/_GraphicsMagick_).
+2. The possibilities offered by the scripting languages associated with each project, for writing image processing pipelines, are more extensive in `G'MIC` (`G'MIC` language makes it possible to write conditions, loops and multi-threaded pipelines, without having to resort to an external scripting tool, such as `sh` or `bash`).
 
 - **Image Filter Collections:**
 
@@ -106,13 +106,9 @@ The `G'MIC` interpreter lets the user write and run custom programs using this p
 
 On top of the `G'MIC` interpreter are the user interfaces. Several types of UI are implemented, adapted to varying degrees of user's expertise:
 
-- **`gmic`**, a _command-line_ tool used to control the `G'MIC` interpreter from a terminal (Fig. 2).
-
-![The command-line interface `gmic` in action.](images/gmic_cli2.png)
+- **`gmic`**, a _command-line_ tool to control the `G'MIC` interpreter from a terminal (Fig. 2).
 
 - **_G'MIC-Qt_** is a _Qt_-based [@qt] graphical interface intended to be used as a _plug-in_ for digital image retouching software, such as _GIMP_, _Krita_, _DigiKam_, _Photoshop_, _Affinity Photo_ and others, or as a _stand-alone_ program (Fig. 3).
-
-![The _G'MIC-Qt_ plug-in in action.](images/gmic_qt_330.jpg)
 
 - **`G'MIC` Online** is a website where a user can upload a color image and apply one of the _G'MIC-Qt_ filters on it.
 
@@ -120,9 +116,13 @@ On top of the `G'MIC` interpreter are the user interfaces. Several types of UI a
 
 - **_ZArt_** is a _Qt_-based graphical interface used mainly for demonstration purposes, which applies `G'MIC` filters and effects on streamed webcam images in (almost) real-time.
 
+![The command-line interface `gmic` in action.](images/gmic_cli2.png)
+
+![The _G'MIC-Qt_ plug-in in action.](images/gmic_qt_330.jpg)
+
 ## 2.3. Visibility and Community
 
-The `G'MIC` framework has been developed since 2008, mainly in the [IMAGE team](https://www.greyc.fr/equipes/image/) at the
+The `G'MIC` framework has been developed since 2008, mainly in the IMAGE team at the
 [_GREYC_ laboratory](https://www.greyc.fr/), a French public research laboratory specialized in computer sciences.
 The project web page is [https://gmic.eu](https://gmic.eu).
 This website brings together a range of resources, from software download links to documentation and tutorial pages.
@@ -130,9 +130,8 @@ This website brings together a range of resources, from software download links 
 The core features of the `G'MIC` interpreter are developed by [David Tschumperlé](https://tschumperle.users.greyc.fr/),
 the _G'MIC-Qt_ plug-in by [Sébastien Fourey](https://foureys.users.greyc.fr/), both being permanent researchers at _GREYC_.
 The other contributors (for documentation, creation of new filters, or implementation of other user interfaces) can be found on
-the [software's forum pages](https://discuss.pixls.us/c/software/gmic/10), hosted by [Pixls.Us](https://pixls.us/),
-an association whose goal is to promote the use of open-source software dedicated to photography and image creation.
-This forum is the place to go to get answers to questions about the software and chat with developers and users.
+the [software's forum](https://discuss.pixls.us/c/software/gmic/10), hosted by _Pixls.Us_,
+an association which promotes the use of open-source software dedicated to photography and image creation.
 
 The `G'MIC` source code is available on these various github repositories:
 [`gmic`](https://github.com/GreycLab/gmic/) (interpreter), [`gmic-qt`](https://github.com/c-koi/gmic-qt/) (plug-in) and
@@ -143,77 +142,57 @@ Last but not least, the project provides regular updates on new developments on 
 
 # 3. Examples of Research Work Conducted With `G'MIC`
 
-To illustrate the high degree of genericity of the `G'MIC` framework, we list a selection of a few image processing research projects
-carried out, which have used `G'MIC` for algorithm development, prototyping, testing and result generation.
+To illustrate the usefulness of `G'MIC` for research, we list here a few image processing research projects
+carried out with `G'MIC`, for algorithm development, prototyping, testing and result generation.
+For each, we cite its associated research publication.
 
-## 3.1. Patch-Based Image Inpainting
+- **Patch-Based Image Inpainting**:
 
-Between 2011 and 2015, the problem of Image _inpainting_ was studied by researchers Maxime Daisy, Pierre Buyssens, David Tschumperlé, Olivier Le Meur and Olivier Lézoray, in [@buyssens2015exemplar]. In `G'MIC`, several algorithms are implemented for image inpainting (Fig. 4).
+`G'MIC` has been used to design and implement an original patch-based image _inpainting_ algorithm in [@buyssens2015exemplar] (Fig. 4).
 
 ![Patch-based image inpainting with `G'MIC`. Left: input image. Middle: user-defined mask. Right: inpainting result.](images/inpaint.png)
 
-## 3.2. Color LUT Compression
+- **Color LUT Compression**:
 
-3D _CLUTs_ (Color Look Up Tables) are popular digital models used in artistic image and video processing, for the description
-of generic non-parametric color transformations.
-The relatively large size of these models leads to high data storage requirements when trying to distribute them on a large scale
-(_e.g._ several hundred at the same time), typically as sets of `.png` HaldCLUTs or Adobe's `.cube` files.
-For storage purposes, researchers David Tschumperlé, Amal Mahboubi and Christine Porquet have proposed an original algorithm
-for _CLUT_ compression [@tschumperle2020reconstruction], which allows `G'MIC` to provide more than 1100 _CLUTs_ in approximatively only 4MiB of storage (Fig. 5).
+We also used `G'MIC` to study the problem of 3D _CLUTs_ compression (Color Look Up Tables), for allowing the efficient storage of
+color transformations [@tschumperle2020reconstruction].
+`G'MIC` provides more than 1100 _CLUTs_ with approximatively only 4MiB of storage (Fig. 5).
 
 ![Principle of the `G'MIC` color _LUT_ compression algorithm. An input _CLUT_ (a) is analyzed and relevant color keypoints are deduced (b) and stored as a small image (c). A perceptual metric is used to ensure that the application of the compressed _CLUT_ on an image is visually similar to the application of the original one.](images/clut_compression2.png)
 
-## 3.3. Semi-automatic Colorization of Line Arts
+- **Semi-automatic Colorization of Line Arts**:
 
-Colorizing line art drawings is a problem that illustrators are familiar with.
-Traditional tools available in image creation or retouching software (such as the well-known _Bucket Fill_) are not always well suited
-because they do not take into account the anti-aliased nature of the lines, or the gaps that may be present in line drawings.
-It was while discussing with David Revoy [@davidrevoy], an independent illustrator, author of the webcomic _Pepper & Carrot_ [@pepperandcarrot],
-that researchers Sébastien Fourey and David Tschumperlé came up with the idea of an algorithm which would make it possible to semi-automatically
-generate a layer of colorization from an input line art [@fourey2018fast].
-The resulting _"Smart Coloring"_ algorithm, now implemented in `G'MIC`, analyzes the geometry of the line art contours and automatically deduces a reasonable flat-colored layer, from a user-defined layer that only contains a few color strokes (Fig. 6).
+Colorizing line art drawings is a problem that illustrators are familiar with, as traditional digital tools (e.g. _Bucket Fill_)
+are not always working well, e.g. when lines are anti-aliased or contain gaps in the drawing.
+In [@fourey2018fast], we describe a _"Smart coloring"_ algorithm, now implemented in `G'MIC` that analyzes the geometry of the contours
+and automatically deduces a reasonable flat-colored layer, from a user-defined set of colored strokes (Fig. 6).
 
 ![Color spot extrapolation for automatic lineart colorization.](images/lineart_cat.png)
 
-Note that this colorization algorithm has been also implemented natively in the GIMP software, to enrich the "Bucket Fill" tool with a specialized "Line Art" mode for the colorization of line drawings [@jehan18].
+Note that this colorization algorithm has been also implemented natively in GIMP [@jehan18].
 
-## 3.4. Automatic Illumination of Flat-colored Drawings
+- **Automatic Illumination of Flat-colored Drawings**:
 
-In a similar vein, researchers David Tschumperlé, Amal Mahboubi and Christine Porquet have been interested in going one step further by
-designing an original algorithm that illuminates flat-colorized drawings, by automatically creating a light and shadow layer
-[@tschumperle2022automatic] (Fig. 7).
+In a similar vein, we have designed an original algorithm that illuminates flat-colorized drawings,
+by automatically creating a light and shadow layer from a flat-colored layer [@tschumperle2022automatic] (Fig. 7).
 
 ![Principle of the Shape Illumination Algorithm. Left: input image, middle-left: estimated 3D normal map. Right: two examples of different illuminations obtained with the Phong lighting model applied with different parameters.](images/illumination.png)
 
-## 3.5. Patch-Based Image Style Transfer
+- **Patch-Based Image Style Transfer**:
 
 Image stylization consists in transforming an input image to give it a pictorial style close to that of a second image (style image).
-In 2022, researchers Benjamin Samuth, David Tschumperlé and Julien Rabin have turned their attention to patch-based methods and
-were able to develop a patch-based multi-scale algorithm, with a low algorithmic cost [@samuth2022patch].
-It has been implemented in the `G'MIC` framework, as a new command `stylize` (Fig. 8).
+In 2022, were able to develop a patch-based multi-scale algorithm, with a low algorithmic cost [@samuth2022patch],
+now implemented in `G'MIC` (Fig. 8).
 
-![Examples of application of the `G'MIC` style transfer method. An input image (top left) is stylized according to a set of different style images (top row).](images/style_transfer2.png)
+![Examples of application of the `G'MIC` style transfer method. An input image (top left) is stylized according to a set of different style images (top row).](images/style_transfer.png)
 
-## 3.6. Debanding of Astronomical Images
+- **Debanding of Astronomical Images**:
 
-Let us finally mention that `G'MIC` is known to be used in the astronomy research community, in particular for processing images
-from the [JWST (James Webb Space Telescope)](https://en.wikipedia.org/wiki/James_Webb_Space_Telescope),
-which often exhibit frequency noise that materializes as transverse bands degrading the image quality
-(quite well removed with `G'MIC` filter **Banding Denoise**).
-`G'MIC` has been mentionned in the article [@ray2023outflows],
-where images from protostar _HH211_ have been processed with it.
-One of those made the cover of _Nature_ magazine (October 5, 2023, Volume 622 Issue 7981) (Fig. 9).
+`G'MIC` is known to be used in the astronomy research community, in particular for processing images from the James Webb Space Telescope,
+which exhibit band frequency noise, that are well removed with `G'MIC` filter **Banding Denoise**.
+`G'MIC` has been cited in [@ray2023outflows], where images from protostar _HH211_ have been processed.
+One of those made the cover of _Nature_ of October 2023 (Fig. 9).
 
 ![Left: image of protostar _HH211_, partially processed with `G'MIC` (cover of Nature, courtesy of [Mark McCaughrean/ESA](https://mastodon.social/@markmccaughrean)). Right: an example of the effect of the `G'MIC` **Banding Denoise** filter on an image of the _IC4553_ galaxy (acquired by the JWST, courtesy of [Judy Schmidt](https://astrodon.social/@spacegeck)).](images/nature.png)
-
-# 5. Conclusions and Perspectives
-
-We presented `G'MIC`, an open-source framework for digital image processing, developed since more than 15 years.
-`G'MIC` defines its own scripting language to ease the design and application of image processing pipelines and
-to allow the definition of new image processing filters and algorithms.
-This is a mature software package that can be used by a wide range of users : experts in image processing,
-regular users looking for a tool to quickly retouch or generate images,
-or researchers working in fields where image processing can play a role to improve acquired data.
-The wide range of available user interfaces makes `G'MIC` a versatile tool for image processing.
 
 # References
