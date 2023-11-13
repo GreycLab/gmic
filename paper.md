@@ -2,11 +2,9 @@
 title: "`G'MIC`: An Open-Source Self-Extending Framework for Image Processing"
 tags:
   - image processing
-  - image filtering
   - computer graphics
   - scripting language
   - user interfaces
-  - creative coding
 authors:
   - name: David Tschumperlé
     corresponding: true
@@ -20,7 +18,7 @@ authors:
 affiliations:
  - name: GREYC Lab (IMAGE Team), CNRS, Normandie Univ, UNICAEN, ENSICAEN, F-14000 Caen, France 
    index: 1
- - name: Independent contributor, New York City, US
+ - name: Independent researcher, New York City, US
    index: 2
 date: 8 June 2023
 bibliography: paper.bib
@@ -36,14 +34,15 @@ image retouching applications, such as _GIMP_, _Krita_, _Photoshop_, _Affinity P
 
 ## Keywords
 
-Image Analysis, Processing and Filtering, Computer Graphics, Scripting Language, User Interfaces, Creative Coding.
+Image Analysis and Processing, Computer Graphics, Scripting Language, User Interfaces.
 
 # 1. Statement of Need
 
 ## 1.1. Context
 
 Intrinsic to `G'MIC`'s design are means to map image processing pipelines to commands, advancing the tool as a self-extending language.
-Primal command pipelines may be further assembled into those having wider remits, these suitably named to bespeak their extended purposes and available for succeeding command prototyping.
+Primal command pipelines may be further assembled into those having wider remits, these suitably named to bespeak their extended purposes
+and available for succeeding command prototyping.
 
 `G'MIC` is distributed under the CeCILL free software licenses (GPL-compatible). The core language projects several user interfaces to convert,
 process or visualize generic *image datasets*. Allied with pipeline toolset, `G'MIC` embodies a highly flexible image model,
@@ -94,13 +93,18 @@ While these software somehow allows the user to create its own pipeline of image
 
 ## 2.1. Core Components
 
-The current architecture of the `G'MIC` framework is depicted on Fig. 1. This corresponds to the current state of the framework (version **3.3.2**), at the time of writing.
+The current architecture of the `G'MIC` framework is depicted on Fig. 1.
 
 ![Overview of the `G'MIC` framework.](images/gmic_architecture.png)
 
-The organization of this framework revolves around a central component: the **`G'MIC` scripting language interpreter** (in yellow). This interpreter uses the native functionalities of the **`CImg` library** (which is implemented in _C`++`_, in blue), but relies also on a set of commands, written in the `G'MIC` language themselves, constituting a **_standard library_ (`stdlib`)** for the framework (in green). The other components (in orange) stand for the different user interfaces provided by the framework. More than 1000 distinct commands are currently implemented in the `stdlib`, covering a large portion of general image processing needs.
+The framework revolves around a central component: the **`G'MIC` scripting language interpreter** (yellow).
+This interpreter uses the native functionalities of the **`CImg` library** (implemented in _C`++`_, blue),
+but relies also on a set of commands, written in the `G'MIC` language themselves, constituting a **_standard library_ (`stdlib`)**
+for the framework (green). The other components (orange) stand for the different user interfaces provided by the framework.
+More than 1000 distinct commands are currently implemented, covering a large portion of image processing needs.
 
-The `G'MIC` interpreter lets the user write and run custom programs using this predefined set of commands, for tasks as varied as writing new image filters, implementing generative algorithms or creating user interfaces for image manipulation.
+The interpreter lets the user implements their own scripts using this predefined set of commands,
+for tasks as varied as writing image filters or generative algorithms, or creating user interfaces for image manipulation.
 
 ## 2.2. User Interfaces
 
@@ -122,7 +126,7 @@ On top of the `G'MIC` interpreter are the user interfaces. Several types of UI a
 
 ## 2.3. Visibility and Community
 
-The `G'MIC` framework has been developed since 2008, mainly in the IMAGE team at the
+`G'MIC` has been developed since 2008, mainly in the IMAGE team at the
 [_GREYC_ laboratory](https://www.greyc.fr/), a French public research laboratory specialized in computer sciences.
 The project web page is [https://gmic.eu](https://gmic.eu).
 This website brings together a range of resources, from software download links to documentation and tutorial pages.
@@ -137,28 +141,25 @@ The `G'MIC` source code is available on these various github repositories:
 [`gmic`](https://github.com/GreycLab/gmic/) (interpreter), [`gmic-qt`](https://github.com/c-koi/gmic-qt/) (plug-in) and
 [`gmic-community`](https://github.com/GreycLab/gmic-community/) (external contributions, documentation).
 
-Last but not least, the project provides regular updates on new developments on social networks such as
-[Mastodon](https://piaille.fr/@gmic) and [Twitter](https://twitter.com/gmic_eu).
-
 # 3. Examples of Research Work Conducted With `G'MIC`
 
-To illustrate the usefulness of `G'MIC` for research, we list here a few image processing research projects
-carried out with `G'MIC`, for algorithm development, prototyping, testing and result generation.
+To illustrate `G'MIC`'s usefulness for research, we list a few examples of image processing tasks
+carried out with `G'MIC`, for algorithm development and prototyping.
 For each, we cite its associated research publication.
 
 - **Patch-Based Image Inpainting**:
 
 `G'MIC` has been used to design and implement an original patch-based image _inpainting_ algorithm in [@buyssens2015exemplar] (Fig. 4).
 
-![Patch-based image inpainting with `G'MIC`. Left: input image. Middle: user-defined mask. Right: inpainting result.](images/inpaint.png)
+![Left: input image. Middle: user-defined mask. Right: result of `G'MIC` patch-based inpainting.](images/inpaint.png)
 
 - **Color LUT Compression**:
 
-We also used `G'MIC` to study the problem of 3D _CLUTs_ compression (Color Look Up Tables), for allowing the efficient storage of
-color transformations [@tschumperle2020reconstruction].
-`G'MIC` provides more than 1100 _CLUTs_ with approximatively only 4MiB of storage (Fig. 5).
+We also used `G'MIC` to handle the problem of 3D _CLUTs_ compression (Color Look-Up Tables), for the efficient storage of
+generic color transformations [@tschumperle2020reconstruction].
+More than 1100 _CLUTs_ are thus provided in `G'MIC`, requiring only 4MiB of storage (Fig. 5).
 
-![Principle of the `G'MIC` color _LUT_ compression algorithm. An input _CLUT_ (a) is analyzed and relevant color keypoints are deduced (b) and stored as a small image (c). A perceptual metric is used to ensure that the application of the compressed _CLUT_ on an image is visually similar to the application of the original one.](images/clut_compression2.png)
+![`G'MIC` color _LUT_ compression. An input _CLUT_ (a) is analyzed, relevant color keypoints are deduced (b) and stored (c). A perceptual metric ensure that the difference between original/compressed CLUTs are visually imperceptible.](images/clut_compression2.png)
 
 - **Semi-automatic Colorization of Line Arts**:
 
