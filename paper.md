@@ -51,7 +51,7 @@ Intrinsic to `G'MIC`'s design are means to map pipelines to commands, advancing 
 `G'MIC` is distributed under the CeCILL free software licenses (GPL-compatible). The core language projects several user interfaces to convert, process or visualize generic *image datasets*. Allied with pipeline toolset, `G'MIC` embodies a highly flexible image model, ranging from 1D scalar signals to 3D+t sequences of multi-spectral volumetric images, hence including 2D color images.
 This makes it a versatile tool for image processing, with a wide range of applications in research, industry and graphic design.
 
-## 1.2. History and Motivation
+## 1.2. Statement of Need
 
 The `G'MIC` project was started in mid-2008 by [David Tschumperlé](https://tschumperle.users.greyc.fr), a research scientist working in the IMAGE team of the _GREYC_, a public research laboratory affiliated with the CNRS institute in France.
 David's area of research is the study and elaboration of image processing algorithms.
@@ -187,312 +187,7 @@ The `G'MIC` source code is available on these various github repositories:
 Last but not least, the project provides regular updates on new developments on social networks such as
 [Mastodon](https://piaille.fr/@gmic) and [Twitter](https://twitter.com/gmic_eu).
 
-## 3. The `G'MIC` Scripting Language
-
-Here we provide some insights about the `G'MIC` scripting language and illustrate its use in the creation of custom image processing algorithms and pipelines.
-
-## 3.1. Overview and Main Features
-
-The `G'MIC` language has been specifically designed for manipulating digital images, in the broadest sense of the term.
-This means, making it easy to apply image processing algorithms that have already been written (e.g. those from the `stdlib`), but also developing new algorithms, either in the form of elaborated pipelines, or in the form of "low-level" operations applied directly to the image pixels.
-This represents a wide variety of different use cases, so some key features of the `G'MIC` language are as follows:
-
-- The ability to handle generic image data type: up to sequences of 4D (3D + channels) hyperspectral images with floating-point valued pixels/voxels.
-- An already implemented large collection of various image processing operators.
-- A powerful math evaluator which supports operations on scalars, complexes, vectors and strings.
-- Multi-threaded computations when possible, using OpenMP [@openmp].
-- Drawing of primitives and 3D rendering capabilities.
-- The ability to manage display windows and handle user events, which leads to the possible creation of simple graphical user interfaces.
-- A network-based update mechanism for the filters and commands.
-
-## 3.2. Language Rules
-
-`G'MIC` is both a _procedural_ and an _interpreted_ language, and therefore shares common properties with equivalent scripting languages
-such as _bash_, _Python_, _LUA_ or _Javascript_, particularly with regard to program structuring and the use of flow control instructions.
-It does, however, have its own distinctive features, some of which we list below:
-
-- **Image storage:**
-At any time, `G'MIC` manages one list of numbered (and optionally named) pixel-based images, entirely stored in computer memory.
-The first image of the list has index `0` and is denoted by `[0]`. The second image of the list is denoted by `[1]`, the third by `[2]` and so on.
-Negative indices are treated in a periodic way: `[-1]` refers to the last image of the list, `[-2]` to the penultimate one, etc.
-A named image may be also indicated by `[name]`.
-Then, `G'MIC` defines a set of various commands to manage this list of images, in a very flexible way: You can insert or remove images in the list, rearrange image order, process images (individually or grouped),
-merge image data together, display and output image files, etc.
-
-- **Types of images:**
-Each image is modeled as a 1D, 2D, 3D or 4D array of scalar values, uniformly discretized on a rectangular/parallelepipedic domain.
-The four dimensions of this array are respectively denoted by `width` (number of columns), `height` (number of rows), `depth` (number of slices)
-and `spectrum` (number of channels).
-There are no hard limitations on the size of the image along each dimension, within the limits of the available memory.
-`G'MIC` makes it also possible to manage 3D meshes. A 3D mesh is stored as `1xN` image containing the vertex coordinates, primitive definition,
-as well as their associated colors/textures, all these information being merged and unrolled as a single data vector.
-
-- **Definition of a processing pipeline:**
-In `G'MIC`, a processing pipeline is described as a sequence of items (separated by the _space_ character) which are interpreted and
-executed from the left to the right. For instance, the expression:
-```
-filename.jpg blur 3,0 sharpen 10 resize 200%,200% output file_out.jpg
-```
-defines a valid pipeline composed of nine `G'MIC` items.
-Each `G'MIC` item is a string that is either a _command_, a _list of command arguments_, a _filename_ or a _special input string_.
-
-- **Command selections:**
-A command may be applied only to a subset of the image list, by appending `[selection]` to the command name. For instance,
-    - `command[-2]`: Apply command only on the penultimate image `[-2]` of the list.
-    - `command[3-6]`: Apply command only on images `[3]`, `[4]`, `[5]` and `[6]`.
-    - `command[0--1:2]`: Apply command only on images of the list with even indices.
-    - `command[name1,name2]`: Apply command on named images `name1` and `name2`.
-
-- **Substituting expressions:**
-In `G'MIC`, items containing braces `{}` or dollars `$` may be substituted before being evaluated.
-These substituting expressions are used for on-the-fly evaluation of math expressions (e.g. `{3+cos(0)}` is substituted by `4`),
-or to get interpreter or environment variables (e.g. `$HOME` is substituted by `/home/username`).
-
-## 3.3. Examples of Pipeline and Algorithm Implementations
-
-The set of rules defining the language is fairly small, but provides a complete, high-performance scripting language for image processing.
-Rather than go into the syntactical details of the language, we illustrate it below with a few examples of pipeline constructions,
-for a variety of image processing tasks.
-
-### 3.3.1. Difference of Gaussians
-
-Given a 2D multi-spectral image $I:\mathbb{R}^2\rightarrow\mathbb{R}^n$,
-the [difference of Gaussians](https://en.wikipedia.org/wiki/Difference_of_Gaussians) (*DoG*) of the image $I$
-is the image $\Gamma_{\sigma_1,\sigma_2}:\mathbb{R}^2\rightarrow\mathbb{R}^n$
-obtained by subtracting the image $I$ convolved with the Gaussian of standard deviation $\sigma_2$ from the image $I$
-convolved with a Gaussian of standard deviation $\sigma_1$, _i.e._ $\Gamma_{\sigma_1,\sigma_2} = I*G_{\sigma_1}-I*G_{\sigma_2},$
-where $G_{\sigma} : \mathbb{R}^2\rightarrow\mathbb{R}$ is a 2D Gaussian kernel with standard deviation $\sigma$:
-
-$G_{\sigma}(x,y) = \frac{1}{(\sigma^2 2\pi)} e^{-\frac{\|x\|^2+\|y\|^2}{2\sigma^2}}$
-
-Using the `G'MIC` language, such a filter can be written as a new function `dog` (e.g. in a file `dog.gmic`) as:
-```
-# dog : _sigma1>=0,_sigma2>=0
-# Apply DoG filter on selected images.
-# Default values: 'sigma1=1' and 'sigma2=2'.
-dog : check "${1=1}>=0 && ${2=2}>=0" # Check validity of arguments
-  foreach {      # Loop over each image in the command selection
-    +blur[0] $2  # Get blurred version of the image
-    blur[0] $1   # Blur initial image in-place
-    sub          # Subtract the two images together
-  }
-```
-
-And then used afterwards, e.g. in a command line call, here on two input images:
-```
-$ gmic dog.gmic flower.jpg butterfly.jpg +dog 1,1.6
-```
-resulting in this list of images (Fig. 6):
-
-![Application of the DoG filter on two input images (using command `dog`).](images/new_dog.png)
-
-In the source code of the `dog` function, it's interesting to note that:
-
-- Values of arguments are accessible using the `$1`, `$2`, ... syntax.
-
-- The `foreach { ... }` constructs ensures that the filter can be applied to several input images at once (specified in the command selection),
-as it was done in our example.
-
-- The use of the `+` prefix (e.g. in `+blur` and `+dog`) forces a command to return its result as new images inserted
-at the end of the image list, rather than processing the image in-place.
-
-### 3.3.2. Artistic Effect
-
-Here, we show how to mimic the [Fractalius effect](https://www.redfieldplugins.com/filterFractalius.htm), a popular, closed-source, image filter, developed by _RedField_.
-As stated in their webpage, it "creates unusual, eccentric artworks in a single step. The effects are based on extraction of so-called hidden fractal texture of an image. You can also simulate various types of exotic lightings and high realistic pencil sketches" [@ashbrook2009fractalius].
-A similar effect (although not exactly the same) can be actually done by several steps of linear image blurs along different orientations,
-that are sharpened and merged together with a _Lighten_ blending mode (i.e. pointwise maximum of pixel values).
-The corresponding `G'MIC` script is implemented as follows:
-```
-# Arguments: 0<=_amplitude<=100,_0<=thickness<=100,_sharpness>=0, \
-# _nb_orientations>0,_offset,_color_mode={ 0=darker | 1=brighter }.
-fractalius : check "${1=10}>=0 && $1<=200 && ${2=10}>=0 && $2<=100 && "\
-                   "${3=400}>=0 && ${4=7}>0 && isbool(${6=1})" skip ${5=0}
-  foreach {
-    if !$6 negate fi
-    +fill 0
-    repeat round($4) {
-      angle:=$5+$>*180/round($4)
-      +blur_linear[0] $1%,{$1*$2/100}%,$angle,1
-      blur[-1] 0.7 sharpen[-1] $3
-      max[1,-1]
-    }
-    keep[1]
-    if !$6 negate fi
-  }
-```
-
-This filter has been already a part of the `G'MIC` framework since 2011, starting from an idea of [Rod](http://gimpchat.com/memberlist.php?mode=viewprofile&u=196), a user from the [GimpChat](http://gimpchat.com/) forums (Fig. 7).
-This example shows that `G'MIC` is well suited to prototype potentially complex image processing filters with a few lines of script only,
-particularly thanks to its embedded mathematical evaluator and its very concise syntax.
-
-![Applying a Fractalius-like effect, with command `fractalius_like`. Left: input image. Right: filtered image.](images/rodilius.png)
-
-### 3.3.3. NL-Means
-
-The [Non-local means](https://en.wikipedia.org/wiki/Non-local_means) algorithm (NL-means, [@buades2005non]) is a classical noise reduction
-technique used in image processing.
-It works by averaging the pixel values in an image, giving more weight to pixels whose neighborhoods are similar to the neighborhood of the target pixel
-in a non-local sense.
-In other words, it considers not only nearby pixels but also those from different parts of the image that exhibit similar patterns.
-This approach helps preserving image details while effectively reducing noise, making it a powerful tool for image denoising.
-
-Basically, a NL-means filtered image $J:\mathbb{R}^2\rightarrow\mathbb{R}^n$ is computed from an input image $I:\mathbb{R}^2\rightarrow\mathbb{R}^n$, as
-$J(x,y) = {1 \over N(p)}\sum_{p,q \in \Omega}w(p,q)I(p,q)$
-where $I(p,q)$ is the unfiltered value of the image at point $(p,q)$.
-The normalization factor $N$ is given by:
-$N = \sum_{p,q \in \Omega}w(p,q)$.
-The weights $w(p,q)$ are Gaussian functions, defined as:
-$w(p,q) = e^{-{{\left \|\| P(q)^2-P(p)^2\right \|\|}\over \sigma^2}}$,
-where $P(p)$ and $P(q)$ are the values of the patches (unrolled as vectors) centered respectively at points $p$ and $q$.
-
-
-Non-local means can be implemented quite easily in `G'MIC` language, thanks to its embedded math evaluator, along with command `fill` that computes
-a custom math expression per pixel:
-
-```
-#@cli nlmeans : _patch_size>0,_lookup_size>0,sigma>=0
-#@cli : Apply NL-means filter on selected images.
-#@cli : Default values: 'patch_size=5', 'lookup_size=3' and 'sigma=100'.
-nlmeans : check "isint(${1=5}) && $1>0 && isint(${2=8}) && $2>0 && ${3=100}>=0"
-  fill "
-    const patch_size = $1;
-    const patch_beg = int($1/2);
-    const lookup_size = $2;
-    const lookup_beg = int($2/2);
-    const sigma = $3;
-
-    V_ref = crop(x - patch_beg,y - patch_beg,0,c,patch_size,patch_size,1,1);
-    sum_weights = new_value = 0;
-
-    repeat (lookup_size,q,
-      Y = y - q + lookup_beg;
-      repeat (lookup_size,p,
-        X = x - p + lookup_beg;
-        V = crop(X - patch_beg,Y - patch_beg,0,c,patch_size,patch_size,1,1);
-        V-=V_ref;
-        weight = gauss(norm(V),sigma,0);
-        new_value+=weight*i(X,Y);
-        sum_weights+=weight;
-      );
-    );
-    new_value/=sum_weights"
-```
-
-The command above is composed of a single `fill` command that is actually a large math expression, evaluated for each pixel
-by the `G'MIC` math parser (and in this case, automatically parallelized, as the expression is indeed independent for each pixel).
-As before, this command can be called from the command line to denoise one or several images (Fig.8), with:
-```
-$ gmic nlmeans.gmic noisy_face.jpg +nlmeans 5,15
-```
-
-![Example of NL-means filtering, with the `nlmeans` command. Left: input (noisy) image. Right: filtered image.](images/nlmeans.jpg)
-
-### 3.3.4. Generation of Fractal Images
-
-The following examples are similar: they use the `G'MIC` math evaluator to render fractal images.
-It illustrates the capability of the math evaluator to work with complex values.
-
-- **Julia Set**
-
-The [Julia Set](https://en.wikipedia.org/wiki/Julia_set) is a mathematical set that represents the boundary between points
-that remain bounded and points that diverge to infinity under repeated iterations of a specific mathematical function.
-It is associated with the Mandelbrot set, a famous fractal studied by French-American mathematician
-[Benoit Mandelbrot](https://en.wikipedia.org/wiki/Benoit_Mandelbrot) [@julia1918memoire].
-
-To render the Julia set, we choose a complex number $c$ and repeatedly apply an iterative function, typically the formula $z = z^2 + c$,
-starting with an initial value of $z$ that represents the $(x,y)$ coordinates of each pixel we want to render.
-For each point in the complex plane, we iterate this function and track whether the values remain bounded or escape to infinity.
-Then, we color or shade the points based on the number of iterations it takes for a point to escape (Fig. 9, left).
-
-In `G'MIC`, the classical colored Julia set rendering can be written as:
-```
-#@cli julia
-#@cli : Insert a new fractal image at the end of the image list
-+julia :
-  1024,1024,1,1,"
-    z = [ lerp(-1.2,1.2,x/w), lerp(-1.2,1.2,y/h) ];
-    for (iter = 0, cabs(z)<=2 && iter<256, ++iter,
-      z = z^^2 + [ 0.4,0.2 ];
-    );
-    iter<256?iter:0"
-  map balance
-```
-Here again, the mathematical evaluator of `G'MIC` makes this whole process automatically parallelized
-(elapsed time: 0.325 s for a 1024x1024 image, on a 12-core Intel Xeon CPU@2.60Ghz).
-
-- **Buddhabrot**
-
-The [Buddhabrot](https://en.wikipedia.org/wiki/Buddhabrot) is a different technique for visualizing Mandelbrot sets:
-Instead of just coloring the pixels according to the number of iterations until they diverge,
-the rendering is generated by tracking the paths of escaped points (those that eventually reach infinity) during iterations of the Mandelbrot set's formula.
-The Buddhabrot accumulates the paths of these escaped points, highlighting areas with higher escape density.
-This creates a ghostly image resembling a Buddha-like figure [@melindagreen93].
-To render it, we have to perform many iterations of the Mandelbrot set's formula, keeping track of escaped points,
-and then display the accumulated path data to create the final Buddhabrot image (Fig. 9, right, elapsed time: 57.074 s for a 1024x1024 image,
-on a 12-core Intel Xeon CPU@2.60Ghz).
-
-This process can be written in the `G'MIC` scripting language as:
-```
-+buddhabrot :
-  repeat 3 { buddhabrot_mono[] {[100,1000,3000][$>]} } # Do it for each channel
-  normalize 0,500 cut 0,255 append c denoise_cnn 0 adjust_colors 0,10,10,0,30
-  to_rgb
-
-buddhabrot_mono :
-  1024,1024
-  32,1,1,1,":
-    begin(
-      const itermax = $1;
-      zs = vector(#itermax*2);
-    );
-
-    repeat (0.25*w#0*h#0,
-      c = [ u(-2,1),u(-1.5,1.5) ];
-      z = [ 0,0 ];
-      for (iter = 0, cabs(z)<=2 && iter<itermax, ++iter,
-        z = z**z + c;
-        copy(zs[2*iter],z);
-      );
-      iter>0 && iter<itermax ?
-        repeat(iter,k,
-          x = lerp(0,w#0 - 1,(zs[2*k] + 2)/3);
-          y = lerp(0,h#0 - 1,(zs[2*k + 1] + 1.5)/3);
-          ++i(#0,x,y);
-        )
-    )"
-  remove[-1] rotate[-1] 90
-```
-
-![Rendering of the Julia and Buddhabrot fractals, with the `julia` and `buddhabrot` commands.](images/julia_buddhabrot.png)
-
-Note that these two fractal rendering commands do not modify existing images, but generate new images _from scratch_.
-For this reason, they are defined directly under the names `+julia` and `+buddhabrot`, giving them the special status of commands whose
-purpose is simply to insert new images at the end of the image list managed in `G'MIC`.
-
-### 3.3.5. Segmentation and Visualisation of 3D Volumetric Images.
-
-Brain image segmentation is the process of partitioning a brain MRI scan (Magnetic Resonance Imaging) into distinct anatomical regions or structures,
-such as white matter, gray matter, cerebrospinal fluid, and specific brain regions.
-This can help in analyzing and quantifying the brain's structures, aiding in medical diagnosis, research, and treatment planning.
-Below, we show how `G'MIC` can be a helper for this kind of task, with a segmentation/visualization pipeline (here, simplified on purpose)
-that is applied on an input volumetric MRI image of a monkey's brain:
-```
-segment_mri :
-  +flood 33,57,36,20,1,1,1000 # Segment gray matter using region growing
-  flood[-2] 0,0,0,20,0,1,1000 # Segment skull interface using region growing
-  blur 1
-  isosurface3d 500 # Convert segmentations to 3D meshes (marching cubes)
-  opacity3d[-2] 0.2
-  color3d[-1] 255,128,0
-  add3d
-```
-This script segments both the gray matter and the skull from the input volumetric image, then converts those segmentations
-into 3D meshes, that are finally colored then merged together (Fig.10).
-
-![Example of MRI volumetric image segmentation, using the `segment_mri` command. Left: input volumetric image as displayed by the default `G'MIC` volume viewer. Right: 3D view of the segmented structures.](images/mri_segment.png)
-
-# 4. Examples of Research Work Conducted With `G'MIC`
+# 3. Examples of Research Work Conducted With `G'MIC`
 
 To illustrate the high degree of genericity of the `G'MIC` framework, we list a selection of a few image processing research projects
 carried out in the [IMAGE team](https://www.greyc.fr/equipes/image) at the [_GREYC_ laboratory](https://www.greyc.fr) (UMR CNRS 6072),
@@ -502,7 +197,7 @@ The resulting algorithms, presented below, have all been integrated into the `G'
 This demonstrates the potential of `G'MIC` not only in developing new image processing algorithms,
 but also as a software platform for disseminating these new algorithms to professionals and the general public.
 
-## 4.1. Patch-Based Image Inpainting
+## 3.1. Patch-Based Image Inpainting
 
 Image _inpainting_ is the name given to the process of replacing part of an image, defined in the form of a user-drawn mask,
 with algorithmically synthesized content.
@@ -522,7 +217,7 @@ As illustrated in Fig. 11, the algorithms are able to reconstruct complex portio
 
 ![Patch-based image inpainting with `G'MIC`. Left: input image. Middle: user-defined mask. Right: inpainting result.](images/inpaint.png)
 
-## 4.2. Color LUT Compression
+## 3.2. Color LUT Compression
 
 3D _CLUTs_ (Color Look Up Tables) are popular digital models used in artistic image and video processing, for color grading,
 simulation of analog films, and more generally for the description and application of generic non-parametric color transformations.
@@ -546,7 +241,7 @@ The proposed compression/decompression technique has been extensively used in `G
 
 ![Color Presets filter in _G'MIC-Qt_.](images/color_presets.jpg)
 
-## 4.3. Semi-automatic Colorization of Line Arts
+## 3.3. Semi-automatic Colorization of Line Arts
 
 Colorizing line art drawings is a problem that illustrators are familiar with.
 The question is how to colorize, with solid colors, an image originally made up of black or grayscale lines, on a white or transparent background.
@@ -588,7 +283,7 @@ to make the colors stick to the different contours of the input line art (Fig. 1
 Note that the colorization algorithm resulting from this research work was the subject of an external implementation in the GIMP software,
 to enrich the "Bucket Fill" tool with a specialized "Line Art" mode for the colorization of line drawings [@jehan18].
 
-## 4.4. Automatic Illumination of Flat-colored Drawings
+## 3.4. Automatic Illumination of Flat-colored Drawings
 
 In 2021, researchers David Tschumperlé, Amal Mahboubi and Christine Porquet have been interested in going one step further by
 designing an original algorithm that tries to illuminate flat-colorized drawings, by automatically creating a light and shadow layer.
@@ -604,7 +299,7 @@ In the _G'MIC-Qt_ plug-in, this illumination algorithm can be applied via the fi
 
 ![Filter **Illuminate 2D Shape** in the _G'MIC-Qt_ plug-in.](images/illumination2.png)
 
-## 4.5. Patch-Based Image Style Transfer
+## 3.5. Patch-Based Image Style Transfer
 
 Image stylization is a relatively recent processing application, having made its appearance in 2015 with the pioneering work of
 [@gatys2015]. The problem consists in transforming an input image (usually a photograph) to give it a pictorial style close to
@@ -621,7 +316,7 @@ It has been implemented in `G'MIC`, as command `stylize`, and its associated _G'
 
 ![Examples of application of the `G'MIC` style transfer method. An input image (top left) is stylized according to a set of different style images (top row).](images/style_transfer.png)
 
-## 4.6. Debanding of Astronomical Images
+## 3.6. Debanding of Astronomical Images
 
 Regarding the use of G'MIC in research activities outside the _GREYC_ laboratory (in which it is developed) :
 Let us mention that `G'MIC` is known to be used in the astronomy research community, in particular for processing images
