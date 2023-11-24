@@ -402,7 +402,7 @@ ifneq ($(OS),Windows)
 	ln -fs libgmic.so.$(VERSION1) libgmic.so
 endif
 
-libgmic.o: gmic.cpp gmic.h gmic_stdlib.h CImg.h
+libgmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 	$(CXX) -o libgmic.o -c gmic.cpp -Dgmic_core $(PIC) $(CFLAGS)
 
 use_libgmic : use_libgmic.cpp libgmic.so
@@ -436,7 +436,7 @@ _cli: gmic$(EXE)
 gmic$(EXE): gmic_cli.cpp gmic.o
 	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS)
 
-gmic.o: gmic.cpp gmic.h gmic_stdlib.h CImg.h
+gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
 
 # CLI (shared).
