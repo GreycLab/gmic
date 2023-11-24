@@ -1,11 +1,11 @@
 file(STRINGS ${PROJECT_SOURCE_DIR}/src/gmic.h GMIC_VERSION REGEX "#define gmic_version [0-9]+")
 string(REGEX MATCH "[0-9]+" GMIC_VERSION ${GMIC_VERSION})
-set(HEADER_URL "https://gmic.eu/gmic_stdlib${GMIC_VERSION}.h")
+set(HEADER_URL "https://gmic.eu/gmic_stdlib_community${GMIC_VERSION}.h")
 set(HEADER_DIR ${PROJECT_SOURCE_DIR}/src)
-set(HEADER_NAME gmic_stdlib.h)
+set(HEADER_NAME gmic_stdlib_community.h)
 set(HEADER_PATH ${HEADER_DIR}/${HEADER_NAME})
 
-# gmic_stdlib.h header
+# gmic_stdlib_community.h header
 if(NOT EXISTS ${HEADER_PATH})
   file(DOWNLOAD ${HEADER_URL} ${HEADER_PATH} STATUS download_status)
 
