@@ -1807,13 +1807,8 @@ static CImg<T> copy_rounded(const CImg<T>& list) {
 #else // #if defined(cimg_plugin) .. #elif defined(cimglist_plugin)
 
 #include "gmic.h"
-using namespace gmic_library;
-
-#ifdef gmic_community
 #include "gmic_stdlib_community.h"
-#else
-#include "gmic_stdlib.h"
-#endif
+using namespace gmic_library;
 
 // Define convenience macros, variables and functions.
 //----------------------------------------------------
