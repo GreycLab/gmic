@@ -2969,7 +2969,10 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
 
   for (const char *ptrs = ptrs0; *ptrs; ++ptrs) {
     c = *ptrs;
-    if (c=='\\') { // If escaped character
+    if (c=='#' && ((ptrs>commands_line && is_blank(*(ptrs - 1))) || ptrs==commands_line)) { // Discard possible comment
+      while (c && c!='\n') c = *(++ptrs);
+      if (!c) break;
+    } else if (c=='\\') { // If escaped character
       c = *(++ptrs);
       switch (c) {
       case 0 : c = '\\'; --ptrs; break;
@@ -2983,8 +2986,10 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
       }
       *(ptrd++) = c;
     } else if (is_dquoted) { // If non-escaped character inside string
-      if (c==1) { while (c && c!=' ') c = *(++ptrs); if (!c) break; } // Discard debug info inside string
-      else switch (c) {
+      if (c==1) { // Discard debug info inside string
+        while (c && c!=' ') c = *(++ptrs);
+        if (!c) break;
+      } else switch (c) {
         case '\"' : is_dquoted = false; break;
         case '$' :
           if (ptrs[1]=='?') { *(ptrd++) = '$'; is_subst = true; }
