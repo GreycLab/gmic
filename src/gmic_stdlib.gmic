@@ -24669,36 +24669,47 @@ skeleton3d : check "isint(${1=2}) && $1>=0 && $1<=2 && isint(${2=3}) && $2>=0 &&
     +3d
   }
 
-#@cli snapshot3d : _size>0,_zoom>=0,_backgroundR,_backgroundG,_backgroundB,_backgroundA : [background_image],zoom>=0
+#@cli snapshot3d : _size>0,_zoom>=0,_backgroundR,_backgroundG,_backgroundB,_backgroundA,_fov_angle>=0 : \
+# [background_image],zoom>=0,_fov_angle>=0
 #@cli : Take 2D snapshots of selected 3D objects.
 #@cli : Set 'zoom' to 0 to disable object auto-scaling.
-#@cli : Default values: 'size=512', 'zoom=1' and '[background_image]=(default)'.
+#@cli : Default values: 'size=1024', 'zoom=1', '[background_image]=(default)' and 'fov_angle=45'.
 #@cli : $ torus3d 100,20 rotate3d 1,1,0,60 snapshot3d 400,1.2,128,64,32
 #@cli : $ torus3d 100,20 rotate3d 1,1,0,60 sample ? +snapshot3d[0] [1],1.2
-snapshot3d : check "${2=1}>=0" skip ${1=512},${3=""}
-  if ${"is_image_arg $1"} # Background image specified.
-    e[0--3] "Take $1x$1 snapshot$? of 3D object$?, with zoom factor $2 and background image $3."
+snapshot3d : check "((isint(${1=1024}) && $1>0) || ("${"is_image_arg $1"}")) && "\
+                   "${2=1}>=0 && ${7=45}" skip ${3=""},${4=$3},${5=$4},${6=255}
+  fov=$7
+  if ${"is_image_arg $1"} # Background image specified
     pass$1 0 to_color.
-  elif isnum($3) # Background color specified.
-    e[0--3] "Take $1x$1 snapshot$? of 3D object$?, with zoom factor $2 and background color ${3--1}."
-    (${3--1}) y. c r. $1,$1 to_color.
-  else # Default background color.
-    e[0--3] "Take $1x$1 snapshot$? of 3D object$?, with zoom factor $2 and default background."
+    if isnum($3) fov=$3 fi
+    e[0--3] "Take "{w}"x"{h}" snapshot of 3D object$?, with background image $1, zoom factor $2 and FOV "$fov"."
+
+  elif isnum($3) # Background color specified
+    e[0--3] "Take $1x$1 snapshot of 3D object$?, with zoom factor $2, background color (${3-6}) "\
+            "and FOV "$fov"."
+    if $6>=255 ($3^$4^$5) else ($3^$4^$5^$6) fi
+    r. $1,$1
+
+  else # Default background color
+    e[0--3] "Take $1x$1 snapshot of 3D object$?, with zoom factor $2, default background and FOV "$fov"."
     3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx r. $1,$1,1,3,3
     24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2 round.
   fi
+
   ofocale3d=$_focale3d
-  repeat $!-1 { . l[$>,-1] {
-    fov3d. 45
-    if $2!=0 c3d[0] n3d[0] *3d[0] {3*min(w,h)*$2/4} fi
-    if s>3 # RGBA rendering.
+  fov3d $fov
+  foreach[^-1] {
+    pass. 0
+    if $2!=0 c3d[0] n3d[0] *3d[0] {3*min(w,h)*$2/4} fi # Apply zoom factor
+    if s>3 # RGBA rendering
+      o3d[0] 1
       100%,100%,1,3,-1 j3d. [0],50%,50%,0,1
       to_rgba. replace_color. 0,0,-1,-1,-1,255,0,0,0,0 blend[-2,-1] alpha
-    else # RGB rendering.
+    else # RGB rendering
       j3d[1] [0],50%,50%,0,1
     fi
-   =>[1] {-2,n} rm[0]
-  } } rm.
+    =>[1] {0,n} k.
+  } rm.
   _focale3d=$ofocale3d
 
 #@cli sl3d : eq. to 'specl3d'.
