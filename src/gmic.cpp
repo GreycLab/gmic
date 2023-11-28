@@ -2969,7 +2969,8 @@ CImgList<char> gmic::commands_line_to_CImgList(const char *const commands_line) 
 
   for (const char *ptrs = ptrs0; *ptrs; ++ptrs) {
     c = *ptrs;
-    if (c=='#' && ((ptrs>commands_line && is_blank(*(ptrs - 1))) || ptrs==commands_line)) { // Discard possible comment
+    if (!is_dquoted && c=='#' &&
+        ((ptrs>commands_line && is_blank(*(ptrs - 1))) || ptrs==commands_line)) { // Discard possible comment
       while (c && c!='\n') c = *(++ptrs);
       if (!c) break;
     } else if (c=='\\') { // If escaped character
