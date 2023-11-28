@@ -48,7 +48,7 @@
  #
 */
 /*
-    Note : To compile this example, using g++, use :
+    Note: To compile this example, using g++, use:
 
     g++ -o use_libgmic use_libgmic.cpp -lgmic -lfftw3
 */
@@ -67,9 +67,9 @@ int main() {
 
   gmic::init_rc(); // Initialize resources folder
 
-  // First step : Create a list of input images.
-  //--------------------------------------------
-  std::fprintf(stderr,"\n- 1st step : Create input list of images.\n");
+  // First step: Create a list of input images.
+  //-------------------------------------------
+  std::fprintf(stderr,"\n- 1st step: Create input list of images.\n");
 
   gmic_list<float> images;                            // List of images, will contain all images pixel data
   gmic_list<char> images_names;                       // List of images names. Can be left empty if no names
@@ -78,7 +78,7 @@ int main() {
     gmic_image<float>& img = images[i];
     img.assign(256,256,1,3);                          // Assign i-th image with size 256x256x1x3 (2d color image)
 
-    std::fprintf(stderr,"    Input image %u =  %ux%ux%ux%u, buffer : %p\n",i,
+    std::fprintf(stderr,"    Input image %u =  %ux%ux%ux%u, buffer = %p\n",i,
                  img._width,
                  img._height,
                  img._depth,
@@ -93,9 +93,9 @@ int main() {
           *(ptr++) = std::cos(x/(1. + i))*std::sin(y/(1. + i + c));
   }
 
-  // Second step : Call G'MIC API to process input images.
-  //------------------------------------------------------
-  std::fprintf(stderr,"\n- 2nd step : Call G'MIC interpreter.\n");
+  // Second step: Call G'MIC API to process input images.
+  //-----------------------------------------------------
+  std::fprintf(stderr,"\n- 2nd step: Call G'MIC interpreter.\n");
 
   try {
 
@@ -104,13 +104,13 @@ int main() {
     gmic("v + add normalize 0,255 flower 8 sharpen 100 output foo1.bmp",images,images_names);
 
   } catch (gmic_exception &e) { // Catch exception, if an error occurred in the interpreter
-    std::fprintf(stderr,"\n- Error encountered when calling G'MIC : '%s'\n",e.what());
+    std::fprintf(stderr,"\n- Error encountered when calling G'MIC: '%s'\n",e.what());
     return 0;
   }
 
-  // Third step (alternative) : Call G'MIC API to process input images.
+  // Third step (alternative): Call G'MIC API to process input images.
   //---------------------------------------------------------------------
-  std::fprintf(stderr,"\n- 3rd step (alternative) : Call G'MIC interpreter twice from empty instance.\n");
+  std::fprintf(stderr,"\n- 3rd step (alternative): Call G'MIC interpreter twice from empty instance.\n");
 
   gmic gmic_instance; // Construct first an empty 'gmic' instance
 
@@ -124,15 +124,15 @@ int main() {
                       "blur_radial[0] 10% blend alpha output foo3.bmp",images,images_names);
 
   } catch (gmic_exception &e) { // Catch exception, if an error occurred in the interpreter
-    std::fprintf(stderr,"\n- Error encountered when calling G'MIC : '%s'\n",e.what());
+    std::fprintf(stderr,"\n- Error encountered when calling G'MIC: '%s'\n",e.what());
     return 0;
   }
 
-  // Fourth step : get back modified image data.
-  //---------------------------------------------
-  std::fprintf(stderr,"\n- 4th step : Returned %u output images.\n",images._width);
+  // Fourth step: get back modified image data.
+  //-------------------------------------------
+  std::fprintf(stderr,"\n- 4th step: Returned %u output images.\n",images._width);
   for (unsigned int i = 0; i<images._width; ++i) {
-    std::fprintf(stderr,"   Output image %u = %ux%ux%ux%u, buffer : %p\n",i,
+    std::fprintf(stderr,"   Output image %u = %ux%ux%ux%u, buffer = %p\n",i,
                  images[i]._width,
                  images[i]._height,
                  images[i]._depth,
@@ -140,8 +140,8 @@ int main() {
                  (void*)images[i]._data);
   }
 
-  // Fourth step : Free image resources.
-  //-------------------------------------
+  // Fourth step: Free image resources.
+  //-----------------------------------
   images.assign(0U);
 
   // That's it !
