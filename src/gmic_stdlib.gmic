@@ -22824,34 +22824,6 @@ dijkstra :
 #@cli : Default value: 'use_LU=0' and 'lambda=0'.
 #@cli : $ (0,1,0;0,0,1;1,0,0) +invert
 
-#@cli orthogonalize : _mode = { 0:orthogonalize | 1:orthonormalize }
-#@cli : Orthogonalize or orthonormalize selected matrices, using Modified Gram-Schmidt process.
-#@cli : Default value: 'mode=0'.
-orthogonalize :
-  if isbool($1) mode=$1 else mode=0 noarg fi
-  u0,u1,v0,v1=Orthogonalize,Orthonormalize,x,ce
-  e[^-1] ${u$mode}" matri"${v{$!!=1}}"$?, using Modified Gram-Schmidt process."
-  foreach {
-    eval ">
-      proj(u,v) = (dot(u,v)/dot(u,u)*u);
-      for (p = 1, p<w, ++p,
-        ref(crop(p,0,1,h),v);
-        repeat (p,q,
-          ref(crop(q,0,1,h),u);
-          v-=proj(u,v);
-        );
-        draw(v,p,0,0,1,h,1);
-      )"
-    if $mode
-      eval. "*!y?(
-        ref(crop(x,0,1,h),v);
-        n = norm(v);
-        v/=n?norm(v):1;
-        draw(v,x,0,0,1,h,1);
-      )"
-    fi
-  }
-
 #@cli meigen : m>=1
 #@cli : Compute an approximation of the 'm' largest eigenvalues and eigenvectors of selected symmetric matrices,
 #@cli : using the Arnoldi iteration method (https://en.wikipedia.org/wiki/Arnoldi_iteration).
@@ -22886,6 +22858,71 @@ meigen : check "isint($1) && $1>0"
 #@cli : whose columns correspond to the weights associated to each column of D,
 #@cli : such that the matrix product D*W is an approximation of the input matrix.
 #@cli : Default values: 'method=0', 'max_iter=0' and 'max_residual=1e-6'.
+
+#@cli orthogonalize : _mode = { 0:orthogonalize | 1:orthonormalize }
+#@cli : Orthogonalize or orthonormalize selected matrices, using Modified Gram-Schmidt process.
+#@cli : Default value: 'mode=0'.
+orthogonalize :
+  if isbool($1) mode=$1 else mode=0 noarg fi
+  u0,u1,v0,v1=Orthogonalize,Orthonormalize,x,ce
+  e[^-1] ${u$mode}" matri"${v{$!!=1}}"$?, using Modified Gram-Schmidt process."
+  foreach {
+    eval ">
+      proj(u,v) = (dot(u,v)/dot(u,u)*u);
+      for (p = 1, p<w, ++p,
+        ref(crop(p,0,1,h),v);
+        repeat (p,q,
+          ref(crop(q,0,1,h),u);
+          v-=proj(u,v);
+        );
+        draw(v,p,0,0,1,h,1);
+      )"
+    if $mode
+      eval. "*!y?(
+        ref(crop(x,0,1,h),v);
+        n = norm(v);
+        v/=n?norm(v):1;
+        draw(v,x,0,0,1,h,1);
+      )"
+    fi
+  }
+
+#@cli poweriteration : _nb_eigenvectors>0,_epsilon>0,_max_iter>0
+#@cli : Compute the 'nb_eigenvectors' largest eigenvectors of the selected symmetric matrices,
+#@cli : using the power iteration algorithm.
+#@cli : Default values: 'nb_eigenvectors)=1', 'epsilon=1e-5' and 'max_iter=100'.
+poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-5}>0 && isint(${3=100}) && $3>0"
+  s0,s1=,s if $!>1 c=ces else c=x fi
+  e[^-1] "Compute the $1 first eigenvector"${s{$1>1}}" of matri"$c" [$[]] with epsilon $2."
+  foreach {
+    nm={n}
+    if !w rm 0 0 => $nm[val] $nm[vec] continue fi
+    if w!=h" || "d>1" || "s>1
+      error[0--3] "Command '$0': Image "[{[$[]][$>]}]" ("{[w,h,d,s]}") is not a square matrix."
+    fi
+    1,100% $1,100%
+
+    eval "
+      const N = w#0;
+      A = crop(#0);
+      b = expr('v',N); b/=norm(b);
+      repeat ($1,k,
+        p_lambda = inf;
+        repeat ($3,
+          c = mul(A,b);
+          lambda = norm(c);
+          c/=lambda;
+          delta = abs(lambda - p_lambda);
+          b = c;
+          p_lambda = lambda;
+          delta<$2?break();
+        );
+        i[#-2,k] = lambda;
+        draw(#-1,b,k,1);
+        A-=(mul(b,b,N)*=lambda);
+      )"
+    rm[0]
+  }
 
 #@cli solve : [image],_use_LU={ 0:SVD | 1:LU } : (+)
 #@cli : Solve linear system AX = B for selected B-matrices and specified A-matrix.
