@@ -8654,10 +8654,10 @@ parse_gui_json :
     sepf={`$<?_',':0`}
     ppos=1
     repeat ${_f${f}_nb_params} { p=$>
-      _parse_gui_json ${_f${f}_p{$p}_name} name={/${}}
+      _parse_gui_json[] ${_f${f}_p{$p}_name} name={/${}}
       type=${_f${f}_p{$p}_type}
       nbargs=${_f${f}_p{$p}_nb_args}
-      arg0= repeat $nbargs { ('${_f${f}_p${p}_a$>}') autocrop. {'\"'} _parse_gui_json {t} arg$>=${} rm. }
+      arg0= repeat $nbargs { ('${_f${f}_p${p}_a$>}') autocrop. {'\"'} _parse_gui_json[] {t} arg$>=${} rm. }
       sepp={`$<?_',':0`}
       if narg(${_f${f}_p{$p}_visibility})
         visibility=", \"visibility\": \""${_f${f}_p{$p}_visibility}"\""
@@ -8772,8 +8772,8 @@ _parse_gui_json :
     replace_str. "</b>",""
     replace_str. "<small>",""
     replace_str. "</small>",""
-    u {t} rm.
-    onfail u ""
+    u {t} rm
+    onfail u "" rm
   }
 
 #
@@ -48840,6 +48840,26 @@ fx_edges :
 
 fx_edges_preview :
   gui_split_preview "fx_edges ${^0}",${-3--1}
+
+#@gui Edges (Canny) : fx_canny, fx_canny_preview(1)
+#@gui : Sigma = float(5,0,20)
+#@gui : Lower Threshold = float(0.05,0,1)
+#@gui : Upper Threshold = float(0.15,0,1)
+#@gui : Monochrome = bool(1)
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>Garagecoder</i> and <i>David Tschumperlé</i>.      \
+# Latest Update: <i>2023/12/04</i>.</small>")
+fx_canny :
+  if $4 norm fi
+  foreach { split_opacity canny[0] $1,{[max($2,1e-6),max($3,1e-6)]} *[0] 255 a c }
+
+fx_canny_preview :
+  gui_split_preview "fx_canny $*",${-3--1}
 
 #@gui Edges Offsets : fx_edge_offsets, fx_edge_offsets_preview(0)
 #@gui : Smoothness = float(0,0,10)
