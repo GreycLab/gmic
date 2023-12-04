@@ -19971,6 +19971,33 @@ betti :
   }
   u $res
 
+#@cli canny : _sigma>=0,_low_threshold>=0,_high_threshold>=0,\
+#@cli : Locate image edges using Canny edge detector.
+#@cli : Default values: 'sigma=1', 'low_threshold=0.05', 'high_threshold=0.15'.
+#@cli : $ image.jpg canny 1
+canny : check "${1=1}>=0 && ${2=0.05}>=0 && ${3=0.15}>=0 && isint(${4=0}) && inrange($4,0,2)"
+  e[^-1] "Apply Canny edge detection on image$?, with sigma $1, low threshold $2 and high threshold $3."
+  low,high:=$2*$3,$3
+  foreach {
+    nm={n}
+    b $1 (1,2,1;0,0,0;-1,-2,-1) +convolve[0] . transpose.. convolve[0] .. rm.. # Gaussian + Sobel
+    +atan2.. . mul. {4/pi} round. 1 mod. 4 # Quantized gradient orientation
+    sqr[0,1] +[0,1] sqrt.. # Gradient norm
+    f.. " # Suppress non-maximum gradients
+      A = i#1;
+      Y = A<1?max(j(0,-1),j(0,1)):
+          A<2?max(j(-1,-1),j(1,1)):
+          A<3?max(j(-1),j(1)):
+          max(j(-1,1),j(1,-1));
+      i>=Y?i:0" rm.
+    div {iM} +ge $high ge.. $low # Double thresholding
+
+    # Hysteresis.
+    f. ">max(crop(x-1,y-1,z,c,3,3,1,1)) && i#0?1:i"
+    f. "<max(crop(x-1,y-1,z,c,3,3,1,1)) && i#0?1:i"
+    rm.. => $nm
+  }
+
 #@cli delaunay : _output_type={ 0:image | 1:coordinates/triangles }
 #@cli : Generate discrete 2D Delaunay triangulation of non-zero pixels in selected images.
 #@cli : Input images must be scalar.
