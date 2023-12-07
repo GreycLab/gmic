@@ -51079,6 +51079,40 @@ _fx_noise :
 fx_noise_preview :
   gui_split_preview "fx_noise $*",${-3--1}
 
+#@gui Noise [Gradient] : fx_noise_gradient,fx_noise_gradient_preview(0)
+#@gui : Strength = float(100,0,255)
+#@gui : Smoothness[%] = float(0,0,100)
+#@gui : Noise Type = choice("Gaussian","Uniform")
+#@gui : sep = separator()
+#@gui : Channel(s) = choice(2,"All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
+#@gui : "Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [Luminance]",
+#@gui : "YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",
+#@gui : "YCbCr [Green chrominance]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",
+#@gui : "Lab [b-Chrominance]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [Hue]",
+#@gui : "HSV [Saturation]","HSV [Value]","HSI [Intensity]","HSL [Lightness]","CMYK [Cyan]","CMYK [Magenta]",
+#@gui : "CMYK [Yellow]","CMYK [Key]","YIQ [Luma]","YIQ [Chromas]")
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/06</i>.</small>")
+_fx_noise_gradient :
+  foreach {
+    avg=${average_vectors.}
+    g[0] xy,1,2
+    foreach { +f 0 noise. {$3?$1:$1/2},$3 b. {lerp(0,10,($2%)^2)}% + }
+    g[0] x,-1,2 g[1] y,-1,2 + ilaplacian 0
+    +fc $avg + c 0,255
+  }
+
+fx_noise_gradient :
+  ac "_fx_noise_gradient $*",$-4,1
+
+fx_noise_gradient_preview :
+  gui_split_preview "fx_noise_gradient $*",${-3--1}
+
 #@gui Noise [Perlin] : fx_noise_perlin, fx_noise_perlin_preview(1)
 #@gui : Random Seed = int(0,0,65536)
 #@gui : sep = separator()
