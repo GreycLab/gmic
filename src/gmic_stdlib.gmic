@@ -22844,6 +22844,56 @@ dijkstra :
   e[^-1] "Input $1x$1 identity matrix."
   if $1 $1,$1,1,1,x==y else 0 fi
 
+#@cli fitsamples : nb_samples>0,_relevant_dimension[%]>0,\
+# _average_vector_varname,_dilation_vector_varname,_orientation_matrix_varname
+#@cli : Generate 'nb_samples' vectors having the same multivariate gaussian distribution as the vectors of the \
+# selected images.
+#@cli : Each input represents a set of 'M' vectors of dimension 'N' (with M>1) (specified as an image with size \
+# 'MxNx1x1', 'Mx1xNx1', 'Mx1x1xN', '1xMxNx1', '1xMx1xN' or '1x1xMxN').
+#@cli : The command returns a new set of random vectors with similar geometry.
+#@cli : Default values: 'relevant_dimension=100%', and \
+# 'average_vector_varname=orientation_matrix_varname=dilation_matrix_varname=(undefined)'.
+fitsamples : check "isint($1) && $1>0 && ${2=100%}>0" skip "${3=},${4=},${5=}"
+  e[^-1] "Generate $1 new vectors for input vector set$? with $2 relevant dimensions."
+  fwd0,fwd1,fwd2,fwd3,fwd4,fwd5=xzcy,xycz,,yxcz,yxzc,zxyc
+  bwd0,bwd1,bwd2,bwd3,bwd4,bwd5=xcyz,xycz,,yxcz,yxzc,yzxc
+  foreach {
+    nm={n}
+
+    # Determine input format: 'MxNx1x1', 'Mx1xNx1', 'Mx1x1xN', '1xMxNx1', '1xMx1xN' or '1x1xMxN'.
+    M,N,type:=w>1?[w,h>1?[h,0]:d>1?[d,1]:[s,2]]:h>1?[h,d>1?[d,3]:[s,4]]:d>1?[d,s>1?[s,5]:[-1,-1]]
+    if $M*$N!=whds
+      error[0--4] "Command 'fitsamples': Selected image ("{[w,h,d,s]}") does not represent a set of vectors."
+    fi
+    permute ${fwd$type} # Force it to be a 'Mx1x1xN' matrix.
+
+    # Compute average vector.
+    if !narg("$3") +l { s x + / $M } else $$3 fi
+    => avg
+
+    # Compute dilation vector and orientation matrix.
+    if !narg("$4")" || "!narg("$5")
+      $N,$N
+      eval... "*
+        begin(avg = crop(#$avg); C = vector(#$N^2,0));
+        mI = I - avg;
+        C+=mul(mI,mI,s);
+        end(merge(C,+); C/=$M; draw(#-1,C,0,0,0,0,$N,$N,1,1))"
+      P:=round(ispercentage($2)?$N*$2:$2)
+      poweriteration. $P sqrt..
+    else
+      $$4 $$5 P:=w
+    fi
+    => dilation,orientation
+
+    # Generate new random samples with same gaussian distribution.
+    $1,1,1,$N,"*
+      begin(avg = crop(#$avg); L = crop(#$dilation); R = crop(#$orientation));
+      U = vector(#$P); fill(U,k,g*L[k]);
+      mul(R,U)+=avg"
+    k. permute ${bwd$type} => $nm
+  }
+
 #@cli invert : _use_LU={ 0:SVD | 1:LU },_lambda>=0 : (+)
 #@cli : Inverse selected matrices (or compute Moore-Penrose pseudoinverse for non-square matrices).
 #@cli : SVD solver is slower but more precise than LU.
@@ -22917,8 +22967,8 @@ orthogonalize :
 #@cli poweriteration : _nb_eigenvectors>0,_epsilon>0,_max_iter>0
 #@cli : Compute the 'nb_eigenvectors' largest eigenvectors of the selected symmetric matrices,
 #@cli : using the power iteration algorithm.
-#@cli : Default values: 'nb_eigenvectors)=1', 'epsilon=1e-5' and 'max_iter=100'.
-poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-5}>0 && isint(${3=100}) && $3>0"
+#@cli : Default values: 'nb_eigenvectors=1', 'epsilon=1e-5' and 'max_iter=100'.
+poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-6}>0 && isint(${3=1000}) && $3>0"
   s0,s1=,s if $!>1 c=ces else c=x fi
   e[^-1] "Compute the $1 first eigenvector"${s{$1>1}}" of matri"$c" [$[]] with epsilon $2."
   foreach {
@@ -22933,7 +22983,6 @@ poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-5}>0 && isint(${3=100}) 
       A = crop(#0);
       b = expr('v',N); b/=norm(b);
       repeat ($1,k,
-        print(k);
         p_lambda = inf;
         repeat ($3,
           c = mul(A,b);
@@ -22944,6 +22993,7 @@ poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-5}>0 && isint(${3=100}) 
           p_lambda = lambda;
           delta<$2?break();
         );
+        lambda = mul(b,mul(A,b,1))[0]; # Get eigenvalue with correct sign
         i[#-2,k] = lambda;
         draw(#-1,b,k,1);
         A-=(mul(b,b,N)*=lambda);
