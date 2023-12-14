@@ -2406,9 +2406,7 @@ _display : skip ${1=},${3=}
 
       if !0$area_3d_mesh
         if $is_volumetric
-          +projections3d[$selected] {$selected,floor([cut($view_center_x*w,0,w-1),\
-                                                      cut($view_center_y*h,0,h-1),\
-                                                      cut($view_center_z*d,0,d-1)])},1,10
+          +projections3d[$selected] {$selected,[$view_center_x*w,$view_center_y*h,$view_center_z*d]},1,10
           asiz={$selected,max(w,h,d)/3}
           axes3d $asiz,$asiz,$asiz,16 o3d. 0.5 col3d. 255,128,0 +3d[-2,-1]
         else
@@ -24608,10 +24606,13 @@ projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint
 +projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5}) && $5>0"
   e[^-1] "Generate 3D projection planes (XY,XZ,ZY) from image$?, from point ($1,$2,$3)."
   foreach {
-    w,h,d,x,y,z:="[ w, h, d, ispercentage($1)?$1*w:$1, ispercentage($2)?$2*h:$2,ispercentage($3)?$3*h:$3 ]"
-    +z. 0,0,$3,100%,100%,$3 # XY
-    +z.. 0,$2,100%,$2 permute. xzyc # XZ
-    +z... $1,$1 permute. zyxc # ZY
+    w,h,d,x,y,z:="[ w,h,d,
+                    cut(ispercentage($1)?$1*w:$1,0,w-1),
+                    cut(ispercentage($2)?$2*h:$2,0,h-1),
+                    cut(ispercentage($3)?$3*d:$3,0,d-1) ]"
+    +z. 0,0,$z,100%,100%,$z # XY
+    +z.. 0,$y,100%,$y permute. xzyc # XZ
+    +z... $x,$x permute. zyxc # ZY
     n[-3--1] 0,255 r[-3--1] 100%,100%,1,3
     foreach[-3--1] { plane3d {[w,h]},$5,$5 t3d. .. rm.. }
     +3d... 0,0,$z
