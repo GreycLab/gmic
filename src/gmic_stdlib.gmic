@@ -45133,47 +45133,69 @@ fx_engrave_preview :
 
 #@gui Filaments : fx_filaments, fx_filaments(0)+
 #@gui : Density (%) = float(50,0,100)
+#@gui : Length (%) = float(50,0,100)
 #@gui : Contour (%) = float(75,0,100)
 #@gui : Distortion (%) = float(30,0,100)
 #@gui : Smoothness = float(10,0,100)
 #@gui : Angle (deg.) = float(0,-180,180)
+#@gui : sep = separator()
+#@gui : Throw From Left = bool(1)
+#@gui : Throw From Right = bool(1)
+#@gui : Throw From Above = bool(1)
+#@gui : Throw From Below = bool(1)
 #@gui : sep = separator()
 #@gui : Opacity (%) = float(50,0,100)
 #@gui : Color model = choice("White on Black","Black on White","White on Transparent","Black on Transparent")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/18</i>.</small>")
 fx_filaments :
-  density,contour,distortion,smoothness,angle,opacity,colormodel=$*
+  density,length,contour,distortion,smoothness,angle,is_left,is_right,is_above,is_below,opacity,colormodel=$*
   foreach {
     lightness. b. {$smoothness/10} g. xy a[-2,-1] c
     100%,100%,1,3,"P = I(#-1); n = norm(P); a = atan2(P[1],P[0]) + (90 + $angle)°; [ 1/(1 + n)^0.25,cos(a),sin(a) ]" rm..
     sh. 0 n. {max(1,100-$contour)%},1 rm.
     100%,100%
-    {$density*(w+h)/10},1,1,1,"*
-      const distortion = $distortion/1000;
-      const dmax = 2*norm(w#0,h#0);
-      const opacity = ($opacity/10)%;
+    if $density" && "$length
+      {$density*(w+h)/10},1,1,1,"*
+        begin(
+          const distortion = $distortion/1000;
+          const dmax = 2*($length%)*norm(w#0,h#0);
+          const opacity = ($opacity/10)%;
+          const is_none = !($is_left || $is_right || $is_above || $is_below);
+          const is_left = is_none || $is_left;
+          const is_right = is_none || $is_right;
+          const is_above = is_none || $is_above;
+          const is_below = is_none || $is_below;
+          const nb_throw_directions = sum(is_left,is_right,is_above,is_below);
+          throw_directions = vector(#nb_throw_directions);
+          k = 0;
+          is_left?(throw_directions[k++] = 0);
+          is_right?(throw_directions[k++] = 1);
+          is_above?(throw_directions[k++] = 2);
+          is_below?(throw_directions[k] = 3);
+        );
 
-      # Set initial particle direction.
-      case = int(u(4))%4;
-      case==0?(x = 0; y = u(h#0)%h#0; dx = 1; dy = 0.5*v):
-      case==1?(x = w#0 - 1; y = u(h#0)%h#0; dx = -1; dy = 0.5*v):
-      case==2?(x = u(w#0)%w#0; y = 0; dx = 0.5*v; dy = 1):
-      (x = u(w#0)%w#0; y = h#0 - 1; dx = 0.5*v; dy = -1);
-      n = norm(dx,dy); dx/=n; dy/=n;
+        # Set initial particle direction.
+        case = throw_directions[int(u(nb_throw_directions))%nb_throw_directions];
+        case==0?(x = 0; y = u(h#0)%h#0; dx = 1; dy = 0.5*v):
+        case==1?(x = w#0 - 1; y = u(h#0)%h#0; dx = -1; dy = 0.5*v):
+        case==2?(x = u(w#0)%w#0; y = 0; dx = 0.5*v; dy = 1):
+        case==3?(x = u(w#0)%w#0; y = h#0 - 1; dx = 0.5*v; dy = -1);
+        n = norm(dx,dy); dx/=n; dy/=n;
 
-      # Find path of the particle through the image.
-      repeat (dmax,dl,
-        !(inrange(x,0,w#0-1) && inrange(y,0,h#0-1))?break();
-        polygon(#1,1,x,y,opacity,255);
-        u = i(#0,x,y,0,1,1);
-        v = i(#0,x,y,0,2,1);
-        dx*u + dy*v<0?(u = -u; v = -v);
-        dx = lerp(dx,u,distortion);
-        dy = lerp(dy,v,distortion);
-        n = norm(dx,dy)/i(#0,x,y,0,0,1); dx/=n; dy/=n;
-        x+=dx; y+=dy;
-      )"
+        # Find path of the particle through the image.
+        repeat (dmax,dl,
+          !(inrange(x,0,w#0-1) && inrange(y,0,h#0-1))?break();
+          polygon(#1,1,x,y,opacity,255);
+          u = i(#0,x,y,0,1,1);
+          v = i(#0,x,y,0,2,1);
+          dx*u + dy*v<0?(u = -u; v = -v);
+          dx = lerp(dx,u,distortion);
+          dy = lerp(dy,v,distortion);
+          n = norm(dx,dy)/i(#0,x,y,0,0,1); dx/=n; dy/=n;
+          x+=dx; y+=dy;
+        )"
+    fi
     k[1]
     if $colormodel==1 *. -1 +. 255 c. 0,255
     elif $colormodel==2 i[0] 100%,100%,1,1,255 a c
