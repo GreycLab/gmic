@@ -45130,6 +45130,54 @@ fx_engrave :
 fx_engrave_preview :
   foreach { gui_split_preview "=> foo fx_engrave $* gui_merge_layers",${-3--1} }
 
+#@gui Filaments : fx_filaments, fx_filaments(0)+
+#@gui : Density (%) = float(50,0,100)
+#@gui : Distortion (%) = float(10,0,100)
+#@gui : Smoothness = float(10,0,100)
+#@gui : Angle (deg.) = float(0,-180,180)
+#@gui : sep = separator()
+#@gui : Opacity (%) = float(50,0,100)
+#@gui : Color model = choice("White on Black","Black on White","White on Transparent","Black on Transparent")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/18</i>.</small>")
+fx_filaments :
+  density,distortion,smoothness,angle,opacity,colormodel=$*
+  foreach {
+    lightness. b. {$smoothness/10} g. xy a[-2,-1] c
+    100%,100%,1,3,"P = I(#-1); a = atan2(P[1],P[0]) + (90 + $angle)°; [ 1/(1 + n)^0.25,cos(a),sin(a) ]" rm..
+    100%,100%
+    {$density*(w+h)/10},1,1,1,"*
+      const distortion = $distortion/1000;
+      const dmax = 2*norm(w#0,h#0);
+      const opacity = ($opacity/10)%;
+
+      # Set initial particle direction.
+      case = int(u(4))%4;
+      case==0?(x = 0; y = u(h#0)%h#0; dx = 1; dy = 0.5*v):
+      case==1?(x = w#0 - 1; y = u(h#0)%h#0; dx = -1; dy = 0.5*v):
+      case==2?(x = u(w#0)%w#0; y = 0; dx = 0.5*v; dy = 1):
+      (x = u(w#0)%w#0; y = h#0 - 1; dx = 0.5*v; dy = -1);
+      n = norm(dx,dy); dx/=n; dy/=n;
+
+      # Find path of the particle through the image.
+      repeat (dmax,dl,
+        !(inrange(x,0,w#0-1) && inrange(y,0,h#0-1))?break();
+        polygon(#1,1,x,y,opacity,255);
+        u = i(#0,x,y,0,1,1);
+        v = i(#0,x,y,0,2,1);
+        dx*u + dy*v<0?(u = -u; v = -v);
+        dx = lerp(dx,u,distortion);
+        dy = lerp(dy,v,distortion);
+        n = norm(dx,dy)/i(#0,x,y,0,0,1); dx/=n; dy/=n;
+        x+=dx; y+=dy;
+      )"
+    k[1]
+    if $colormodel==1 *. -1 +. 255 c. 0,255
+    elif $colormodel==2 i[0] 100%,100%,1,1,255 a c
+    elif $colormodel==3 i[0] 100%,100% a c
+    fi
+  }
+
 #@gui Freaky B&W : fx_freaky_bw, fx_freaky_bw_preview
 #@gui : Strength (%) = float(90,0,100)
 #@gui : Oddness (%) = float(20,0,100)
