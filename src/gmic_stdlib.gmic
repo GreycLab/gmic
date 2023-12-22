@@ -1835,6 +1835,7 @@ d :
 #@cli :   - '_display_3d_is_axes' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_3d_is_bounding_box' can be { 0:off | 1:on } (default value: '0').
 #@cli :   - '_display_3d_background' is an unsigned integer in range [0,11] (default value: '11').
+#@cli :   - '_display_3d_pose' is a sequence of 12 values that defines the current 3D pose matrix (read/write).
 #@cli :   - '_display_3d_animation' can be { 0:off | 1:forward | 2:backward } (default value: '0').
 #@cli :   - '_display_3d_animation_mode' can be { 0-3:X-axis | 4-7:Y-axis | 8-11:Z-axis | 12-15:XYZ-axes } \
 # (default value: '4').
@@ -1884,6 +1885,7 @@ _display : skip ${1=},${3=}
   setting_3d_background:=narg($_display_3d_background)?cut(int(0$_display_3d_background),0,12):11
   setting_3d_animation:=narg($_display_3d_animation)?cut(int(0$_display_3d_animation),0,1):0
   setting_3d_animation_mode:=narg($_display_3d_animation_mode)?cut(int(0$_display_3d_animation_mode),0,15):4
+  if !narg($_display_3d_pose) _display_3d_pose=1,0,0,0,0,1,0,0,0,0,1,0 fi
 
   thumb_height_factor=0.15
   thumb_min_ratio=0.45
@@ -2455,7 +2457,10 @@ _display : skip ${1=},${3=}
         fi
         [canvas_3d_background] => area_3d_view
 
-        if !0$view_3d_pose (1,0,0,0;0,1,0,0;0,0,1,0) => view_3d_pose view_3d_zoom=0.65 fi
+        if !0$view_3d_pose
+          ($_display_3d_pose) r. 4,3,1,1,-1 => view_3d_pose
+          view_3d_zoom=0.65
+        fi
 
         is_bounding_box_only:=$area_3d_is_motion" && "$setting_3d_motion_rendering_mode<0" && "!$is_volumetric
         if $is_bounding_box_only
@@ -3708,6 +3713,9 @@ _display : skip ${1=},${3=}
       if $notification_opacity<1 $0_rmn window_view fi
     fi
   }
+
+  # Return current 3D pose.
+  if 0$view_3d_pose _display_3d_pose={view_3d_pose,^} fi
 
   # Reset image list and display window to their previous states.
   if $is_opencv" && "$window_record_frame>=0 o[] $filename_animation,0,0,0 fi # Close recording stream
