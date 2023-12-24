@@ -50133,6 +50133,7 @@ fx_square_circle :
 #@gui : Mode = choice("Square to Circle","Circle to Square")
 #@gui : Center = point(50,50,0,1)
 #@gui : Zoom (%) = float(0,-100,100)
+#@gui : Angle (deg.) = float(0,-180,180)
 #@gui : Interpolation = choice(1,"Nearest Neighbor","Linear")
 #@gui : Boundary = choice("Transparent","Nearest","Periodic","Mirror")
 #@gui : Adapt to Image Ratio = bool(1)
@@ -50144,13 +50145,14 @@ fx_square_circle :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/24</i>.</small>")
 fx_square_circle_alt :
-  mode,centerx,centery,zoom,interpolation,boundary,ratio=${1-7}
+  mode,centerx,centery,zoom,angle,interpolation,boundary,ratio=${1-8}
   if !$boundary to_a fi
-  f. "const interpolation = $interpolation;
-      const boundary = $boundary;
-      const zoom = 10^($zoom%);
-      const cx = w*$centerx%;
+  f. "const cx = w*$centerx%;
       const cy = h*$centery%;
+      const zoom = 10^($zoom%);
+      const angle = $angle°;
+      const interpolation = $interpolation;
+      const boundary = $boundary;
       const fx = $ratio?w:1;
       const fy = $ratio?h:1;
       x = (x - cx)/fx;
@@ -50159,6 +50161,7 @@ fx_square_circle_alt :
       r = norm(x,y);
       phi = (t + pi/4)%(pi/2) - pi/4;
       nr = ($mode?r*cos(phi):r/cos(phi))/zoom;
+      t+=angle;
       nx = cx + fx*nr*cos(t);
       ny = cy + fy*nr*sin(t);
       i(nx,ny)"
