@@ -51692,10 +51692,11 @@ fx_self_glitching_preview :
 
 #@gui Simulate CRT : fx_crt,fx_crt_preview(0)
 #@gui : CRT Type = choice("CRT-1","CRT-2")
+#@gui : Upscale Factor = choice(3,"x1","x2","x3","x4","x5","x6","x7","x8")
+#@gui : Smoothness (%) = float(0,0,10)
 #@gui : Neighborhhod Size (px) = int(4,1,16)
-#@gui : Upscale Factor = choice("x1","x2","x3","x4","x5","x6","x7","x8")
 #@gui : Adaptive Pattern = bool(1)
-#@gui : Rotate Pattern = bool(0)
+#@gui : Transpose Pattern = bool(0)
 #@gui : Normalize = bool(1)
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
@@ -51705,7 +51706,7 @@ fx_self_glitching_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
 fx_crt :
-  type,nsize,upscale_factor,is_adaptive,is_rotate,is_normalize=${1-6}
+  type,upscale_factor,smoothness,nsize,is_adaptive,is_rotate,is_normalize=${1-7}
   upscale_factor+=1
   foreach { nm={n} split_opacity l[0] {
 
@@ -51723,15 +51724,14 @@ fx_crt :
       r. 200%,4,1,3,0,2
       f. "i*lerp(0.35,1,y/(h-1))" +mirror. y a[-2,-1] y
     else
-      4,12,1,3,[255,60,0]
-      4,12,1,3,[0,200,0]
-      4,12,1,3,[0,60,255]
-      r[-3--1] 5,15,1,3,0,0
-      shift.. 0,5,0,0,2
-      shift. 0,10,0,0,2
+      4,12,1,3,[255,60,0] +fc. 0,200,0 +fc. 0,60,255
+      r[-3--1] 5,15,1,3,0,0 shift.. 0,5,0,0,2 shift. 0,10,0,0,2
       a[-3--1] x
+
+
     fi
     if $is_rotate transpose. fi
+    if $smoothness b. $smoothness% fi
 
     # Add dynamics to the CRT pattern.
     if $is_adaptive l. {
