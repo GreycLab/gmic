@@ -51692,8 +51692,10 @@ fx_self_glitching_preview :
 
 #@gui Simulate CRT : fx_crt,fx_crt_preview(0)
 #@gui : CRT Type = choice("CRT-1","CRT-2")
+#@gui : Neighborhhod Size (px) = int(4,1,16)
 #@gui : Upscale Factor = choice("x1","x2","x3","x4","x5","x6","x7","x8")
 #@gui : Adaptive Pattern = bool(1)
+#@gui : Rotate Pattern = bool(0)
 #@gui : Normalize = bool(1)
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
@@ -51703,7 +51705,7 @@ fx_self_glitching_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
 fx_crt :
-  type,upscale_factor,is_adaptive,is_normalize=${1-4}
+  type,nsize,upscale_factor,is_adaptive,is_rotate,is_normalize=${1-6}
   upscale_factor+=1
   foreach { nm={n} split_opacity l[0] {
 
@@ -51711,7 +51713,7 @@ fx_crt :
     if $is_normalize to_rgb s c repeat $! { avg$>,std$>:=ia#$>,id#$> } a c fi
 
     # Algorithm parameters.
-    M=4 # Size of input image neighborhood
+    M=$nsize # Size of input image neighborhood
     S:=max(1,int($M/2)) # Stride
     Q:=$upscale_factor*$M # Size of output image neighborhood
 
@@ -51729,6 +51731,7 @@ fx_crt :
       shift. 0,10,0,0,2
       a[-3--1] x
     fi
+    if $is_rotate transpose. fi
 
     # Add dynamics to the CRT pattern.
     if $is_adaptive l. {
@@ -51737,9 +51740,8 @@ fx_crt :
       +l { repeat 5 { 3,3,1,1,1 +dilate.. .,0 rm.. } r $w,$w,1,3,2 b 1 n 0,255 a z }
       l.. { repeat 5 { 3,3,1,1,1 +erode.. .,0 rm.. } rv rm. r $w,$w,1,3,2 b 1 n 0,255 a z }
       a z
-      rgb2hsl f "[ i0, cut(i1*lerp(1,0.5,z/(d-1)),0,1), cut(i2*lerp(0.25,1.5,z/(d-1)),0,1) ]" hsl2rgb
+      rgb2hsl f "[ i0, cut(i1*lerp(1,0.5,z/(d-1)),0,1), i2 ]" hsl2rgb
     } fi
-    P:=w
     /. 255
 
     # Apply CRT pattern to image.
@@ -51749,29 +51751,23 @@ fx_crt :
     {0,ceil([w,h]/$S)},1,3,"*
       begin(
         const M = $M;
+        const M2 = int(M/2);
         const P = w#1;
         const Q = $Q;
-        const M2 = int(M/2);
-        iS = expr('x = x - w/2; y = y - h/2; gauss(norm(x,y),0.3*Q,0)',Q,Q); # Gaussian weights for patch accumulation
+        iS = expr('x = x - w/2; y = y - h/2; gauss(norm(x,y),0.3*$Q,0)',Q,Q); # Gaussian weights for patch accumulation
       );
       xM = x*$S;
       yM = y*$S;
       iM = crop(#0,xM,yM,0,c,M,M,1,1);
+      icM = iM[M2*(M + 1)];
       riMy = resize(iM,M,M,1,1,M,P,1,1,1);
       riM = resize(riMy,M,P,1,1,P,P,1,1,3);
-
-      xcM = xM + M2;
-      ycM = yM + M2;
-      ind = int(i(#0,xcM,ycM,0,c)*d#1/256);
-
+      ind = int(icM*d#1/256);
       p = int((xM%M)*P/M);
       q = int((yM%M)*P/M);
       iP = crop(#1,p,q,ind,c,P,P,1,1,2);
-
       riM*=iP;
-
       iQ = resize(riM,P,P,1,1,Q,Q,1,1,2);
-
       xQ = int(xM*Q/M);
       yQ = int(yM*Q/M);
       draw(#-2,iQ,xQ,yQ,0,c,Q,Q,1,1,-1,iS);
@@ -51783,10 +51779,10 @@ fx_crt :
     k.
     if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c fi
     c 0,255
-  } a c => $nm }
+  } r. ..,..,1,1 a c => $nm }
 
 fx_crt_preview :
-  gui_split_preview "fx_crt $1,0,${3--3}",${-3--1}
+  gui_split_preview "fx_crt ${1--3}",${-3--1}
 
 #@gui Streak : fx_streak,fx_streak(1)
 #@gui : Mask Color = color(255,0,0,255)
