@@ -51697,10 +51697,12 @@ fx_self_glitching_preview :
 #@gui : Smoothness (%) = float(0,0,10)
 #@gui : Neighborhhod Size (px) = int(4,1,16)
 #@gui : Stride (%) = float(50,0,100)
+#@gui : sep = separator()
 #@gui : Adaptive Pattern = bool(1)
+#@gui : Use Luma for Adaptive Pattern = bool(0)
 #@gui : Transpose Pattern = bool(0)
 #@gui : Average Over Pattern = bool(0)
-#@gui : Normalize = bool(1)
+#@gui : Normalize Image = bool(1)
 #@gui : sep = separator()
 #@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
 #@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
@@ -51710,7 +51712,8 @@ fx_self_glitching_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
 fx_crt :
-  type,upscale_factor,is_precise,smoothness,nsize,stride,is_adaptive,is_transpose,is_average,is_normalize=${1-10}
+  type,upscale_factor,is_precise,smoothness,nsize,stride,is_adaptive,use_luma,\
+    is_transpose,is_average,is_normalize=${1-11}
   upscale_factor+=1
   foreach { nm={n} split_opacity l[0] {
 
@@ -51756,7 +51759,7 @@ fx_crt :
     W,H={0,ceil([w,h]*$Q/$M)}
     $W,$H,1,3
     $W,$H,1,1
-    {0,ceil([w,h]/$S)},1,3,"*
+    {0,ceil([w,h]/$S)},1,3,":
       begin(
         const M = $M;
         const M2 = int(M/2);
@@ -51768,10 +51771,17 @@ fx_crt :
       xM = x*$S;
       yM = y*$S;
       iM = crop(#0,xM,yM,0,c,M,M,1,1);
-      icM = iM[M2*(M + 1)];
       riMy = resize(iM,M,M,1,1,M,P,1,1,1);
       riM = resize(riMy,M,P,1,1,P,P,1,1,3);
-      ind = int(icM*d#1/256);
+      $use_luma?(
+        xl = xM + M2;
+        yl = yM + M2;
+        luma = 0.22248840*i(#0,xl,yl,0,0) + 0.71690369*i(#0,xl,yl,0,1) + 0.06060791*i(#0,xl,yl,0,2);
+        ind = int(luma*d#1/256);
+      ):(
+        icM = iM[M2*(M + 1)];
+        ind = int(icM*d#1/256);
+      );
       p = int((xM%M)*P/M);
       q = int((yM%M)*P/M);
 
@@ -51779,7 +51789,14 @@ fx_crt :
         off = 0;
         repeat (P,n,
           repeat (P,m,
-            ind = int(riM[off]*d#1/256);
+            $use_luma?(
+              xl = xM + m*M/P;
+              yl = yM + n*M/P;
+              luma = 0.22248840*i(#0,xl,yl,0,0,1) + 0.71690369*i(#0,xl,yl,0,1,1) + 0.06060791*i(#0,xl,yl,0,2,1);
+              ind = int(luma*d#1/256);
+            ):(
+              ind = int(riM[off]*d#1/256);
+            );
             iP[off++] = i(#1,p + m, q + n,ind,c,1,2);
           );
         )
@@ -51803,7 +51820,7 @@ fx_crt :
 
 fx_crt_preview :
   if $-1 r. {101-$-1}%,{101-$-1}%,1,100%,0,0,0.5,0.5 fi
-  gui_split_preview "fx_crt ${1-10}",${-4--2}
+  gui_split_preview "fx_crt ${1-11}",${-4--2}
 
 #@gui Streak : fx_streak,fx_streak(1)
 #@gui : Mask Color = color(255,0,0,255)
