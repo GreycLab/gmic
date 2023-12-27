@@ -51693,6 +51693,7 @@ fx_self_glitching_preview :
 #@gui Simulate CRT : fx_crt,fx_crt_preview(0)
 #@gui : CRT Type = choice("CRT-1","CRT-2","CRT-3")
 #@gui : Upscale Factor = choice(3,"x1","x2","x3","x4","x5","x6","x7","x8")
+#@gui : Rendering Precision = choice{"Low (Faster)","High (Slower)"}
 #@gui : Smoothness (%) = float(0,0,10)
 #@gui : Neighborhhod Size (px) = int(4,1,16)
 #@gui : Stride (%) = float(50,0,100)
@@ -51709,7 +51710,7 @@ fx_self_glitching_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
 fx_crt :
-  type,upscale_factor,smoothness,nsize,stride,is_adaptive,is_transpose,is_average,is_normalize=${1-9}
+  type,upscale_factor,is_precise,smoothness,nsize,stride,is_adaptive,is_transpose,is_average,is_normalize=${1-10}
   upscale_factor+=1
   foreach { nm={n} split_opacity l[0] {
 
@@ -51761,6 +51762,7 @@ fx_crt :
         const M2 = int(M/2);
         const P = w#1;
         const Q = $Q;
+        iP = vector(#P^2);
         iS = expr('x = x - w/2; y = y - h/2; gauss(norm(x,y),0.3*$Q,0)',Q,Q); # Gaussian weights for patch accumulation
       );
       xM = x*$S;
@@ -51772,7 +51774,18 @@ fx_crt :
       ind = int(icM*d#1/256);
       p = int((xM%M)*P/M);
       q = int((yM%M)*P/M);
-      iP = crop(#1,p,q,ind,c,P,P,1,1,2);
+
+      $is_precise?( # High-precision rendering
+        off = 0;
+        repeat (P,n,
+          repeat (P,m,
+            ind = int(riM[off]*d#1/256);
+            iP[off++] = i(#1,p + m, q + n,ind,c,1,2);
+          );
+        )
+      ):( # Low-precision rendering
+        iP = crop(#1,p,q,ind,c,P,P,1,1,2);
+      );
       $is_average?(iP*=avg(riM)):(iP*=riM);
       iQ = resize(iP,P,P,1,1,Q,Q,1,1,2);
       xQ = int(xM*Q/M);
@@ -51790,7 +51803,7 @@ fx_crt :
 
 fx_crt_preview :
   if $-1 r. {101-$-1}%,{101-$-1}%,1,100%,0,0,0.5,0.5 fi
-  gui_split_preview "fx_crt ${1-9}",${-4--2}
+  gui_split_preview "fx_crt ${1-10}",${-4--2}
 
 #@gui Streak : fx_streak,fx_streak(1)
 #@gui : Mask Color = color(255,0,0,255)
