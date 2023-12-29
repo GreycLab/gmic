@@ -50135,6 +50135,7 @@ fx_square_circle :
 #@gui Square to Circle [alt] : fx_square_circle_alt,fx_square_circle_alt_preview(1)
 #@gui : Mode = choice("Square to Circle","Circle to Square")
 #@gui : Center = point(50,50,0,1)
+#@gui : Strength (%) = float(100,0,100)
 #@gui : Zoom (%) = float(0,-100,100)
 #@gui : Angle (deg.) = float(0,-180,180)
 #@gui : Interpolation = choice(1,"Nearest Neighbor","Linear")
@@ -50148,10 +50149,11 @@ fx_square_circle :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/24</i>.</small>")
 fx_square_circle_alt :
-  mode,centerx,centery,zoom,angle,interpolation,boundary,ratio=${1-8}
+  mode,centerx,centery,strength,zoom,angle,interpolation,boundary,ratio=${1-9}
   if !$boundary to_a fi
   f. "const cx = w*$centerx%;
       const cy = h*$centery%;
+      const strength = $strength%;
       const zoom = 10^($zoom%);
       const angle = $angle°;
       const interpolation = $interpolation;
@@ -50164,6 +50166,7 @@ fx_square_circle_alt :
       r = norm(x,y);
       phi = (t + pi/4)%(pi/2) - pi/4;
       nr = ($mode?r*cos(phi):r/cos(phi))/zoom;
+      nr = lerp(r,nr,strength);
       t+=angle;
       nx = cx + fx*nr*cos(t);
       ny = cy + fy*nr*sin(t);
