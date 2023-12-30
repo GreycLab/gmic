@@ -9420,27 +9420,27 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         if (!std::strcmp("noise",command)) {
           gmic_substitute_args(false);
           int noise_type = 0;
-          float sigma = 0;
+          float amplitude = 0;
           sep = 0;
           if ((cimg_sscanf(argument,"%f%c",
-                           &sigma,&end)==1 ||
+                           &amplitude,&end)==1 ||
                (cimg_sscanf(argument,"%f%c%c",
-                            &sigma,&sep,&end)==2 && sep=='%') ||
+                            &amplitude,&sep,&end)==2 && sep=='%') ||
                cimg_sscanf(argument,"%f,%d%c",
-                           &sigma,&noise_type,&end)==2 ||
+                           &amplitude,&noise_type,&end)==2 ||
                (cimg_sscanf(argument,"%f%c,%d%c",
-                            &sigma,&sep,&noise_type,&end)==3 && sep=='%')) &&
-              sigma>=0 && noise_type>=0 && noise_type<=4) {
+                            &amplitude,&sep,&noise_type,&end)==3 && sep=='%')) &&
+              amplitude>=0 && noise_type>=0 && noise_type<=4) {
             const char *s_type = noise_type==0?"gaussian":
               noise_type==1?"uniform":
               noise_type==2?"salt&pepper":
               noise_type==3?"poisson":"rice";
-            if (sep=='%' && noise_type!=2) sigma = -sigma;
+            if (sep=='%' && noise_type!=2) amplitude = -amplitude;
             print(0,"Add %s noise to image%s, with standard deviation %g%s.",
                   s_type,
                   gmic_selection.data(),
-                  cimg::abs(sigma),sep=='%'?"%":"");
-            cimg_forY(selection,l) gmic_apply(noise(sigma,noise_type),true);
+                  cimg::abs(amplitude),sep=='%'?"%":"");
+            cimg_forY(selection,l) gmic_apply(noise(amplitude,noise_type),true);
           } else arg_error("noise");
           is_change = true;
           ++position;
