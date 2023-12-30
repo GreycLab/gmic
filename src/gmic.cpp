@@ -8103,7 +8103,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         // Index image with a LUT.
         if (!std::strcmp("index",command)) {
           gmic_substitute_args(true);
-          unsigned int map_indexes = 0;
+          unsigned int map_colors = 0;
           float dithering = 0;
           sep = 0;
           if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
@@ -8111,16 +8111,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
                            indices,&dithering,&end)==2 ||
                cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%u%c",
-                           indices,&dithering,&map_indexes,&end)==3) &&
+                           indices,&dithering,&map_colors,&end)==3) &&
               (ind=selection2cimg(indices,images.size(),images_names,"index")).height()==1) {
             const float ndithering = dithering<0?0:dithering>1?1:dithering;
             print(0,"Index values in image%s by LUT [%u], with dithering level %g%s.",
                   gmic_selection.data(),
                   *ind,
                   ndithering,
-                  map_indexes?" and index mapping":"");
+                  map_colors?" and color mapping":"");
             const CImg<T> palette = gmic_image_arg(*ind);
-            cimg_forY(selection,l) gmic_apply(index(palette,ndithering,(bool)map_indexes),false);
+            cimg_forY(selection,l) gmic_apply(index(palette,ndithering,(bool)map_colors),false);
             is_change = true;
             ++position;
             continue;
