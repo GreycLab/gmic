@@ -13331,8 +13331,9 @@ quantize_area : check "${1=10}>0"
     rm.
   }
 
-#@cli rand : { value0[%] | [image0] },_{ value1[%] | [image1] } : [image] : (+)
-#@cli : Fill selected images with random values uniformly distributed in the specified range.
+#@cli rand : { value0[%] | [image0] },_{ value1[%] | [image1] },_[pdf] : [image] : (+)
+#@cli : Fill selected images with random values in the specified range.
+#@cli : If no '[pdf]' (probability density function) is specified, random values follow a uniform distribution.
 #@cli : $ 400,400,1,3 rand -10,10 +blur 10 sign[-1]
 
 #@cli rand_pdf : [probability_density],_min_value,_max_value,_precision[%]
@@ -19698,7 +19699,7 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
     fft
 
     # Compute coherent random phase.
-    100%,100% rand. {-pi},{pi}
+    100%,100% rand. {[-pi,pi]}
     =. 0
     if !(w%2) =. {(u<0.5)*pi},{int(w/2)} fi
     if !(h%2) =. {(u<0.5)*pi},0,{int(h/2)} fi
@@ -25559,11 +25560,11 @@ tensors3d : check "${1=1}>=0 && isint(${2=2}) && $2>=0 && ${3=0.05}>=0"
   expand_xy[-2,-1] 2,0 dilate[-2,-1] 2
   permute. zyxc r[-2,-1] ${-max_whd} &[-2,-1]
 
-  100%,100% rand. 0,{{-2,d}-1} round. ri. .. f. z==i
+  100%,100% rand. 0,{-2,d-1} round. ri. .. f. z==i
   distance. 1 +. 1 +f. 1 rv[-2,-1] /[-2,-1] *. ..
   +dilate. 0,0,{d} ==[-2,-1] *. ..
 
-  1,100%,100% rand. 0,{{-2,w}-1} round. ri. .. f. x==i
+  1,100%,100% rand. 0,{-2,w-1} round. ri. .. f. x==i
   distance. 1 +. 1 +f. 1 rv[-2,-1] /[-2,-1] *. ...
   +dilate. 0,0,{d} ==[-2,-1] *[-3,-1]
 
@@ -30064,7 +30065,7 @@ cubism : check "${1=50}>=0 && ${2=10}>=0 && $2<=50 && ${5=0}>=0" skip ${3=75},${
     r.. 5,$N,1,1,3 round.. 1 a[-2,-1] x
 
     # Generate list of vertices.
-    1,$N rand. {225-$3},{225+$3} *. {pi/180}
+    1,$N rand. {225+[-$3,$3]} *. {pi/180}
     +sin. cos.. +*. -1 ... a[-4--3] x a[-2,-1] x z[-4,-2,-1] 0,2 +*[-2,-1] -1 a[-4--1] x *. {sqrt(2)*$P}
     r... 400%,100%,1,1,0,2 +[-3,-1]
 
@@ -31276,7 +31277,7 @@ _ripple0 : f {$1/2}*"(1-2*(i%"{2*$2}"<$2))"
 _ripple1 : f "I=(i%$2)/$2;$1*(2*(I<0.5?I:1-I)-0.5)"
 _ripple2 : f {-$1/2}*"cos(i*"{2*pi/$2}")"
 _ripple3 : f {-$1/2}*"abs(cos(i*"{2*pi/$2}"))"
-_ripple4 : skip $* n 0,{h-1} 1,{h} rand. {-$1/2},{$1/2} m,M:=im,iM b. {$2/10} n. $m,$M map.. . rm.
+_ripple4 : skip $* n 0,{h-1} 1,{h} rand. {[-$1,$1]/2} m,M:=im,iM b. {$2/10} n. $m,$M map.. . rm.
 
 #@cli rotoidoscope : _center_x[%],_center_y[%],_tiles>0,_smoothness[%]>=0,\
 # _boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
