@@ -13341,30 +13341,6 @@ quantize_area : check "${1=10}>0"
 #@cli : $ 256 gaussian[-1] 30 line[-1] 47%,0,53%,0,1,0 500,500 rand[-1] 0,255,[-2] +histogram[-1] 256 \
 # display_graph[0,2] 640,480,3,0
 
-#@cli rand_pdf : [probability_density],_min_value,_max_value,_precision[%]
-#@cli : Fill selected images with random values which follow the given probability distribution.
-#@cli : This commands implements the inverse random sampling algorithm, as described in
-#@cli : <https://en.wikipedia.org/wiki/Inverse_transform_sampling>.
-#@cli : The 'precision' argument sets the number of distinct random values that can be generated.
-#@cli : Default values: 'min_value=-1', 'max_value=1' and 'precision=65536'.
-#@cli : $ (1,0.5,1) 50,50 rand_pdf[1] [0],0,255
-#@cli : $ 256 gaussian[-1] 30 line[-1] 47%,0,53%,0,1,0 500,500 rand_pdf[-1] [-2],0,255 +histogram[-1] 256 \
-# display_graph[0,2] 640,480,3,0
-rand_pdf : check ${"is_image_arg $1"}" && isnum(${2=-1}) && isnum(${3=1}) && ${4=65536}>=0"
-  e[^-1] "Fill image$? with random values in [$2,$3], according to probability distribution $1, with precision $4."
-
-  # Compute normalized cumulated density function (cdf).
-  pass$1 0 y. x
-  if w<2 rm. f $2 return fi
-  prec:=round(!$4?w:ispercentage($4)?w*$4:$4)
-  max. 0 cumulate. *. {($prec-1)/i[-1,2]}
-
-  # Compute inverse cdf.
-  $prec,1,1,1,">begin(k = 0); while (p = i[#-1,k]; k<w#-1 && (!p || p<x), ++k); lerp($2,$3,min(k/(w#-1-1),1))" rm..
-
-  # Sample random numbers according to given pdf.
-  f[^-1] "ind = lerp(0,w#-1,u); i[#-1,ind,2]" rm.
-
 #@cli rand_sum : sum>0,_random_function
 #@cli : Fill selected images with strictly positive, random, integer values, that sums to 'sum'.
 #@cli : For each image, 'sum' must be greater or equal than 'width*height*depth*spectrum'.
