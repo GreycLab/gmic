@@ -58226,32 +58226,43 @@ fx_rainbow :
 #@gui : Thickness (%) = float(1.5,0,10)
 #@gui : Tilt (deg.) = float(0,-180,180)
 #@gui : Tilt Strength (%) = float(45,0,100)
-#@gui : Mirror = choice("None","X-Axis","Y-Axis","XY-Axes")
 #@gui : Color = color(0,0,0,255)
 #@gui : Anti-Alias = bool(1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/04</i>.</small>")
 fx_random_signature :
   x0,y0,x1,y1:=min($3,$5),min($4,$6),max($3,$5),max($4,$6)
+  dx,dy:=$x1-$x0,$y1-$y0
   foreach {
-    to_color
+    nm=${"-gui_layer_name"}
     srand $1 $2,1,1,4,"u(1000)" s. c,2 rbf[-2,-1] 1000
-    W,H={0,[abs($x1-$x0)*(w-1)%,abs($y1-$y0)*(h-1)%]}
-    thickness:=max(w#0*($x1-$x0)%,h#0*($y1-$y0)%)*$7%
+    W,H={0,[max(1,$dx*(w-1)%),max(1,$dy*(h-1)%)]}
+    thickness:=max($dx*w#0%,$dy*h#0%)*$7%
     thickness2:=round($thickness/2)
     n.. $thickness2,{$W-1-$thickness2} n. $thickness2,{$H-1-$thickness2}
     a[-2,-1] c
-    {[$W,$H]*($15+1)}
-    if $15 *.. 2 fi
-    curve. ..,{$thickness*($15+1)},$8,{$9%},0,1,1
-    if $15 r. $W,$H,1,1,2 fi
-    if $10 mirror. ${"arg $10,x,y,xy"} fi
-    100%,100%,1,{0,s} fc. ${11-13},255
-    j[0] .,$x0%,$y0%,0,0,{$14/255},..
-    k[0]
+    {[$W,$H]*($14+1)}
+    if $14 *.. 2 fi
+    curve. ..,{$thickness*($14+1)},$8,{$9%},0,1,255
+    if $14 r. $W,$H,1,1,2 fi
+    if $3>$5 mirror. x fi
+    if $4>$6 mirror. y fi
+
+    if inrange(0$_output_mode,1,2) # Output as new layer
+      i[-2] 100%,100%,1,3 fc.. ${10-12}
+      a[-2,-1] c
+      x,y:=round([$x0*w#0%,$y0*h#0%])
+      => name($nm" [signature]")\,pos($x\,$y)\,opacity({round($13*100/255)})
+      k.
+    else # Draw on current layer
+      100%,100%,1,{0,s} fc. ${10-12},255
+      j[0] .,$x0%,$y0%,0,0,{$13/255},..,255
+      k[0]
+    fi
   }
 
 fx_random_signature_preview :
+  _output_mode=0
   foreach {
     fx_random_signature $*
     rectangle $3%,$4%,$5%,$6%,1,0x33333333,0
