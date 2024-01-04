@@ -21978,6 +21978,54 @@ close_binary :
     rm[strokes] =>[new_strokes] $nm
   }
 
+#@cli curve : [xy_coordinates],_thickness>0,_tilt,_tilt_strength[%],_is_closed={ 0:no | 1:yes },_opacity,_color1,...
+#@cli : Draw specified parameterized curve on selected images.
+#@cli : Arguments are:
+#@cli : * '[xy_coordinates]' is the set of XY-coordinates of the curve, specified as a 2-channels image.
+#@cli : * 'thickness' is the thickness of the drawing, specified in pixels.
+#@cli : * 'tilt' is an angle, specified in degrees.
+#@cli : * 'tilt_strength' must be a float value in [0,1] (or in [0,100] if specified as a percentage).
+#@cli : * 'is_closed' is a boolean which tells if the curve is closed or not.
+#@cli : Default values: 'thickness=0', 'tilt=45'
+curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${4=0},0,1) && isbool(${5=0}) && "\
+              "isnum(${6=1}) && isnum(${7=0})"
+  s0,s1=open,closed
+  e[^-1] "Draw parameterized "${s$5}" curve $1 on image$?, with thickness $2, tilt $3, tilt strength $4, "\
+         "opacity $6 and color (${7--1})."
+  pass$1 0 r. {whd},1,1,100%,-1
+  if s!=2 error[0--3] "Command 'curve': Argument '[xy_coordinates]' is not a 2-channels image (has "{s}" channels)." fi
+  repeat $!-1 {
+    if $2<1
+      {w},1,1,1,">
+        begin(
+          const boundary = $5?2:1;
+        );
+        pP = J[#-1,-1]; P = I(#-1);
+        polygon(#"$>",2,pP[0],pP[1],P[0],P[1],${6--1})"
+    else
+      {w+$5},1,1,1,">
+        begin(
+          const thickness = $2/2;
+          const boundary = $5?2:1;
+          U = [ cos($3°), sin($3°) ];
+          A = B = [ 0,0 ];
+          pP = J[#-1,-1];
+        );
+        P = I(#-1);
+        dP = P - pP;
+        ndP = norm(dP);
+        !x || ndP>1?(
+          T = x?dP/ndP:unitnorm(J[#-1,1] - P);
+          N = lerp([ -T[1],T[0] ],U,$4)*thickness;
+          C = round(P - N); D = round(P + N);
+          x>0?polygon(#"$>",4,A[0],A[1],B[0],B[1],D[0],D[1],C[0],C[1],${6--1});
+          A = C; B = D
+        )"
+    fi
+    rm.
+  }
+  rm.
+
 #@cli ellipse : x[%],y[%],R[%],r[%],_angle,_opacity,_pattern,_color1,... : (+)
 #@cli : Draw specified colored ellipse on selected images.
 #@cli : A radius of '100%' stands for 'sqrt(width^2+height^2)'.
