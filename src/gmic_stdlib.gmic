@@ -21987,6 +21987,8 @@ close_binary :
 #@cli : * 'tilt_strength' must be a float value in [0,1] (or in [0,100] if specified as a percentage).
 #@cli : * 'is_closed' is a boolean which tells if the curve is closed or not.
 #@cli : Default values: 'thickness=0', 'tilt=45'
+#@cli : $ image.jpg srand 3 16,1,1,4,u s. c,2 rbf[-2,-1] 1000,0,1 n[-2] 10,{w#0-10} n[-1] 10,{h#0-10} a[-2,-1] c \
+# curve[-2] [-1],6,0,0,0,1,0,128,0
 curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${4=0},0,1) && isbool(${5=0}) && "\
               "isnum(${6=1}) && isnum(${7=0})"
   s0,s1=open,closed
@@ -22007,7 +22009,7 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
         begin(
           const thickness = $2/2;
           const boundary = $5?2:1;
-          U = [ cos($3°), sin($3°) ];
+          U = cexp([ 0,3° ]);
           A = B = [ 0,0 ];
           pP = J[#-1,-1];
         );
@@ -22018,7 +22020,10 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
           T = x?dP/ndP:unitnorm(J[#-1,1] - P);
           N = lerp([ -T[1],T[0] ],U,$4)*thickness;
           C = round(P - N); D = round(P + N);
-          x?polygon(#"$>",4,A[0],A[1],B[0],B[1],D[0],D[1],C[0],C[1],${6--1});
+          x?(
+            polygon(#"$>",3,A[0],A[1],B[0],B[1],C[0],C[1],${6--1});
+            polygon(#"$>",3,D[0],D[1],B[0],B[1],C[0],C[1],${6--1});
+          );
           pP = P; A = C; B = D;
         )"
     fi
