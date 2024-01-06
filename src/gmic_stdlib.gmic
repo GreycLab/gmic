@@ -46884,6 +46884,7 @@ _fx_cluts_youssefhossam :
 #@gui CLUT from After - Before Layers : fx_clut_from_ab, fx_clut_from_ab_preview
 #@gui : Output Mode = choice("Replace Layer with CLUT","Insert New CLUT Layer","Save CLUT as .cube or .png File")
 #@gui : Output CLUT Resolution = choice{4,16,25,36,49,64,81,100,121,144,169,225,256}_2
+#@gui : CLUT format = choice("Hald CLUT","RGB LUT")
 #@gui : sep = separator()
 #@gui : Output Folder = _folder()_1-
 #@gui : Output Filename = _text("output.cube")_1+
@@ -46903,77 +46904,51 @@ _fx_cluts_youssefhossam :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      
 #@gui : Latest Update: <i>2019/08/27</i>.</small>")
-fx_clut_from_ab : skip "${3=},${4=}"
+fx_clut_from_ab : skip "${4=},${5=}"
   if $!<2 error "At least two input layers are needed to run this filter." fi
   repeat $!-1 { l[$<,-1] {
     nm=${gui_layer_name..}
     i[0] {a=0$_is_preview?32:64;[a,a,a]},4 f[1] ">I(#0,round(I(#2)*(w#0-1)/255))+=[R,G,B,1]; I"
     l[0] {
-      s c,-3 +max. 1 /[-3,-1] ==. 0 inpaint_pde.. .,75%,1 distance. 0 *. {-1/(1+$5)} exp.
+      s c,-3 +max. 1 /[-3,-1] ==. 0 inpaint_pde.. .,75%,1 distance. 0 *. {-1/(1+$6)} exp.
       f.. "f = i(#-1); f*I + (1-f)*[x,y,z]*255/(w-1)" rm.
       S:=arg(1+$2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w r. $S,$S,$S,3,3 fi
       c 0,255
     }
-
     if $1==2 # Output as a file
-      is_png:=str=lowercase(['"$4"']);find(str,'.png')==size(str)-4
-      is_cube:=str=lowercase(['"$4"']);find(str,'.cube')==size(str)-5
-      if !$is_png" && "!$is_cube $!is_ciube error "Filename extension must be '.cube' or '.png'." fi
-      if $is_png r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 o[0] "$3/$4"
+      is_png:=str=lowercase(['"$5"']);find(str,'.png')==size(str)-4
+      is_cube:=str=lowercase(['"$5"']);find(str,'.cube')==size(str)-5
+      if !$is_png" && "!$is_cube error "Filename extension must be '.cube' or '.png'." fi
+      if $is_png r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 o[0] "$4/$5"
       else
         if {0,w>32} r3dx[0] 32 fi
-        output_cube[0] "$3/$4"
+        output_cube[0] "$4/$5"
       fi
       rm[0]
     else
-      r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1
+      l[0] {
+        if $3 s z append_tiles , # RGB LUT
+        else r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 # Hald CLUT
+        fi
+      }
       if !$1 rm[1] fi # Replace Layer with CLUT
       =>[0] "name(CLUT to '"$nm"')"
     fi
   if 0$_output_mode k[0] fi
   } }
 
-fx_clut_from_ab_preview : skip "${3=},${4=}"
+fx_clut_from_ab_preview : skip "${4=},${5=}"
   if $!<2 gui_warning_preview "At least two input layers are needed to run this filter." return fi
-  _is_preview,_output_mode=1 fx_clut_from_ab 0,4,0,0,$5
+  _is_preview,_output_mode=1
+  fx_clut_from_ab 0,4,0,0,0,$6
   foreach {
-    r {a=round(cbrt(wh));[a,a,a]},3,-1
-    +r3dx. 24 _fx_clut_from_ab_preview.
-    S:=arg(1+$2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w#0 r[0] $S,$S,$S,3,3 fi
-    r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1
-    rr2d[0] $_preview_area_width,$_preview_area_height,2,1 r2dx. 70%
-    sh. 100% b. 1% n. 0,255 rm.
-    blend alpha
+    +r {a=round(cbrt(wh));[a,a,a]},3,-1
+    +dclut. {0,round(0.75*w)},24
+    if $3 rm[0] l[0] { s z append_tiles , } else rm.. fi
+    blend[-2,-1] alpha
   }
-
   file_attr:=$1==2?2:1
-  u "{$1}{$2}{$3}_"$file_attr"{$4}_"$file_attr"{$5}"
-
-# Render 3D visualization of a CLUT.
-_fx_clut_from_ab_preview :
-  foreach {
-    fact:=256/w
-
-    # Color data, as a point cloud.
-    pointcloud3d +3d 0.5,0.5,0.5 *3d $fact circles3d {1.25*$fact} o3d {0.004*$fact}
-
-    # Add cube edges.
-    colorcube3d[]
-    l. { s3d l.. { s y,6 repeat $! { sh[$>] 4,100%,0,0 /. 1.25 rm. } } a y } # Darken colors of edges
-    p3d. 1
-    l. { repeat 8 { o:=a=$>;0.5*[a&1,(a>>1)&1,(a>>2)&1] ++3d[0] $o +-3d[0] $o } +3d } # Increase thickness of edges
-
-    # Add 3D axes, without the 'O'.
-    axes3d 64,64,64,24,R,G,B,0
-    +3d
-
-    # Render 3D snapshot.
-    pose3d 1.2451,0.120715,-0.893986,-58.3864,-0.572953,1.28275,-0.62477,-11.6557,\
-           0.696784,0.839071,1.08374,-333.008,0,0,217,1
-    snapshot3d {max(512,0$_preview_area_width,0$_preview_area_height)},1.22,255,255,255
-    autocrop frame 10,10,255
-    to_rgba flood 0,0,0,20,1,1,255,255,255,0
-  }
+  u "{$1}{$2}{$3}{$4}_"$file_attr"{$5}_"$file_attr"{$6}"
 
 #@gui Colorful Blobs : fx_colorful_blobs, fx_colorful_blobs_preview
 #@gui : Colorspace = choice(1,"sRGB","Linear RGB","Lab")
