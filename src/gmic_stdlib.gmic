@@ -662,7 +662,8 @@ reference : skip "${2=}"
 "specified inside braces '{}', or formulas in commands that may take one as an argument (e.g. ''fill'' or ''eval'')."\n\
 "* When the context allows it, a formula is evaluated __for each pixel__ of the selected images "\
 "(e.g. ''fill'' or ''eval'')."\n\
-"* A math expression may return a __scalar__ or a __vector-valued__ result (with a fixed number of components)."\n\
+"* A math expression may return or take as an argument a __scalar__ or a __vector-valued__ result "\
+"(with a fixed number of components)."\n\
 "The mathematical parser understands the following set of functions, operators and variables:"\n\
 "## Usual math operators:"\n\
 "'||' (logical or), '&&' (logical and), '|' (bitwise or), '&' (bitwise and), "\
@@ -709,8 +710,8 @@ reference : skip "${2=}"
 "{ -1:to-lowest | 0:to-nearest | 1:to-highest }."\n\
 "* 'lerp(a,b,t)' returns 'a*(1-t)+b*t'."\n\
 "* 'swap(a,b)' swaps the values of the given arguments."\n\
-"## Variable names:"\n\
-"Variable names below are pre-defined. They can be overridden."\n\
+"## Predefined variable names:"\n\
+"Variable names below are pre-defined. They can be overridden though."\n\
 "* 'l': length of the associated list of images."\n\
 "* 'k': index of the associated image, in '[0,l-1]'."\n\
 "* 'w': width of the associated image, if any ('0' otherwise)."\n\
@@ -761,7 +762,7 @@ reference : skip "${2=}"
 "on pixel access operators). Its initial default value is '0'."\n\
 "* The last image of the list is always associated to the evaluations of 'expressions', e.g. G'MIC sequence "\
 "\n~~~\n256,128 fill {w}\n~~~\n will create a 256x128 image filled with value 256."\n\
-"## Vector calculus:"\n\
+"## Vector-valued functions and operators:"\n\
 "The math evaluator is able to work with vector-valued elements. A math function applied on a vector-valued "\
 "argument usually returns a vector with same dimension, where each element of the input vector "\
 "has been passed to the specified function (e.g. 'abs([-1,2,-3])' returns '[1,2,3]')."\n\n\
@@ -772,8 +773,6 @@ reference : skip "${2=}"
 "* In previous expressions, the 'ak' can be vectors themselves, to be concatenated into a single vector."\n\
 "* The scalar element 'ak' of a vector 'X' is retrieved by 'X[k]'."\n\
 "* The sub-vector '[X[p],X[p+s]...X[p+s*(q-1)]]' (of size 'q') of a vector 'X' is retrieved by 'X[p,q,s]'."\n\
-"* 'expr(formula,_w,_h,_d,_s)' outputs a vector of size 'w*h*d*s' with values generated from "\
-"the specified formula, as if one were filling an image with dimensions '(w,h,d,s)'."\n\
 "* Equality/inequality comparisons between two vectors is done with operators '==' and '!='."\n\
 "* Some vector-specific functions can be used on vector values: "\
 "'cross(X,Y)' (cross product), 'dot(X,Y)' (dot product), 'size(X)' (vector dimension), "\
@@ -790,9 +789,35 @@ reference : skip "${2=}"
 "specified interpolation mode. 'interpolation' can be "\
 "{ -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | 4:grid | 5:bicubic | 6:lanczos }, and "\
 "'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }."\n\
+"* Function 'find(A,B,_starting_index,_search_step)' returns the index where sub-vector 'B' appears in vector 'A', "\
+"(or '-1' if 'B' is not contained in 'A'). Argument 'A' can be also replaced by an image index '#ind'."\n\
+"* Specifying a vector-valued math expression as an argument of a command that operates on image values "\
+"(e.g. 'fill') modifies the whole spectrum range of the processed image(s), for each spatial coordinates `(x,y,z)`. "\
+"The command does not loop over the `c`-axis in this case."\n\
+"## Complex-valued functions:"\n\
+"A `2`-dimensional vector may be seen as a complex number and used in those particular functions/operators: "\
+"'**' (complex multiplication), '//' (complex division), '^^' (complex exponentiation), "\
+"'**=' (complex self-multiplication), '//=' (complex self-division), '^^=' (complex self-exponentiation), "\
+"'cabs()' (complex modulus), 'carg()' (complex argument), 'cconj()' (complex conjugate), "\
+"'cexp()' (complex exponential), 'clog()' (complex logarithm),  'ccos()' (complex cosine), "\
+"'csin()' (complex sine), 'csqrt()' (complex square root), 'ctan()' (complex tangent), 'ccosh()' "\
+"(complex hyperpolic cosine), 'csinh()' (complex hyperbolic sine) and 'ctanh()' (complex hyperbolic tangent)."\n\
+"## Matrix-valued functions:"\n\
+"A `MN`-dimensional vector may be seen as a `M` x `N` matrix and used in those particular functions/operators: "\
+"'*' (matrix-vector multiplication), 'det(A)' (determinant), 'diag(V)' (diagonal matrix from a vector), "\
+"'eig(A)' (eigenvalues/eigenvectors), 'eye(n)' (n x n identity matrix), 'invert(A,_nb_colsA,_use_LU,_lambda)' "\
+"(matrix inverse), 'mul(A,B,_nb_colsB)' (matrix-matrix multiplication), "\
+"'rot(u,v,w,angle)' (3D rotation matrix), 'rot(angle)' (2D rotation matrix), "\
+"'solve(A,B,_nb_colsB,_use_LU)' (solver of linear system A.X = B), 'svd(A,_nb_colsA)' (singular value decomposition), "\
+"'trace(A)' (matrix trace) and 'transpose(A,nb_colsA)' (matrix transpose). Argument 'nb_colsB' may be omitted if "\
+"it is equal to `1`".\n\
+"## Image-valued functions:"\n\
+"Some functions takes vector-valued arguments that represent image data :"\n\
+"* Function 'expr(formula,_w,_h,_d,_s)' outputs a vector of size 'w*h*d*s' with values generated from "\
+"the specified formula, as if one were filling an image with dimensions '(w,h,d,s)'."\n\
 "* Function 'resize(A,wA,hA,dA,sA,nwA,_nhA,_ndA,_nsA,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac)' is an "\
-"extended version of the previous function. It allows to resize the vector 'A', seen as an image of size "\
-"'ow x oh x od x os' as a new image of size 'nw x nh x nd x ns', with specified resizing options."\n\
+"extended version of the 'resize()' function. It allows to resize the vector 'A', seen as an image of size "\
+"'(ow,oh,od,os)' as a new image of size '(nw,nh,nd,ns)', with specified resizing options."\n\
 "* Function 'warp(A,wA,hA,dA,sA,B,wB,hB,dB,sB,_mode,_interpolation,_boundary_conditions)' returns the warped version "\
 "of the image 'A' (of size '(wA,hA,dA,sA)', viewed as a vector of size 'wA*hA*dA*sA') by the warping field 'B' "\
 "(of size '(wB,hB,dB,sB)'). The resulting image has size '(wB,hB,dB,sA)'. This is the math evaluator analog "\
@@ -814,35 +839,15 @@ reference : skip "${2=}"
 "This is the math evaluator analog to command ''equalize''."\n\
 "* Function 'normalize(A,min_value,max_value)' returns the normalized version of the vector 'A'. "\
 "This is the math evaluator analog to command ''normalize''."\n\
+"* 'mproj(S,nb_colsS,D,nb_colsD,method,max_iter,max_residual)' projects a matrix 'S' onto a dictionary (matrix) "\
+"'D'. This is the math evaluator analog to command ''mproj''."\n\
 "* Function 'noise(A,amplitude,_noise_type)' returns the noisy version of the vector 'A'. "\
 "This is the math evaluator analog to command ''noise''."\n\
 "* Function 'rand(#size,_min_value,_max_value,_pdf,_precision)' returns the a vector of 'size' random values. "\
 "This is the math evaluator analog to command ''rand''."\n\
-"* Function 'find(A,B,_starting_index,_search_step)' returns the index where sub-vector 'B' appears in vector 'A', "\
-"(or '-1' if 'B' is not contained in 'A'). Argument 'A' can be also replaced by an image index '#ind'."\n\
-"* A `2`-dimensional vector may be seen as a complex number and used in those particular functions/operators: "\
-"'**' (complex multiplication), '//' (complex division), '^^' (complex exponentiation), "\
-"'**=' (complex self-multiplication), '//=' (complex self-division), '^^=' (complex self-exponentiation), "\
-"'cabs()' (complex modulus), 'carg()' (complex argument), 'cconj()' (complex conjugate), "\
-"'cexp()' (complex exponential), 'clog()' (complex logarithm),  'ccos()' (complex cosine), "\
-"'csin()' (complex sine), 'csqrt()' (complex square root), 'ctan()' (complex tangent), 'ccosh()' "\
-"(complex hyperpolic cosine), 'csinh()' (complex hyperbolic sine) and 'ctanh()' (complex hyperbolic tangent)."\n\
-"* A `MN`-dimensional vector may be seen as a `M` x `N` matrix and used in those particular functions/operators: "\
-"'*' (matrix-vector multiplication), 'det(A)' (determinant), 'diag(V)' (diagonal matrix from a vector), "\
-"'eig(A)' (eigenvalues/eigenvectors), 'eye(n)' (n x n identity matrix), 'invert(A,_nb_colsA,_use_LU,_lambda)' "\
-"(matrix inverse), 'mul(A,B,_nb_colsB)' (matrix-matrix multiplication), "\
-"'rot(u,v,w,angle)' (3D rotation matrix), 'rot(angle)' (2D rotation matrix), "\
-"'solve(A,B,_nb_colsB,_use_LU)' (solver of linear system A.X = B), 'svd(A,_nb_colsA)' (singular value decomposition), "\
-"'trace(A)' (matrix trace) and 'transpose(A,nb_colsA)' (matrix transpose). Argument 'nb_colsB' may be omitted if "\
-"it is equal to `1`".\n\
-"* 'mproj(S,nb_colsS,D,nb_colsD,method,max_iter,max_residual)' projects a matrix 'S' onto a dictionary (matrix) "\
-"'D'. Equivalent to command ''mproj'' but inside the math evaluator."\n\
-"* Specifying a vector-valued math expression as an argument of a command that operates on image values "\
-"(e.g. 'fill') modifies the whole spectrum range of the processed image(s), for each spatial coordinates `(x,y,z)`. "\
-"The command does not loop over the `c`-axis in this case."\n\
 "## String manipulation:"\n\
-"Character strings are defined and managed as vectors objects. "\
-"Dedicated functions and initializers to manage strings are:"\n\
+"Character strings are defined as vectors objects and can be then managed as is. "\
+"Dedicated functions and initializers to manage strings exist:"\n\
 "* `['string']` and `'string'` define a vector whose values are the character codes of the "\
 "specified `character string` (e.g. `'foo'` is equal to `[ 102,111,111 ]`)."\n\
 "* `_'character'` returns the (scalar) byte code of the specified character (e.g. `_'A'` is equal to '65')."\n\
