@@ -22005,27 +22005,17 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
          "opacity $6 and color (${7--1})."
   pass$1 0 r. 1,{whds/2},1,2,-1
 
-  if $2>=1
+  if $2>=1 # Estimate pointwise (tilted) normals for thick curves
 
-    # Ensure consecutive curve points are at a minimal distance.
+    # Ensure consecutive curve points are at a minimal distance from each others.
     1,1,1,2
     eval.. ">
-      begin(
-        const boundary = 2;
-        const aw = ($5?2:1)*h;
-        ret = [ 0,0 ];
-        off = 0;
-      );
-      y>=off?(
-        P = I;
-        for (noff = off + 1, noff<aw && norm((Q = I[noff]) - P)<1e-3, ++noff);
-        da_push(P);
-        off = noff;
-      );
-      end(da_freeze()); ret"
+      begin(ret = [ 0,0 ]; pP = I);
+      P = I; norm(P - pP)>1e-3?(da_push(pP); pP = P);
+      end(norm(P - da_back())>1e-3?da_push(P); da_freeze()); ret"
     rm..
 
-    # Estimate (opt. tilted) normals.
+    # Estimate normals.
     +f. "
       begin(
         const boundary = $5?2:1;
