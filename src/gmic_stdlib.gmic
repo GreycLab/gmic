@@ -22003,37 +22003,52 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
   s0,s1=open,closed
   e[^-1] "Draw parameterized "${s$5}" curve $1 on image$?, with thickness $2, tilt $3, tilt strength $4, "\
          "opacity $6 and color (${7--1})."
-  pass$1 0 r. {whds/2},1,1,2,-1
+  pass$1 0 r. 1,{whds/2},1,2,-1
+
+  # Try to simplify curve and compute pointwise (tilted) normals if thickness>0.
+  if $2>0
+    1,1,1,4
+    eval.. ">
+      begin(
+        const boundary = 2;
+        const thickness = $2/2;
+        const aw = 2*h;
+        off = 0;
+        U = cexp([ 0,$3° ]);
+        ret = [ 0,0 ]
+      );
+      y>=off?(
+        P = I;
+        for (noff = off + 1, noff<aw && norm((Q = I[noff]) - P)<1e-3, ++noff);
+        noff<aw?(
+          T = unitnorm(Q - P);
+          N = lerp([ -T[1],T[0] ],U,$4)*thickness;
+          da_push([P[0],P[1],N[0],N[1]]);
+        );
+        off = noff;
+      );
+      end(da_freeze()); ret"
+    rm..
+  fi
+
+  # Draw curve on selected images.
   repeat $!-1 {
     if $2<1
-      {w},1,1,1,">
-        begin(
-          const boundary = $5?2:1;
-        );
-        pP = J[#-1,-1]; P = I(#-1);
-        polygon(#"$>",2,pP[0],pP[1],P[0],P[1],${6--1})"
+      1,{h-1+$5},1,1,"const boundary = 2;
+        P0 = I(#-1); P1 = J[#-1,1];
+        polygon(#"$>",2,P0[0],P0[1],P1[0],P1[1],${6--1})"
     else
-      {w+$5},1,1,1,">
+      1,{h-1+$5},1,1,"
         begin(
-          const thickness = $2/2;
-          const boundary = $5?2:1;
-          U = cexp([ 0,$3° ]);
-          A = B = [ 0,0 ];
-          pP = J[#-1,-1];
+          const boundary = 2;
         );
-        P = I(#-1);
-        dP = P - pP;
-        ndP = norm(dP);
-        !x || ndP>1?(
-          T = x?dP/ndP:unitnorm(J[#-1,1] - P);
-          N = lerp([ -T[1],T[0] ],U,$4)*thickness;
-          C = floor(P - N); D = floor(P + N);
-          x?(
-            polygon(#"$>",3,A[0],A[1],B[0],B[1],C[0],C[1],${6--1});
-            polygon(#"$>",3,D[0],D[1],B[0],B[1],C[0],C[1],${6--1});
-          );
-          pP = P; A = C; B = D;
-        )"
+        V0 = I(#-1); V1 = J[#-1,1];
+        P0 = V0[0,2]; N0 = V0[2,2];
+        P1 = V1[0,2]; N1 = V1[2,2];
+        A = round(P0 - N0); B = round(P0 + N0);
+        C = round(P1 - N1); D = round(P1 + N1);
+        polygon(#"$>",3,A[0],A[1],B[0],B[1],C[0],C[1],${6--1});
+        polygon(#"$>",3,D[0],D[1],B[0],B[1],C[0],C[1],${6--1})"
     fi
     rm.
   }
