@@ -22006,50 +22006,49 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
   pass$1 0 r. 1,{whds/2},1,2,-1
 
   # Try to simplify curve and compute pointwise (tilted) normals if thickness>0.
-  if $2>0
-    1,1,1,4
-    eval.. ">
+  if $2>=1
+    1,1,1,2x2
+    eval... ">
       begin(
         const boundary = 2;
         const thickness = $2/2;
-        const aw = 2*h;
-        off = 0;
+        const aw = ($5?2:1)*h;
         U = cexp([ 0,$3° ]);
-        ret = [ 0,0 ]
+        ret = [ 0,0 ];
+        off = 0;
       );
       y>=off?(
         P = I;
         for (noff = off + 1, noff<aw && norm((Q = I[noff]) - P)<1e-3, ++noff);
         noff<aw?(
-          T = unitnorm(Q - P);
+          T = noff<aw?unitnorm(Q - P):da_back()[2,2];
           N = lerp([ -T[1],T[0] ],U,$4)*thickness;
-          da_push([P[0],P[1],N[0],N[1]]);
+          da_push(#-2,P); da_push(#-1,N);
         );
         off = noff;
       );
-      end(da_freeze()); ret"
-    rm..
+      end(da_freeze(#-2); da_freeze(#-1)); ret"
+    rm...
   fi
 
   # Draw curve on selected images.
-  repeat $!-1 {
-    if $2<1
-      1,{h-1+$5},1,1,"const boundary = 2;
-        P0 = I(#-1); P1 = J[#-1,1];
-        polygon(#"$>",2,P0[0],P0[1],P1[0],P1[1],${6--1})"
-    else
-      1,{h-1+$5},1,1,"const boundary = 2;
-        V0 = I(#-1); V1 = J[#-1,1];
-        P0 = V0[0,2]; N0 = V0[2,2];
-        P1 = V1[0,2]; N1 = V1[2,2];
-        A = round(P0 - N0); B = round(P0 + N0);
-        C = round(P1 - N1); D = round(P1 + N1);
-        polygon(#"$>",3,A[0],A[1],B[0],B[1],C[0],C[1],${6--1});
-        polygon(#"$>",3,D[0],D[1],B[0],B[1],C[0],C[1],${6--1})"
-    fi
+  if $2<1 repeat $!-1 { # W/o thickness
+    1,{h-1+$5},1,1,"const boundary = 2;
+      P0 = I(#-1); P1 = J[#-1,1];
+      polygon(#"$>",2,P0[0],P0[1],P1[0],P1[1],${6--1})"
     rm.
-  }
-  rm.
+  } rm.
+  else repeat $!-2 { # W/ thickness
+    1,{h-1+$5},1,1,"const boundary = 2;
+      P0 = I(#-2); N0 = I(#-1);
+      P1 = J[#-2,1]; N1 = J[#-1,1];
+      A = round(P0 - N0); B = round(P0 + N0);
+      C = round(P1 - N1); D = round(P1 + N1);
+      polygon(#"$>",3,A[0],A[1],B[0],B[1],C[0],C[1],${6--1});
+      polygon(#"$>",3,D[0],D[1],B[0],B[1],C[0],C[1],${6--1})"
+    rm.
+  } rm[-2,-1]
+  fi
 
 #@cli ellipse : x[%],y[%],R[%],r[%],_angle,_opacity,_pattern,_color1,... : (+)
 #@cli : Draw specified colored ellipse on selected images.
