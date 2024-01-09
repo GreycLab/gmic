@@ -50996,6 +50996,63 @@ _fx_chromatic_aberrations :
 fx_chromatic_aberrations_preview :
   gui_split_preview "fx_chromatic_aberrations $*",${-3--1}
 
+#@gui CRT Beam : fx_crt_beam, fx_crt_beam_preview(0)
+#@gui : Upscale Factor = choice(1,"x2","x4","x8","x16","x32")
+#@gui : sep = separator()
+#@gui : Bloom Shape = choice("Square","Triangular","Sine","Gaussian")
+#@gui : Bloom Threshold = float(0,0,1)
+#@gui : Use Luma For Bloom = bool(1)
+#@gui : sep = separator()
+#@gui : Fuzz Shape = choice("Square","Triangular","Sine","Gaussian")
+#@gui : sep = separator()
+#@gui : Normalize Image = bool(1)
+#@gui : sep = separator()
+#@gui : note = note("<small>Authors: <i>Romain Hérault</i> and <i>David Tschumperlé</i>.\
+#       Latest Update: <i>2024/01/09</i>.</small>")
+fx_crt_beam :
+  upscale_factor,bloom_shape,bloom_threshold,bloom_use_luma,fuzz_shape,is_normalize:=${1-6}
+  upscale_factor:=arg0($upscale_factor,2,4,8,16,32)
+  foreach { nm={n} split_opacity l[0] {
+
+    # Retrieve image statistics.
+    if $is_normalize to_rgb s c repeat $! { avg$>,std$>:=ia#$>,id#$> } a c fi
+    / 255
+    r {w*$upscale_factor},100%,1,100%,3 # Linear resize along X
+    r 100%,{h*$upscale_factor},1,100%,1 # NN resize along Y
+
+    # Bloom effect.
+    _fx_crt_beam$bloom_shape $upscale_factor n. 0,1,1 =. 0
+    r. [0],[0],1,[0],0,2
+    if $bloom_use_luma +luminance[0] +[-2,-1] else +. [0] fi
+    gt. {1-$bloom_threshold} *[0,-1]
+
+    # Fuzz effect.
+    _fx_crt_beam$fuzz_shape $upscale_factor n. 0,1,1
+    r. [0],[0],1,[0],0,2 * * 255
+
+    # Normalize colors.
+    if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c fi
+    c 0,255
+  } if $!>1 r. ..,..,1,1 a c fi => $nm }
+
+fx_crt_beam_preview :
+  upscale_factor:=arg0($1,2,4,8,16,32)
+  fact:=100/$upscale_factor
+  r $fact%,$fact%,1,100%,0,0,0.5,0.5
+  fx_crt_beam $*
+
+_fx_crt_beam0 : # Square shape
+  1,$1,1,1,1
+
+_fx_crt_beam1 : # Triangular shape
+  1,$1,1,1,"const h2 = h/2; t = (y<h2?y:h - y)/h2; lerp(0,1,t)"
+
+_fx_crt_beam2 : # Sine shape
+  1,$1,1,1,"sin(y*pi/(h-1))"
+
+_fx_crt_beam3 : # Gaussian shape
+  1,$1,1,1,"gauss(y - h/2,h/4,0)"
+
 #@gui Dirty : fx_dirty, fx_dirty_preview(0)
 #@gui : Amplitude = float(30,0,100)
 #@gui : Monochrome = bool(1)
