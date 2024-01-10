@@ -51005,7 +51005,7 @@ _fx_chromatic_aberrations :
 fx_chromatic_aberrations_preview :
   gui_split_preview "fx_chromatic_aberrations $*",${-3--1}
 
-#@gui CRT Beam : fx_crt_beam, fx_crt_beam(0)
+#@gui CRT Beam : fx_crt_beam, fx_crt_beam_preview(0)
 #@gui : Upscale Factor = int(4,1,16)
 #@gui : Neighborhood size = int(16,8,64)
 #@gui : sep = separator()
@@ -51017,8 +51017,14 @@ fx_chromatic_aberrations_preview :
 #@gui : sep = separator()
 #@gui : Normalize Image = bool(0)
 #@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : Preview Zoom (%) = float(0,0,100)
+#@gui : sep = separator()
 #@gui : note = note("<small>Authors: <i>Romain Hérault</i> and <i>David Tschumperlé</i>.\
-#       Latest Update: <i>2024/01/09</i>.</small>")
+#       Latest Update: <i>2024/01/10</i>.</small>")
 fx_crt_beam :
   upscale_factor,nsize,bloom_shape,bloom_threshold,bloom_use_luma,fuzz_shape,is_normalize:=${1-7}
   upscale_factor+=1
@@ -51076,6 +51082,10 @@ fx_crt_beam :
     c 0,255
   } if $!>1 r. ..,..,1,1 a c fi => $nm }
 
+fx_crt_beam_preview :
+  if $-1 r. {101-$-1}%,{101-$-1}%,1,100%,0,0,0.5,0.5 fi
+  gui_split_preview "fx_crt_beam $*",${-4--2}
+
 _fx_crt_beam0 : # Square shape
   1,$1,1,1,1
 
@@ -51087,6 +51097,139 @@ _fx_crt_beam2 : # Sine shape
 
 _fx_crt_beam3 : # Gaussian shape
   1,$1,1,1,"gauss(y - h/2,h/4,0)"
+
+#@gui CRT Phosphors : fx_crt_phosphors,fx_crt_phosphors_preview(0)
+#@gui : Phosphor Type = choice("Phosphor-1","Phosphor-2","Phosphor-3")
+#@gui : Upscale Factor = choice(3,"x1","x2","x3","x4","x5","x6","x7","x8")
+#@gui : Rendering Precision = choice{"Low (Faster)","High (Slower)"}
+#@gui : Smoothness (%) = float(0,0,10)
+#@gui : Neighborhhod Size (px) = int(4,1,16)
+#@gui : Stride (%) = float(50,0,100)
+#@gui : sep = separator()
+#@gui : Adaptive Pattern = bool(1)
+#@gui : Use Luma for Adaptive Pattern = bool(0)
+#@gui : Transpose Pattern = bool(0)
+#@gui : Average Over Pattern = bool(0)
+#@gui : Normalize Image = bool(1)
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : Preview Zoom (%) = float(0,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
+fx_crt_phosphors :
+  type,upscale_factor,is_precise,smoothness,nsize,stride,is_adaptive,use_luma,\
+    is_transpose,is_average,is_normalize=${1-11}
+  upscale_factor+=1
+  foreach { nm={n} split_opacity l[0] {
+
+    # Retrieve image statistics.
+    if $is_normalize to_rgb s c repeat $! { avg$>,std$>:=ia#$>,id#$> } a c fi
+
+    # Algorithm parameters.
+    M=$nsize # Size of input image neighborhood
+    S:=max(1,int($M*$stride%)) # Stride
+    Q:=$upscale_factor*$M # Size of output image neighborhood
+
+    # Create CRT pattern.
+    if $type==0
+      4,12,1,3,[255,60,0] +fc. 0,200,0 +fc. 0,60,255
+      r[-3--1] 5,15,1,3,0,0 shift.. 0,5,0,0,2 shift. 0,10,0,0,2
+      a[-3--1] x
+    elif $type==1
+      15,15,1,3 circle. 5,5,4,-1,255,0,0 circle. 10,5,4,-1,0,255,0 circle. 7,10,4,-1,0,0,255
+    else
+      (218,65,87;229,255,125;141,247,211;68,36,213) permute. yzcx
+      r. 200%,4,1,3,0,2
+      f. "i*lerp(0.35,1,y/(h-1))" +mirror. y a[-2,-1] y
+    fi
+    if $is_transpose transpose. fi
+    if $smoothness b. $smoothness%,2 fi
+
+    # Add dynamics to the CRT pattern.
+    if $is_adaptive l. {
+      w:=w
+      if $w>8
+        r 300%,300%
+        +l { repeat 5 { 3,3,1,1,1 +dilate.. .,0 rm.. } r $w,$w,1,3,2 b 1,2 n 0,255 a z }
+        l.. { repeat 5 { 3,3,1,1,1 +erode.. .,0 rm.. } rv rm. r $w,$w,1,3,2 b 1,2 n 0,255 a z }
+        a z
+      else
+        r 100%,100%,15,3
+      fi
+      rgb2hsl f "[ i0, cut(i1*lerp(1,0.5,z/(d-1)),0,1), i2 ]" hsl2rgb
+      if $type==1 shape_circle. {w} *[-2,-1] fi
+    } fi
+    /. 255
+
+    # Apply CRT pattern to image.
+    W,H={0,ceil([w,h]*$Q/$M)}
+    $W,$H,1,3
+    $W,$H,1,1
+    {0,ceil([w,h]/$S)},1,3,":
+      begin(
+        const M = $M;
+        const M2 = int(M/2);
+        const P = w#1;
+        const Q = $Q;
+        iP = vector(#P^2);
+        iS = expr('x = x - w/2; y = y - h/2; gauss(norm(x,y),0.3*$Q,0)',Q,Q); # Gaussian weights for patch accumulation
+      );
+      xM = x*$S;
+      yM = y*$S;
+      iM = crop(#0,xM,yM,0,c,M,M,1,1);
+      riMy = resize(iM,M,M,1,1,M,P,1,1,1);
+      riM = resize(riMy,M,P,1,1,P,P,1,1,3);
+      $use_luma?(
+        xl = xM + M2;
+        yl = yM + M2;
+        luma = 0.22248840*i(#0,xl,yl,0,0) + 0.71690369*i(#0,xl,yl,0,1) + 0.06060791*i(#0,xl,yl,0,2);
+        ind = int(luma*d#1/256);
+      ):(
+        icM = iM[M2*(M + 1)];
+        ind = int(icM*d#1/256);
+      );
+      p = int((xM%M)*P/M);
+      q = int((yM%M)*P/M);
+
+      $is_precise?( # High-precision rendering
+        off = 0;
+        repeat (P,n,
+          repeat (P,m,
+            $use_luma?(
+              xl = xM + m*M/P;
+              yl = yM + n*M/P;
+              luma = 0.22248840*i(#0,xl,yl,0,0,1) + 0.71690369*i(#0,xl,yl,0,1,1) + 0.06060791*i(#0,xl,yl,0,2,1);
+              ind = int(luma*d#1/256);
+            ):(
+              ind = int(riM[off]*d#1/256);
+            );
+            iP[off++] = i(#1,p + m, q + n,ind,c,1,2);
+          );
+        )
+      ):( # Low-precision rendering
+        iP = crop(#1,p,q,ind,c,P,P,1,1,2);
+      );
+      $is_average?(iP*=avg(riM)):(iP*=riM);
+      iQ = resize(iP,P,P,1,1,Q,Q,1,1,2);
+      xQ = int(xM*Q/M);
+      yQ = int(yM*Q/M);
+      draw(#-2,iQ,xQ,yQ,0,c,Q,Q,1,1,-1,iS);
+      !c?draw(#-1,iS,xQ,yQ,0,0,Q,Q,1,1,-1)"
+    rm.
+    max. 1e-6 /[-2,-1]
+
+    # Renormalize output with input statistics.
+    k.
+    if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c fi
+    c 0,255
+  } if $!>1 r. ..,..,1,1 a c fi => $nm }
+
+fx_crt_phosphors_preview :
+  if $-1 r. {101-$-1}%,{101-$-1}%,1,100%,0,0,0.5,0.5 fi
+  gui_split_preview "fx_crt_phosphors ${1-11}",${-4--2}
 
 #@gui Dirty : fx_dirty, fx_dirty_preview(0)
 #@gui : Amplitude = float(30,0,100)
@@ -51852,139 +51995,6 @@ _fx_self_glitching :
 
 fx_self_glitching_preview :
   gui_split_preview "fx_self_glitching $*",${-3--1}
-
-#@gui Simulate CRT : fx_crt,fx_crt_preview(0)
-#@gui : CRT Type = choice("CRT-1","CRT-2","CRT-3")
-#@gui : Upscale Factor = choice(3,"x1","x2","x3","x4","x5","x6","x7","x8")
-#@gui : Rendering Precision = choice{"Low (Faster)","High (Slower)"}
-#@gui : Smoothness (%) = float(0,0,10)
-#@gui : Neighborhhod Size (px) = int(4,1,16)
-#@gui : Stride (%) = float(50,0,100)
-#@gui : sep = separator()
-#@gui : Adaptive Pattern = bool(1)
-#@gui : Use Luma for Adaptive Pattern = bool(0)
-#@gui : Transpose Pattern = bool(0)
-#@gui : Average Over Pattern = bool(0)
-#@gui : Normalize Image = bool(1)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : Preview Zoom (%) = float(0,0,100)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/12/26</i>.</small>")
-fx_crt :
-  type,upscale_factor,is_precise,smoothness,nsize,stride,is_adaptive,use_luma,\
-    is_transpose,is_average,is_normalize=${1-11}
-  upscale_factor+=1
-  foreach { nm={n} split_opacity l[0] {
-
-    # Retrieve image statistics.
-    if $is_normalize to_rgb s c repeat $! { avg$>,std$>:=ia#$>,id#$> } a c fi
-
-    # Algorithm parameters.
-    M=$nsize # Size of input image neighborhood
-    S:=max(1,int($M*$stride%)) # Stride
-    Q:=$upscale_factor*$M # Size of output image neighborhood
-
-    # Create CRT pattern.
-    if $type==0
-      4,12,1,3,[255,60,0] +fc. 0,200,0 +fc. 0,60,255
-      r[-3--1] 5,15,1,3,0,0 shift.. 0,5,0,0,2 shift. 0,10,0,0,2
-      a[-3--1] x
-    elif $type==1
-      15,15,1,3 circle. 5,5,4,-1,255,0,0 circle. 10,5,4,-1,0,255,0 circle. 7,10,4,-1,0,0,255
-    else
-      (218,65,87;229,255,125;141,247,211;68,36,213) permute. yzcx
-      r. 200%,4,1,3,0,2
-      f. "i*lerp(0.35,1,y/(h-1))" +mirror. y a[-2,-1] y
-    fi
-    if $is_transpose transpose. fi
-    if $smoothness b. $smoothness%,2 fi
-
-    # Add dynamics to the CRT pattern.
-    if $is_adaptive l. {
-      w:=w
-      if $w>8
-        r 300%,300%
-        +l { repeat 5 { 3,3,1,1,1 +dilate.. .,0 rm.. } r $w,$w,1,3,2 b 1,2 n 0,255 a z }
-        l.. { repeat 5 { 3,3,1,1,1 +erode.. .,0 rm.. } rv rm. r $w,$w,1,3,2 b 1,2 n 0,255 a z }
-        a z
-      else
-        r 100%,100%,15,3
-      fi
-      rgb2hsl f "[ i0, cut(i1*lerp(1,0.5,z/(d-1)),0,1), i2 ]" hsl2rgb
-      if $type==1 shape_circle. {w} *[-2,-1] fi
-    } fi
-    /. 255
-
-    # Apply CRT pattern to image.
-    W,H={0,ceil([w,h]*$Q/$M)}
-    $W,$H,1,3
-    $W,$H,1,1
-    {0,ceil([w,h]/$S)},1,3,":
-      begin(
-        const M = $M;
-        const M2 = int(M/2);
-        const P = w#1;
-        const Q = $Q;
-        iP = vector(#P^2);
-        iS = expr('x = x - w/2; y = y - h/2; gauss(norm(x,y),0.3*$Q,0)',Q,Q); # Gaussian weights for patch accumulation
-      );
-      xM = x*$S;
-      yM = y*$S;
-      iM = crop(#0,xM,yM,0,c,M,M,1,1);
-      riMy = resize(iM,M,M,1,1,M,P,1,1,1);
-      riM = resize(riMy,M,P,1,1,P,P,1,1,3);
-      $use_luma?(
-        xl = xM + M2;
-        yl = yM + M2;
-        luma = 0.22248840*i(#0,xl,yl,0,0) + 0.71690369*i(#0,xl,yl,0,1) + 0.06060791*i(#0,xl,yl,0,2);
-        ind = int(luma*d#1/256);
-      ):(
-        icM = iM[M2*(M + 1)];
-        ind = int(icM*d#1/256);
-      );
-      p = int((xM%M)*P/M);
-      q = int((yM%M)*P/M);
-
-      $is_precise?( # High-precision rendering
-        off = 0;
-        repeat (P,n,
-          repeat (P,m,
-            $use_luma?(
-              xl = xM + m*M/P;
-              yl = yM + n*M/P;
-              luma = 0.22248840*i(#0,xl,yl,0,0,1) + 0.71690369*i(#0,xl,yl,0,1,1) + 0.06060791*i(#0,xl,yl,0,2,1);
-              ind = int(luma*d#1/256);
-            ):(
-              ind = int(riM[off]*d#1/256);
-            );
-            iP[off++] = i(#1,p + m, q + n,ind,c,1,2);
-          );
-        )
-      ):( # Low-precision rendering
-        iP = crop(#1,p,q,ind,c,P,P,1,1,2);
-      );
-      $is_average?(iP*=avg(riM)):(iP*=riM);
-      iQ = resize(iP,P,P,1,1,Q,Q,1,1,2);
-      xQ = int(xM*Q/M);
-      yQ = int(yM*Q/M);
-      draw(#-2,iQ,xQ,yQ,0,c,Q,Q,1,1,-1,iS);
-      !c?draw(#-1,iS,xQ,yQ,0,0,Q,Q,1,1,-1)"
-    rm.
-    max. 1e-6 /[-2,-1]
-
-    # Renormalize output with input statistics.
-    k.
-    if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c fi
-    c 0,255
-  } if $!>1 r. ..,..,1,1 a c fi => $nm }
-
-fx_crt_preview :
-  if $-1 r. {101-$-1}%,{101-$-1}%,1,100%,0,0,0.5,0.5 fi
-  gui_split_preview "fx_crt ${1-11}",${-4--2}
 
 #@gui Streak : fx_streak,fx_streak(1)
 #@gui : Mask Color = color(255,0,0,255)
