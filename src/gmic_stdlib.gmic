@@ -51005,50 +51005,76 @@ _fx_chromatic_aberrations :
 fx_chromatic_aberrations_preview :
   gui_split_preview "fx_chromatic_aberrations $*",${-3--1}
 
-#@gui CRT Beam : fx_crt_beam, fx_crt_beam_preview(0)
-#@gui : Upscale Factor = choice(1,"x2","x4","x8","x16","x32")
+#@gui CRT Beam : fx_crt_beam, fx_crt_beam(0)
+#@gui : Upscale Factor = int(4,1,16)
+#@gui : Neighborhood size = int(16,8,64)
 #@gui : sep = separator()
-#@gui : Bloom Shape = choice(3,"Square","Triangular","Sine","Gaussian")
-#@gui : Bloom Threshold = float(0.15,0,1)
+#@gui : Bloom Shape = choice(1,"Square","Triangular","Sine","Gaussian")
+#@gui : Bloom Threshold = float(0,-1,1)
 #@gui : Use Luma For Bloom = bool(1)
 #@gui : sep = separator()
 #@gui : Fuzz Shape = choice(1,"Square","Triangular","Sine","Gaussian")
 #@gui : sep = separator()
-#@gui : Normalize Image = bool(1)
+#@gui : Normalize Image = bool(0)
 #@gui : sep = separator()
 #@gui : note = note("<small>Authors: <i>Romain Hérault</i> and <i>David Tschumperlé</i>.\
 #       Latest Update: <i>2024/01/09</i>.</small>")
 fx_crt_beam :
-  upscale_factor,bloom_shape,bloom_threshold,bloom_use_luma,fuzz_shape,is_normalize:=${1-6}
-  upscale_factor:=arg0($upscale_factor,2,4,8,16,32)
+  upscale_factor,nsize,bloom_shape,bloom_threshold,bloom_use_luma,fuzz_shape,is_normalize:=${1-7}
+  upscale_factor+=1
   foreach { nm={n} split_opacity l[0] {
 
     # Retrieve image statistics.
     if $is_normalize to_rgb s c repeat $! { avg$>,std$>:=ia#$>,id#$> } a c fi
     / 255
-    r {w*$upscale_factor},100%,1,100%,3 # Linear resize along X
-    r 100%,{h*$upscale_factor},1,100%,1 # NN resize along Y
 
-    # Bloom effect.
-    _fx_crt_beam$bloom_shape $upscale_factor n. 0,1,1 =. 0
-    r. [0],[0],1,[0],0,2
-    if $bloom_use_luma +luminance[0] +[-2,-1] else +. [0] fi
-    gt. {1-$bloom_threshold} *[0,-1]
+    {[w,h]*$upscale_factor},1,100%
+    eval.. ":
+      begin(
+        const epsilon = $bloom_threshold;
+        const M = $upscale_factor;
+        const N = $nsize;
 
-    # Fuzz effect.
-    _fx_crt_beam$fuzz_shape $upscale_factor n. 0,1,1
-    r. [0],[0],1,[0],0,2 * * 255
+        window_weights(type,spectrum) = (
+          unref(formula,W);
+          formula = type==0?'1': # Square
+                    type==1?'const h2 = h/2; t = (y<h2?y:h - y)/h2; lerp(0,1,t)': # Triangular
+                    type==2?'sin(y*pi/(h-1))': # Sine
+                            'gauss(y - h/2,h/4,0)'; # Gaussian
+          W = expr(formula,N,N,1,spectrum);
+          W-=min(W); mW = max(W); mW?(W/=mW):(W=1); (W*=0.75)+=0.25;
+        );
+
+        Wb = window_weights($bloom_shape,$bloom_use_luma?1:3);
+        Wf = window_weights($fuzz_shape,3);
+     );
+
+      # Interpolate neighborhood to local NxN patch.
+      P0 = crop(resize(crop(x,y,2,1),2,1,1,3,N+1,1,1,3,3),N+1,1,1,3,0,0,0,0,N,1,1,3); # Linear interpolation along X
+      P = resize(P0,N,1,1,3,N,N,1,3,1); # NN interpolation along Y
+
+      # Apply bloom and fuzz.
+      $bloom_use_luma?(
+        R = crop(P,N,N,1,3,0,0,0,0,N,N,1,1);
+        G = crop(P,N,N,1,3,0,0,0,1,N,N,1,1);
+        B = crop(P,N,N,1,3,0,0,0,2,N,N,1,1);
+        R*=0.22248840; G*=0.71690369; B*=0.06060791; (R+=G)+=B;
+        mask = resize((R + Wb)>=1 - epsilon,N,N,1,1,N,N,1,3,1);
+      ):(
+        mask = (P + Wb)>=1;
+      );
+      mask*=Wf;
+      P*=mask;
+
+      # Downsize patch back to MxM and draw to resulting image.
+      out = resize(P,N,N,1,3,M,M,1,3,2);
+      draw(#-1,out,x*M,y*M,0,0,M,M,1,3)"
+    k.
 
     # Normalize colors.
-    if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c fi
+    if $is_normalize s c repeat $! { f[$>] ${avg$>}" + (i - ia)/id*"${std$>} } a c else * 255 fi
     c 0,255
   } if $!>1 r. ..,..,1,1 a c fi => $nm }
-
-fx_crt_beam_preview :
-  upscale_factor:=arg0($1,2,4,8,16,32)
-  fact:=100/$upscale_factor
-#  r $fact%,$fact%,1,100%,0,0,0.5,0.5
-  fx_crt_beam $*
 
 _fx_crt_beam0 : # Square shape
   1,$1,1,1,1
