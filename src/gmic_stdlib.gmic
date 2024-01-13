@@ -50052,6 +50052,7 @@ fx_warp_perspective :
 #@gui : Antialiasing = bool(1)
 #@gui : sep = separator()
 #@gui : Filling = choice(1,"Binary","Image")
+#@gui : Shift = point(50,50)
 #@gui : Outline (px) = int(2,0,8)
 #@gui : Outline Color = color(0,0,0)
 #@gui : First Color = color(0,0,0)_0
@@ -50059,7 +50060,7 @@ fx_warp_perspective :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/13</i>.</small>")
 fx_poincare_disk :
-  p,q,tiling,antialiasing,filling,outline,Ro,Go,Bo,R0,G0,B0,R1,G1,B1=${1-15}
+  p,q,tiling,antialiasing,filling,shiftx,shifty,outline,Ro,Go,Bo,R0,G0,B0,R1,G1,B1=${1-17}
   foreach {
     to_a
     if $antialiasing r 200%,200%,1,100%,3 fi
@@ -50068,7 +50069,9 @@ fx_poincare_disk :
     if $filling # Image filling
       eval[1] ">begin(m = inf; M = -inf); i0!=-2?(m = min(m,i0,i1); M = max(M,i0,i1)); end(set('m',m); set('M',M))"
       f[1] "begin(const m = $m; const dM = $M - m; mwh = min(w#0,h#0));
-        i0==-2?[-1,-1]:[ w#0 - mwh + (i0 - m)*mwh/dM, h#0 - mwh + (i1 - m)*mwh/dM ]"
+        i0==-2?[-1,-1]:
+        [ w#0 - mwh - ($shiftx - 50)*mwh/100 + (i0 - m)*mwh/dM,
+          h#0 - mwh - ($shifty - 50)*mwh/100 + (i1 - m)*mwh/dM ]"
       warp[0] [1],0,1,2
       if $outline
         +f. "const boundary = 1; v = i; v==j(1) && v==j(0,1)" erode. {$outline*($antialiasing?2:1)}
@@ -50090,7 +50093,7 @@ fx_poincare_disk :
 
   v_outline,v_binary:="v = $filling?2:0; [ v,2-v ]"
   u "{"$p"}{"$q"}{"$tiling"}{"$antialiasing"}{"$filling"}"\
-    "{"$outline"}_"$v_outline"{"$Ro,$Go,$Bo"}_"$v_outline\
+    "{"$shiftx,$shifty"}_"$v_outline"{"$outline"}_"$v_outline"{"$Ro,$Go,$Bo"}_"$v_outline\
     "{"$R0,$G0,$B0"}_"$v_binary"{"$R1,$G1,$B1"}_"$v_binary
 
 #@gui Polar Transform : fx_transform_polar, fx_transform_polar(1)
