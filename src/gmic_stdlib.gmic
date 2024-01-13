@@ -9090,7 +9090,7 @@ _parse_gui_strings :
 
 #@cli poincare_disk : _size>=0,_p>2,_q>2,_tiling={ 0:triangular | 1:polygon },_nb_max_iter>=0
 #@cli : Return a 3-channels image of a pointcare disk. Output channels are '[x,y,it]'.
-#@cli : Default values: 'size=1024', 'p=5', 'q=4', 'tiling=0' and 'nb_max_iter=20'.
+#@cli : Default values: 'size=1024', 'p=5', 'q=3', 'tiling=0' and 'nb_max_iter=20'.
 +poincare_disk : check "isint(${1=1024}) && $1>=0 && isint(${2=5}) && $2>2 && isint(${3=4}) && $3>2 && "\
                        "isbool(${4=0}) && isint(${5=20}) && $5>=0"
   s0,s1=triangular,polygon
@@ -9098,7 +9098,7 @@ _parse_gui_strings :
   $1,$1,1,3,":
     begin(
       const p = $2;
-      const q = $3;
+      const q = max($3,floor(4/(p - 2) + 3)); # Ensure that (p - 2)(q - 2)>4
       const tiling = $4;
       const nb_iter = $5;
       const it_max = (tiling?1:3)*nb_iter;
@@ -9126,32 +9126,32 @@ _parse_gui_strings :
       t = atan2(y,x)%pi2;
       repeat (it_max,it,
 
-        # Test if point (x,y) is in fundamental region.
+        # Test if point (x,y) is in the fundamental region.
         tiling?(
           trm = round(t,pi2p)%pi2;
-          P0 = rot(trm)*[ x0,y0 ];
-          is_inside_region = norm([x,y] - P0)>=r0;
+          C = rot(trm)*[ x0,y0 ];
+          is_inside_region = norm([x,y] - C)>=r0;
         ):(
-          P0 = [ x0,y0 ];
+          C = [ x0,y0 ];
           is_inside_region = t<pip && norm(x - x0, y -  y0)>=r0;
         );
         is_inside_region?break();
 
         # Otherwise, transform (x,y) coordinates for next iteration.
         tiling || (it3 = it%3)==2?( # Circle inversion
-          u = x - P0[0];
-          v = y - P0[1];
+          u = x - C[0];
+          v = y - C[1];
           nr = norm(u,v);
-          x = P0[0] + u*r0^2/nr^2;
-          y = P0[1] + v*r0^2/nr^2;
+          x = C[0] + u*r0^2/nr^2;
+          y = C[1] + v*r0^2/nr^2;
           r = norm(x,y);
-          t = atan2(y,x)%pi2):
-        it3==1?( # Symmetrize along horizontal axis
+          t = atan2(y,x)%pi2;
+        ):it3==1?( # Symmetrize along horizontal axis
           y*=-1;
           t = -t + pi2;
-        ):( # Rotate to have an angle in range [0,pip]
+        ):( # Rotate so that the angle is in range [0,pip]
           t = (((t + pip)%pi2p) - pip)%pi2;
-          x = r*cos(t); y = r*sin(t)
+          x = r*cos(t); y = r*sin(t);
         );
       );
 
