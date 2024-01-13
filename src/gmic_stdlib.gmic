@@ -50046,22 +50046,22 @@ fx_warp_perspective :
   shift $6%,$7%,0,0,2 warp_perspective $1,$2,$3,$4,$5,$8
 
 #@gui Pointcaré disk : fx_poincare_disk, fx_poincare_disk(1)
-#@gui : P-Value = int(5,3,16)
-#@gui : Q-Value = int(7,3,16)
+#@gui : P-Value = int(5,3,32)
+#@gui : Q-Value = int(7,3,32)
 #@gui : Tiling = choice(1,"Triangular","Polygon")
-#@gui : Filling = choice(1,"Binary","Image")
+#@gui : Antialiasing = bool(1)
 #@gui : sep = separator()
+#@gui : Filling = choice(1,"Binary","Image")
 #@gui : Outline (px) = int(2,0,8)
 #@gui : Outline Color = color(0,0,0)
 #@gui : First Color = color(0,0,0)_0
 #@gui : Second Color = color(255,255,255)_0
 #@gui : sep = separator()
-#@gui : Antialiasing = bool(1)
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/13</i>.</small>")
 fx_poincare_disk :
-  p,q,tiling,filling,outline,Ro,Go,Bo,R0,G0,B0,R1,G1,B1,antialiasing=${1-15}
+  p,q,tiling,antialiasing,filling,outline,Ro,Go,Bo,R0,G0,B0,R1,G1,B1=${1-15}
   foreach {
+    to_a
     if $antialiasing r 200%,200%,1,100%,3 fi
     poincare_disk {max(w,h)},$p,$q,$tiling s. c,-2
 
@@ -50071,27 +50071,26 @@ fx_poincare_disk :
       warp[0] [1],0,1,2
       if $outline
         +f. "const boundary = 1; v = i; v==j(1) && v==j(0,1)" erode. {$outline*($antialiasing?2:1)}
-        sh[0] 0,{0,s-2} f. "i(#-2)?I:[$R,$G,$B]" rm[-2,-1]
+        sh[0] 0,{0,s-2} f. "i(#-2)?I:[ $Ro,$Go,$Bo ]" rm[-2,-1]
       fi
 
     else # Binary filling
       rm[0]
       if $tiling +%. 2 else +%. 3 ==. 2 fi
-      ($R0,$R1^$G0,$G1^$B0,$B1) map.. . rm. mv. 0
+      ($R0,$R1^$G0,$G1^$B0,$B1) map.. . rm. to_a. mv. 0
     fi
 
     # Manage alpha-channel
-    !=. -2 to_a[0] sh[0] 100% *. ..
+    !=. -2 sh[0] 100% *. ..
 
     k[0]
     if $antialiasing r 50%,50%,1,100%,2 fi
   }
 
   v_outline,v_binary:="v = $filling?2:0; [ v,2-v ]"
-  u "{"$p"}{"$q"}{"$tiling"}{"$filling"}"\
+  u "{"$p"}{"$q"}{"$tiling"}{"$antialiasing"}{"$filling"}"\
     "{"$outline"}_"$v_outline"{"$Ro,$Go,$Bo"}_"$v_outline\
-    "{"$R0,$G0,$B0"}_"$v_binary"{"$R1,$G1,$B1"}_"$v_binary\
-    "{"$antialiasing"}"
+    "{"$R0,$G0,$B0"}_"$v_binary"{"$R1,$G1,$B1"}_"$v_binary
 
 #@gui Polar Transform : fx_transform_polar, fx_transform_polar(1)
 #@gui : Preset = choice("Custom Transform","Inverse Radius","Swap Radius / Angle")
