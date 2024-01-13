@@ -50050,22 +50050,25 @@ fx_warp_perspective :
 #@gui : Q-Value = int(7,3,16)
 #@gui : Tiling = choice(1,"Triangular","Polygon")
 #@gui : Filling = choice(1,"Binary","Image")
+#@gui : sep = separator()
 #@gui : Outline (px) = int(2,0,8)
 #@gui : Outline Color = color(0,0,0)
+#@gui : First Color = color(0,0,0)_0
+#@gui : Second Color = color(255,255,255)_0
+#@gui : sep = separator()
 #@gui : Antialiasing = bool(1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/13</i>.</small>")
 fx_poincare_disk :
-  p,q,tiling,filling,outline,R,G,B,antialiasing=${1-9}
+  p,q,tiling,filling,outline,Ro,Go,Bo,R0,G0,B0,R1,G1,B1,antialiasing=${1-15}
   foreach {
     if $antialiasing r 200%,200%,1,100%,3 fi
-    to_a
-    poincare_disk {w},$p,$q,$tiling s. c,-2
+    poincare_disk {max(w,h)},$p,$q,$tiling s. c,-2
 
     if $filling # Image filling
       eval[1] ">begin(m = inf; M = -inf); i0!=-2?(m = min(m,i0,i1); M = max(M,i0,i1)); end(set('m',m); set('M',M))"
       f[1] "begin(const m = $m; const dM = $M - m); i0==-2?[-1,-1]:[ (i0 - m)*w#0/dM, (i1 - m)*h#0/dM ]"
-      warp[0] [1],0
+      warp[0] [1],0,1,2
       if $outline
         +f. "const boundary = 1; v = i; v==j(1) && v==j(0,1)" erode. {$outline*($antialiasing?2:1)}
         sh[0] 0,{0,s-2} f. "i(#-2)?I:[$R,$G,$B]" rm[-2,-1]
@@ -50074,18 +50077,21 @@ fx_poincare_disk :
     else # Binary filling
       rm[0]
       if $tiling +%. 2 else +%. 3 ==. 2 fi
-      *. 255 mv. 0
+      ($R0,$R1^$G0,$G1^$B0,$B1) map.. . rm. mv. 0
     fi
 
     # Manage alpha-channel
-    !=. -2 sh[0] 100% *. .. rm.
+    !=. -2 to_a[0] sh[0] 100% *. ..
 
     k[0]
     if $antialiasing r 50%,50%,1,100%,2 fi
   }
 
-  vis:=$filling?2:1
-  u "{$1}{$2}{$3}{$4}{$5}_"$vis"{$6,$7,$8}_"$vis"{$9}"
+  v_outline,v_binary:="v = $filling?2:0; [ v,2-v ]"
+  u "{"$p"}{"$q"}{"$tiling"}{"$filling"}"\
+    "{"$outline"}_"$v_outline"{"$Ro,$Go,$Bo"}_"$v_outline\
+    "{"$R0,$G0,$B0"}_"$v_binary"{"$R1,$G1,$B1"}_"$v_binary\
+    "{"$antialiasing"}"
 
 #@gui Polar Transform : fx_transform_polar, fx_transform_polar(1)
 #@gui : Preset = choice("Custom Transform","Inverse Radius","Swap Radius / Angle")
