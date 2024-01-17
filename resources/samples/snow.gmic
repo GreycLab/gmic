@@ -1,0 +1,31 @@
+#!/usr/bin/env gmic
+# File : heart.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] Snow e[] "" animate 60
+
+# Main function
+go :
+  v 0
+
+  nbf=400
+  shape_snowflake 300 repeat 100 { f:=3+0.5*$> +r[0] $f%,$f%,1,1,2 rotate. {lerp(0,90,$>/10)},1,0 } rm[0] a z,0.5 autocrop. r2dx. 16
+  l[] { 8,1,1,{3*1000} rand. 0,1 s c,-3 rbf $nbf,0,1 a c }
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}/$nbf
+    400,400
+    {1,s/3},1,1,1,"
+      begin(P = I[#1,"$>"]; S = vector(#w#0*h#0*3,255));
+      k3 = 3*x;
+      x = P[k3]*w#-1;
+      y = P[k3 + 1]*h#-1;
+      r = round(lerp(0,d#0 - 1,cut(P[k3 + 2],0,1)));
+      M = crop(#0,0,0,r,w#0,h#0,1);
+      draw(#-1,S,x,y,0,0,w#0,h#0,1,1,0.75,M);
+    " rm.
+    to. "Snow",0.5~,0.5~,${"font macondo,150"},3,1,255
+  }
+  rm[0,1]
+
+# End of file.
