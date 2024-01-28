@@ -32373,23 +32373,33 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
   if "isnum($1)"
     e[0--3] "Animate image$?, with a delay of $1 ms"${"if $2 u \", in back-and-forth mode\" else u \"\" fi"}.
     if !$! return fi
+    is_volumetric:=$!==1" && "d>1
     speed,pause,direction,scale,frame=$1,-1,1,1,0
     is_same_size={"res = 1; s = [ w#0,h#0 ]; for (k = 1, k<l && res, ++k, res = (s==[ w#k,h#k ]))"}
 
-    w[0] ${fitscreen[]\ {0,[w,h]}},1,0,{0,b}.{0,x}
+    if $is_volumetric +slices[0] 0 else sh[0] fi
+    w. ${fitscreen[]\ {[w,h]}},1,0,{b}.{x}
+    rm.
+    nb_frames:=$is_volumetric?d:$!
     do
-      title={$frame,b}{`narg({$frame,x})?_'.':0`}{$frame,x}
-      if $is_same_size
-        w[$frame] -1,-1,1,0,$title
+      if $is_volumetric
+        title={b}{`narg({x})?_'.':0`}{x}" ["$frame"]"
+        +slices[0] $frame
       else
-        w[$frame] {$scale*[${fitscreen[]\ {$frame,[w,h]}}]},1,0,$title
+        title={$frame,b}{`narg({$frame,x})?_'.':0`}{$frame,x}
+        sh[$frames]
       fi
+      if $is_same_size w. -1,-1,1,0,$title
+      else w. {$scale*[${fitscreen[]\ {[w,h]}}]},1,0,$title
+      fi
+      rm.
+
       frame+=$direction
       if $2
-        if $frame==-1 frame=0 direction=1
-        elif $frame==$! frame:=$!-1 direction=-1
+        if $frame<0 frame,direction=0,1
+        elif $frame>=$nb_frames frame,direction:=$nb_frames-1,-1
         fi
-      else frame%=$!
+      else frame%=$nb_frames
       fi
       wait $speed
 
@@ -32409,6 +32419,7 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
       fi
 
     while {*}" && "!{*,Q}" && "!{*,ESC} w 0
+    if $is_volumetric a z fi
   else
     e[0--3] "Compute animated version of filter '$1', from parameters $2 to $3 with $4 frames."
     if !($5||narg("$6")) return fi
