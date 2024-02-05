@@ -55642,6 +55642,57 @@ fx_random_pattern_preview :
   to "Seed: \#"$_seed,5,5,5%,2
   u "{$1}{$2}{"{$4?$_seed:$3}"}{0}{$5}{$6}{$7}{$8}{$9}"
 
+#@gui Random Rectangles : fx_random_rectangles, fx_random_rectangles(0)
+#@gui : Density (%) = float(10,0,100)
+#@gui : Consistency (%) = float(100,0,100)
+#@gui : Outline (px) = int(0,1,16)
+#@gui : Outline Color = color(0,0,0)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/02/05</i>.</small>")
+fx_random_rectangles :
+  density,consistency,outline,oR,oG,oB=${1-6}
+  foreach { split_opacity l[0] {
+    (0,0,{[w,h]-1};1) permute. zycx
+    eval "
+      const consistency = $consistency%;
+      repeat(ceil(sqrt(wh#0)*5*$density%),
+        best_p = best_area = 0;
+        siz = da_size();
+        repeat(round(siz/50,5,1),k,
+          p = int(u(da_size()))%da_size();
+          P = I[p]; P0 = P[0,2]; P1 = P[2,2];
+          dP = P1 - P0;
+          area = prod(dP);
+          area>best_area && (!k || u<consistency)?(best_p = p; best_area = area);
+        );
+        P = I[best_p]; P0 = P[0,2]; P1 = P[2,2];
+        dP = P1 - P0;
+
+        dP[0]>dP[1]?( # Horizontal split
+          x = round(lerp(P0[0],P1[0],u(0.1,0.9)));
+          I[best_p] = [ P0,x,P1[1] ];
+          ++x<P1[0]?da_push([ x,P0[1],P1 ]);
+        ):( # Vertical split
+          y = round(lerp(P0[1],P1[1],u(0.1,0.9)));
+          I[best_p] = [ P0,P1[0],y ];
+          ++y<P1[1]?da_push([ P0[0],y,P1 ]);
+        );
+      );
+      da_freeze()"
+    [0],[0],1,3 fc. $oR,$oG,$oB
+    eval.. ":
+      const b2 = $outline/2;
+      const b0 = floor(b2/2);
+      const b1 = ceil(b2/2);
+      P = I; P0 = P[0,2]; P1 = P[2,2]; Pc = (P0 + P1)/2;
+      col = I(#0,Pc);
+      x0 = P0[0] + b0; y0 = P0[1] + b0;
+      x1 = P1[0] - b1; y1 = P1[1] - b1;
+      x0<x1 && y0<y1?polygon(#-1,4,x0,y0,x1,y0,x1,y1,x0,y1,1,col)
+    "
+    k.
+  } a c }
+
 #@gui Reaction-Diffusion : fx_reaction_diffusion, fx_reaction_diffusion(1)
 #@gui : Iterations = int(5,1,10)
 #@gui : Size = float(5,0,20)
