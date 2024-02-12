@@ -14080,35 +14080,38 @@ colormap : check "isint($1) && $1>=0" skip ${2=1},${3=1}
 
     if $1 # Estimate quantized colormap.
       r {whd},1,1,100%,-1
-      +_colormap $1 # Median-cut algorithm
-      if $2 # Add k-means step
-        max_diff:=(iM-im+1)/8192
-        do
-          +index.. . # Find nearest cluster for each color
-          if $is_half
-            ..,1,1,{1,s}
-            eval "
-              csum = vector(#w*s#0);
-              cocc = vector(#w,0);
-              repeat (w#2,k,
-                ind = i[#2,k];
-                repeat (s#0,c,csum[ind + c*w]+=i(#0,k,0,0,c));
-                ++cocc[ind];
-              );
-              off = 0;
-              repeat (s#0,c,
-                repeat (w,k,occ = cocc[k]; occ?(csum[off++]/=occ));
-              );
-              draw(#3,csum)"
-            rm..
-          else
-            ..,1,1,{1,s+1}
-            f.. ">I[#3,i]+=[ I[#0,x],1 ]" rm..
-            f. "s = i(x,0,0,s-1); s?I/s:[ I[#1,x], 0 ]"
-          fi
-          +-.. . abs. diff:=iM/w rm. # Compute colormap difference
-          j.. . rm.
-        while $diff>$max_diff
+      if ${count_colors.}<=$1 +colormap 0 # Check that 'nb_levels' is lower than number of used colors
+      else
+        +_colormap $1 # Median-cut algorithm
+        if $2 # Add k-means step
+          max_diff:=(iM-im+1)/8192
+          do
+            +index.. . # Find nearest cluster for each color
+            if $is_half
+              ..,1,1,{1,s}
+              eval "
+                csum = vector(#w*s#0);
+                cocc = vector(#w,0);
+                repeat (w#2,k,
+                  ind = i[#2,k];
+                  repeat (s#0,c,csum[ind + c*w]+=i(#0,k,0,0,c));
+                  ++cocc[ind];
+                );
+                off = 0;
+                repeat (s#0,c,
+                  repeat (w,k,occ = cocc[k]; occ?(csum[off++]/=occ));
+                );
+                draw(#3,csum)"
+              rm..
+            else
+              ..,1,1,{1,s+1}
+              f.. ">I[#3,i]+=[ I[#0,x],1 ]" rm..
+              f. "s = i(x,0,0,s-1); s?I/s:[ I[#1,x], 0 ]"
+            fi
+            +-.. . abs. diff:=iM/w rm. # Compute colormap difference
+            j.. . rm.
+          while $diff>$max_diff
+        fi
       fi
       if $3 index.. .,0,0 histogram.. {[w,0,w-1]} a y sort -,x rows 1 # Sort by decreasing occurrence
       else rm..
@@ -14165,6 +14168,42 @@ compose_channels : skip ${1="+"}
     repeat s { sh[0] $> }
     $1[^0] r[0] 100%,100%,100%,1,-1 k[0]
   }
+
+#@cli count_colors : _count_until={ 0: none | >0: max number of counted colors }
+#@cli : Count number of distinct colors in selected images until it reaches the specified max number of counted colors.
+#@cli : Set 'count_until' to '0' to disable limit on counted colors.
+#@cli : This command returns the number of distinct colors for each image (separated by commas).
+count_colors : check "isint(${1=0}) && $1>=0"
+  if $1 e[0--3] "Count number of distinct colors in image$?, until it reaches $1."
+  else e[0--3] "Count number of distinct colors in image$?."
+  fi
+  res,sep=
+  foreach {
+    # Compute hashcode map.
+    +n. 0,255 f. "ret = vectors(); H = 0; repeat (s,p,(H*=31)+=j(0,0,0,p)); ret[0] = H%2048; ret"
+    channels. 0 equalize. 2048 n. 0,2047 round. 1
+
+    # Find single occurrence of each color/vector.
+    0x2048
+    eval[0] ">
+      const max_nb = $1;
+      begin(sizes = vector2048(); nb = 0; ret = vectors());
+      !max_nb || nb<max_nb?(
+        col_s = I;
+        H = i#1; indH = H + 2;
+        sH = sizes[H];
+        !sH || find(#indH,col_s,s#0*(sH - 1),-s#0)<0?( # Color not found
+          sH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
+          copy(i(#indH,0,sH,0,0),col_s);
+          ++sizes[H];
+          ++nb;
+        );
+      );
+      ret;
+      end(set('nb',sum(sizes)))"
+    k[0] res.=$sep$nb sep=,
+  }
+  u $res
 
 #@cli deltaE : [image],_metric={ 0:deltaE_1976 | 1:deltaE_2000 },"_to_Lab_command"
 #@cli : Compute the CIE DeltaE color difference between selected images and specified [image].
