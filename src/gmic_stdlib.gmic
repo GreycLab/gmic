@@ -30853,13 +30853,13 @@ polaroid : check "${1=10}>=0 && ${2=20}>=0"
 #@cli polygonize : _warp_amplitude>=0,_smoothness[%]>=0,_min_area[%]>=0,_resolution_x[%]>0,_resolution_y[%]>0
 #@cli : Apply polygon effect on selected images.
 #@cli : Default values: 'warp_amplitude=300', 'smoothness=2%', 'min_area=0.1%', 'resolution_x=resolution_y=10%'.
-#@cli : $ image.jpg image.jpg polygonize 100,10 +fill "I!=J(1) || I!=J(0,1)?[0,0,0]:I"
+#@cli : $ image.jpg +polygonize 100,10 fill[-1] "I!=J(1) || I!=J(0,1)?[0,0,0]:I"
 polygonize : check "${1=300}>=0 && ${2=2%}>=0 && ${3=0.1%}>=0 && ${4=10%}>0 && ${5=$4}>0"
   e[^-1] "Polygonize image$? with warp amplitude $1, smoothness $2, minimal area $3 and resolutions ($4,$5)."
    foreach {
      +b $2 gradient_norm. g. a[-2,-1] c channels. 0,2 *. {1/0.1+max(abs(im),abs(iM))}
      resx:=max(1,round(ispercentage($4)?w*$4:w/$4)-1)
-     resy:=max(1,round(ispercentage($5)?h*$5,h/$5)-1)
+     resy:=max(1,round(ispercentage($5)?h*$5:h/$5)-1)
      plane3d 1,1,$resx,$resy *3d. {0,w-1},{0,h-1},1
      s3d. rm.. i.. (0;{h-1}) r.. 3,{h},1,1,3 round.. y..
      [-4] a[-7--2] y r. 3,{h/3},1,1,-1 z. 0,1 permute. yzcx
