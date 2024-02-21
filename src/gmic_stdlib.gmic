@@ -58548,29 +58548,39 @@ fx_plasma :  skip ${4=0},${5=0}
   plasma $1,$2,$3 n 0,255
   balance_gamma ${6-8}
 
-#@gui Quick Copyright : fx_quick_copyright, fx_quick_copyright(0)
-#@gui : Text = text{"\\251 G'MIC"}
-#@gui : Size = int(27,13,128)
-#@gui : Color = color(255,255,255,128)
-#@gui : Outline = int(1,0,4)
-#@gui : Position = choice(3,"Up-Left","Up-Right","Bottom-Left","Bottom-Right")
-#@gui : Offset = int(5,0,40)
-#@gui : Orientation = choice(1,"-90 deg.","0 deg.","+90 deg.","+180 deg.")
+#@gui Quick Copyright : fx_quick_copyright, fx_quick_copyright(1)
+#@gui : Text = text{"\\251 John Doe"}
+#@gui : Font = choice(22,"Acme","Arial","Arial Black","Black Ops One","BlackChancery","Cabin Sketch",\
+# "Caprasimo","Carnevalee Freakshow","Cheese Burger","Cheque","Cheque-Black","Chlorinar","Comic Sans MS",\
+# "Courier New","Creepster","Georgia","Impact","Lobster","Luckiest Guy","Macondo","MedievalSharp","Odin Rounded",\
+# "Oswald","Palatino Linotype","Playfair Display","Roboto","Sacramento","Satisfy","Sofia","Tex Gyre Adventor",\
+# "Times New Roman","Titan One","Verdana")
+#@gui : Size (%) = float(10,0,50)
+#@gui : Bold Face = bool(0)
+#@gui : Color = color(255,255,255,200)
+#@gui : Outline (%) = float(3,0,20)
+#@gui : Position = choice(4,"Center","Up-Left","Up-Right","Bottom-Left","Bottom-Right")
+#@gui : Offset (%) = float(1,0,25)
+#@gui : Orientation = choice(2,"-90 deg.","-45 deg.","0 deg.","+45 deg.","+90 deg.","+135 deg.","+180 deg.")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/02/21</i>.</small>")
 fx_quick_copyright :
-  i[0] 0 t[0] "$1",0,0,$2,1,$3,$4,$5 autocrop[0] 0 r[0] {{0,w}+2*$7},{{0,h}+2*$7},1,3,0,0,0.5,0.5
-  i[1] 0 t[1] "$1",0,0,$2,1,1 autocrop[1] 0 r[1] {{1,w}+2*$7},{{1,h}+2*$7},1,1,0,0,0.5,0.5 dilate[1] {1+2*$7}
-  rotate[0,1] {90*($10-1)}
-  repeat $!-2 {
-    if !$8 j. [0],$9,$9,0,0,{$6/255},[1]
-    elif $8==1 j. [0],{w-1-{0,w}-$9},$9,0,0,{$6/255},[1]
-    elif $8==2 j. [0],$9,{h-1-{0,h}-$9},0,0,{$6/255},[1]
-    else j. [0],{w-1-{0,w}-$9},{h-1-{0,h}-$9},0,0,{$6/255},[1]
+  if "['$1']==0 || !$3" return fi
+  foreach {
+    font_size:=ceil(max(w,h)*$3%)
+    outline_size:=$9?max(1,$font_size*$9%):0
+    0 t. "$1",0,0,${"font $2,"$font_size",$4"},1,255 autocrop.
+    if !$outline_size # No outline
+      i.. 100%,100%,1,4 fc.. ${5-7},255 a[-2,-1] c
+    else # Outline
+      r. {[w,h]+2*$outline_size+1},1,100%,0,0,0.5,0.5
+      +dilate. {2*$outline_size+1} to_rgb.. *.. '[${5-7}]/255' to_rgba.. a[-2,-1] c
+      autocrop.
     fi
-    mv. 2
+    rotate. {45*($12-2)}
+    dx,dy:="const e = $11%; const f = 1 - e; arg0($10,[0.5,0.5],[e,e],[f,e],[e,f],[f,f])"
+    ja.. .,$dx~,$dy~,0,0,{$8/255} rm.
   }
-  rm[0,1]
 
 #@gui Rainbow : fx_rainbow, fx_rainbow
 #@gui : Left Position = float(80,0,100)
