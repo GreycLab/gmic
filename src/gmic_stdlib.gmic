@@ -58557,9 +58557,13 @@ fx_plasma :  skip ${4=0},${5=0}
 # "Times New Roman","Titan One","Verdana")
 #@gui : Size (%) = float(10,0,50)
 #@gui : Bold Face = bool(0)
-#@gui : Color = color(255,255,255,200)
+#@gui : Color = color(255,255,255)
+#@gui : Opacity (%) = float(90,0,100)
+#@gui : sep = separator()
 #@gui : Outline (%) = float(3,0,20)
-#@gui : Position = choice(4,"Center","Up-Left","Up-Right","Bottom-Left","Bottom-Right")
+#@gui : Outline Color = color(0,0,0)
+#@gui : sep = separator()
+#@gui : Position = choice(4,"Up-Left","Up-Right","Center","Bottom-Left","Bottom-Right")
 #@gui : X-Offset (%) = float(1,0,50)
 #@gui : Y-Offset (%) = float(1,0,50)
 #@gui : Orientation = choice(2,"-90 deg.","-45 deg.","0 deg.","+45 deg.","+90 deg.","+135 deg.","+180 deg.")
@@ -58568,28 +58572,32 @@ fx_plasma :  skip ${4=0},${5=0}
 fx_quick_copyright :
   if "['$1']==0 || !$3" return fi
   foreach {
-    font_size:=ceil(max(w,h)*$3%)
+    font_size:=ceil(min(w,h)*$3%)
     outline_size:=$9?max(1,$font_size*$9%):0
     0 t. "$1",0,0,${"font $2,"$font_size",$4"},1,255 autocrop.
     if !$outline_size # No outline
       i.. 100%,100%,1,4 fc.. ${5-7},255 a[-2,-1] c
     else # Outline
       r. {[w,h]+2*$outline_size+1},1,100%,0,0,0.5,0.5
-      +dilate. {2*$outline_size+1} to_rgb.. *.. '[${5-7}]/255' to_rgba.. a[-2,-1] c
+      +dilate. {2*$outline_size+1}
+      100%,100%,1,3x2 fc. ${10-12} j.. .,0,0,0,0,1,[-3],255 fc. ${5-7} j.. .,0,0,0,0,1,[-4],255 rm[-4,-1]
+      to_rgba. rv[-2,-1] a[-2,-1] c
       autocrop.
     fi
-    rotate. {45*($13-2)}
-    dx,dy:="const e = $11%; const f = 1 - e; const g = $12%; const h = 1 - g;
-            arg0($10,[0.5,0.5],[e,g],[f,g],[e,h],[f,h])"
-    ja.. .,$dx~,$dy~,0,0,{$8/255} rm.
+    rotate. {45*($16-2)}
+    dx,dy:="const e = $14%; const f = 1 - e; const g = $15%; const h = 1 - g;
+            arg0($13,[e,g],[f,g],[0.5,0.5],[e,h],[f,h])"
+    ja.. .,$dx~,$dy~,0,0,{$8%} rm.
   }
 
 fx_quick_copyright_preview :
   fx_quick_copyright "$1",${2--1}
-  offset_visibility:=$10?2:1
-  u "{$1}{$2}{$3}{$4}{${5-8}}{$9}{$10}"\
-    "{$11}"_$offset_visibility"{$12}"_$offset_visibility\
-    "{$13}"
+  outline_visibility:=$9?2:1
+  offset_visibility:=$13!=2?2:1
+  u "{$1}{$2}{$3}{$4}{${5-7}}{$8}{$9}"\
+    "{${10-12}}"_$outline_visibility\
+    "{$13}{$14}"_$offset_visibility"{$15}"_$offset_visibility\
+    "{$16}"
 
 #@gui Rainbow : fx_rainbow, fx_rainbow
 #@gui : Left Position = float(80,0,100)
