@@ -10960,7 +10960,6 @@ _update_gmicol : # Keep only a subset of existing filters
   "Degradations/Blur [Radial]",\
   "Degradations/Blur [Splinter]",\
   "Degradations/Chromatic Aberrations",\
-  "Degradations/CRT Sub-Pixels",\
   "Degradations/CRT Phosphors",\
   "Degradations/CRT Scanlines",\
   "Degradations/CRT Sub-pixels",\
@@ -51603,7 +51602,7 @@ fx_huffman_glitches_preview :
 #@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2017/05/07</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/02/21</i>.</small>")
 fx_jpeg_artefacts :
 
   # Input all 8x8 DCT and iDCT kernels.
@@ -51682,10 +51681,10 @@ fx_jpeg_artefacts :
   => Q
 
   # Process images.
-  repeat $!-3 { l[$>,-3--1] {
+  foreach[0--4] { split_opacity pass[-3--1] l[0,-3--1] {
 
     # Decompose image into luma/chroma
-    l[0] { w,h={w},{h} r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
+    l[0] { w,h={w},{h} to_rgb r {w+(-w%16)},{h+(-h%16)},1,100%,0,3 rgb2ycbcr s c r[-2,-1] 50%,50%,1,1,2 round. }
 
     repeat 3 {
       # Compute DCT of image with 8x8 blocks.
@@ -51712,8 +51711,7 @@ fx_jpeg_artefacts :
       round[$>]
     }
     l[^3--1] { r ${-max_wh},1,1,1 a c ycbcr2rgb round. r $w,$h,1,3,0 }
-
-  } }
+  } rm[-3--1] a c }
   rm[dct,idct,Q]
 
 fx_jpeg_artefacts_preview :
