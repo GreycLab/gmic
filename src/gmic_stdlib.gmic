@@ -16461,7 +16461,7 @@ edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>
       da_push(P);
       !$is_xyn0?(i(#1,P[0],P[1],0,0)|=(1<<P[2]));
       P = next_edgel"{$4?8:4}"_fg(#0,P,1),
-    P!=P0);"
+    P!=P0)"
 
   foreach {
     if $is_xyn0 # Edgel coordinates specified
@@ -16470,7 +16470,7 @@ edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>
         error[0--5] "Command 'edgels': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
       fi
       1,1,1,3
-      eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code" da_freeze()"
+      eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code
 
     elif $is_xy0 # Pixel coordinates specified
       if "!i($1,$2)"
@@ -16479,24 +16479,23 @@ edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>
       100%,100% # Already visited edgels (bitwise storage)
       1,1,1,3
       eval ${-math_lib}"
-        const x = $1; const y = $2;
+        const x = $1; const y = $2; sep = [ -1,-1,-1 ];
         repeat (4,n,
-          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))?("$code")
-        );
-        da_freeze()"
-      rm[1]
+          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))?(
+            "$code"; da_push(sep))
+        )"
 
     else # No coordinates specified
       100%,100% # Already visited edgels (bitwise storage)
       1,1,1,3
-      eval[0] >${-math_lib}"
+      eval[0] >${-math_lib}"begin(sep = [ -1,-1,-1 ]);
         i(x,y)?repeat (4,n,
-          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(x + 1,y,0,0),i(x,y + 1,0,0),i(x - 1,y,0,0),i(x,y - 1,0,0))?("$code")
-        );
-        end(da_freeze())"
-      rm[1]
+          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(x + 1,y,0,0),i(x,y + 1,0,0),i(x - 1,y,0,0),i(x,y - 1,0,0))?(
+            "$code"; da_push(sep))
+        )"
     fi
-    rm[0]
+    k. da_freeze.
+    if !$is_xyn0 permute cxyz s -,-1 foreach { r 3,{h/3},1,1,-1 } permute zycx fi # Split into multiple parts
   }
 
 #@cli elevate : _depth,_is_plain={ 0 | 1 },_is_colored={ 0 | 1 }
