@@ -2341,9 +2341,9 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
     cimg_snprintf(title,title.width(),"*expr#%u",p_gmic_instance->debug_line);
     CImg<char>::string(title).move_to(p_gmic_instance->callstack);
   } else CImg<char>::string("*expr").move_to(p_gmic_instance->callstack);
-  unsigned int pos = 0;
+  unsigned int nposition = 0;
   try {
-    p_gmic_instance->_run(p_gmic_instance->commands_line_to_CImgList(gmic::strreplace_fw(str)),pos,images,images_names,
+    p_gmic_instance->_run(p_gmic_instance->commands_line_to_CImgList(gmic::strreplace_fw(str)),nposition,images,images_names,
                           parent_images,parent_images_names,variables_sizes,0,0,command_selection,false);
   } catch (gmic_exception &e) {
     CImg<char>::string(e.what()).move_to(is_error);
@@ -2449,9 +2449,9 @@ static void *gmic_parallel(void *arg) {
 #endif
   _gmic_parallel<T> &st = *(_gmic_parallel<T>*)arg;
   try {
-    unsigned int pos = 0;
+    unsigned int nposition = 0;
     st.gmic_instance.is_debug_info = false;
-    st.gmic_instance._run(st.commands_line,pos,*st.images,*st.images_names,
+    st.gmic_instance._run(st.commands_line,nposition,*st.images,*st.images_names,
                           *st.parent_images,*st.parent_images_names,
                           st.variables_sizes,0,0,st.command_selection,true);
   } catch (gmic_exception &e) {
