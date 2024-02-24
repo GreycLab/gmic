@@ -13434,8 +13434,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 if ((_ss=std::strchr(ss,','))!=0) {
                   if (ss==_ss) ++nb_arguments;
                   else {
-                    if (++nb_arguments>=arguments.size())
-                      arguments.insert(2 + 2*nb_arguments - arguments.size());
+                    if (++nb_arguments>=arguments.size()) arguments.insert(arguments.size()/2);
                     CImg<char> arg_item(ss,(unsigned int)(_ss - ss + 1));
                     arg_item.back() = 0;
                     arg_item.move_to(arguments[nb_arguments]);
