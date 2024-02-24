@@ -5014,7 +5014,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   CImgList<unsigned int> primitives;
   CImgList<unsigned char> g_list_uc;
   CImgList<float> g_list_f;
-  CImgList<char> g_list_c, arguments;
+  CImgList<char> g_list_c, g_arguments;
   CImgList<T> g_list;
 
   CImg<unsigned int> ind, ind0, ind1;
@@ -13422,8 +13422,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             }
 
             // Set $0 to be the command name.
-            arguments.assign(1);
-            CImg<char>::string(command).move_to(arguments[0]);
+            if (g_arguments.is_empty()) g_arguments.assign(1); else cimglist_for(g_arguments,l) g_arguments[l].assign();
+            CImg<char>::string(command).move_to(g_arguments[0]);
             unsigned int nb_arguments = 0;
 
             if (commands_has_arguments[hash_custom](ind_custom,0)) { // Command takes arguments
@@ -13434,15 +13434,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 if ((_ss=std::strchr(ss,','))!=0) {
                   if (ss==_ss) ++nb_arguments;
                   else {
-                    if (++nb_arguments>=arguments.size()) arguments.insert(nb_arguments + 1 - arguments.size());
+                    if (++nb_arguments>=g_arguments.size()) g_arguments.insert(nb_arguments + 1 - g_arguments.size());
                     CImg<char> arg_item(ss,(unsigned int)(_ss - ss + 1));
                     arg_item.back() = 0;
-                    arg_item.move_to(arguments[nb_arguments]);
+                    arg_item.move_to(g_arguments[nb_arguments]);
                   }
                 } else {
                   if (*ss) {
-                    if (++nb_arguments>=arguments.size()) arguments.insert(nb_arguments + 1 - arguments.size());
-                    if (*ss!=',') CImg<char>::string(ss).move_to(arguments[nb_arguments]);
+                    if (++nb_arguments>=g_arguments.size()) g_arguments.insert(nb_arguments + 1 - g_arguments.size());
+                    if (*ss!=',') CImg<char>::string(ss).move_to(g_arguments[nb_arguments]);
                   }
                   break;
                 }
@@ -13452,7 +13452,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                       nb_arguments,nb_arguments!=1?"s":"",
                       command_name,nb_arguments>0?":":".");
                 for (unsigned int i = 1; i<=nb_arguments; ++i)
-                  if (arguments[i]) debug("  $%d = '%s'",i,arguments[i].data());
+                  if (g_arguments[i]) debug("  $%d = '%s'",i,g_arguments[i].data());
                   else debug("  $%d = (undefined)",i);
               }
             }
@@ -13509,7 +13509,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   nsource+=4;
                   for (unsigned int i = 1; i<=nb_arguments; ++i) {
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
-                    CImg<char>(arguments[i].data(),arguments[i].width() - 1,1,1,1,true).
+                    CImg<char>(g_arguments[i].data(),g_arguments[i].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
                     if (i!=nb_arguments) CImg<char>::append_string_to(',',substituted_command,ptr_sub);
@@ -13539,7 +13539,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   }
                   for (unsigned int i = 0; i<=nb_arguments; ++i) {
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
-                    CImg<char>(arguments[i].data(),arguments[i].width() - 1,1,1,1,true).
+                    CImg<char>(g_arguments[i].data(),g_arguments[i].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
                     CImg<char>::append_string_to(i==nb_arguments?' ':',',substituted_command,ptr_sub);
@@ -13550,7 +13550,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 } else if ((cimg_sscanf(nsource,"$%d",&iind)==1 ||
                             (cimg_sscanf(nsource,"${%d%c",&iind,&sep)==2 && sep=='}'))) {
                   const int niind = iind + (iind<0?(int)nb_arguments + 1:0);
-                  if ((niind<=0 && iind) || niind>=arguments.width() || !arguments[niind]) {
+                  if ((niind<=0 && iind) || niind>=g_arguments.width() || !g_arguments[niind]) {
                     error(true,0,command_name,
                           "Command '%s': Undefined argument '$%d', in expression '$%s%d%s' "
                           "(for %u argument%s specified).",
@@ -13558,8 +13558,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                           nb_arguments,nb_arguments!=1?"s":"");
                   }
                   nsource+=cimg_snprintf(substr,substr.width(),"$%d",iind) + (sep=='}'?2:0);
-                  if (arguments[niind].width()>1)
-                    CImg<char>(arguments[niind].data(),arguments[niind].width() - 1,1,1,1,true).
+                  if (g_arguments[niind].width()>1)
+                    CImg<char>(g_arguments[niind].data(),g_arguments[niind].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                   if (niind!=0) has_arguments = true;
 
@@ -13568,20 +13568,20 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 } else if (cimg_sscanf(nsource,"${%d=$%d%c",&iind,&iind1,&sep)==3 && sep=='}' &&
                            iind>0) {
                   const int niind1 = iind1 + (iind1<0?(int)nb_arguments + 1:0);
-                  if (niind1<=0 || niind1>=arguments.width() || !arguments[niind1])
+                  if (niind1<=0 || niind1>=g_arguments.width() || !g_arguments[niind1])
                     error(true,0,command_name,
                           "Command '%s': Undefined argument '$%d', in expression '${%d=$%d}' "
                           "(for %u argument%s specified).",
                           command_name,iind1,iind,iind1,
                           nb_arguments,nb_arguments!=1?"s":"");
                   nsource+=cimg_snprintf(substr,substr.width(),"${%d=$%d}",iind,iind1);
-                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
-                  if (!arguments[iind]) {
-                    arguments[iind] = arguments[niind1];
+                  if (iind>=g_arguments.width()) g_arguments.insert(iind + 1 - g_arguments.size());
+                  if (!g_arguments[iind]) {
+                    g_arguments[iind] = g_arguments[niind1];
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
-                  if (arguments[iind].width()>1)
-                    CImg<char>(arguments[iind].data(),arguments[iind].width() - 1,1,1,1,true).
+                  if (g_arguments[iind].width()>1)
+                    CImg<char>(g_arguments[iind].data(),g_arguments[iind].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
@@ -13589,15 +13589,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   // i.e. the maximum index of known arguments.
                 } else if (cimg_sscanf(nsource,"${%d=$#%c",&iind,&sep)==2 && sep=='}' &&
                            iind>0) {
-                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
-                  if (!arguments[iind]) {
+                  if (iind>=g_arguments.width()) g_arguments.insert(iind + 1 - g_arguments.size());
+                  if (!g_arguments[iind]) {
                     cimg_snprintf(substr,substr.width(),"%u",nb_arguments);
-                    CImg<char>::string(substr).move_to(arguments[iind]);
+                    CImg<char>::string(substr).move_to(g_arguments[iind]);
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
                   nsource+=cimg_snprintf(substr,substr.width(),"${%d=$#}",iind);
-                  if (arguments[iind].width()>1)
-                    CImg<char>(arguments[iind].data(),arguments[iind].width() - 1,1,1,1,true).
+                  if (g_arguments[iind].width()>1)
+                    CImg<char>(g_arguments[iind].data(),g_arguments[iind].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
@@ -13606,15 +13606,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 } else if (cimg_sscanf(inbraces,"%d%c",&iind,&sep)==2 && sep=='=' &&
                            iind>0) {
                   nsource+=l_inbraces + 3;
-                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
-                  if (!arguments[iind]) {
+                  if (iind>=g_arguments.width()) g_arguments.insert(iind + 1 - g_arguments.size());
+                  if (!g_arguments[iind]) {
                     CImg<char>::string(inbraces.data() +
                                        cimg_snprintf(substr,substr.width(),"%d=",iind)).
-                      move_to(arguments[iind]);
+                      move_to(g_arguments[iind]);
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
-                  if (arguments[iind].width()>1)
-                    CImg<char>(arguments[iind].data(),arguments[iind].width() - 1,1,1,1,true).
+                  if (g_arguments[iind].width()>1)
+                    CImg<char>(g_arguments[iind].data(),g_arguments[iind].width() - 1,1,1,1,true).
                       append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
@@ -13651,12 +13651,12 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                           cimg_forY(inds,j) {
                             uind = inds[j];
                             if (uind) has_arguments = true;
-                            if (!arguments[uind])
+                            if (!g_arguments[uind])
                               error(true,0,command_name,
                                     "Command '%s': Undefined argument '$%d', "
                                     "in expression '${%s}'.",
                                     command_name,uind,inbraces.data());
-                            CImg<char>(arguments[uind],true).append_string_to(substituted_command,ptr_sub);
+                            CImg<char>(g_arguments[uind],true).append_string_to(substituted_command,ptr_sub);
                             *(ptr_sub - 1) = ',';
                           }
                           --ptr_sub;
