@@ -13421,7 +13421,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     "takes no arguments");
             }
 
-            CImgList<char> arguments(32);
+            CImgList<char> arguments(1);
             // Set $0 to be the command name.
             CImg<char>::string(command).move_to(arguments[0]);
             unsigned int nb_arguments = 0;
@@ -13434,14 +13434,14 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 if ((_ss=std::strchr(ss,','))!=0) {
                   if (ss==_ss) ++nb_arguments;
                   else {
-                    if (++nb_arguments>=arguments.size()) arguments.insert(arguments.size()/2);
+                    if (++nb_arguments>=arguments.size()) arguments.insert(nb_arguments + 1 - arguments.size());
                     CImg<char> arg_item(ss,(unsigned int)(_ss - ss + 1));
                     arg_item.back() = 0;
                     arg_item.move_to(arguments[nb_arguments]);
                   }
                 } else {
                   if (*ss) {
-                    if (++nb_arguments>=arguments.size()) arguments.insert(1);
+                    if (++nb_arguments>=arguments.size()) arguments.insert(nb_arguments + 1 - arguments.size());
                     if (*ss!=',') CImg<char>::string(ss).move_to(arguments[nb_arguments]);
                   }
                   break;
@@ -13575,7 +13575,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                           command_name,iind1,iind,iind1,
                           nb_arguments,nb_arguments!=1?"s":"");
                   nsource+=cimg_snprintf(substr,substr.width(),"${%d=$%d}",iind,iind1);
-                  if (iind>=arguments.width()) arguments.insert(2 + 2*iind - arguments.size());
+                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
                   if (!arguments[iind]) {
                     arguments[iind] = arguments[niind1];
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
@@ -13589,7 +13589,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   // i.e. the maximum index of known arguments.
                 } else if (cimg_sscanf(nsource,"${%d=$#%c",&iind,&sep)==2 && sep=='}' &&
                            iind>0) {
-                  if (iind>=arguments.width()) arguments.insert(2 + 2*iind - arguments.size());
+                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
                   if (!arguments[iind]) {
                     cimg_snprintf(substr,substr.width(),"%u",nb_arguments);
                     CImg<char>::string(substr).move_to(arguments[iind]);
@@ -13606,7 +13606,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 } else if (cimg_sscanf(inbraces,"%d%c",&iind,&sep)==2 && sep=='=' &&
                            iind>0) {
                   nsource+=l_inbraces + 3;
-                  if (iind>=arguments.width()) arguments.insert(2 + 2*iind - arguments.size());
+                  if (iind>=arguments.width()) arguments.insert(iind + 1 - arguments.size());
                   if (!arguments[iind]) {
                     CImg<char>::string(inbraces.data() +
                                        cimg_snprintf(substr,substr.width(),"%d=",iind)).
