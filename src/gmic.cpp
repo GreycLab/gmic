@@ -13441,8 +13441,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   }
                 } else {
                   if (*ss) {
-                    if (++nb_arguments>=arguments.size())
-                      arguments.insert(1 + nb_arguments - arguments.size());
+                    if (++nb_arguments>=arguments.size()) arguments.insert(1);
                     if (*ss!=',') CImg<char>::string(ss).move_to(arguments[nb_arguments]);
                   }
                   break;
