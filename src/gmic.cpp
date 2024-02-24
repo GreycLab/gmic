@@ -5014,7 +5014,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   CImgList<unsigned int> primitives;
   CImgList<unsigned char> g_list_uc;
   CImgList<float> g_list_f;
-  CImgList<char> g_list_c;
+  CImgList<char> g_list_c, arguments;
   CImgList<T> g_list;
 
   CImg<unsigned int> ind, ind0, ind1;
@@ -10322,19 +10322,19 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           }
           if (!*_arg) print(0,"Skip command 'parallel' (no commands specified)."); // No command specified
           else {
-            CImgList<char> arguments = CImg<char>::string(_arg).get_split(CImg<char>::vector(','),0,false);
-            CImg<_gmic_parallel<T> >(1,arguments.width()).move_to(gmic_threads);
+            CImgList<char> l_arguments = CImg<char>::string(_arg).get_split(CImg<char>::vector(','),0,false);
+            CImg<_gmic_parallel<T> >(1,l_arguments.width()).move_to(gmic_threads);
             CImg<_gmic_parallel<T> > &_gmic_threads = gmic_threads.back();
 
 #ifdef gmic_is_parallel
             print(0,"Execute %d command%s '%s' in parallel%s.",
-                  arguments.width(),arguments.width()>1?"s":"",_arg_text,
+                  l_arguments.width(),l_arguments.width()>1?"s":"",_arg_text,
                   wait_mode?" and wait thread termination immediately":
                   " and wait thread termination when current environment ends");
 #else // #ifdef gmic_is_parallel
             print(0,"Execute %d commands '%s' (run sequentially, "
                   "parallel computing disabled).",
-                  arguments.width(),_arg_text);
+                  l_arguments.width(),_arg_text);
 #endif // #ifdef gmic_is_parallel
 
             // Prepare thread structures.
@@ -10359,13 +10359,13 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               _gmic_threads[l].is_thread_running = true;
 
               // Substitute special characters codes appearing outside strings.
-              arguments[l].resize(1,arguments[l].height() + 1,1,1,0);
+              l_arguments[l].resize(1,l_arguments[l].height() + 1,1,1,0);
               bool is_dquoted = false;
-              for (char *s = arguments[l].data(); *s; ++s) {
+              for (char *s = l_arguments[l].data(); *s; ++s) {
                 if (*s=='\"') is_dquoted = !is_dquoted;
                 else if (!is_dquoted) _strreplace_fw(*s);
               }
-              gmic_instance.commands_line_to_CImgList(arguments[l].data()).
+              gmic_instance.commands_line_to_CImgList(l_arguments[l].data()).
                 move_to(_gmic_threads[l].commands_line);
             }
 
@@ -13421,8 +13421,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     "takes no arguments");
             }
 
-            CImgList<char> arguments(1);
             // Set $0 to be the command name.
+            arguments.assign(1);
             CImg<char>::string(command).move_to(arguments[0]);
             unsigned int nb_arguments = 0;
 
