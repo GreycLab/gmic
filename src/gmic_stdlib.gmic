@@ -9901,39 +9901,36 @@ _update :
   }
   m $out
 
-# Function that inserts a new 'Update information' filter for a previous version number,
+# Function that inserts a new 'New Version Available!' filter for a previous version number,
 # passed as an argument.
 update_deprecate : check "isint($1) && $1>0 && $1<999"
   e[^-1] "Deprecate filter updates for G'MIC version $1."
   l[] {
     file=${_path_rc}update$1.gmic
     i cimgz:"https://gmic.eu/update$1.gmic",uint8
-    +l. { s +,{'"UPDATE"" INFORMATION"'} is_deprecated:=$!>1 rm } # Check if deprecation has not been already done.
-    if $is_deprecated
+    off1:="find(#-1,'\n#@gui ________\n#@gui !<b><i>[ New Version Available! ]</i></b>')"
+    if $off1>0 # Deprecation has been already done
       e[0--4] "  > Version $1 already deprecated -> Removing deprecation."
-      off1:="ref(crop(),data); find(data,'\n#@gui !<b><i>&gt;&gt; UPDATE"" INFORMATION</i></b>')"
-      if $off1>0
-        +rows $off1,100% rows[0] 0,{$off1-1}
-        off2:="ref(crop(),data); find(data,'\n\n')"
-        if $off2>0
-          rows. {$off2+2},100% a y
-          o cimgz:$file,uint8
-          _upload[] $file
-          e[0--6] "  > Done! Version $1 is not deprecated anymore."
-        fi
+      off2:="find(#-1,'\n#@cli ::',$off1)"
+      if $off2>0
+        +rows $off2,100% rows.. 0,{$off1-1} a y
+        o cimgz:$file,uint8
+        _upload[] $file
+        e[0--5] "  > Done! Version $1 is not deprecated anymore."
       fi
     else
       s +,{'"#@cli :: "'}
       i[1] ('"\n\
-             \#@gui !<b><i>&gt;&gt; UPDATE"" INFORMATION</i></b> : _none_, _none_\n\
-             \#@gui : note = note{\"A <b>new version</b> of the <i>G\47MIC</i> plug-in is available!\\n\\n\n\
+             \#@gui ________\n\
+             \#@gui !<b><i>[ New Version"" Available! ]</i></b> : _none_, _none_\n\
+             \#@gui : note = note{\"A <b>new version</b> of the <i>G\47MIC-Qt</i> plug-in binary is available!\\n\\n\n\
              \#@gui : You are strongly encouraged to upgrade your version,
              by visiting our <i>Download page</i>:\\n\\n\"}\n\
              \#@gui : url = link{\"Visit G\47MIC Download Page\",\"https://gmic.eu/download.html\"}\n\
-             \#@gui : note = note{\"\\nOf course, your plug-in will continue to work, but please note that we
-             won\47t be able\n\
-             \#@gui : to provide filter updates anymore for your current plug-in version.\\n\\n\n\
-             \#@gui : Best regards,\\n\\n <i>The G\47MIC team.</i>\"}\n\n"')
+             \#@gui : note = note{\"\\nYour current version of the plug-in will continue to work, but we won\47t\n\
+             \#@gui : provide filter updates anymore for it.\\n\\n\n\
+             \#@gui : Best regards,\\n\\n <i>The G\47MIC team.</i>\"}\n\
+             \#@gui : sep = separator()\n\n"')
       y[1] a y
       o cimgz:$file,uint8
       _upload[] $file

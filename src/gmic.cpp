@@ -2343,7 +2343,8 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   } else CImg<char>::string("*expr").move_to(p_gmic_instance->callstack);
   unsigned int nposition = 0;
   try {
-    p_gmic_instance->_run(p_gmic_instance->commands_line_to_CImgList(gmic::strreplace_fw(str)),nposition,images,images_names,
+    p_gmic_instance->_run(p_gmic_instance->commands_line_to_CImgList(gmic::strreplace_fw(str)),nposition,
+                          images,images_names,
                           parent_images,parent_images_names,variables_sizes,0,0,command_selection,false);
   } catch (gmic_exception &e) {
     CImg<char>::string(e.what()).move_to(is_error);
