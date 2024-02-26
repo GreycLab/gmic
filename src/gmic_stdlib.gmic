@@ -9775,7 +9775,7 @@ _sample :
   is_arg=1
   repeat $N {
     arg=${arg{1+$>}} is_rand{1+$>}=0
-    if ['$arg']=='?' arg:=round(u(1,$M)) is_rand{1+$>}=1
+    if ['$arg']=='?' arg:=v(1,$M) is_rand{1+$>}=1
     elif !isnum($arg)" || "!isint($arg)
       repeat $M {
         name=${_sp_name{1+$>}}
@@ -9785,7 +9785,7 @@ _sample :
     if !isnum($arg)" || "!isint($arg) is_arg=0 break fi
     arg{1+$>}=$arg
   }
-  if !$is_arg N=1 W=0 H=0 arg1:=round(u(1,$M)) fi
+  if !$is_arg N=1 W=0 H=0 arg1:=v(1,$M) fi
 
   # Input sample images.
   repeat $N {
@@ -14617,8 +14617,8 @@ lightness :
       e "\r  [ Optim ] > Score = "{_$energy_max}", Attempts = "$nb_attempts"      "
       . eval "
         do(
-          k0 = round(u("$N0",w-1));
-          k1 = round(u("$N0",w-1)),
+          k0 = v("$N0",w-1);
+          k1 = v("$N0",w-1),
         k0==k1);
         tmp = I[k0]; I[k0] = I[k1]; I[k1] = tmp"
       energy=${-_lut_contrast.}
@@ -15463,7 +15463,7 @@ pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3
   # Determine a set of random color keypoint.
   1,1,1,3
   1,8,1,1,"u<0.75 || !y?da_push(255*[ y&1, (y>>1)&1, (y>>2)&1 ])" rm. # Add some of the cube corners
-  1,{round(u(2,12))},1,1,"
+  1,{v(2,12)},1,1,"
     do (
       RGB = u([255,255,255]);
       dmin = inf;
@@ -18032,9 +18032,9 @@ denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) &&
     r {round(w,2^($nb_scales+1),1)},{round(h,2^($nb_scales+1),1)},{d==1?1:round(d,2^($nb_scales+1),1)},100%,0,0
     +f 0
     repeat $3 {
-      dx:=round(u(0,{4*$nb_scales}))
-      dy:=round(u(0,{4*$nb_scales}))
-      dz:=$d==1?0:round(u(0,{4*$nb_scales}))
+      dx:=u(4*$nb_scales)
+      dy:=u(4*$nb_scales)
+      dz:=$d==1?0:v(4*$nb_scales)
       +shift[0] $dx,$dy,$dz,0,2
       haar. $nb_scales
       threshold. {$1*$sigma},1
@@ -21402,7 +21402,7 @@ tsp : check "${1=256}>=0"
     eval "
       is_used = vectorw(0);
       next = vectorw(-1);
-      n_initial = n_current = round(u(0,w-1));
+      n_initial = n_current = v(w - 1);
       do (
         is_used[n_current] = 1;
         P_current = I[n_current];
@@ -21430,10 +21430,10 @@ tsp : check "${1=256}>=0"
         nb_try = $1*w;
         repeat (nb_try,try,
           r = round(max(8,0.5*w*(try/nb_try)^0.25));
-          i = round(u(0,w-1));
+          i = v(w - 1);
           ni = (i+1)%w;
           pi = (i-1)%w;
-          do (j = (i + round(u(-r,r)))%w; _(while), j==i || j==ni || j==pi);
+          do (j = (i + v(-r,r))%w; _(while), j==i || j==ni || j==pi);
           nj = (j+1)%w;
           P_i = I[i];
           P_ni = I[ni];
@@ -22403,7 +22403,7 @@ _imagealpha :
 #@cli line_aa : x0[%],y0[%],x1[%],y1[%],_opacity,_color1,...
 #@cli : Draw specified antialiased colored line on selected images.
 #@cli : Default values: 'opacity=1' and 'color1=0'.
-#@cli : $ 512,512,1,3 repeat 100 line_aa {round(u([w,h,w,h])-1)},1,${-RGB} done
+#@cli : $ 512,512,1,3 repeat 100 line_aa {v([w,h,w,h])-1},1,${-RGB} done
 line_aa : check "isnum(${5=1}) && isnum(${6=0})"
   e[^-1] "Draw antialiased line ($1,$2) - ($3,$4) on image$?, with opacity $5 and color (${6--1})."
   if !$5 return fi
@@ -22503,7 +22503,7 @@ marble : skip ${1=0.2},${2=0.1},${3=45},${4=0},${5=0.4},${6=0.8},${7=0.6},${8=1.
 #@cli : $ maze 30,20 negate normalize 0,255
 +maze : check "isint(${1=15}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=24}) && $3>0"
   e[^-1] "Input $1x$2 maze."
-  ({round(u($1-1))},{round(u($2-1))})  # Starting cell.
+  ({v($1-1)},{v($2-1)})  # Starting cell.
   $1,$2,1,1,15 +f. 0 a[-2,-1] c   # Starting maze data.
   _generate_maze $1,$2
   _render_maze. $3 => [maze]
@@ -22522,7 +22522,7 @@ _generate_maze :
     left=-1 if i($x,$y)&2" && "$x>0" && "!i($x-1,$y,0,1) left={$x-1},$y,2 is_candidate=1 fi      # Left.
     right=-1 if i($x,$y)&1" && "$x<$1-1" && "!i($x+1,$y,0,1) right={$x+1},$y,1 is_candidate=1 fi # Right.
     if $is_candidate
-      ($up,$down,$left,$right) y. discard. -1 r. 3,{h/3},1,1,-1 shift. 0,{round(u(4))},0,0,2 rows. 0,0 mv. -2
+      ($up,$down,$left,$right) y. discard. -1 r. 3,{h/3},1,1,-1 shift. 0,{v(4)},0,0,2 rows. 0,0 mv. -2
     fi
 
     # Remove wall between the current and chosen neighboring cells.
@@ -22681,8 +22681,8 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
       # Compute reference sprite.
       ind:=1+($>%$N) area=${area$ind}
       if !$3 [$ind]
-      elif $3==1 +rotate[$ind] {round(u)*180}
-      elif $3==2 +rotate[$ind] {round(u(3))*90}
+      elif $3==1 +rotate[$ind] {v()*180}
+      elif $3==2 +rotate[$ind] {v(3)*90}
       else +rotate[$ind] {u*360} sh. 100% !=. 0 area:=is rm.
       fi
 
@@ -22717,14 +22717,14 @@ pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint($
           +channels.. 100% i.. (-128;{w};{h};{s})
           if $n>1 ... fi
         elif $3==1 # 180 deg. rotation allowed.
-          +rotate[-6] {round(u(1))*180} i.. (-128;{w};{h};{s})
+          +rotate[-6] {v()*180} i.. (-128;{w};{h};{s})
           if $n>1 +rotate. 180 i.. (-128;{w};{h};{s}) fi
           if $n>2 4,{$n-2},1,1,-128,0,0,0 1,100% rand. 0,1 round. 1 j.. .,1 rm. fi
           +channels[-4] 100% i.. (-128;{w};{h};{s})
           if $n>1 +channels[-4] 100% i.. (-128;{w};{h};{s}) fi
           if $n>2 [-5] fi
         else # 90 deg. rotation (or more) allowed.
-          +rotate[-6] {round(u(3))*90} i.. (-128;{w};{h};{s})
+          +rotate[-6] {v(3)*90} i.. (-128;{w};{h};{s})
           if $n>1 +rotate. 90 i.. (-128;{w};{h};{s}) fi
           if $n>2 +rotate. 90 i.. (-128;{w};{h};{s}) fi
           if $n>3 +rotate. 90 i.. (-128;{w};{h};{s}) fi
@@ -24636,8 +24636,8 @@ pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(
 
     # Pick set of N random located patches.
     repeat $3 {
-      x:=round(u({0,w}))
-      y:=round(u({0,h}))
+      x:=v(w#0-1)
+      y:=v(h#0-1)
       ({$6*$x};{$6*$y})
       +z[0] {$x-$P1},{$y-$P1},{$x+$P2},{$y+$P2},1
       y. a[-2,-1] y
@@ -30493,7 +30493,7 @@ ellipsionism : check "${1=10}>0 && ${2=3}>0 && ${5=8}>0 && ${6=0.6}>0" skip ${3=
       const interpolation = 1;
       const N = $6*wh/max($1,$2);
       repeat (N,n,
-        x = round(u(w-1)); y = round(u(h-1));
+        x = v(w - 1); y = v(h - 1);
         ellipse(x,y,$1,$2,i(#-2,x,y)°,$4,I(#0,x,y),255);
         ellipse(x,y,-$1,-$2,i(#-2,x,y)°,$4,0xFFFFFFFF,I(#0,x,y)/$5,255);
       )"
@@ -30996,7 +30996,7 @@ sketchbw :
     +gradient_norm[0] sqrt.
     diffusiontensors[0] $sharpness,$anisotropy,$smoothness,$coherence
     a[0,-1] c                                                          # [0] = field of stroke tensors + gradient norm
-    1,{$density*wh/sqrt($length)},1,2,round(u([w#0,h#0]-1))            # [2] = set of random points
+    1,{$density*wh/sqrt($length)},1,2,v([w#0,h#0]-1)                   # [2] = set of random points
 
     repeat $nb_angles {
 
@@ -33739,7 +33739,7 @@ filename : skip "${1=default}"
 #@cli filename_rand
 #@cli : Return a random filename for storing temporary data.
 filename_rand :
-  do filename=${-path_tmp}gmic$_pid{`round(u(vector6(_'0'),vector6(_'9')))`}
+  do filename=${-path_tmp}gmic$_pid{`v(vector6(_'0'),vector6(_'9'))`}
   while isfile(['{/$filename}'])
   u $filename
 
@@ -35126,14 +35126,14 @@ reset :
 #@cli rgb
 #@cli : Return a random int-valued RGB color.
 rgb :
-  u {round(u(255))},{round(u(255))},{round(u(255))}
+  u {v([255,255,255])}
 
 RGB : rgb
 
 #@cli rgba
 #@cli : Return a random int-valued RGBA color.
 rgba :
-  u {round(u(255))},{round(u(255))},{round(u(255))},{round(u(255))}
+  u {v([255,255,255,255])}
 
 RGBA : rgba
 
@@ -35974,7 +35974,7 @@ x_2048 : check_display $0
   l[] {
   score=0 f3d 50 m3d 0
   m "_x_2048_setrandom : +==[0] 0 f. i?4*y+x:-1 discard. -1
-     off:=i[round(u(h-1))] rm. x:=$off&3 y:=$off>>2 n:=u<0.75?1:2
+     off:=i[v(h - 1)] rm. x:=$off&3 y:=$off>>2 n:=u<0.75?1:2
      =[0] $n,$x,$y [{2+$n}] c3d.
      repeat 6 { j3d[1] .,{78+$x*121},{190+$y*121},{10*$<},{(1+$>)/6} w[1] wait 20 }
      rm."
@@ -36204,7 +36204,7 @@ x_bouncing : check_display $0
   520,320,1,3 plasma 1,1,9 n 0,220
   N=12
   repeat $N {
-    ball[] {round(u(32,80))},${-rgb}
+    ball[] {v(32,80)},${-rgb}
     t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=(u<0.5?1:-1)*u(1,8)
   }
   mv[0] $!
@@ -38284,7 +38284,7 @@ x_minesweeper : check "${1=20}>=8 && $1<=30 && ${2=$1}>=8 && $2<=30" check_displ
   # Generate random mine field and player board.
   # Labels : 0:mine, 1:empty, 2:'1-near', 3:'2-near', ..., 9:'8-near', 10:still unknown.
   $1,$2 noise. 30,2 ==. 1 nb_mines:=is (1,1,1;1,0,1;1,1,1) +convolve.. .,0 rm.. +. 1 ==.. 0 *[-2,-1] => field
-  do x:=round(u(w-1)) y:=round(u(h-1)) while i($x,$y)!=1 # Find a good starting point.
+  do x:=v(w-1) y:=v(h-1) while i($x,$y)!=1 # Find a good starting point.
   +f[field] 11 =. 12,$x,$y => board
 
   # Generate sprite graphics.
@@ -38802,8 +38802,8 @@ x_pacman : check_display $0
         fi
 
         if !$is_get_ready" && "($|-$fruit_timer)>=10
-          x:=round(u(0,{map0,w}))
-          y:=round(u(0,{map0,h}))
+          x:=v({map0,w})
+          y:=v({map0,h})
           if !{map,i($x,$y)}" && "{map0,i($x,$y)}==2
             n:=min(3,int(abs(g*1.7))) =[map] {4+$n},$x,$y j[visu] [fruit$n],{16*$x},{16*$y+24} fruit_timer=$|
           fi
@@ -39049,7 +39049,7 @@ x_plasma : check_display $0
   N=8
   repeat $N {
     320,200,1,3 rand. 0,255 plasma. 1,0,7 n. 0,255
-    amp:=u(-40,40) freq:=round(u(2,6)) dir$>:=(u<0.5?-1:1)*round(u(1,2))
+    amp:=u(-40,40) freq:=v(2,6) dir$>:=(u<0.5?-1:1)*v(1,2)
     100%,100%,1,1,'$amp*cos(y*2*pi*$freq/h)'
   }
 
@@ -39074,7 +39074,7 @@ x_plasma : check_display $0
 
     shift[$a21] 0,${dir$a},0,0,2  # Animate plasma background.
     shift[$b21] 0,${dir$b},0,0,2
-    if int($t+0.005)>int($t) dir$a:=(u<0.5?-1:1)*round(u(1,3)) fi
+    if int($t+0.005)>int($t) dir$a:=(u<0.5?-1:1)*v(1,3) fi
     t:=($t+max(0.005,($|-$tic)))%$N
 
     # Render text scrolling.
@@ -39991,9 +39991,9 @@ x_shadebobs : check_display $0
     t+=0.015
     if $t>4*pi" || "{*,b} # Reset motions variables if necessary.
       rx,ry,rz,rt,rcx,t:=u(-1,1),u(-1,1),u(-1,1),u(-1,1),u(-0.6*0.6),0
-      N:=20+round(u(80)) R:=(2+round(u(40)))*min({*,w},{*,h})/300
+      N:=20+v(80) R:=(2+v(40))*min({*,w},{*,h})/300
       if $obj3d rm[colormap,img,obj3d] fi
-      {4+round(u(12))},1,1,3 noise[0] 255,2 ==. 1 r[0] 256,1,1,3,3 *[0] 255 shift[0] 1 => colormap
+      {4+v(12)},1,1,3 noise[0] 255,2 ==. 1 r[0] 256,1,1,3,3 *[0] 255 shift[0] 1 => colormap
       (67.5;73.5;109.5;103.5;51.5;100.5;{2*$N};$N) 3,{2*$N},1,1,0
       1,$N,1,1,5 2,$N,1,1,'y+x*$N' a[-2--1] x z. 0,5
       4,$N,1,1,1 y[-3--1] a[-4--1] y => obj3d
@@ -40261,7 +40261,7 @@ x_tetris : check_display $0
   n. 0,64 blur_x. 1 100%,100% noise. 0.5,2 ==. 1 b. 1 *. 300 +[-2,-1] c. 0,255 => background
 
   # Start game.
-  time=$| score=0 fall_mode=0 gameover=0 n=-1 nn:=round(u(0,$N-1))
+  time=$| score=0 fall_mode=0 gameover=0 n=-1 nn:=v(0,$N-1)
   do
     wait {$fall_mode?-1:-20}
 
@@ -40279,7 +40279,7 @@ x_tetris : check_display $0
         0 rm[$i] a y score+=2^(narg($i)-1)-1 r $W,$H,1,1,0,0,0,1 => board
       }
       if narg($i)>1 l[render] { s y,$H 0 rm[$i] a y r {$fact*$W},{$fact*$H},1,3,0,0,0,1 => render } fi
-      n=$nn nn:=round(u(0,$N-1)) x:=$W/2 y=0 do_render=1 fall_mode=0
+      n=$nn nn:=v(0,$N-1) x:=$W/2 y=0 do_render=1 fall_mode=0
     fi
 
     # Render board at current time.
@@ -42997,7 +42997,7 @@ fx_shuffle_patches :
 
     s z srand $seed
     if isin($mode,0,2) sort_list +,u fi
-    if $mode>0 foreach { rotate {90*round(u(3))} } fi
+    if $mode>0 foreach { rotate {90*v(3)} } fi
     a z
 
     patches2img $w,$h,$overlap%,$overlap_std%
@@ -48301,7 +48301,7 @@ fx_mix_ycbcr_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/03/10</i>.</small>")
 fx_random_color_transformation :
-  if $2" || "$3 srand __seed:=_round(u(100000)) else __seed=$1 fi
+  if $2" || "$3 srand __seed:=_v(100000) else __seed=$1 fi
   random_clut $__seed
   amplitude:=$4%
   repeat $!-1 { l[$>,-1] {
@@ -51623,9 +51623,9 @@ fx_huffman_glitches :
     # Add bit-inversion noise in compressed Huffman codes.
     eval "srand($seed);
       repeat($siz*($noise_level/100)^6,
-        k = round(u(1,l - 1));
-        off = round(u(4,whds#k - 1));
-        bit = round(u(0,7));
+        k = v(1,l - 1);
+        off = v(4,whds#k - 1);
+        bit = v(0,7);
         val = i[#k,off];
         mask = 1<<v(7);
         i[#k,off] = xor(val,mask);
@@ -55521,7 +55521,7 @@ fx_pack_ellipses :
         const N = 4*$radius_max;
         wm1 = w#$mask - 1;
         hm1 = h#$mask - 1;
-        Pc = round(u([wm1,hm1])); P0 = Pc - N/2; P1 = Pc + N/2;
+        Pc = v([wm1,hm1]); P0 = Pc - N/2; P1 = Pc + N/2;
         [ cut(P0[0],0,wm1), cut(P0[1],0,hm1), cut(P1[0],0,wm1), cut(P1[1],0,hm1) ]"
 
       +z[mask] $x0,$y0,$x1,$y1 r. {[w,h]+2},1,1,0,0,0.5,0.5 distance. 0
@@ -55729,7 +55729,7 @@ fx_color_ellipses :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/10/08</i>.</small>")
 _fx_random_pattern :
-  if $4 srand _seed:=_round(u(100000)) else _seed=$3 fi
+  if $4 srand _seed:=_v(100000) else _seed=$3 fi
   srand $_seed
   random_pattern $1,$1,$2
   adjust_colors. ${5-9}
@@ -57976,13 +57976,13 @@ fx_random_gradient :
   foreach {
     to_rgba 100%,100% srand $2
     eval "repeat ($1,n,
-            x = round(u(w-1));
-            y = round(u(h-1));
+            x = v(w - 1);
+            y = v(h - 1);
             i(x,y) = 1;
-            i(#0,x,y,0,0) = round(u(255));
-            i(#0,x,y,0,1) = round(u(255));
-            i(#0,x,y,0,2) = round(u(255));
-            i(#0,x,y,0,3) = $7*255 + (1-$7)*round(u(255));
+            i(#0,x,y,0,0) = v(255);
+            i(#0,x,y,0,1) = v(255);
+            i(#0,x,y,0,2) = v(255);
+            i(#0,x,y,0,3) = $7*255 + (1-$7)*v(255);
           )"
     if $7!=1 sh.. 100% n. 0,255 rm. fi
     ==. 0
@@ -58075,7 +58075,7 @@ fx_lightning :
           new_y=0
           new_angle=$14
         else
-          i:=round(u(1,max(1,($!-1)*$6)))
+          i:=v(1,max(1,($!-1)*$6))
           level={$i,@-2}
           angle={$i,@-1}
           nb_points={$i,i[6]}
@@ -58267,7 +58267,7 @@ fx_memoakten_algorithm_a :
         nb_pts = da_size(#0)
       );
       do (
-        do (p0 = round(u(nb_pts - 1)); p1 = round(u(nb_pts - 1)), p0==p1);
+        do (p0 = v(nb_pts - 1); p1 = v(nb_pts - 1), p0==p1);
         P0 = I[#0,p0]; P1 = I[#0,p1],
         !inrange(norm(P0 - P1),mwh*$msl%,mwh*$Msl%)
       );
@@ -58289,7 +58289,7 @@ fx_memoakten_algorithm_a :
       const mwh = min($W,$H);
       const angt = 1 - $angt%;
       nb_seg = da_size(#1);
-      do (s0 = round(u(nb_seg - 1)); s1 = round(u(nb_seg - 1)),
+      do (s0 = v(nb_seg - 1); s1 = v(nb_seg - 1),
           s0==s1 || i(#1,0,s0,0,2)>$max_occ || i(#1,0,s1,0,2)>$max_occ);
       S0 = I[#1,s0]; S1 = I[#1,s1];
       P0 = I[#0,S0[0]]; P1 = I[#0,S0[1]]; dP = P1 - P0; nP = norm(dP); ndP = dP/nP;
@@ -58724,7 +58724,7 @@ fx_random_signature :
 fx_random_signature_preview :
   _output_mode=0
   seed=$1
-  if $15 seed:=round(u(65535)) fi
+  if $15 seed:=v(65535) fi
   foreach {
     fx_random_signature $seed,${2--1}
     rectangle $3%,$4%,$5%,$6%,1,0x33333333,0
