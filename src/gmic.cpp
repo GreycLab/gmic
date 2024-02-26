@@ -6024,7 +6024,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               (cimg_sscanf(st1,"%lf%c",&a1,&end)==1 ||
                (cimg_sscanf(st1,"%lf%c%c",&a1,&sep1,&end)==2 && sep1=='%')) &&
               boundary<=3) {
-            print(0,"Crop image%s with coordinates (%g%s) - (%g%s) and "
+            print(0,"Crop image%s with coordinates (%.17g%s) - (%.17g%s) and "
                   "%s boundary conditions.",
                   gmic_selection.data(),
                   a0,sep0=='%'?"%":"",
@@ -6058,7 +6058,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                       (cimg_sscanf(st3,"%lf%c%c",&a3,&sep3,&end)==2 && sep3=='%')) &&
                      boundary<=3) {
             print(0,
-                  "Crop image%s with coordinates (%g%s,%g%s) - (%g%s,%g%s) and "
+                  "Crop image%s with coordinates (%.17g%s,%.17g%s) - (%.17g%s,%.17g%s) and "
                   "%s boundary conditions.",
                   gmic_selection.data(),
                   a0,sep0=='%'?"%":"",
@@ -6098,7 +6098,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                      (cimg_sscanf(st5,"%lf%c",&a5,&end)==1 ||
                       (cimg_sscanf(st5,"%lf%c%c",&a5,&sep5,&end)==2 && sep5=='%')) &&
                      boundary<=3) {
-            print(0,"Crop image%s with coordinates (%g%s,%g%s,%g%s) - (%g%s,%g%s,%g%s) "
+            print(0,"Crop image%s with coordinates (%.17g%s,%.17g%s,%.17g%s) - (%.17g%s,%.17g%s,%.17g%s) "
                   "and %s boundary conditions.",
                   gmic_selection.data(),
                   a0,sep0=='%'?"%":"",
@@ -6149,7 +6149,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                       (cimg_sscanf(st7,"%lf%c%c",&a7,&sep7,&end)==2 && sep7=='%')) &&
                      boundary<=3) {
             print(0,
-                  "Crop image%s with coordinates (%g%s,%g%s,%g%s,%g%s) - (%g%s,%g%s,%g%s,%g%s) "
+                  "Crop image%s with coordinates (%.17g%s,%.17g%s,%.17g%s,%.17g%s) - (%.17g%s,%.17g%s,%.17g%s,%.17g%s) "
                   "and %s boundary conditions.",
                   gmic_selection.data(),
                   a0,sep0=='%'?"%":"",
