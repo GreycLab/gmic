@@ -5985,7 +5985,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
         // Check expression or filename.
         if (is_command_check) {
-          if (is_first_item && callstack.size()>2) { ++position; continue; } // Skip check if called in sub-command
           gmic_substitute_args(false);
           is_cond = check_cond(argument,images,"check");
           if (is_very_verbose)
