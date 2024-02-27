@@ -12891,7 +12891,6 @@ decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
 #@cli : If the 'width', 'height' and 'depth' arguments are provided, they define the size of the decompressed image, \
 # : overriding then the original image size `[ Width,Height,Depth ]` defined in the keypoints header.
 decompress_from_keypoints : skip "${1=},${2=},${3=}"
-  e[^-1] "Decompress keypoint set$? as images."
 
   # Parse arguments.
   l[] {
@@ -12899,8 +12898,12 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
     check $is_args
     onfail noarg is_args=0
   }
-  nw,nh,nd=0
-  if $is_args nw,nh,nd:="[ narg($1)?$1:0, narg($2)?$2:0, narg($3)?$3:0 ]" fi
+  if $is_args
+    w0,h0,d0:="[ narg($1)?$1:0, narg($2)?$2:1, narg($3)?$3:1 ]"
+    e[0--3] "Decompress keypoint set$?, with size ("$w0,$h0,$d0")."
+  else
+    e[0--3] "Decompress keypoint set$?."
+  fi
   pass -1 sel=${}
 
   # Decompress from keypoints.
