@@ -1720,13 +1720,15 @@ clean_cluts :
 #@cli : Default value: 'add_debug_info=1' (except for a "string" argument, in which case 'add_debug_info=0').
 #@cli : $ image.jpg command "foo : mirror y deform $""1" +foo[0] 5 +foo[0] 15
 
-#@cli compress_to_keypoints
+#@cli compress_to_keypoints : method={ 0:PDE | 1:RBF },_max_keypoints>=0
 #@cli : Compress each of the selected images into a set of keypoints that can be further decompressed \
 # using command ''decompress_from_keypoints''.
 #@cli : **Beware**: This type of compression is effective only for images with very smooth content.
-compress_to_keypoints :
-  e[^-1] "Compress image$? as sets of keypoints."
-  is_rbf=1
+#@cli : Defaults values: 'method=1' and 'max_keypoints=0'.
+compress_to_keypoints : check "isbool(${1=1}) && isint($2) && $2>=0"
+  m0,m1=PDE,RBF
+  e[^-1] "Compress image$? as sets of keypoints, using "$m$1" method and $2 max keypoints."
+  is_rbf,nb_max_keypoints=${1-2}
   target_err_avg=0.75
   target_err_max=3
 
@@ -1759,6 +1761,7 @@ compress_to_keypoints :
     # Step #1: Greedily add improving keypoints.
     w2[0]
     err_avg,err_max=inf,inf
+    nb_keypoints:="da_size(#1) - 2"
     do
       +da_freeze[1] decompress_from_keypoints.
       if !($>%2) w. fi
@@ -1766,9 +1769,9 @@ compress_to_keypoints :
       eval "$dim==3?da_push(#1,[$xM,$yM,$zM,I(#0,$xM,$yM,$zM)]):
             $dim==2?da_push(#1,[$xM,$yM,I(#0,$xM,$yM)]):
             da_push(#1,[$xM,I(#0,$xM)])"
-
-      e "\r Point \#"{"da_size(#1)-2"}" : ErrA = "$err_avg", ErrM = "$err_max
-    while $err_avg>$target_err_avg" || "$err_max>$target_err_max
+      e "\r  > \#"$nb_keypoints": ErrA = "$err_avg", ErrM = "$err_max
+      nb_keypoints+=1
+    while $nb_keypoints<$nb_max_keypoints" && "($err_avg>$target_err_avg" || "$err_max>$target_err_max)
     da_freeze[1]
 
     # Step #2: Remove keypoints.
