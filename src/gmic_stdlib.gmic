@@ -12875,6 +12875,59 @@ decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
     if $4 ${"arg $4,rgb,lab"}2srgb fi
   }
 
+#@cli decompress_from_keypoints
+#@cli : Decompress selected sets of keypoints as images.
+#@cli : A set of keypoints is defined as a vector-valued image, such that:
+#@cli : - The first pixel is a vector which encodes the `[ width,height,depth ]` of the decompressed image.
+#@cli : - The remaining pixels define the keypoint coordinates and values, as:
+#@cli :   - `[ x_k,y_k,z_k, v0_k,...,vN_k ]` for a 3D target image.
+#@cli :   - `[ x_k,y_k, v0_k,...,vN_k ]` for a 2D target image.
+#@cli :   - `[ x_k, v0_k,...,vN_k ]` for a 1D target image.
+#@cli : where the coordinates 'x_k', 'y_k' and 'z_k' are defined respectively in ranges \
+# '[0,width]', '[0,height]' and '[0,depth]'.
+#@cli : If the keypoints are stored with increasing order for the 'x_k', the keypoint interpolation is performed \
+# using RBF, otherwise it uses a diffusion PDE-based scheme (except for 1D target images where RBF is always used).
+decompress_from_keypoints :
+  e[^-1] "Decompress keypoint$? as images."
+  pass -1 sel=${}
+  foreach { nm={n}
+
+    # Get image information from first pixel.
+    r 1,{whd},1,100%,-1
+    w,h,d,s,is_rbf:="P = I; print(P); W = P[0]; H = s>1?P[1]:1; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1);
+      V = resize(crop(0,1,0,0,1,h,1,1),2,2);
+      is_rbf = V[0]<V[1];
+      [ W,H,D,S,is_rbf ]"
+
+    if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($is_rbf)
+      error[0--4] "Command 'decompress_keypoints': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
+                  "is a not a valid keypoint set."
+    fi
+
+    # Decompress keypoints.
+    rows 1,100%
+    if $d>1 # 3D keypoints
+      if $is_rbf
+        rbf $w,$h,$d,0,0,0,{[$w,$h,$d]-1}
+      else
+        $w,$h,$d,$s 100%,100%,100%,100%,1
+        eval... "P = I; I(#-2,P[0],P[1],P[2]) = P[3,size(P) - 3]; i(#-1,P[0],P[1],P[2]) = 0"
+        inpaint_pde.. .,-8,1,20 rm[-3,-1]
+      fi
+    elif $h>1 # 2D keypoints
+      if $is_rbf
+        rbf $w,$h,0,0,{[$w,$h]-1}
+      else
+        $w,$h,1,$s 100%,100%,1,100%,1
+        eval... "P = I; I(#-2,P[0],P[1]) = P[2,size(P) - 2]; i(#-1,P[0],P[1]) = 0"
+        inpaint_pde.. .,-8,1,20 rm[-3,-1]
+      fi
+    else # 1D keypoints
+      rbf $w,0,{$w-1}
+    fi
+    => $nm
+  }
+
 #@cli decompress_huffman : [huffman_tree]
 #@cli : Decompress selected images with Huffman decoding.
 #@cli : See also: ''compress_huffman'', ''huffman_tree''.
