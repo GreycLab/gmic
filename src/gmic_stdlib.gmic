@@ -1774,14 +1774,22 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
             $dim==2?da_push(#1,[$xM,$yM,I(#0,$xM,$yM)]):
             da_push(#1,[$xM,I(#0,$xM)])"
       stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
-      e "\r  > Add \#"$nb_keypoints": "$stats"        "
       nb_keypoints+=1
+      e "\r  > Add \#"$nb_keypoints": "$stats"        "
     while (!$nb_max_keypoints" || "$nb_keypoints<$nb_max_keypoints)" && "\
           ($err_avg>$target_err_avg" || "$err_max>$target_err_max)
     da_freeze[1]
 
     # Step #2: Remove keypoints.
     s:=s
+    if $err_avg>$target_err_avg # Constraints not reached : relax them to allow keypoint removal anyway
+      target_err_avg:=$err_avg*1.05 d_target_err_avg={_$target_err_avg}
+    fi
+    if $err_max>$target_err_max
+      target_err_max:=$err_max*1.05 d_target_err_max={_$target_err_max}
+    fi
+    stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
+
     repeat $nb_keypoints {
       +point. 0,{$>+2},0,1,-1 discard. -1 r. 1,{h/$s},1,$s,-1 +decompress_from_keypoints.
       -. [0] norm. err_avg,err_max,xM,yM:=ia,iM,xM,yM rm.
