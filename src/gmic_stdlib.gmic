@@ -12923,22 +12923,26 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
     rows 2,100%
     if $d>1 # 3D keypoints
       if $is_rbf
-        rbf $w,$h,$d,0,0,0,{[$w,$h,$d]-1}
+        rbf {$is_args?[$w0,$h0,$d0]:[$w,$h,$d]},0,0,0,{[$w,$h,$d]-1}
       else
-        $w,$h,$d,$s 100%,100%,100%,100%,1
-        eval... "P = I; I(#-2,P[0],P[1],P[2]) = P[3,size(P) - 3]; i(#-1,P[0],P[1],P[2]) = 0"
+        {$is_args?[$w0,$h0,$d0]:[$w,$h,$d]},$s 100%,100%,100%,100%,1
+        eval... "P = I;
+                 $is_args?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h); P[2] = round(P[2]*$d0/$d));
+                 I(#-2,P[0],P[1],P[2]) = P[3,size(P) - 3]; i(#-1,P[0],P[1],P[2]) = 0"
         inpaint_pde.. .,-8,1,20 rm[-3,-1]
       fi
     elif $h>1 # 2D keypoints
       if $is_rbf
-        rbf $w,$h,0,0,{[$w,$h]-1}
+        rbf {$is_args?[$w0,$h0]:[$w,$h]},0,0,{[$w,$h]-1}
       else
         $w,$h,1,$s 100%,100%,1,100%,1
-        eval... "P = I; I(#-2,P[0],P[1]) = P[2,size(P) - 2]; i(#-1,P[0],P[1]) = 0"
+        eval... "P = I;
+                 $is_args?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h));
+                 I(#-2,P[0],P[1]) = P[2,size(P) - 2]; i(#-1,P[0],P[1]) = 0"
         inpaint_pde.. .,-8,1,20 rm[-3,-1]
       fi
     else # 1D keypoints
-      rbf $w,0,{$w-1}
+      rbf {$is_args?$w0:$w},0,{$w-1}
     fi
     c $im,$iM
     => $nm
