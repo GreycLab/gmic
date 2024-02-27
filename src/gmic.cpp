@@ -3943,9 +3943,9 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
   bool res = false;
   float _resu = 0;
   if (!expr || !*expr) return false;
-  if (img.__eval(expr,_resu)) return (bool)_resu;
   CImg<char> _expr(expr,(unsigned int)std::strlen(expr) + 1);
   strreplace_fw(_expr);
+  if (img.__eval(_expr,_resu)) return (bool)_resu;
   try { if (img.eval(_expr,0,0,0,0,&images)) res = true; }
   catch (CImgException &e) {
     const char *const e_ptr = std::strstr(e.what(),": ");

@@ -12822,19 +12822,6 @@ decompress_clut : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 && isi
     fi
   }
 
-#@cli decompress_clut_rbf : _width>0,_height>0,_depth>0,_reconstruction_colorspace={ 0:srgb | 1:rgb | 2:lab }
-#@cli : Decompress selected colored keypoints into 3D CLUTs, using RBF thin plate spline interpolation.
-#@cli : Default value: 'width=height=depth=33' and 'reconstruction_colorspace=0'.
-decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=$1}) && $3>0 && "\
-                            "isin(${4=0},0,1,2)"
-  e[^-1] "Decompress colored keypoint$? into $1x$2x$3 CLUTs (RBF approach), using "\
-         ${"s0,s1,s2=srgb,rgb,lab u $s$4"}" colorspace for reconstruction."
-  foreach {
-    if $4 s c,-3 srgb2${"arg $4,rgb,lab"}. a c fi
-    rbf $1,$2,$3,0,0,0,255,255,255
-    if $4 ${"arg $4,rgb,lab"}2srgb fi
-  }
-
 #@cli decompress_clut_pde : _width>0,_height>0,_depth>0,_reconstruction_colorspace={ 0:srgb | 1:rgb | 2:lab }
 #@cli : Decompress selected colored keypoints into 3D CLUTs, using multiscale diffusion PDE's.
 #@cli : Default values: 'width=height=depth=33' and 'reconstruction_colorspace=0'.
@@ -12874,6 +12861,19 @@ decompress_clut_pde : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
     => $nm
   }
   um srgb2srgb
+
+#@cli decompress_clut_rbf : _width>0,_height>0,_depth>0,_reconstruction_colorspace={ 0:srgb | 1:rgb | 2:lab }
+#@cli : Decompress selected colored keypoints into 3D CLUTs, using RBF thin plate spline interpolation.
+#@cli : Default value: 'width=height=depth=33' and 'reconstruction_colorspace=0'.
+decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=$1}) && $3>0 && "\
+                            "isin(${4=0},0,1,2)"
+  e[^-1] "Decompress colored keypoint$? into $1x$2x$3 CLUTs (RBF approach), using "\
+         ${"s0,s1,s2=srgb,rgb,lab u $s$4"}" colorspace for reconstruction."
+  foreach {
+    if $4 s c,-3 srgb2${"arg $4,rgb,lab"}. a c fi
+    rbf $1,$2,$3,0,0,0,255,255,255
+    if $4 ${"arg $4,rgb,lab"}2srgb fi
+  }
 
 #@cli decompress_huffman : [huffman_tree]
 #@cli : Decompress selected images with Huffman decoding.
