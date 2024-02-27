@@ -41600,7 +41600,7 @@ fx_support_us :
 
 #@gui Download External Data : gui_download_all_data, gui_no_preview(1)
 #@gui : note = note{"This filter will download all external data files used by some filters of the <i>G'MIC</i>
-#@gui : plug-in (<i>Color Grading</i>, <i>Light Leaks</i>, <i>Grain</i>, etc...),
+#@gui : plug-in (<i>Color Presets</i>, <i>Light Leaks</i>, <i>Grain</i>, <i>Denoise</i>, etc.),
 #@gui : and will install them as persistent files on your hard drive. After this operation, you won't need a permanent
 #@gui : internet connection anymore in order to use some of the G'MIC filters."}
 #@gui : note = note()
@@ -41622,19 +41622,19 @@ fx_support_us :
 gui_download_all_data :
 
   # Color Presets.
-  l[] { clut foo rm onfail rm }
+  l[] { input_cached gmic_cluts.gmz rm onfail rm }
+
+  # Light Leaks.
+  l[] { input_cached gmic_lightleaks.gmz rm onfail rm }
+
+  # Denoising CNN.
+  l[] { input_cached gmic_denoise_cnn.gmz rm onfail rm }
 
   # Grain.
   _filenames_grain=${-_fx_simulate_grain}
   _url_grain=https://gmic.eu/data_film_presets
   _prefix_grain=grain_
   _ext_grain=cimgz
-
-  # Light leaks.
-  _filenames_lightleak=${-_fx_light_leaks}
-  _url_lightleak=https://gmic.eu/data_lightleaks
-  _prefix_lightleak=
-  _ext_lightleak=cimgz
 
   # Sample images.
   _filenames_sample=${-__sample}
@@ -41650,10 +41650,9 @@ gui_download_all_data :
 
   # Manage downloads.
   _n=0
-  _N:=narg($_filenames_grain,$_filenames_lightleak,$_filenames_logo,$_filenames_sample)
+  _N:=narg($_filenames_grain,$_filenames_logo,$_filenames_sample)
   progress 0
   _gui_download_all_data[] grain,$1
-  _gui_download_all_data[] lightleak,$1
   _gui_download_all_data[] logo,$1
   _gui_download_all_data[] sample,$1
   _gui_download_all_data[] demos,$1
@@ -54350,8 +54349,7 @@ fx_lightglow_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/01/07</i>.</small>")
 fx_light_leaks :
-  filename=lightleak_${"padint $1",6}.cimgz
-  input_cached data_lightleaks/$filename
+  l[] { input_cached gmic_lightleaks.gmz k[$1] rbf. 512,512,0,0,511,511 }
   mode=${arg0\ $7,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,softlight,hardlight,difference,\
          subtract,grainextract,grainmerge,divide,hue,saturation,value}
   mv. 0
@@ -54370,10 +54368,6 @@ fx_light_leaks :
 
 fx_light_leaks_preview :
   gui_split_preview "fx_light_leaks ${1--5},0",${-3--1}
-
-_fx_light_leaks :
-  u="" repeat 71 { if narg($u) u=$u, fi u=${u}lightleak_${"padint "$>,6} }
-  u $u
 
 #@gui Light Patch : fx_light_patch, fx_light_patch(0)
 #@gui : Density = int(5,2,30)
