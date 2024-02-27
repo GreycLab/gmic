@@ -1731,7 +1731,7 @@ clean_cluts :
 compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1%}>=0 && ${4=5%}>=0"
   m0,m1=PDE,RBF M0,M1="$2 max keypoints, ",
   e[^-1] "Compress image$? as sets of keypoints, using "$m$1" method, "${M{!$2}}"average error $3 and max error $4."
-  is_rbf,nb_max_keypoints=${1-2}
+  use_rbf,nb_max_keypoints=${1-2}
 
   foreach { nm={n}
     e "\n- Process image \#"$>/{1+$>+$<}\n
@@ -1741,20 +1741,20 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
     if $dim==3
       1,1,1,{3+s}
       eval "const w1 = w#0 - 1; const h1 = h#0 - 1; const d1 = d#0 - 1;
-            dims = vals = vectors(); copy(dims,[ w#0,h#0,d#0 ]); copy(vals,[ $im,$iM,$is_rbf ]);
+            dims = vals = vectors(); copy(dims,[ w#0,h#0,d#0 ]); copy(vals,[ $im,$iM,$use_rbf ]);
             da_push(dims,vals,
                     [0,0,0,I(#0,0,0,0)],  [w1,0,0,I(#0,w1,0,0)],  [w1,h1,0,I(#0,w1,h1,0)],  [0,h1,0,I(#0,0,h1,0)],
                     [0,0,d1,I(#0,0,0,d1)],[w1,0,d1,I(#0,w1,0,d1)],[w1,h1,d1,I(#0,w1,h1,d1)],[0,h1,d1,I(#0,0,h1,d1)])"
     elif $dim==2
       1,1,1,{2+s}
       eval "const w1 = w#0 - 1; const h1 = h#0 - 1; const m = min(s,3);
-            dims = vals = vectors(); copy(dims,[ w#0,h#0,1 ],m); copy(vals,[ $im,$iM,$is_rbf ],m);
+            dims = vals = vectors(); copy(dims,[ w#0,h#0,1 ],m); copy(vals,[ $im,$iM,$use_rbf ],m);
             da_push(dims,vals,
                     [0,0,I(#0,0,0)],[w1,0,I(#0,w1,0)],[w1,h1,I(#0,w1,h1)],[0,h1,I(#0,0,h1)])"
     else
       1,1,1,{1+s}
       eval "const w1 = w#0 - 1; const m = min(s,3);
-            dims = vals = vectors(); copy(dims,[ w#0,1,1 ],m); copy(vals,[ $im,$iM,$is_rbf ],m);
+            dims = vals = vectors(); copy(dims,[ w#0,1,1 ],m); copy(vals,[ $im,$iM,$use_rbf ],m);
             da_push(dims,vals,
                     [0,I(#0,0,0)],[w1,I(#0,w1,0)])"
     fi
@@ -12993,10 +12993,10 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
 
     # Get image information from first pixel.
     r 1,{whd},1,100%,-1
-    w,h,d,s,im,iM,is_rbf:="P = I[0]; V = I[1];
-      W = P[0]; H = P[1]; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1); is_rbf = s>2?V[2]:1;
-      [ W,H,D,S,V[0],V[1],is_rbf ]"
-    if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($is_rbf)
+    w,h,d,s,im,iM,use_rbf:="P = I[0]; V = I[1];
+      W = P[0]; H = P[1]; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1); use_rbf = s>2?V[2]:1;
+      [ W,H,D,S,V[0],V[1],use_rbf ]"
+    if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($use_rbf)
       error[0--4] "Command 'decompress_keypoints': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
                   "is a not a valid keypoint set."
     fi
@@ -13004,7 +13004,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
     # Reconstruct 1D/2D or 3D signal from keypoints.
     rows 2,100%
     if $d>1 # 3D keypoints
-      if $is_rbf
+      if $use_rbf
         rbf {$is_args?[$w0,$h0,$d0]:[$w,$h,$d]},0,0,0,{[$w,$h,$d]-1}
       else
         {$is_args?[$w0,$h0,$d0]:[$w,$h,$d]},$s 100%,100%,100%,100%,1
@@ -13014,7 +13014,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
         inpaint_pde.. .,-8,1,16 rm[-3,-1]
       fi
     elif $h>1 # 2D keypoints
-      if $is_rbf
+      if $use_rbf
         rbf {$is_args?[$w0,$h0]:[$w,$h]},0,0,{[$w,$h]-1}
       else
         $w,$h,1,$s 100%,100%,1,100%,1
