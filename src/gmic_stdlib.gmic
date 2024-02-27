@@ -12875,8 +12875,8 @@ decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
     if $4 ${"arg $4,rgb,lab"}2srgb fi
   }
 
-#@cli decompress_from_keypoints
-#@cli : Decompress selected sets of keypoints as images.
+#@cli decompress_from_keypoints : _width>0,_height>0,_depth>0 : (no arg)
+#@cli : Decompress selected sets of keypoints as images (opt. of specified size).
 #@cli : A set of keypoints is defined as a vector-valued image, such that:
 #@cli : - The first pixel is a vector which encodes the `[ width,height,depth ]` of the decompressed image.
 #@cli : - The second pixel is a vector which encodes `[ min,max,is_rbf ]`, where 'min' and 'max' defines the \
@@ -12888,11 +12888,22 @@ decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
 #@cli :   - `[ x_k, v0_k,...,vN_k ]` for a 1D target image.
 #@cli : where the coordinates 'x_k', 'y_k' and 'z_k' are defined respectively in ranges \
 # '[0,width]', '[0,height]' and '[0,depth]'.
-#@cli : If the keypoints are stored with increasing order for the 'x_k', the keypoint interpolation is performed \
-# using RBF, otherwise it uses a diffusion PDE-based scheme (except for 1D target images where RBF is always used).
-decompress_from_keypoints :
+#@cli : If the 'width', 'height' and 'depth' arguments are provided, they define the size of the decompressed image, \
+# : overriding then the original image size defined in the keypoints header.
+decompress_from_keypoints : skip "${1=},${2=},${3=}"
   e[^-1] "Decompress keypoint set$? as images."
+
+  # Parse arguments.
+  nw,nh,nd=0
+  l[] {
+    is_args:="isint($1) && $1>0 && (['$2']==0 || (isint($2) && $2>0)) && (['$3']==0 || (isint($3) && $3>0))"
+    check $is_args
+    onfail noarg is_args=0
+  }
+  if $is_args nw,nh,nd:="[ narg($1)?$1:0, narg($2)?$2:0, narg($3)?$3:0 ]" fi
   pass -1 sel=${}
+
+  # Decompress keypoints.
   foreach { nm={n}
 
     # Get image information from first pixel.
@@ -12905,7 +12916,7 @@ decompress_from_keypoints :
                   "is a not a valid keypoint set."
     fi
 
-    # Decompress keypoints.
+    # Reconstruct 1D/2D or 3D signal.
     rows 2,100%
     if $d>1 # 3D keypoints
       if $is_rbf
