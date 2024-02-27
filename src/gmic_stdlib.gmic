@@ -1727,6 +1727,8 @@ clean_cluts :
 compress_to_keypoints :
   e[^-1] "Compress image$? as sets of keypoints."
   is_rbf=1
+  target_err_avg=0.75
+  target_err_max=1.5
 
   foreach { nm={n}
     e "\n- Process image \#"$>/{1+$>+$<}\n
@@ -1766,7 +1768,7 @@ compress_to_keypoints :
             da_push(#1,[$xM,I(#0,$xM)])"
 
       e "\r Point \#"{"da_size(#1)-2"}" : ErrA = "$err_avg", ErrM = "$err_max
-    while $err_avg>5" || "$err_max>15
+    while $err_avg>$target_err_avg" || "$err_max>$target_err_max
     da_freeze[1]
 
     # Step #2: Remove keypoints.
@@ -1774,7 +1776,7 @@ compress_to_keypoints :
     repeat h-2 {
       +point. 0,{$>+2},0,1,-1 discard. -1 r. 1,{h/$s},1,$s,-1 +decompress_from_keypoints.
       -. [0] norm. err_avg,err_max,xM,yM:=ia,iM,xM,yM rm.
-      if $err_avg<=5" && "$err_max<=15 rv[1,-1] +decompress_from_keypoints[1] w. rm. fi
+      if $err_avg<=$target_err_avg" && "$err_max<=$target_err_max rv[1,-1] +decompress_from_keypoints[1] w. rm. fi
       e "\r Point \#"{h-2}/{1+$>+$<}" : ErrA = "$err_avg", ErrM = "$err_max
       rm.
     }
