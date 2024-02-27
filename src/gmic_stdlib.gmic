@@ -12879,6 +12879,7 @@ decompress_clut_rbf : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 &&
 #@cli : Decompress selected sets of keypoints as images.
 #@cli : A set of keypoints is defined as a vector-valued image, such that:
 #@cli : - The first pixel is a vector which encodes the `[ width,height,depth ]` of the decompressed image.
+#@cli : - The second pixel is a vector which encodes the `[ min,max ]` value of the decompressed image.
 #@cli : - The remaining pixels define the keypoint coordinates and values, as:
 #@cli :   - `[ x_k,y_k,z_k, v0_k,...,vN_k ]` for a 3D target image.
 #@cli :   - `[ x_k,y_k, v0_k,...,vN_k ]` for a 2D target image.
@@ -12894,10 +12895,11 @@ decompress_from_keypoints :
 
     # Get image information from first pixel.
     r 1,{whd},1,100%,-1
-    w,h,d,s,is_rbf:="P = I; print(P); W = P[0]; H = s>1?P[1]:1; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1);
-      V = resize(crop(0,1,0,0,1,h,1,1),2,2);
-      is_rbf = V[0]<V[1];
-      [ W,H,D,S,is_rbf ]"
+    w,h,d,s,im,iM,is_rbf:="P = I[0]; V = I[1];
+      W = P[0]; H = s>1?P[1]:1; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1);
+      vec = resize(crop(0,2,0,0,1,h - 2,1,1),2,2);
+      is_rbf = vec[0]<vec[1];
+      [ W,H,D,S,V[0],V[1],is_rbf ]"
 
     if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($is_rbf)
       error[0--4] "Command 'decompress_keypoints': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
@@ -12905,7 +12907,7 @@ decompress_from_keypoints :
     fi
 
     # Decompress keypoints.
-    rows 1,100%
+    rows 2,100%
     if $d>1 # 3D keypoints
       if $is_rbf
         rbf $w,$h,$d,0,0,0,{[$w,$h,$d]-1}
@@ -12925,7 +12927,7 @@ decompress_from_keypoints :
     else # 1D keypoints
       rbf $w,0,{$w-1}
     fi
-    => $nm
+    c $im,$iM => $nm
   }
 
 #@cli decompress_huffman : [huffman_tree]
