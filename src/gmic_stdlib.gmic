@@ -1768,13 +1768,13 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
     nb_keypoints:="da_size(#1) - 2"
     do
       +da_freeze[1] decompress_from_keypoints.
-      if {*}" && "!($>%5) w. fi
+      if {*} w. fi
       -. [0] norm. err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM rm.
       eval "$dim==3?da_push(#1,[$xM,$yM,$zM,I(#0,$xM,$yM,$zM)]):
             $dim==2?da_push(#1,[$xM,$yM,I(#0,$xM,$yM)]):
             da_push(#1,[$xM,I(#0,$xM)])"
-      e "\r  > Add \#"$nb_keypoints": avg = "{_$err_avg}" / "$d_target_err_avg", "\
-        "max = "{_$err_max}" / "$d_target_err_max
+      stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
+      e "\r  > Add \#"$nb_keypoints": "$stats"        "
       nb_keypoints+=1
     while (!$nb_max_keypoints" || "$nb_keypoints<$nb_max_keypoints)" && "\
           ($err_avg>$target_err_avg" || "$err_max>$target_err_max)
@@ -1787,10 +1787,10 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
       -. [0] norm. err_avg,err_max,xM,yM:=ia,iM,xM,yM rm.
       if $err_avg<=$target_err_avg" && "$err_max<=$target_err_max
         rv[1,-1] nb_keypoints-=1
+        stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
       fi
       rm.
-      e "\r  > Rem \#"$>/$nb_keypoints": avg = "{_$err_avg}" / "$d_target_err_avg", "\
-        "max = "{_$err_max}" / "$d_target_err_max
+      e "\r  > Rem \#"$>/$nb_keypoints": "$stats"        "
     }
     k. => $nm
   }
@@ -13004,7 +13004,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
         eval... "P = I;
                 "$is_args"?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h); P[2] = round(P[2]*$d0/$d));
                  I(#-2,P[0],P[1],P[2]) = P[3,size(P) - 3]; i(#-1,P[0],P[1],P[2]) = 0"
-        inpaint_pde.. .,-8,1,20 rm[-3,-1]
+        inpaint_pde.. .,-8,1,16 rm[-3,-1]
       fi
     elif $h>1 # 2D keypoints
       if $is_rbf
@@ -13014,7 +13014,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
         eval... "P = I;
                 "$is_args"?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h));
                  I(#-2,P[0],P[1]) = P[2,size(P) - 2]; i(#-1,P[0],P[1]) = 0"
-        inpaint_pde.. .,-8,1,20 rm[-3,-1]
+        inpaint_pde.. .,-8,1,16 rm[-3,-1]
       fi
     else # 1D keypoints
       rbf {$is_args?$w0:$w},0,{$w-1}
