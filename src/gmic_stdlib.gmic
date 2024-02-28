@@ -1793,15 +1793,18 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
     fi
     stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
 
-    repeat $nb_keypoints {
-      +point. 0,{$>+2},0,1,-1 discard. -1 r. 1,{h/$s},1,$s,-1 +decompress_from_keypoints.
+    ind=0
+    repeat h-2 {
+      +point. 0,{$ind+2},0,1,-1 discard. -1 r. 1,{h/$s},1,$s,-1 +decompress_from_keypoints.
       l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM k[0] }
       if $err_avg<=$target_err_avg" && "$err_max<=$target_err_max
         rv[1,-1] nb_keypoints-=1
         stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
+      else
+        ind+=1
       fi
       rm.
-      e "\r  > Rem \#"$>/$nb_keypoints": "$stats"        "
+      e "\r  > Rem \#"$ind/$nb_keypoints": "$stats"        "
     }
     k. => $nm
   }
