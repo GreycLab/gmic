@@ -1729,8 +1729,9 @@ clean_cluts :
 #@cli : - 'err_max' is the desired max compression error.
 #@cli : - 'err_command' is the code of a command that inputs the two images '[reference]' and '[compressed]' \
 # and compute a single error map as a last image.
-#@cli : Defaults values: 'method=1', 'max_keypoints=0', 'err_avg=1%', 'err_max=5%' and 'err_command='
-compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1%}>=0 && ${4=5%}>=0" skip "${5=- norm}"
+#@cli : Defaults values: 'method=1', 'max_keypoints=0', 'err_avg=1%', 'err_max=5%' and 'err_command=-. .. norm.'
+compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1%}>=0 && ${4=5%}>=0" \
+                        skip "${5=-. .. norm.}"
   m0,m1=PDE,RBF M0,M1="$2 max keypoints, ",
   e[^-1] "Compress image$? as sets of keypoints, using "$m$1" method, "${M{!$2}}"average error $3 and max error $4."
   use_rbf,nb_max_keypoints=${1-2}
@@ -1770,7 +1771,7 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
     do
       +da_freeze[1] decompress_from_keypoints.
       if {*} w. fi
-      +l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM rm } rm.
+      l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM k[0] }
       eval "$dim==3?da_push(#1,[$xM,$yM,$zM,I(#0,$xM,$yM,$zM)]):
             $dim==2?da_push(#1,[$xM,$yM,I(#0,$xM,$yM)]):
             da_push(#1,[$xM,I(#0,$xM)])"
@@ -1793,7 +1794,7 @@ compress_to_keypoints : check "isbool(${1=1}) && isint(${2=0}) && $2>=0 && ${3=1
 
     repeat $nb_keypoints {
       +point. 0,{$>+2},0,1,-1 discard. -1 r. 1,{h/$s},1,$s,-1 +decompress_from_keypoints.
-      +l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM rm } rm.
+      l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM k[0] }
       if $err_avg<=$target_err_avg" && "$err_max<=$target_err_max
         rv[1,-1] nb_keypoints-=1
         stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
@@ -13011,7 +13012,10 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
       else
         {$is_args?[$w0,$h0,$d0]:[$w,$h,$d]},$s 100%,100%,100%,100%,1
         eval... "P = I;
-                "$is_args"?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h); P[2] = round(P[2]*$d0/$d));
+                "$is_args"?(
+                  P[0] = round(P[0]*($w0 - 1)/($w - 1));
+                  P[1] = round(P[1]*($h0 - 1)/($h - 1));
+                  P[2] = round(P[2]*($d0 - 1)/($d - 1)));
                  I(#-2,P[0],P[1],P[2]) = P[3,size(P) - 3]; i(#-1,P[0],P[1],P[2]) = 0"
         inpaint_pde.. .,-8,1,16 rm[-3,-1]
       fi
@@ -13021,7 +13025,9 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
       else
         $w,$h,1,$s 100%,100%,1,100%,1
         eval... "P = I;
-                "$is_args"?(P[0] = round(P[0]*$w0/$w); P[1] = round(P[1]*$h0/$h));
+                "$is_args"?(
+                  P[0] = round(P[0]*($w0 - 1)/($w - 1));
+                  P[1] = round(P[1]*($h0 - 1)/($h - 1)));
                  I(#-2,P[0],P[1]) = P[2,size(P) - 2]; i(#-1,P[0],P[1]) = 0"
         inpaint_pde.. .,-8,1,16 rm[-3,-1]
       fi
