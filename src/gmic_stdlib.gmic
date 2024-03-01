@@ -1730,9 +1730,9 @@ clean_cluts :
 #@cli : - 'err_max' is the desired pointwise max compression error.
 #@cli : - 'err_command' is the code of a command that inputs the two images '[reference]' and '[compressed]' \
 # and compute a single error map as a last image.
-#@cli : Defaults values: 'method=3', 'max_keypoints=0', 'err_avg=1%', 'err_max=5%' and 'err_command=-. .. norm.'
+#@cli : Defaults values: 'method=3', 'max_keypoints=0', 'err_avg=1%', 'err_max=5%' and 'err_command=-. [0] norm.'
 compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && $2>=0 && ${3=1%}>=0 && ${4=5%}>=0" \
-                        skip "${5=-. .. norm.}"
+                        skip "${5=-. [0] norm.}"
   use_rbf,is_removal_step,nb_max_keypoints:=$1%2,$1>1,$2
   m0,m1=PDE,RBF M0,M1="$2 max keypoints, ",
   e[^-1] "Compress image$? as sets of keypoints, using "${m$method}" method, "${M{!$2}}"average error $3 and "\
@@ -1771,9 +1771,16 @@ compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && $2>=0 && 
     err_avg,err_max=inf,inf
     nb_keypoints:="da_size(#1) - 2"
     do
-      +da_freeze[1] decompress_from_keypoints.
+      +da_freeze[1]
+
+      if $dim==3 [0],[0],[0] eval.. "begin(ret = I); i(#-1,i0,i1,i2) = 1; ret"
+      elif $dim==2 [0],[0] eval.. "begin(ret = I); i(#-1,i0,i1) = 1; ret"
+      else [0] eval.. "begin(ret = I); i[#-1,i0] = 1; ret"
+      fi
+      distance. 1 n. 0.1,1
+      decompress_from_keypoints.. , rv[-2,-1]
       if {*} w. fi
-      l[0,-1] { $5 err_avg,err_max,xM,yM,zM:=ia,iM,xM,yM,zM k[0] }
+      l[0,-2,-1] { $5 err_avg,err_max:=ia,iM *. .. xM,yM,zM:=xM,yM,zM k[0] }
       eval "$dim==3?da_push(#1,[$xM,$yM,$zM,I(#0,$xM,$yM,$zM)]):
             $dim==2?da_push(#1,[$xM,$yM,I(#0,$xM,$yM)]):
             da_push(#1,[$xM,I(#0,$xM)])"
