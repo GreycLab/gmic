@@ -12764,19 +12764,17 @@ compress_clut2 :
     fi
 
     # Try first with RBFs.
-    if s>1 +compress_to_keypoints. 3,-640,0.45,2.5,"deltaE. [0],1" # Color CLUT
-    else +compress_to_keypoints. 3,-640,2,10 # B&W CLUT
+    if s>1 +compress_to_keypoints. 3,640,0.45,2.5,"deltaE. [0],1" # Color CLUT
+    else +compress_to_keypoints. 3,640,2,10 # B&W CLUT
     fi
-    if h-2>=640 # RBFs failed, use PDEs.
-      +decompress_from_keypoints. deltaE. [0] err_avg_rbf,err_max_rbf:=ia,iM rm.
+    +decompress_from_keypoints. deltaE. [0] err_avg_rbf,err_max_rbf:=ia,iM rm.
+    if $err_avg_rbf>0.45" || "$err_max_rbf>2.5 # RBFs failed, try with PDEs
       store. rbf_keypoints
       if s>1 +compress_to_keypoints 2,2048,0.45,2.5,"deltaE. [0],1" # Color CLUT
       else +compress_to_keypoints 2,2048,2,10 # B&W CLUT
       fi
-      if h-2>=2048 # PDEs also failed, keep the best between the two approaches.
-        +decompress_from_keypoint. deltaE. [0] err_avg_pde,err_max_pde:=ia,iM rm.
-        if $err_avg_rbf<$err_avg_pde rm. $rbf_keypoints fi
-      fi
+      +decompress_from_keypoint. deltaE. [0] err_avg_pde,err_max_pde:=ia,iM rm.
+      if $err_avg_rbf<$err_avg_pde rm. $rbf_keypoints fi
     fi
     k.
 
