@@ -1739,12 +1739,13 @@ compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && ${3=1%}>=
   m0,m1=PDE,RBF M0,M1=$nb_max_keypoints" max keypoints, ",
   e[^-1] "Compress image$? as sets of keypoints, using "${m$method}" method, "${M{!$2}}"average error $3 and "\
          "pointwise max error $4."
+  pass -1 sel=${} nb_img=$!
 
-  foreach { nm={n}
-    e "\n- Process image \#"$>/{1+$>+$<}\n
-    dim,im,iM:=d>1?3:h>1?2:1,im,iM
+  foreach {
+    nm={n} d_ind=[{arg0($>,$sel)}]" (#"{$>+1}/#$nb_img")"
 
     # Initialize keypoints with pixel values at image corners.
+    dim,im,iM:=d>1?3:h>1?2:1,im,iM
     if $dim==3
       1,1,1,{3+s}
       eval "const w1 = w#0 - 1; const h1 = h#0 - 1; const d1 = d#0 - 1;
@@ -1789,7 +1790,7 @@ compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && ${3=1%}>=
             da_push(#1,[$xM,I(#0,$xM)])"
       stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
       nb_keypoints+=1
-      e "\r  > Add \#"$nb_keypoints": "$stats"        "
+      e "\r  "$d_ind" > Add \#"$nb_keypoints": "$stats"        "
     while (!$nb_max_keypoints" || "$nb_keypoints<$nb_max_keypoints)" && "\
           ($err_avg>$target_err_avg" || "$err_max>$target_err_max)
     da_freeze[1]
@@ -1814,7 +1815,7 @@ compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && ${3=1%}>=
           rv[1,-1] nb_keypoints-=1 is_deleted=1
           stats="avg = "{_$err_avg}" / "$d_target_err_avg", max = "{_$err_max}" / "$d_target_err_max
         fi
-        e "\r  > Rem \#"{1+$ind}/$nb_keypoints": "$stats"        "
+        e "\r  "$d_ind" > Rem \#"{1+$ind}/$nb_keypoints": "$stats"        "
         if !$is_deleted ind+=1 fi
         rm.
       }
