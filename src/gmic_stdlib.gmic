@@ -12746,6 +12746,45 @@ compress_clut : check "${1=1.5}>0 && ${2=0.75}>0 && isint(${3=2048}) && (!$3 || 
     strclut $nm => ${}
   }
 
+
+compress_clut2 :
+
+  foreach {
+    nm={b}
+    if iM>1024 / 257 fi # When input is 16bits
+    round
+    if d==1 S:=round(cbrt(wh)) r $S,$S,$S,100%,-1 fi # When input is a 2D haldclut image
+    e "* Process CLUT '"$nm"' ("{w}"x"{h}"x"{d}").\n"
+
+    # Detect B&W cluts.
+    if "s==3 &&
+        crop(0,0,0,0,w,h,d,1)==crop(0,0,0,1,w,h,d,1) &&
+        crop(0,0,0,0,w,h,d,1)==crop(0,0,0,2,w,h,d,1)"
+      channels 0
+    fi
+
+    # Try first with RBFs.
+    nb_max_keypoints=640
+    if s>1 +compress_to_keypoints 3,-$nb_max_keypoints,0.35,2.5,"deltaE. [0],1" # Color CLUT
+    else +compress_to_keypoints 3,-$nb_max_keypoints,2,10 # B&W CLUT
+    fi
+    if h-2>=$nb_max_keypoints # RBFs failed, use PDEs.
+      rm.
+      if s>1 +compress_to_keypoints 2,$nb_max_keypoints,0.35,2.5,"deltaE. [0],1" # Color CLUT
+      else +compress_to_keypoints 2,$nb_max_keypoints,2,10 # B&W CLUT
+      fi
+    fi
+    k.
+
+    # Remove header and format keypoints.
+    f. "begin(WHD = [ i0,i1,i2 ]); y<2?I:(P = I; [ round(P[0,3]*256/WHD),P[3,3] ])" # Renormalize
+    is_rbf:=i(0,1,0,2);
+    rows 2,100%
+    1,100%,1,1,"P = I(#0); P[0]*65536 + P[1]*256 + P[2]" rv a x sort {`$is_rbf?_'+':_'-'`},y z. 1,100%
+
+    strclut $nm => ${}
+  }
+
 # compress_cluts : {"file_pattern" | "file_list.txt"},_max_error>0,_avg_error>0,_max_nb_points>=8
 # Batch compress CLUT files.
 compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
@@ -12784,7 +12823,7 @@ compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
       e "* Compress file '"$filename"'."
       if w>33 r3dx 33 fi
       to_rgb
-      tic compress_clut $2,$3,$4 toc
+      tic compress_clut2 $2,$3,$4 toc
       o $cclut
     fi
     rm
