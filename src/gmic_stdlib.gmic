@@ -12663,91 +12663,10 @@ complex2polar :
     }
   }
 
-#@cli compress_clut : _max_error>0,_avg_error>0,_max_nbpoints>=8 | 0 (unlimited),\
-# _error_metric={ 0:L2-norm | 1:deltaE_1976 | 2:deltaE_2000 },_reconstruction_colorspace={ 0:srgb | 1:rgb | 2:lab },\
-# _try_rbf_first={ 0:false | 1:true }
+#@cli compress_clut
 #@cli : Compress selected color LUTs as sequences of colored keypoints.
-#@cli : Default values: 'max_error=1.5', 'avg_error=0.75', 'max_nb_points=2048', 'error_metric=2', \
-# 'reconstruction_colorspace=0' and 'try_rbf_first=1'.
-compress_clut : check "${1=1.5}>0 && ${2=0.75}>0 && isint(${3=2048}) && (!$3 || $3>=8) && isin(${4=2},0,1,2) && "\
-                      "isin(${5=0},0,1,2) && isbool(${6=1})"
-  e[^-1] "Compress color LUT$? as a set of colored keypoints, with maximum error $1, average error $2, "\
-         "$3 maximum keypoints, "${"s0,s1,s2=L2-RGB,DeltaE_1976,DeltaE_2000 u $s$4"}" metric and "\
-         ${"s0,s1,s2=srgb,rgb,lab u $s$5"}" colorspace for reconstruction."
-  v 0
-  max_error,avg_error,max_keypoints,metric,colorspace,try_rbf=${1-6}
-  if $try_rbf method=rbf else method=pde fi
-  foreach {
-    nm={b}
-    if iM>1024 / 257 fi # When input is 16bits
-    if d==1 S:=round(cbrt(wh)) r $S,$S,$S,100%,-1 fi # When input is a 2D haldclut image
-    e "\n* Process CLUT '"$nm"' ("{w}"x"{h}"x"{d}")."
-
-    # Detect B&W cluts.
-    if "s==3 &&
-        crop(0,0,0,0,w,h,d,1)==crop(0,0,0,1,w,h,d,1) &&
-        crop(0,0,0,0,w,h,d,1)==crop(0,0,0,2,w,h,d,1)"
-      channels 0
-    fi
-
-    _metric:=s==3?$metric:0
-    if $_metric +srgb2lab fi
-
-    # Initialize keypoints (corners of the RGB cube).
-    1,8,1,{s+3}
-    eval "
-      coords = [ 0,0,0, 255,0,0, 255,255,0, 0,255,0, 0,0,255, 255,0,255, 255,255,255, 0,255,255 ];
-      repeat (size(coords)/3,k,
-        P = coords[3*k,3];
-        I[k] = [ P, I(#0,round(P*([w#0,h#0,d#0]-1)/255)) ]
-      )"
-
-    # Iteratively add keypoints.
-    sep="\n"
-    do
-      +decompress_clut_$method. {0,[w,h,d]},$colorspace
-      if !$_metric -. [0] norm. else srgb2lab. deltaE. [1],{$_metric-1}," " fi
-      emax,eavg:=[iM,ia]
-      e "\r"$sep"  > Add [#"{-2,h}"] Max_Err = "{_$emax}", Avg_Err = "{_$eavg}"         " sep=""
-      if $emax<=$max_error" && "$eavg<=$avg_error rm. break fi
-      1,1,1,{0,s+3},{"P = [ xM,yM,zM ]; [ P*255/[max(1,w#0-1),max(1,h#0-1),max(1,d#0-1)], I(#0,P) ]"} rm..
-      a[-2,-1] y
-      if $max_keypoints" && "h>=512" && "['$method']=='rbf' method=pde rows. 0,7 fi # RBF failed, switch to PDE method.
-    while h<($max_keypoints?$max_keypoints:inf)
-
-    # Iteratively remove keypoints.
-    if h>8
-      if $_metric max_rounding,avg_rounding=0.1,0.025
-      else max_rounding,avg_rounding=1,0.25
-      fi
-      if $emax>$max_error" || "$eavg>$avg_error
-        max_error=round($max_error,$max_rounding,1)
-        avg_error=round($avg_error,$avg_rounding,1)
-      fi
-      index=8 sep="\n"
-      do
-        +l. { s y rm[$index] a y } # Remove kth keypoint
-        +decompress_clut_$method. {0,[w,h,d]},$colorspace
-        if !$_metric -. [0] norm. else srgb2lab. deltaE. [1],{$_metric-1}," " fi
-        emax,eavg:=[iM,ia] rm.
-
-        if $emax<=$max_error" && "$eavg<=$avg_error rv[-2,-1] else index+=1 fi
-        e "\r"$sep"  > Rem [#"{min($index,h-1)}"/"{h}"] Max_Err = "{_$emax}", Avg_Err = "{_$eavg}"       "
-        sep=""
-        rm.
-      while $index<h
-    fi
-    k.
-
-    # Sort keypoints in lexicographic order (increasing order for RBF, decreasing for PDE).
-    1,100%,1,1,"P = I(#0); P[0]*65536 + P[1]*256 + P[2]" rv a x sort {`['$method']=='rbf'?_'+':_'-'`},y z. 1,100%
-
-    strclut $nm => ${}
-  }
-
-# Alternative version.
-compress_clut2 :
-
+compress_clut :
+  e[^-1] "Compress color LUT$? as sets of colored keypoints."
   foreach {
     nm={b}
     if iM>1024 / 257 fi # When input is 16bits
@@ -12823,8 +12742,7 @@ compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
       e "* Compress file '"$filename"'."
       if w>33 rs3d 33 fi
       to_rgb
-#      tic compress_clut $2,$3,$4 toc
-      tic compress_clut2 toc
+      tic compress_clut toc
       o $cclut
     fi
     rm
