@@ -4193,7 +4193,7 @@ display_clut :
 _display_clut : check "isint(${1=320}) && $1>0 && isint(${2=33}) && $2>0"
   e[0--3] "Display selected 3D color LUTs, with image resolution $1x$1 and CLUT resolution $2x$2x$2."
   foreach { nm={n}
-    r3dx $2 pointcloud3d circles3d 1 o3d 0.1 *3d {255/($2-1)} colorcube3d 1 +3d
+    rs3d $2 pointcloud3d circles3d 1 o3d 0.1 *3d {255/($2-1)} colorcube3d 1 +3d
     pose3d 0.815360904,-0.144610703,-0.560602367,0,\
            -0.149177685,0.883129835,-0.444778264,0,\
            0.559404552,0.446283728,0.698496521,0
@@ -10252,7 +10252,7 @@ update_color_presets_html : check "isbool(${1=0})"
       o. $category/clut/$preset.png # Save as HaldCLUT
       rm.
 
-      +r3dx. 13
+      +rs3d. 13
       o. $category/clut/$preset.cube # Save as .cube
       x 0,"rm -f "$category/clut/$preset.zip
       x 0,"zip -j -9 "$category/clut/$preset.zip" "$category/clut/$preset.cube
@@ -12751,7 +12751,7 @@ compress_clut2 :
   foreach {
     nm={b}
     if iM>1024 / 257 fi # When input is 16bits
-    r3dx 33 round
+    rs3d 33 round
     if d==1 S:=round(cbrt(wh)) r $S,$S,$S,100%,-1 fi # When input is a 2D haldclut image
     e "* Process CLUT '"$nm"' ("{w}"x"{h}"x"{d}").\n"
 
@@ -12822,7 +12822,7 @@ compress_cluts : check "${2=1.5}>0 && ${3=0.75}>0 && isint(${4=2048}) && $4>8"
       fi
 
       e "* Compress file '"$filename"'."
-      if w>33 r3dx 33 fi
+      if w>33 rs3d 33 fi
       to_rgb
 #      tic compress_clut $2,$3,$4 toc
       tic compress_clut2 toc
@@ -17288,87 +17288,6 @@ _resize3dout : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 &
     dims = round(max(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
   )"
-
-#@cli r3dx : eq. to 'resize3dx'.
-r3dx :
-  _gmic_s="$?" v + _resize3dx $*
-
-#@cli resize3dx : width[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images along the x-axis, while preserving 3D ratio.
-#@cli : (eq. to 'r3dx').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-resize3dx :
-  _gmic_s="$?" v + _$0 $*
-
-_resize3dx : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=0 && $4<=1 && ${5=0}>=0 && $5<=1 &&
-                    ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
-  e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the x-axis, while preserving 3D ratio."
-  foreach {
-    size:=ispercentage($1)?$1*w:$1
-    r {max(1,$size)},{max(1,h*$size/w)},{max(1,d*$size/w)},100%,${2-7}
-  }
-
-#@cli r3dy : eq. to 'resize3dy'.
-r3dy :
-  _gmic_s="$?" v + _resize3dy $*
-
-#@cli resize3dy : height[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images along the y-axis, while preserving 3D ratio.
-#@cli : (eq. to 'r3dy').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-resize3dy :
-  _gmic_s="$?" v + _$0 $*
-
-_resize3dy : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=0 && $4<=1 && ${5=0}>=0 && $5<=1 &&
-                    ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
-  e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the y-axis, while preserving 3D ratio."
-  foreach {
-    size:=ispercentage($1)?$1*h:$1
-    r {max(1,w*$size/h)},{max(1,$size)},{max(1,d*$size/h)},100%,${2-7}
-  }
-
-#@cli r3dz : eq. to 'resize3dz'.
-r3dz :
-  _gmic_s="$?" v + _resize3dz $*
-
-#@cli resize3dz : depth[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images along the z-axis, while preserving 3D ratio.
-#@cli : (eq. to 'r3dz').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-resize3dz :
-  _gmic_s="$?" v + _$0 $*
-
-_resize3dz : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=0 && $4<=1 && ${5=0}>=0 && $5<=1 &&
-                    ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
-  e[0--3] "Resize 3D image"$_gmic_s" to $1 pixels along the z-axis, while preserving 3D ratio."
-  foreach {
-    size:=ispercentage($1)?$1*d:$1
-    r[$>] {max(1,w*$size/d)},{max(1,h*$size/d)},{max(1,$size)},100%,${2-7}
-  }
 
 #@cli rotate : angle,_interpolation,_boundary_conditions,_center_x[%],_center_y[%] : \
 # u,v,w,angle,interpolation,boundary_conditions,_center_x[%],_center_y[%],_center_z[%] : (+)
@@ -47054,7 +46973,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
       if !$is_png" && "!$is_cube error "Filename extension must be '.cube' or '.png'." fi
       if $is_png r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 o[0] "$4/$5"
       else
-        if {0,w>32} r3dx[0] 32 fi
+        if {0,w>32} rs3d[0] 32 fi
         output_cube[0] "$4/$5"
       fi
       rm[0]
