@@ -17013,6 +17013,40 @@ _montage :
 #@cli : $ image.jpg +resize[-1] 256,128,1,3,2 +resize[-1] 120%,120%,1,3,0,1,0.5,0.5 \
 # +resize[-1] 120%,120%,1,3,0,0,0.2,0.2 +resize[-1] [0],[0],1,3,4
 
+#@cli r2d : eq. to 'resize2d'.
+r2d :
+  _gmic_s="$?" v + _resize2d $*
+
+#@cli resize2d : _width[%]={ 0:any | >0 },_height[%]={ 0:any | >0 },0=<_interpolation<=6,\
+# _mode={ 0:inside | 1:padded-inside | 2:outside | 3: cropped-outside }
+#@cli : Resize selected 2D images while preserving aspect ratio.
+#@cli : The size of the resulting image depends on the specified 'mode':
+#@cli : - If 'mode==0', image size is __at most__ '(width,height)'.
+#@cli : - If 'mode==1' or 'mode==3', image size is __exactly__ '(width,height)'.
+#@cli : - If 'mode==2', image size is __at least__ '(width,height)'.
+#@cli : (eq. to 'r2d').
+#@cli : Default values: 'width=height=0', 'interpolation=3' and 'mode=0'.
+resize2d :
+  _gmic_s="$?" v + _$0 $*
+
+_resize2d : check "${1=0}>=0 && ${2=0}>=0 && isin(${3=3},0,1,2,3,4,5,6) && isin(${4=0},0,1,2,3)"
+  w0,w1="any",$1 h0,h1="any",$2 m0,m1,m2,m3="inside","padded-inside","outside","cropped-outside"
+  i0,i1,i2,i3,i4,i5,i6="no","nearest-neighbor","window-averaging","linear","grid","cubic","lanczos"
+  e[0--3] "Resize 2D image"$_gmic_s" to ("${w{$1!=0}}","${h{$2!=0}}"), with "${i$3}" interpolation and "\
+          "'"${m$4}"' mode."
+  1,$!,1,1,"w = w#y; h = h#y; d = d#y; s = s#y;
+    aw = ispercentage($1)?max(1,round(w*$1)):$1;
+    ah = ispercentage($2)?max(1,round(h*$2)):$2;
+    !w?resize(#y,aw,ah,1,1):
+    aw || ah?(
+      aw && ah?(ratio = $4<2?min(aw/w,ah/h):max(aw/w,ah/h); bw = w*ratio; bh = h*ratio): # H&V constraints
+      aw?(bw = aw; bh = h*aw/w): # H constraint only
+         (bw = w*ah/h; bh = ah); # V constraint only
+      resize(#y,max(1,round(bw)),max(1,round(bh)),d,s,$3);
+      $4==1?resize(#y,max(aw,bw),max(ah,bh),d,s,0,0,0.5,0.5):
+      $4==3?resize(#y,min(aw,bw),min(ah,bh),d,s,0,0,0.5,0.5);
+    )" rm.
+
 #@cli ri : eq. to 'resize_as_image'.
 ri : skip "${2=1},${3=0},${4=0},${5=0},${6=0},${7=0}" # Faster than the non-shortcut version of the command
   pass$1 r[^-1] .,.,.,.,${2--1} rm.
