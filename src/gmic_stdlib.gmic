@@ -2231,7 +2231,7 @@ _display : skip ${1=},${3=}
               is_alpha={$ind,$setting_alpha" && "(s==2||s==4)}
               sh[$ind] 0,{$ind,$is_alpha?s-1:min(2,s-1)}
               if d>1
-                +r3din. {ceil(min($w/(w+d+2),$h/(h+d+2))*[w,h,d])},1
+                +rs3d. {ceil(min($w/(w+d+2),$h/(h+d+2))*[w,h,d])},1
                 volumetric2d. {round([w-(w==1),h-(h==1),d-(d==1)]/2)},2
                 rm..
               fi
@@ -8590,13 +8590,13 @@ parse_gui_thumbnails :
     if ['$pipeline']!=0
       filename thumbnails/thumb.png,$f file_out=${}
       l[] {
-        $img run $pipeline gui_merge_layers r2din 200,200,2
+        $img run $pipeline gui_merge_layers rs 200,200,2
         onfail e "Error "$_vt100_r${}$_vt100_n"\n" rm
       }
     fi
 
     if !$! $img gui_no_preview , fi
-    c. 0,255 r2din. 200,200,2 r. 100%,100%,1,{min(s,4)} to_rgba. r. 200,200,1,4,0,0,0.5,0.5
+    c. 0,255 rs. 200,200,2 r. 100%,100%,1,{min(s,4)} to_rgba. r. 200,200,1,4,0,0,0.5,0.5
     if {*} w. ${"fitscreen ."} fi
     o. $file_out rm.
   }
@@ -17168,126 +17168,6 @@ resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
 resize_pow2 : check "isint(${1=0}) && $1>=-1 && $1<=6" skip ${2=0},${3=0},${4=0},${5=0},${6=0}
   e[^-1] "Resize image$? so that each dimension is a power of 2."
   foreach { r {2^(ceil(log2([w,h,d])))},100%,${1-6} }
-
-#@cli r2din : eq. to 'resize2din'
-r2din :
-  _gmic_s="$?" v + _resize2din $*
-
-#@cli resize2din : width[%]>0,_height[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images so the size is not larger than 'width'x'height' while preserving 2D ratio.
-#@cli : (eq. to 'r2din').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'height=100%', 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-#@cli : $ image.jpg +resize2din 100,100 append x
-resize2din :
-  _gmic_s="$?" v + _$0 $*
-
-_resize2din : check "$1>0 && ${2=100%}>0 && ${3=3}>=0 && $3<=6 && ${4=0}>=0 && $4<=3 && "\
-                    "${5=0}>=0 && $5<=1 && ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1"
-  e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2, while preserving 2D ratio."
-  eval "repeat (l,k,
-    W = ispercentage($1)?w#k*$1:$1;
-    H = ispercentage($2)?h#k*$2:$2;
-    dims = round(min(W/w#k,H/h#k)*[w#k,h#k]);
-    resize(#k,max(1,dims[0]),max(1,dims[1]),d#k,s#k,${3-8});
-  )"
-
-#@cli r3din : eq. to 'resize3din'
-r3din :
-  _gmic_s="$?" v + _resize3din $*
-
-#@cli resize3din : width[%]>0,_height[%]>0,_depth[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images so the size is not larger than 'width'x'height'x'depth' while preserving 3D ratio.
-#@cli : (eq. to 'r3din').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'height=100%', 'depth=100%', 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-resize3din :
-  _gmic_s="$?" v + _$0 $*
-
-_resize3din : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 && ${5=0}>=0 && $5<=3 && "\
-                    "${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1 && ${9=0}>=0 && $9<=1"
-  e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2x$3, while preserving 3D ratio."
-  eval "repeat (l,k,
-    W = ispercentage($1)?w#k*$1:$1;
-    H = ispercentage($2)?h#k*$2:$2;
-    D = ispercentage($3)?d#k*$3:$3;
-    dims = round(min(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
-    resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
-  )"
-
-#@cli r2dout : eq. to 'resize2dout'
-r2dout :
-  _gmic_s="$?" v + _resize2dout $*
-
-#@cli resize2dout : width[%]>0,_height[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images so the size is not smaller than 'width'x'height' while preserving 2D ratio.
-#@cli : (eq. to 'r2dout').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'height=100%', 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-#@cli : $ image.jpg +resize2dout 100,100 append x
-resize2dout :
-  _gmic_s="$?" v + _$0 $*
-
-_resize2dout : check "$1>0 && ${2=100%}>0 && ${3=3}>=0 && $3<=6 && ${4=0}>=0 && $4<=3 && "\
-                     "${5=0}>=0 && $5<=1 && ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1"
-  e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2, while preserving 2D ratio."
-  eval "repeat (l,k,
-    W = ispercentage($1)?w#k*$1:$1;
-    H = ispercentage($2)?h#k*$2:$2;
-    dims = round(max(W/w#k,H/h#k)*[w#k,h#k]);
-    resize(#k,max(1,dims[0]),max(1,dims[1]),d#k,s#k,${3-8});
-  )"
-
-#@cli r3dout : eq. to 'resize3dout'
-r2dout :
-  _gmic_s="$?" v + _resize3dout $*
-
-#@cli resize3dout : width[%]>0,_height[%]>0,_depth[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images so the size is not smaller than 'width'x'height'x'depth' while preserving 3D ratio.
-#@cli : (eq. to 'r3dout').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'height=100%', 'depth=100%', 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-resize3dout :
-  _gmic_s="$?" v + _$0 $*
-
-_resize3dout : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 && ${5=0}>=0 && $5<=3 && "\
-                     "${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1 && ${8=0}>=0 && $8<=1 && ${9=0}>=0 && $9<=1"
-  e[0--3] "Resize image"$_gmic_s" so the size is not larger than $1x$2x$3, while preserving 3D ratio."
-  eval "repeat (l,k,
-    W = ispercentage($1)?w#k*$1:$1;
-    H = ispercentage($2)?h#k*$2:$2;
-    D = ispercentage($3)?d#k*$3:$3;
-    dims = round(max(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
-    resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
-  )"
 
 #@cli rotate : angle,_interpolation,_boundary_conditions,_center_x[%],_center_y[%] : \
 # u,v,w,angle,interpolation,boundary_conditions,_center_x[%],_center_y[%],_center_z[%] : (+)
@@ -32745,10 +32625,7 @@ apply_camera : check_opencv $0 skip "${1=},${4=}" check "${2=0}>=0 && ${3=0}>=0"
       camera $2,1,$3
       _apply_camera_com.
       if !$! 640,480,1,3 else k. fi
-      if {*}" && "[w,h]!=[{*,d,e}]
-        +r2din. {*,d,e},1,0,0.5,0.5 r. {*,d,e},1,100%,0,0,0.5,0.5
-      else .
-      fi
+      if {*}" && "[w,h]!=[{*,d,e}] +rs. {*,d,e},1,1 else . fi
       w. -1,-1,"[G'MIC] Camera ""#$2 ("{0,w}x{0,h}")"
       k[0]
 
@@ -56401,7 +56278,7 @@ fx_denoise :
   repeat $2 { denoise_cnn $1,64 progress {round(($>+1)/$2*100)} }
 
 fx_denoise_preview :
-  r2din 280,280,0,0,0.5,0.5
+  rs 280,280,0,2
   gui_split_preview "fx_denoise $*",${-3--1}
 
 #@gui Smooth [Guided] : fx_smooth_guided, fx_smooth_guided_preview(0)
