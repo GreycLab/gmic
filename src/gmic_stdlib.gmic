@@ -4963,7 +4963,7 @@ update_fonts :
       while h!=$target_height
       delete $outgmz
 
-      if h>$target_height r2dy $target_height fi
+      if h>$target_height rs ,$target_height fi
 
       ge 75% * 255 serialize auto,1,0 => $varname
       o $outfile
@@ -7687,7 +7687,7 @@ _gmd2html_formula :
     x "cd "$path_tmp"; rm -f "$varname".pdf; pdflatex -interaction=nonstopmode "$varname".tex >/dev/null"
     if isfile(['${path_tmp}$varname.pdf'])
       i ${path_tmp}$varname.pdf,800
-      autocrop. lt. 128 r2dy. 20% n. 0,255 channels. -3,0
+      autocrop. lt. 128 rs. ,20% n. 0,255 channels. -3,0
       if !isdir('img') x "mkdir -p img" fi
       o. $_gmd_filename
     fi
@@ -8525,7 +8525,7 @@ parse_gui_parseparams_thumbnails : u 1 # Tell parser to parse filter parameters
 parse_gui_thumbnails :
   e "  >> Generate output, in 'thumbnails' mode.\n"
   if !isdir('thumbnails') x "mkdir -p thumbnails" fi
-  sp landscape r2dy 256 r 256,256,1,3,0,0,0.5,0.5 store img
+  sp landscape rs ,256 r 256,256,1,3,0,0,0.5,0.5 store img
   _preview_area_width,_preview_area_height=256
 
   repeat $_nb_filters { f=$>
@@ -9905,7 +9905,7 @@ _sample :
     if $W>0" && "!$H rs. $W round.
     elif !$W" && "$H>0 rs. $H round.
     elif $W>0" && "$H>0
-      if w/$W>h/$H r2dy. $H else rs. $W fi
+      if w/$W>h/$H rs. ,$H else rs. $W fi
       r. $W,$H,1,100%,0,0,0.5,0.5 round.
     fi
     => $name
@@ -10230,7 +10230,7 @@ update_color_presets_html : check "isbool(${1=0})"
     +to[0] "Reference",4,{0,h-28},20,2 frame. 1,1,0
     o. original/$basename.jpg,$jpeg_quality rm.
     +_thumb[1] o. original/thumb_$basename.jpg,$jpeg_quality rm.
-    +r2dy[0] $thumb_height r. {h},{h},1,100%,0,0,0.5,0.5 _thumb.
+    +rs[0] ,$thumb_height r. {h},{h},1,100%,0,0,0.5,0.5 _thumb.
     o. original/minithumb_$basename.jpg,$jpeg_quality rm.
   } }
 
@@ -10808,8 +10808,8 @@ _gallery :
     if s==1 r {w},{h},1,3
     elif s==4 drgba
     else r {w},{h},1,3,0 fi
-    if w<=h" && "h<256 r2dy 256,2 elif h<=w" && "w<256 rs 256 fi
-    if w<=h" && "h>620 r2dy 620,2 elif h<=w" && "w>620 rs 620 fi
+    if w<=h" && "h<256 rs ,256,2 elif h<=w" && "w<256 rs 256 fi
+    if w<=h" && "h>620 rs ,620,2 elif h<=w" && "w>620 rs 620 fi
     if h<48 r 100%,48 fi
     if w<48 r 48,100% fi
     if $_is_animated" && "(w>480" || "h>480) rr2d 480,480,0,2 fi
@@ -12917,7 +12917,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
 #@cli : Compress selected images as 2xN data matrices, using RLE algorithm.
 #@cli : Set 'maximum_sequence_length=0' to disable maximum length constraint.
 #@cli : Default values: 'is_binary_data=0' and 'maximum_sequence_length=0'.
-#@cli : $ image.jpg resize2dy 100 quantize 4 round +compress_rle , +decompress_rle[-1]
+#@cli : $ image.jpg rescale2d ,100 quantize 4 round +compress_rle , +decompress_rle[-1]
 compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
   s0=" for binary data" s1=""
   if $2 s=", with maximal sequence length "$2 else s="" fi
@@ -14005,7 +14005,7 @@ autoindex : check "isint($1) && $1>0 && ${2=0}>=0" skip ${3=1}
           ${arg0\ !$3,k-means,median-cut}" method."
   foreach {
     if w>h if w>256 +rs 256 else [0] fi
-    else if h>256 +r2dy 256 else [0] fi
+    else if h>256 +rs ,256 else [0] fi
     fi
     colormap[1] $1,$3,0
     index[0] [1],$2,1 rm[1]
@@ -15069,12 +15069,12 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isi
       h0:=2*{*,v}/3 ws0={source,max(1,w*$h0/h)} wt0={target,max(1,w*$h0/h)}
       w1:=2*{*,u}/3 hs1={source,max(1,h*$w1/w)} ht1={target,max(1,h*$w1/w)}
       if abs($ws0+$wt0-$w1)<abs($hs1+$ht1-$h0) # Append along X.
-        +r2dy[source,target] $h0 +b[-2,-1] 0.5% a[-4,-3] x a[-2,-1] x
+        +rs[source,target] ,$h0 +b[-2,-1] 0.5% a[-4,-3] x a[-2,-1] x
       else # Append along Y.
         +rs[source,target] $w1 +b[-2,-1] 0.5% a[-4,-3] y a[-2,-1] y
       fi
       if w>$w1 rs[-2,-1] $w1 fi
-      if h>$h0 r2dy[-2,-1] $h0 fi
+      if h>$h0 rs[-2,-1] ,$h0 fi
       => visu,both
 
       w[visu] -1,-1
@@ -17310,34 +17310,6 @@ _resize3dout : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 &
     resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
   )"
 
-#@cli r2dy : eq. to 'resize2dy'.
-r2dy :
-  _gmic_s="$?" v + _resize2dy $*
-
-#@cli resize2dy : height[%]>=0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images along the y-axis, while preserving 2D ratio.
-#@cli : (eq. to 'r2dy').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-#@cli : $ image.jpg +resize2dy 100,2 append x
-resize2dy :
-  _gmic_s="$?" v + _$0 $*
-
-_resize2dy : check "$1>=0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=0 && $4<=1 && ${5=0}>=0 && $5<=1 &&
-                    ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
-  e[0--3] "Resize 2D image"$_gmic_s" to $1 pixels along the y-axis, while preserving 2D ratio."
-  foreach {
-    size:=ispercentage($1)?$1*h:$1
-    r {max(1,w*$size/h)},{max(1,$size)},100%,100%,${2-7}
-  }
-
 #@cli r3dx : eq. to 'resize3dx'.
 r3dx :
   _gmic_s="$?" v + _resize3dx $*
@@ -17791,7 +17763,7 @@ undistort : check "${1=0.1}>=-1 && $1<=1 && ${6=0}>=0 && $6<=3" skip ${2=0},${3=
 #@cli upscale_smart : width[%],_height[%],_depth,_smoothness>=0,_anisotropy=[0,1],sharpening>=0
 #@cli : Upscale selected images with an edge-preserving algorithm.
 #@cli : Default values: 'height=100%', 'depth=100%', 'smoothness=2', 'anisotropy=0.4' and 'sharpening=10'.
-#@cli : $ image.jpg resize2dy 100 +upscale_smart 500%,500% append x
+#@cli : $ image.jpg rescale2d ,100 +upscale_smart 500%,500% append x
 upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=1 && ${6=10}>=0"
   e[^-1] "Upscale image$? to $1x$2x$3, with smoothness $4, anisotropy $5 and sharpening $6."
   foreach {
@@ -22941,7 +22913,7 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 #@cli : 'precision' tells about the desired number of failed trials before ending the filling process.
 #@cli : Default values: 'nb_scales=5', 'min_scale=25', 'allow_rotation=3', 'spacing=1', 'precision=7' \
 # and 'max_iterations=256'.
-#@cli : $ 512,512,1,3,"min(255,y*c/2)" 100%,100% circle 50%,50%,100,1,255 append c image.jpg resize2dy[-1] 24 \
+#@cli : $ 512,512,1,3,"min(255,y*c/2)" 100%,100% circle 50%,50%,100,1,255 append c image.jpg rescale2d[-1] ,24 \
 # to_rgba pack_sprites 3,25
 pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint(${3=3}) && $3>=0 && $3<=3 &&
                       isint(${4=1}) && isint(${5=7}) && $5>=0 && isint(${6=256}) && $6>=0"
@@ -23129,7 +23101,7 @@ polka_dots : check $1>=0 skip ${2=20},${3=50},${4=50},${5=0},${6=10},${7=1},${8=
 #@cli : Default values: 'sampling=5%', 'factor=1', 'is_arrow=1', 'opacity=1', 'pattern=(undefined)'
 #@cli : and 'color1=0'.
 #@cli : $ 100,100,1,2,'!c?x-w/2:y-h/2' 500,500,1,3,255 quiver[-1] [-2],10
-#@cli : $ image.jpg +resize2dy 600 luminance[0] gradient[0] mul[1] -1 reverse[0,1] append[0,1] c \
+#@cli : $ image.jpg +rescale2d ,600 luminance[0] gradient[0] mul[1] -1 reverse[0,1] append[0,1] c \
 # blur[0] 8 orientation[0] quiver[1] [0],20,1,1,0.8,255
 quiver : check ${"is_image_arg $1"}" && ${2=5%}>0 && ${3=1}>=0 && isbool(${4=1})" skip "${5=1},${6=0}"
   e[^-1] "Draw 2D vector field $1 on image$?, with sampling $2, factor $3, arrows "${"arg0 $4,disabled,enabled"}",
@@ -23294,7 +23266,7 @@ tetraedron_shade :
 # (512 for 256 character sprites + 256 associated opacities), or as an image selection that is a serialized \
 # version of such an image list.
 #@cli : Default values: 'x=y=0.01~', 'font_height=16', 'opacity=1' and 'color1=0'.
-#@cli : $ image.jpg resize2dy 600 y=0 repeat 30 { text {2*$>}" : This is a nice text, isn't it ?",10,$y,{2*$>},0.9,255 \
+#@cli : $ image.jpg rescale2d ,600 y=0 repeat 30 { text {2*$>}" : This is a nice text, isn't it ?",10,$y,{2*$>},0.9,255 \
 # y+={2*$>} }
 #@cli : $ 0 text "G'MIC",0,0,23,1,255
 
@@ -23954,7 +23926,7 @@ chainring3d : check "isint(${1=16}) && $1>=3 && ${2=0.5}>0 && ${3=1}>0 && ${4=1}
 #@cli circles3d : _radius>=0,_is_outlined={ 0 | 1 }
 #@cli : Convert specified 3D objects to sets of 3D circles with specified radius.
 #@cli : Default values: 'radius=1' and 'is_outlined=1'.
-#@cli : $ image.jpg luminance resize2dy 40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 circles3d 0.7
+#@cli : $ image.jpg luminance rescale2d ,40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 circles3d 0.7
 circles3d : check "${1=1}>=0 && isbool(${2=0})"
   e[^-1] "Convert 3D object$? to sets of 3D "${arg0\ $2,filled,outlined}" circles with radius $1."
   p3d 0
@@ -24060,7 +24032,7 @@ _color3d :
 #@cli cubes3d : _size>=0
 #@cli : Convert specified 3D objects to sets of 3D cubes with specified size.
 #@cli : Default value: 'size=1'.
-#@cli : $ image.jpg luminance resize2dy 40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 cubes3d 1
+#@cli : $ image.jpg luminance rescale2d ,40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 cubes3d 1
 cubes3d : check ${1=1}>=0
   e[^-1] "Convert 3D object$? to sets of 3D cubes with size $1."
   p3d 0
@@ -24407,7 +24379,7 @@ fov3d : check "${1=45}>=0 && isint(${2=max(w,h)}) && $2>0"
 
 #@cli gaussians3d : _size>0,_opacity
 #@cli : Convert selected 3D objects into set of 3D gaussian-shaped sprites.
-#@cli : $ image.jpg r2dy 32 distribution3d gaussians3d 20 colorcube3d primitives3d[-1] 1 +3d
+#@cli : $ image.jpg rescale2d ,32 distribution3d gaussians3d 20 colorcube3d primitives3d[-1] 1 +3d
 gaussians3d : check "${1=32}>0" skip ${2=0.3}
   e[^-1] "Convert 3D object$? into sets of gaussian-shaped 3D sprites, with size $1 and opacity $2."
   p3d 2 p3d 0
@@ -24496,7 +24468,7 @@ image6cube3d :
 #@cli : Generate 3D blocks from selected images.
 #@cli : Transparency of selected images is taken into account.
 #@cli : Default values: 'maximum_elevation=10' and 'smoothness=0'.
-#@cli : $ image.jpg resize2dy 32 imageblocks3d -20 mode3d 3
+#@cli : $ image.jpg rescale2d ,32 imageblocks3d -20 mode3d 3
 imageblocks3d : check ${2=0}>=0 skip ${1=10},${3=0}
   e[^-1] "Generate 3D blocks from image$?, with maximum elevation $1 and smoothness $2."
   foreach {
@@ -24691,7 +24663,7 @@ imagesphere3d : check "${1=32}>=3 && ${2=16}>=3"
 #@cli isosurface3d : isovalue[%] : 'formula',value,_x0,_y0,_z0,_x1,_y1,_z1,_size_x>0[%],_size_y>0[%],_size_z>0[%] : (+)
 #@cli : Extract 3D isosurfaces with specified value from selected images or from specified formula.
 #@cli : Default values: 'x0=y0=z0=-3', 'x1=y1=z1=3' and 'size_x=size_y=size_z=32'.
-#@cli : $ image.jpg resize2dy 128 luminance threshold 50% expand_z 2,0 blur 1 isosurface3d 50% mul3d 1,1,30
+#@cli : $ image.jpg rescale2d ,128 luminance threshold 50% expand_z 2,0 blur 1 isosurface3d 50% mul3d 1,1,30
 #@cli : $ isosurface3d 'x^2+y^2+abs(z)^abs(4*cos(x*y*z*3))',3
 
 #@cli label3d : "text",font_height>=0,_opacity,_color1,...
@@ -24967,7 +24939,7 @@ pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(
 
 #@cli pointcloud3d
 #@cli : Convert selected planar or volumetric images to 3D point clouds.
-#@cli : $ image.jpg luminance resize2dy 100 threshold 50% mul 255 pointcloud3d color3d[-1] 255,255,255
+#@cli : $ image.jpg luminance rescale2d ,100 threshold 50% mul 255 pointcloud3d color3d[-1] 255,255,255
 pointcloud3d :
   e[^-1] "Convert image$? to 3D point cloud."
   foreach {
@@ -25735,7 +25707,7 @@ sprite3d :
 #@cli : Convert selected 3D objects as a sprite cloud.
 #@cli : Set 'sprite_has_alpha_channel' to 1 to make the last channel of the selected sprite be a transparency mask.
 #@cli : Default value: 'mask_has_alpha_channel=0'.
-#@cli : $ torus3d 100,20 image.jpg resize2dy[-1] 64 100%,100% gaussian[-1] 30%,30% *[-1] 255 append[-2,-1] c \
+#@cli : $ torus3d 100,20 image.jpg rescale2d[-1] ,64 100%,100% gaussian[-1] 30%,30% *[-1] 255 append[-2,-1] c \
 # +sprites3d[0] [1],1 display_rgba[-2]
 sprites3d : check ${is_image_arg\ $1} skip ${2=0}
   e[^-1] "Convert image$? as 3D sprites clouds, using sprite $1 ("${"arg {1+!$2},with,without"}" alpha-channel)."
@@ -26745,7 +26717,7 @@ _exec_out :
 
 #@cli for : condition : (+)
 #@cli : Start a `for...done` block.
-#@cli : $ image.jpg resize2dy 32 400,400,1,3 x=0 for $x<400 image[1] [0],$x,$x x+=40 done
+#@cli : $ image.jpg rescale2d ,32 400,400,1,3 x=0 for $x<400 image[1] [0],$x,$x x+=40 done
 
 #@cli foreach : (+)
 #@cli : Start a 'foreach...done' block, that iterates over all images in the selection, \
@@ -30178,7 +30150,7 @@ linearize_tiles : check "$1>0 && ${2=$1}>0"
 #@cli map_sprites : _nb_sprites>=1,_allow_rotation={ 0:none | 1:90 deg. | 2:180 deg. }
 #@cli : Map set of sprites (defined as the 'nb_sprites' latest images of the selection) to other selected images,
 #@cli : according to the luminosity of their pixel values.
-#@cli : $ image.jpg resize2dy 48 repeat 16 ball {8+2*$>},${-rgb} mul[-1] {(1+$>)/16} done map_sprites 16
+#@cli : $ image.jpg rescale2d ,48 repeat 16 ball {8+2*$>},${-rgb} mul[-1] {(1+$>)/16} done map_sprites 16
 map_sprites : check "isint($1) && $1>0 && isint(${2=0}) && $2>=0 && $2<=2"
   e[^-1] "Map set of $1 sprites to image selection$?."
   norm[0--{$1+1}] quantize[0--{$1+1}] $1,0,1
@@ -31037,7 +31009,7 @@ linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 &
     remove_opacity nm={n}
     100%,100%,1,{s},$6?0:255
     if {0,w>h} rs[0] {ispercentage($3)?max(1,$3*w):min(w,$3)}
-    else r2dy[0] {ispercentage($3)?max(1,$3*h):min(h,$3)}
+    else rs[0] ,{ispercentage($3)?max(1,$3*h):min(h,$3)}
     fi
     n[0] 0,100
     if narg($_debug)" && "!{*,w} w[] ${-fitscreen[]\ {1,[w,h]}} fi
@@ -31399,7 +31371,7 @@ stars : check "${1=10%}>=0 && ${2=1}>=0 && ${3=32}>0 && ${4=5}>=1 && ${5=0.38}>=
   # Generate star sprites.
   star3d $4,$5 col3d. 255 *3d. $3
   l. { repeat 4 { {round(2*$3)},{round(2*$3)} j3d. [0],50%,50%,0,1,2,0,0 r3d[0] 0,0,1,-90 } rm[0] }
-  autocrop[-4--1] 0 r2dy[-4--1] $3 b[-4--1] $6,0 r[-4--1] 100%,100%,1,4
+  autocrop[-4--1] 0 rs[-4--1] ,$3 b[-4--1] $6,0 r[-4--1] 100%,100%,1,4
   repeat 4 { sh[{-1-$>}] 0,2 fc. $7,$8,$9 rm. }
 
   # Draw stars on selected images.
@@ -32325,7 +32297,7 @@ watermark_visible : check "inrange(${2=0.3},0,1) && ${6=0.5}>=0"
 #@cli : shapeprevalent | softburn | softdodge | softlight | stamp | subtract | value | vividlight | xor }.
 #@cli : 'opacity' must be in range '[0,1]' (or '[0%,100%]').
 #@cli : Default values: 'blending_mode=alpha', 'opacity=1' and 'selection_is=0'.
-#@cli : $ image.jpg +drop_shadow , resize2dy[-1] 200 rotate[-1] 20 +blend alpha display_rgba[-2]
+#@cli : $ image.jpg +drop_shadow , rescale2d[-1] ,200 rotate[-1] 20 +blend alpha display_rgba[-2]
 #@cli : $ image.jpg testimage2d {w},{h} blend overlay
 #@cli : $ command "ex : $""=arg repeat $""# +blend[0,1] ${arg{$>+1}} \
 # text_outline[-1] Mode:\" \"${arg{$>+1}},2,2,23,2,1,255 done" image.jpg testimage2d {w},{h} \
@@ -36099,7 +36071,7 @@ _demos_font : # Define font used for menu items
 "CcmG50FyjyoWH6UJ14bqQXdgudBe+C+GF8Zo1BfCQXlgvtBfeC/GF+UJ94b6QX6u2BR7+iwBEASIB0YCIQFQgMhAdaNdYwSMF0YKIQdQgchA9iCBEESIJ"\
 "nVo/eFQhshBdiDBEGSIN0YaIQ9ShW3Nae8qg0ofpw/Rh+jB9mD5MH6YP04dVAw2PPkwfpg/Th+nD9GH6cO19Df7v4sOrza/Rr9Wv2a/dr+GnD9OH6cO9P"\
 "iHw6MP0YfowfZg+TB+mD9OH6cOjvknw6MP0YfowfZg+TB+mD9OH6cOzPnLz4z8MZjG7"
-    r2dy 32 r 300%,300%,1,100%,3 (0,1,0;1,1,1;0,1,0) dilate[^-1] . rm. r 33%,33%,1,100%,2 n 0,255 sharpen 0.2
+    rs ,32 r 300%,300%,1,100%,3 (0,1,0;1,1,1;0,1,0) dilate[^-1] . rm. r 33%,33%,1,100%,2 n 0,255 sharpen 0.2
     store 1,_font
   }
 
@@ -36807,7 +36779,7 @@ _x_colorize :
   => points
 
   # Compute potential map.
-  if $2>0 if $w>$h +rs[img] {min($2,$w)} else +r2dy[img] {min($2,$h)},2 fi else [img] fi
+  if $2>0 if $w>$h +rs[img] {min($2,$w)} else +rs[img] ,{min($2,$h)},2 fi else [img] fi
   __x_colorize. $1
   pw,ph={potential,[w,h]}
 
@@ -37411,7 +37383,7 @@ x_fisheye : check_display $0
 ----\n
 -------------------------------------------"
 
-  if $!>0 a x n 0,255 r2dy 220 else
+  if $!>0 a x n 0,255 rs ,220 else
   120,90,1,3 rand. 0,255 plasma. 0.3,3 n 0,255
   t "  G\47MIC\nFISH-EYE\n EFFECT",20,13,23,1,255 scale3x b 5 sharpen 1000
   f i+150-3*abs(y-h/2) c. 0,255 frame_fuzzy. 15,10,15,1.5,0 to_rgb.
@@ -37458,7 +37430,7 @@ x_fourier : check_display $0
     freqmax=100    # max freq. (in %)
 
     if w>3*{*,u}/5 rs. {3*{*,u}/10} fi  # Reduce image size if necessary.
-    if h>3*{*,v}/5 r2dy. {3*{*,v}/5} fi
+    if h>3*{*,v}/5 rs. ,{3*{*,v}/5} fi
 
     # Compute fourier transform.
     +fft. => real,imag
@@ -37468,7 +37440,7 @@ x_fourier : check_display $0
     n. 0,255 shift. {round(w/2)},{round(h/2)},0,0,2 to_colormode. {-2,s}
     => logmag
 
-    +r2dy. 128 frame. 1,1,0 => thumb
+    +rs. ,128 frame. 1,1,0 => thumb
     w[0,-2] -1,-1,0,"[G"{`39`}"MIC] Fourier Filtering"
 
     l {
@@ -37745,7 +37717,7 @@ x_histogram : check_display $0
 -----------------------------------------------------"
 
   if !$! sp ? to_rgb
-  else k[0] to_rgb r2dy 300,2 if w>800 r 800,100%,1,3,2 fi n 0,255
+  else k[0] to_rgb rs ,300,2 if w>800 r 800,100%,1,3,2 fi n 0,255
   fi
 
   # Prepare image layout.
@@ -37856,7 +37828,7 @@ x_hough : check_display $0
   foreach {
     r. ${fitscreen\ {[w,h]}},1,100%,3  # Resize to fit screen if necessary.
     if !narg($first_time)
-      parallel 0,"+l[0] { r2dy 128 frame 1,1,0 \
+      parallel 0,"+l[0] { rs ,128 frame 1,1,0 \
         alert \"[G"{`39`}"MIC Hough Transform]\",\
            \"The G\47MIC Hough transform demo illustrates the application\n\
            of the Hough transform to detect lines in an image. Use your\n\
@@ -38673,7 +38645,7 @@ x_minimal_path : check_display $0
     w[0] -1,-1,0,"[G"{`39`}"MIC] Select Starting Point P0"
 
     if !narg($first_time)
-      parallel 0,"+l[0] { r2dy 128 frame 1,1,0 \
+      parallel 0,"+l[0] { rs ,128 frame 1,1,0 \
         alert \"[G"{`39`}"MIC Minimal Path]\",\
            \"The G\47MIC minimal path demo illustrates how minimal paths\n\
            can be computed in images to detect and track edge points.\n\
@@ -39143,22 +39115,22 @@ _pacman_pacgum_gfx :
 _pacman_cherry_gfx :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KNzYgMSAxIDEgIzU5CnicFYpBCgAxDALVXvv/p5ZtmsgmIMoM7k0Cx/ySYYIXrE5qOgTmE1KGlo"\
                "UW1pp1qVUqmkt3Hj9Whx3S"
-  decompress_rle. (0,0,255,255^0,173,0,255^0,0,0,255) map.. . rm. r2dy. 14 r. 16,16,1,3,0,0,0.5,0.5
+  decompress_rle. (0,0,255,255^0,173,0,255^0,0,0,255) map.. . rm. rs. ,14 r. 16,16,1,3,0,0,0.5,0.5
 
 _pacman_strawberry_gfx :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KNzIgMSAxIDEgIzYwCnicJYlJDoAwEMOyHOH/H+UANJ0RBaRIlp1tJ4HAd9HFaoUtTNWC1yIPWT"\
                "5ew5em+lT994guKHgAoIoa8w=="
-  decompress_rle. (0,0,255,255^0,173,0,255^0,0,0,255) map.. . rm. r2dy. 14 r. 16,16,1,3,0,0,0.5,0.5
+  decompress_rle. (0,0,255,255^0,173,0,255^0,0,0,255) map.. . rm. rs. ,14 r. 16,16,1,3,0,0,0.5,0.5
 
 _pacman_orange_gfx :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KNDQgMSAxIDEgIzQ2CnicBcHBDQAgDAOxXPjC/gsxU4VKi7DnAukKPU6SYjTVptxhbSv8wpVufU"\
                "wDEZ4="
-  decompress_rle. (0,0,255,255^0,173,173,255^0,0,0,255) map.. . rm. r2dy. 14 r. 16,16,1,3,0,0,0.5,0.5
+  decompress_rle. (0,0,255,255^0,173,173,255^0,0,0,255) map.. . rm. rs. ,14 r. 16,16,1,3,0,0,0.5,0.5
 
 _pacman_banana_gfx :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KNzAgMSAxIDEgIzQ4CnicNcqxDQAgDMTANx0S++8aIC9ShObceC6QQoSJ5Ai5vWW2WTI6xr+bvL"\
                "U/BnUW3g=="
-  decompress_rle. (0,255,255^0,173,255^0,0,255) map.. . rm. r2dy. 14 r. 16,16,1,3,0,0,0.5,0.5
+  decompress_rle. (0,255,255^0,173,255^0,0,255) map.. . rm. rs. ,14 r. 16,16,1,3,0,0,0.5,0.5
 
 _pacman_map_level1 :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KMjAxIDEgMSAxICM5Nwp4nGWOUQ6AMAhDKX56Be9/QnWJArEM9MdsGa9QYOsGiOy4FaZYHAo1aM"\
@@ -39414,7 +39386,7 @@ x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
 --------------------------------------------------------------"
 
   if !$! sp ? fi
-  k[0] to_rgb if h>300 r2dy 300 round 1 fi => img        # Resize input image if necessary.
+  k[0] to_rgb if h>300 rs ,300 round 1 fi => img         # Resize input image if necessary.
   +r {w*h},1,1,3,-1 r. {min(w,8192)},1,1,3 => colors     # Get reduced set of image colors.
   $1,1,1,3 rand. 0,255 round. 1 => centroids             # Initialize random centroids.
   _x_quantize_rgb_3d (1,0,0,0;0,1,0,0;0,0,1,0) => pose3d # Init 3D object.
@@ -39422,7 +39394,7 @@ x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
   _x_quantize_rgb_text "Clusters",clustering1
   _x_quantize_rgb_text "Dithering: off",dithering0
   _x_quantize_rgb_text "Dithering: on",dithering1
-  if {img,h<300} +r2dy[img] 300,1 else [img] fi           # Generate visualization canvas.
+  if {img,h<300} +rs[img] ,300,1 else [img] fi           # Generate visualization canvas.
   {w+315},365,1,3,255 rm..
   rectangle. 4,4,305,305,1,0xFFFFFFFF,0
   rectangle. 309,4,{w-5},305,1,0xFFFFFFFF,0
@@ -39457,7 +39429,7 @@ x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
     fi
 
     if !narg($visu_img) # Update indexed image.
-      +index[img] [centroids],{0.7*$dithering},1 if h<300 r2dy. 300,1 fi
+      +index[img] [centroids],{0.7*$dithering},1 if h<300 rs. ,300,1 fi
       j. [dithering$dithering],2,0,0,0,1,[mdithering$dithering],255
       => visu_img j[visu] [visu_img],310,5
     fi
@@ -39699,7 +39671,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
     => points
 
     # Compute potential map.
-    if $1>0 if $w>$h +rs[img] {min($1,$w)} else +r2dy[img] {min($1,$h)},2 fi else [img] fi
+    if $1>0 if $w>$h +rs[img] {min($1,$w)} else +rs[img] ,{min($1,$h)},2 fi else [img] fi
     _x_segment.
     pw,ph={potential,[w,h]}
 
@@ -40448,7 +40420,7 @@ x_starfield3d : check_display $0
     x=0 N=$! repeat $N { 0 t. {$>,t},0,0,48,1,1 x$>=$x y$>=0 z$>:=-3200-150*$> x:=$x+w+8 } k[50%--1]
     expand_xy 6,0 dilate_circ 5 b 0.5 expand_z 1,0 isosurface3d 10% *3d 1,1,5 rv3d
     repeat $N { col3d[$>] ${-rgb} }
-    0 t. "Version "${-strver},0,0,48,1,1 r2dy. 18 +f. 255 to_rgb.
+    0 t. "Version "${-strver},0,0,48,1,1 rs. ,18 +f. 255 to_rgb.
     random3d 2500 col3d. 255 *3d. 320,200,1000 -3d. 160,100
     l3d 0,0,-600
     w[] ${"fitscreen 640,400,1,35%"},0,"[G"{`39`}"MIC] 3D Starfield"
@@ -42276,7 +42248,7 @@ fx_dices :
     if $3%2 negate[-6--1] fi
 
     frame_round[-6--1] 0,0,30%,0.5,128,128,128,0 frame[-6--1] 1,1,128,128,128,0
-    r2dy[-6--1] $2 a[-6--1] x
+    rs[-6--1] ,$2 a[-6--1] x
 
     foreach[^-1] {
       pass.
@@ -42384,7 +42356,7 @@ _fx_drawn_montage :
     l:=1+$1
     if $l<=$nb_layers
       if {$l,w>h} +rs[$l] {(0$_preview_area_width?0$_preview_area_width:400)/6}
-      else +r2dy[$l] {(0$_preview_area_height?0$_preview_area_height:400)/6} fi
+      else +rs[$l] ,{(0$_preview_area_height?0$_preview_area_height:400)/6} fi
       frame. 1,1,0,0,0,255 drgba. to. "#"$l,0,-2,13 to_rgba.
       mv. -3
       thumbnail=1
@@ -42736,7 +42708,7 @@ fx_frame_seamless_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/14/01</i>.</small>")
 fx_ministeck :
   foreach {
-    if w>h rs {min($2,w)} else r2dy {min($2,h)} fi
+    if w>h rs {min($2,w)} else rs ,{min($2,h)} fi
     split_opacity l[0] {
       +colormap. $1 index.. .
       [0],[0],1,1 rand[2] 0,1 dilate[2] $4 +[0,2]
@@ -42888,7 +42860,7 @@ fx_puzzle :
 
       if $16 # One piece by layer.
         foreach {
-          r2dy {max(0.1,$10+$11*v)}% rotate {$12+$13*v}
+          rs ,{max(0.1,$10+$11*v)}% rotate {$12+$13*v}
           if $15 expand_xy 1,0 fi
           cx,cy:=round([w,h]/2)
           sh 100% if $15 dilate. 3 fi
@@ -42899,7 +42871,7 @@ fx_puzzle :
       else # All pieces on the same layer.
         i[0] $w,$h,1,{s}
         repeat $!-1 {
-          r2dy. {max(0.1,$10+$11*v)}% rotate. {$12+$13*v}
+          rs. ,{max(0.1,$10+$11*v)}% rotate. {$12+$13*v}
           if $15 expand_xy. 1,0 fi
           cx,cy:=round([w,h]/2)
           sh. 100% if $15 dilate. 3 fi
@@ -44351,7 +44323,7 @@ fx_shapeism :
       # Create shape at given scale.
       size:=$6<=1?$7:$7+($8-$7)*$>/($6-1)
       if $size<1 break fi
-      if $5 {2*$size},{2*$size} _fx_shapeism$1. ${2-4} r2dy. $size
+      if $5 {2*$size},{2*$size} _fx_shapeism$1. ${2-4} rs. ,$size
       else $size,$size _fx_shapeism$1. ${2-4}
       fi
       +!=. 0 expand_xy[-2,-1] 1,0 n[-2,-1] 0,1
@@ -47611,7 +47583,7 @@ fx_customize_clut_preview :
       to[1] "After",2,0,13,1,0.75
       a[0,1] y r[0] 100%,$h,1,3,0
     else # Portrait mode.
-      r2dy[0,1] {0,round(h/2)}
+      rs[0,1] ,{0,round(h/2)}
       to[0] "Before",2,0,13,1,0.75
       to[1] "After",2,0,13,1,0.75
       a[0,1] x r[0] $w,100%,1,3,0
@@ -52967,7 +52939,7 @@ fx_split_details_alpha_preview :
   foreach {
     fx_split_details_alpha ${1-4}
     if $5 remove_opacity[^-1] else to_rgba. fi
-    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) rs ,{100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -52997,7 +52969,7 @@ fx_split_details_gaussian_preview :
   foreach {
     fx_split_details_gaussian $*
     if $4 equalize[^-1] 256 fi n[^-1] 0,255
-    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) rs ,{100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -53031,7 +53003,7 @@ fx_split_details_wavelets_preview :
   foreach {
     fx_split_details_wavelets $1,0
     if $3 equalize[^-1] 256 fi n[^-1] 0,255
-    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) rs ,{100/$N}%
     foreach { 0 text. "#"{1+$>}" ",1,1,24,1,255 +dilate. 5 to_rgba[1] j[0] [1],2,0,0,0,1,[2],255 k[0] }
     to_rgba frame 1,1,0 frame 3,3,255 append_tiles ,
   }
@@ -53907,7 +53879,7 @@ fx_apply_multiscale : skip "${13=}"
 fx_apply_multiscale_preview :
   foreach {
     fx_apply_multiscale $"*"
-    N:=int(sqrt($!)) N:=round($!/$N,1,1) r2dy {100/$N}%
+    N:=int(sqrt($!)) N:=round($!/$N,1,1) rs ,{100/$N}%
     to_rgba
     max_wh=${-max_wh}
     N=$! foreach {
@@ -57124,7 +57096,7 @@ fx_blocks3d :
   foreach {
     nm=${"-gui_layer_name"}
     W,H,M:=w,h,max(w,h)
-    if w>h rs $1 else r2dy $1 fi
+    if w>h rs $1 else rs ,$1 fi
     w,h,m:=w,h,max(w,h)
     if $3>0 mirror y fi
     imageblocks3d $3,$2%
@@ -59488,7 +59460,7 @@ fx_text_pointcloud3d :
     i[0] 100%,100%,1,4 fc[0] ${8-11} +channels. 3,3 +negate. b[-2,-1] $14% to_rgba.
     j[0] .,$12%,$13%,0,0,1,..,255 rm[-2,-1] blend alpha
   } fi
-  if $W>$H rs $W else r2dy $H fi
+  if $W>$H rs $W else rs ,$H fi
   if $15>1
     i[{int($1/2)}] [{int($1/2)}]x{$15-1}
     i[0] [0]x{$15-1}
@@ -60681,7 +60653,7 @@ fx_solve_maze_preview :
 #@cli : 128,128,1,3,u(255) plasma 10,3 blur 4 sharpen 10000 n 0,255 \
 # elevation3d[-1] 'X=(x-64)/6;Y=(y-64)/6;-100*exp(-(X^2+Y^2)/30)*abs(cos(X)*sin(Y))' _fps=10 _label="3D~Elevation"
 #@cli : $ gmic3d _fps=10 _label="3D~G'MIC~Logo"
-#@cli : $ image.jpg resize2dy 32 imageblocks3d -20 mode3d 3 _fps=10 _label="3D~Image~Blocks"
+#@cli : $ image.jpg rescale2d ,32 imageblocks3d -20 mode3d 3 _fps=10 _label="3D~Image~Blocks"
 #@cli : $ image.jpg imagerubik3d , _fps=10 _label="Rubik~Cube"
 #@cli : $ shape_cupid 480 skeleton3d , _fps=10 _label="3D~Skeleton"
 #@cli : $ spherical3d "abs(1+0.5*cos(3*phi)*sin(4*theta))" _fps=10 _label="3D~Spherical~Function"
