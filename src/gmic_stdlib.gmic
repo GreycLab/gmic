@@ -4200,7 +4200,7 @@ _display_clut : check "isint(${1=320}) && $1>0 && isint(${2=33}) && $2>0"
            0.559404552,0.446283728,0.698496521,0
     c3d n3d *3d. {2.10*$1}
     {2*$1},{2*$1},1,3,-1 j3d. ..,47%,46%,0,1,2,0,0,{4*$1} rm..
-    to_rgba replace_color 0,0.5%,-1,-1,-1,255,96,96,96,0 r2dx $1
+    to_rgba replace_color 0,0.5%,-1,-1,-1,255,96,96,96,0 rs $1
     => $nm
   }
 
@@ -4555,7 +4555,7 @@ dt :
 #@cli : Render selected images of tensors as a field of 2D ellipses.
 #@cli : (eq. to 'dt').
 #@cli : Default values: 'size_factor=16', 'ellipse_size=1.5', 'color_mode=2' and 'outline=2'.
-#@cli : $ image.jpg +diffusiontensors 0.1,0.9 resize2dx. 64 +display_tensors. 16,2
+#@cli : $ image.jpg +diffusiontensors 0.1,0.9 rescale2d. 64 +display_tensors. 16,2
 #@cli : $$ https://gmic.eu/oldtutorial/_display_tensors
 display_tensors :
   _gmic_s="$?" v + _$0 $*
@@ -6713,8 +6713,8 @@ _parse_cli_images : l[] { check "isbool(${1=1})" is_arg=1 arg1=$1 onfail is_arg=
         +z[0] 50%,0,0,50%,100%,100% permute. zyxc
         +z[0] 0,50%,0,100%,50%,100% permute. xzyc
         rr2d... $W,$H,0,2
-        r2dy.. {-3,h},1
-        r2dx. {-3,w},1
+        rs.. ,{-3,h},,1
+        rs. {-3,w},,1
         s:=min(w#-2,h)
         if $s>64 projections3d[0] 50%,50%,50%,1 mv[0] $! r3d. 1,1,0,-80 r3d. 0,1,0,80 snapshot3d. $s
         else rm[0] 0
@@ -9215,7 +9215,7 @@ _parse_gui_strings :
 #@cli : Return a 3-channels image of a poincare disk. Output channels are '[x,y,it]'.
 #@cli : Default values: 'size=1024', 'p=5', 'q=3', 'angle=0', 'tiling=0', 'nb_max_iter=20', \
 # 'xmin=ymin=-1' and 'xmax=ymax=1'.
-#@cli : repeat 4 { poincare_disk 1024,{3+$>} channels[-1] 2 mod[-1] 3 neq[-1] 2 } resize2dx 50%
+#@cli : repeat 4 { poincare_disk 1024,{3+$>} channels[-1] 2 mod[-1] 3 neq[-1] 2 } rescale2d 50%
 +poincare_disk : check "isint(${1=1024}) && $1>=0 && isint(${2=5}) && $2>2 && isint(${3=4}) && $3>2 && "\
                        "isbool(${5=0}) && isint(${6=20}) && $6>=0" skip "${4=0},${7=-1},${8=-1},${9=1},${10=1}"
   s0,s1=triangular,polygon
@@ -9294,7 +9294,7 @@ _parse_gui_strings :
 +portrait : check "isint(${1=800}) && $1>0"
   e[^-1] "Input random portrait image of size $1x$1."
   i jpg:"https://thispersondoesnotexist.com/" z. 12,0,1011,999
-  r2dx. $1 => portrait
+  rs. $1 => portrait
 
 #@cli p : eq. to 'print'.
 p :
@@ -9902,10 +9902,10 @@ _sample :
     }
 
     # Resize to desired dimensions.
-    if $W>0" && "!$H r2dx. $W round.
-    elif !$W" && "$H>0 r2dy. $H round.
+    if $W>0" && "!$H rs. $W round.
+    elif !$W" && "$H>0 rs. $H round.
     elif $W>0" && "$H>0
-      if w/$W>h/$H r2dy. $H else r2dx. $W fi
+      if w/$W>h/$H r2dy. $H else rs. $W fi
       r. $W,$H,1,100%,0,0,0.5,0.5 round.
     fi
     => $name
@@ -10084,11 +10084,11 @@ update_instimg :
 
   # Large image.
   +l {
-    r2dx 164
+    rs 164
     0 t. "G'MIC-Qt for GIMP",0,0,96,1,1
     0 t. "(version "${-strver}")",0,0,64,1,1
     a[-2,-1] y,0.5 rows. -5,100%
-    *. -1 n. 0,255 to_rgb. r2dx. {0,0.95*w}
+    *. -1 n. 0,255 to_rgb. rs. {0,0.95*w}
     - 255 a y,0.5 + 255
     - 255 r 164,314,1,3,0,0,0.5,0.25 + 255
     o $HOME/work/src/gmic/resources/gmic_instimg.bmp
@@ -10096,7 +10096,7 @@ update_instimg :
   }
 
   # Small image.
-  r2dx 55 - 255 r 55,55,1,3,0,0,0.5,0.5 + 255
+  rs 55 - 255 r 55,55,1,3,0,0,0.5,0.5 + 255
   o $HOME/work/src/gmic/resources/gmic_instimg_small.bmp
   rm
 
@@ -10226,7 +10226,7 @@ update_color_presets_html : check "isbool(${1=0})"
     =>[0] sample_{1+$<}
     basename={0,b} basename$<=$basename
     e "    - "$basename
-    +r2dx $thumb_width
+    +rs $thumb_width
     +to[0] "Reference",4,{0,h-28},20,2 frame. 1,1,0
     o. original/$basename.jpg,$jpeg_quality rm.
     +_thumb[1] o. original/thumb_$basename.jpg,$jpeg_quality rm.
@@ -10808,8 +10808,8 @@ _gallery :
     if s==1 r {w},{h},1,3
     elif s==4 drgba
     else r {w},{h},1,3,0 fi
-    if w<=h" && "h<256 r2dy 256,2 elif h<=w" && "w<256 r2dx 256,2 fi
-    if w<=h" && "h>620 r2dy 620,2 elif h<=w" && "w>620 r2dx 620,2 fi
+    if w<=h" && "h<256 r2dy 256,2 elif h<=w" && "w<256 rs 256 fi
+    if w<=h" && "h>620 r2dy 620,2 elif h<=w" && "w>620 rs 620 fi
     if h<48 r 100%,48 fi
     if w<48 r 48,100% fi
     if $_is_animated" && "(w>480" || "h>480) rr2d 480,480,0,2 fi
@@ -14004,7 +14004,7 @@ autoindex : check "isint($1) && $1>0 && ${2=0}>=0" skip ${3=1}
   e[^-1] "Index colors in images$? by adapted colormap with $1 entries, dithering level $2 and "\
           ${arg0\ !$3,k-means,median-cut}" method."
   foreach {
-    if w>h if w>256 +r2dx 256 else [0] fi
+    if w>h if w>256 +rs 256 else [0] fi
     else if h>256 +r2dy 256 else [0] fi
     fi
     colormap[1] $1,$3,0
@@ -15071,9 +15071,9 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isi
       if abs($ws0+$wt0-$w1)<abs($hs1+$ht1-$h0) # Append along X.
         +r2dy[source,target] $h0 +b[-2,-1] 0.5% a[-4,-3] x a[-2,-1] x
       else # Append along Y.
-        +r2dx[source,target] $w1 +b[-2,-1] 0.5% a[-4,-3] y a[-2,-1] y
+        +rs[source,target] $w1 +b[-2,-1] 0.5% a[-4,-3] y a[-2,-1] y
       fi
-      if w>$w1 r2dx[-2,-1] $w1 fi
+      if w>$w1 rs[-2,-1] $w1 fi
       if h>$h0 r2dy[-2,-1] $h0 fi
       => visu,both
 
@@ -15121,7 +15121,7 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isi
     #     ap "s. c,-3 view_func. 6,.. rm.."
     #     ap "makefig"
     #     append[^0] [0],x rm[0]
-    #     r2dx 1024
+    #     rs 1024
     #     [-1]x20
     #     o videos/video_${nm_source}_to_${nm_target}.mp4,10
     #     rm
@@ -17013,8 +17013,8 @@ _montage :
 #@cli : $ image.jpg +resize[-1] 256,128,1,3,2 +resize[-1] 120%,120%,1,3,0,1,0.5,0.5 \
 # +resize[-1] 120%,120%,1,3,0,0,0.2,0.2 +resize[-1] [0],[0],1,3,4
 
-#@cli rs2d : eq. to 'rescale2d'.
-rs2d :
+#@cli rs : eq. to 'rescale2d'.
+rs :
   _gmic_s="$?" v + _rescale2d $*
 
 #@cli rescale2d : _width[%]={ 0:any | >0 },_height[%]={ 0:any | >0 },-1=<_interpolation<=6,\
@@ -17039,8 +17039,8 @@ _rescale2d : check "${1=0}>=0 && ${2=0}>=0 && isin(${3=3},-1,0,1,2,3,4,5,6) && i
   e[0--3] "Resize 2D image"$_gmic_s" to ("${w{$1!=0}}","${h{$2!=0}}"), "\
           "with "${i{max(0,$3)}}" interpolation and '"${m$4}"' mode."
   1,$!,1,1,"w = w#y; h = h#y; d = d#y; s = s#y;
-    aw = ispercentage($1)?max(1,round(w*$1)):$1;
-    ah = ispercentage($2)?max(1,round(h*$2)):$2;
+    aw = round(ispercentage($1)?max(1,w*$1):$1);
+    ah = round(ispercentage($2)?max(1,h*$2):$2);
     !w?resize(#y,aw,ah,1,1):
     aw || ah?(
       ratio = aw && ah?($4<2?min(aw/w,ah/h):max(aw/w,ah/h)): # W&H constraints
@@ -17080,9 +17080,9 @@ _rescale3d : check "${1=0}>=0 && ${2=0}>=0 && ${3=0}>=0 && isin(${4=3},-1,0,1,2,
   e[0--3] "Resize 3D image"$_gmic_s" to ("${w{$1!=0}}","${h{$2!=0}}","${d{$3!=0}}"), "\
           "with "${i{max(0,$4)}}" interpolation and '"${m$5}"' mode."
   1,$!,1,1,"w = w#y; h = h#y; d = d#y; s = s#y;
-    aw = ispercentage($1)?max(1,round(w*$1)):$1;
-    ah = ispercentage($2)?max(1,round(h*$2)):$2;
-    ad = ispercentage($3)?max(1,round(d*$3)):$3;
+    aw = round(ispercentage($1)?max(1,w*$1):$1);
+    ah = round(ispercentage($2)?max(1,h*$2):$2);
+    ad = round(ispercentage($3)?max(1,h*$3):$3);
     !w?resize(#y,aw,ah,ad,1):
     aw || ah || ad?(
       ratio = aw && ah && ad?($5<2?min(aw/w,ah/h,ad/d):max(aw/w,ah/h,ad/d)): # W&H&D constraints
@@ -17117,7 +17117,7 @@ resize_as_image : check ${"is_image_arg $1"}" && isint(${2=1}) && $2>=-1 && $2<=
 #@cli : Resize selected images with Mitchell-Netravali filter (cubic).
 #@cli : For details about the method, see: <https://de.wikipedia.org/wiki/Mitchell-Netravali-Filter>.
 #@cli : Default values: 'height=100%', 'depth=100%', 'B=0.3333' and 'C=0.3333'.
-#@cli : $ image.jpg resize2dx 32 resize_mn 800%,800%
+#@cli : $ image.jpg rescale2d 32 resize_mn 800%,800%
 resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
   e[^-1] "Resize image$? to $1x$2x$3 using Mitchell-Netravali filter (B=$4, C=$5)."
   lib="const B = $4; const C = $5; const boundary = 1; const interp = 0;
@@ -17309,34 +17309,6 @@ _resize3dout : check "$1>0 && ${2=100%}>0 && ${3=100%}>0 && ${4=3}>=0 && $4<=6 &
     dims = round(max(W/w#k,H/h#k,D/d#k)*[w#k,h#k,d#k]);
     resize(#k,max(1,dims[0]),max(1,dims[1]),max(1,dims[2]),s#k,${4-9});
   )"
-
-#@cli r2dx : eq. to 'resize2dx'.
-r2dx :
-  _gmic_s="$?" v + _resize2dx $*
-
-#@cli resize2dx : width[%]>0,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac
-#@cli : Resize selected images along the x-axis, while preserving 2D ratio.
-#@cli : (eq. to 'r2dx').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4:grid | 5:bicubic | 6:lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=3', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-#@cli : $ image.jpg +resize2dx 100,2 append x
-resize2dx :
-  _gmic_s="$?" v + _$0 $*
-
-_resize2dx : check "$1>0 && ${2=3}>=0 && $2<=6 && ${3=0}>=0 && $3<=3 && ${4=0}>=0 && $4<=1 && ${5=0}>=0 && $5<=1 &&
-                    ${6=0}>=0 && $6<=1 && ${7=0}>=0 && $7<=1"
-  e[0--3] "Resize 2D image"$_gmic_s" to $1 pixels along the x-axis, while preserving 2D ratio."
-  foreach {
-    size:=ispercentage($1)?$1*w:$1
-    r {max(1,$size)},{max(1,h*$size/w)},100%,100%,${2-7}
-  }
 
 #@cli r2dy : eq. to 'resize2dy'.
 r2dy :
@@ -17838,7 +17810,7 @@ upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=
 #@cli volumetric2d : _x[%],_y[%],_z[%],_separator_size>=0
 #@cli : Convert selected 3D volumetric images into a 2D representation.
 #@cli : Default values: 'x=y=z=50%' and 'separator_size=0'.
-#@cli : $ image.jpg resize2dx 64 animate noise,0,100,50 cut 0,255 append z volumetric2d 50%,50%,50%,1
+#@cli : $ image.jpg rescale2d 64 animate noise,0,100,50 cut 0,255 append z volumetric2d 50%,50%,50%,1
 volumetric2d : skip ${1=50%},${2=50%},${3=50%} check "isint(${4=0}) && $4>=0"
   e[^-1] "Convert 3D volumetric image$? into a 2D representation, with coordinates (${1-3}) and separator size $4."
   foreach { nm={n}
@@ -19757,7 +19729,7 @@ periodize_poisson :
 #@cli : Values 'f1(k),..,fN(k)' are the 'N' components of the vector value of keypoint 'k'.
 #@cli : The command reconstructs an image with specified size 'dx'x'dy'x'dz', with 'N' channels.
 #@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1', 'phi(r)=r^2*log(1e-5+r)'.
-#@cli : $ sp colorful r2dx 400 100%,100% noise_poissondisk. 10 1,{is},1,5 \
+#@cli : $ sample colorful,400 100%,100% noise_poissondisk. 10 1,{is},1,5 \
 # eval[-2] "begin(p=0);i?(I[#-1,p++]=[x,y,I(#0)])" to_rgb[1] mul[0,1] dilate_circ[0] 5 +rbf[-1] {0,[w,h]} c[-1] 0,255
 #@cli : $ 32,1,1,5,u([400,400,255,255,255]) rbf 400,400 c 0,255
 rbf :
@@ -24496,7 +24468,7 @@ gaussians3d : check "${1=32}>0" skip ${2=0.3}
 
 #@cli histogram3d
 #@cli : Get 3D color histogram of selected images.
-#@cli : $ image.jpg resize2dx 64 histogram3d circles3d 3 opacity3d. 0.75 colorcube3d primitives3d[-1] 1 add3d
+#@cli : $ image.jpg rescale2d 64 histogram3d circles3d 3 opacity3d. 0.75 colorcube3d primitives3d[-1] 1 add3d
 histogram3d :
   e[^-1] "Get 3D color histogram of image$?."
   to_rgb
@@ -30230,7 +30202,7 @@ map_sprites : check "isint($1) && $1>0 && isint(${2=0}) && $2>=0 && $2<=2"
 #@cli : The returned status contains the list of new (x,y) offsets for each input image.
 #@cli : Parameter 'is_ratio_constraint' tells if the resulting image must tend to a square image.
 #@cli : Default values: 'is_ratio_constraint=0' and 'sort_criterion=max(w,h)'.
-#@cli : $ image.jpg repeat 10 +resize2dx[-1] 75% balance_gamma[-1] ${-rgb} done pack 0
+#@cli : $ image.jpg repeat 10 +rescale2d[-1] 75% balance_gamma[-1] ${-rgb} done pack 0
 pack : skip ${1=0},${2=max(w,h)}
   e[^-1] "Pack image$? into a single image."
   if $!<2 return fi
@@ -31064,7 +31036,7 @@ linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 &
   foreach {
     remove_opacity nm={n}
     100%,100%,1,{s},$6?0:255
-    if {0,w>h} r2dx[0] {ispercentage($3)?max(1,$3*w):min(w,$3)}
+    if {0,w>h} rs[0] {ispercentage($3)?max(1,$3*w):min(w,$3)}
     else r2dy[0] {ispercentage($3)?max(1,$3*h):min(h,$3)}
     fi
     n[0] 0,100
@@ -35384,7 +35356,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
          "Max: "{_max(0.1,round($all_max,0.1))}"\37",0,0,24,1,1
     *. 200 i[-2] 100%,100%,1,3 a[-2,-1] c
 
-    rows -5,100% a y,0.5 r2dx 480
+    rows -5,100% a y,0.5 rs 480
     if !$2 o $HOME/work/src/gmic/html/img/donations_latest_months.png fi
   }
 
@@ -35403,7 +35375,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     drgba $rgb a x
     shape_heart 82 +r. 100%,100%,1,3 hsv2rgb. rv[-2,-1] *. 255 a[-2,-1] c
     r. ..,..,1,100%,0,0,0.23,0.15 drop_shadow. 3,3,2,0,0
-    blend alpha,0.7 r2dx 500
+    blend alpha,0.7 rs 500
     if !$2 o $HOME/Desktop/donations_latest_months.jpg,85 rm return fi
   }
 
@@ -35428,7 +35400,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
       sh. 100% dilate_circ. 10 rm.
 
       100%,100% t. ${text$>},0.5~,0.5~,45%,1,255 dilate_circ. 10 +dilate_circ. 15 to_rgb.. a[-2,-1] c
-      blend[-2,-1] alpha drop_shadow. 1,1 r2dx. 48 frame 10,5,0,0,0,0
+      blend[-2,-1] alpha drop_shadow. 1,1 rs. 48 frame 10,5,0,0,0,0
       outfile=$HOME/work/src/gmic/html/img/${file$>}
       if !isfile('$outfile') o. $outfile fi
       rm.
@@ -35697,7 +35669,7 @@ demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
     200%,200%,1,1,"x = min(x,w-1-x); y = min(y,h-1-y); (x*y/wh)^0.7>0.01"
     +dilate. 3 xor.. .
     distance.. 1 c.. 0,2 negate.. distance. 0 c. 0,2
-    r2dx[-2,-1] 50% n[-2,-1] 0,1
+    rs[-2,-1] 50% n[-2,-1] 0,1
     +[0] ..
     *.. 100 +[1,-2]
     *[2,3] .
@@ -36260,7 +36232,7 @@ tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
     if $is_formula
       if !narg($formula)
         0 t. {``$expr},0,0,48,1,255 frame. 5,5,0 +dilate. 11 max. 128 to_rgb..
-        if w>0.75*{*,w} r2dx[-2,-1] {0.75*{*,w}} fi
+        if w>0.75*{*,w} rs[-2,-1] {0.75*{*,w}} fi
         mv[-2,-1] 0 =>[0,1] formula,mformula
       fi
       j. [formula],0.5~,1~,0,0,1,[mformula],255
@@ -36835,7 +36807,7 @@ _x_colorize :
   => points
 
   # Compute potential map.
-  if $2>0 if $w>$h +r2dx[img] {min($2,$w)},2 else +r2dy[img] {min($2,$h)},2 fi else [img] fi
+  if $2>0 if $w>$h +rs[img] {min($2,$w)} else +r2dy[img] {min($2,$h)},2 fi else [img] fi
   __x_colorize. $1
   pw,ph={potential,[w,h]}
 
@@ -37100,7 +37072,7 @@ x_connect4 : check_display $0
   . sh. 0 f. 60 rm. hsv2rgb[-2,-1]
   100%,100% circle. 50%,50%,30%,1,255 a[-3,-2] .,c rm.
 
-  r2dx[-3--1] $R s[-3--1] c,-3 rm...
+  rs[-3--1] $R s[-3--1] c,-3 rm...
   n[^0] 0,255 round[^0] =>[^0] cache,cachem,token0,token1,tokenm
   +b[cachem] 2% shift. 1%,1%,0,0,2 max[cachem,-1]
   r[cache,cachem] 100%,{board,h*100}%,1,100%,0,2
@@ -37152,7 +37124,7 @@ x_connect4 : check_display $0
       x:=arg(1,$winner) y:=arg(2,$winner) c:=arg(3,$winner)
       if $x<0 # Draw game
         if !narg($text)
-          0 t. "Draw game",0,0,57,1,1 r2dx. {tmpvisu,w/2} expand_xy. 3,0 +dilate. 5 n.. 0,255 to_rgb..
+          0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand_xy. 3,0 +dilate. 5 n.. 0,255 to_rgb..
           => text,textm
         fi
         j[tmpvisu] [text],{tmpvisu,([w,h]-[w#$text,h#$text])/2},0,0,{0.7+0.3*sin(5*$|)},[textm]
@@ -37477,7 +37449,7 @@ x_fourier : check_display $0
 ----\n
 -----------------------------------------------------------------"
 
-  if !$! sp ? r2dx 400 fi
+  if !$! sp ? rs 400 fi
   foreach {
 
     # Init variables.
@@ -37485,7 +37457,7 @@ x_fourier : check_display $0
     freqmin=0      # min freq. (in %)
     freqmax=100    # max freq. (in %)
 
-    if w>3*{*,u}/5 r2dx. {3*{*,u}/10} fi  # Reduce image size if necessary.
+    if w>3*{*,u}/5 rs. {3*{*,u}/10} fi  # Reduce image size if necessary.
     if h>3*{*,v}/5 r2dy. {3*{*,v}/5} fi
 
     # Compute fourier transform.
@@ -37640,7 +37612,7 @@ _x_grab_color :
 "rMo7rWCYCvJg4k/fvp/5/dJq9QyuUy48UXMOZ5H7ah9ND2YRMbhUXgUsoLDgOnxsf++0/TX1zRf1fcNa0iPgw=="
   -. 127 decompress_rle.
   frame. 10,10,0
-  r2dx. 24
+  rs. 24
 
 #@cli x_hanoi
 #@cli : Launch the Tower of Hanoi game.
@@ -39166,7 +39138,7 @@ _pacman_pacdots_gfx :
   (255^184^151) r. 4,4,1,3 r. 16,16,1,3,0,0,0.5,0.5
 
 _pacman_pacgum_gfx :
-  64,64,1,3 circle. 31,31,31,1,255,128,64 r2dx. 16
+  64,64,1,3 circle. 31,31,31,1,255,128,64 rs. 16
 
 _pacman_cherry_gfx :
   base642img[] "MSBpbnQ4IGxpdHRsZV9lbmRpYW4KNzYgMSAxIDEgIzU5CnicFYpBCgAxDALVXvv/p5ZtmsgmIMoM7k0Cx/ySYYIXrE5qOgTmE1KGlo"\
@@ -39479,7 +39451,7 @@ x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
       fi
 
       pose3d. {pose3d,^}
-      600,600,1,3 j3d. ..,50%,50%,-150,1,2,0,0,600 *. 1.5 b. 0.75 c. 0,255 rm.. r2dx. 50%
+      600,600,1,3 j3d. ..,50%,50%,-150,1,2,0,0,600 *. 1.5 b. 0.75 c. 0,255 rm.. rs. 50%
       j. [clustering$clustering],2,0,0,0,1,[mclustering$clustering],255
       => visu_3d j[visu] [visu_3d],5,5
     fi
@@ -39727,7 +39699,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
     => points
 
     # Compute potential map.
-    if $1>0 if $w>$h +r2dx[img] {min($1,$w)},2 else +r2dy[img] {min($1,$h)},2 fi else [img] fi
+    if $1>0 if $w>$h +rs[img] {min($1,$w)} else +r2dy[img] {min($1,$h)},2 fi else [img] fi
     _x_segment.
     pw,ph={potential,[w,h]}
 
@@ -40403,7 +40375,7 @@ x_spline : check_display $0
     if $visuflags&2 repeat h#1 {
       ellipse. {2,@0-1},10,10,0,1,0,0,0 ellipse. {2,@0-1},8,8,0,1,255,100,155 shift[2] 0,1,0,0,2
     } fi
-    r2dx. 50% w. rm[3,4,-1] wait
+    rs. 50% w. rm[3,4,-1] wait
 
     # Handle key events.
     if {*,SPACE} visuflags+=$visuflags&1?-1:1 wait -1 fi  # Show/hide spline
@@ -41026,9 +40998,9 @@ x_waves : check_display $0
     200,200 x:=-1.06-u*0.1 y:=-0.26-u*0.1
     mandelbrot $x,$y,{$x+0.1},{$y+0.1},256
     16,1,1,3,u r. 256,1,1,3,3 shift. 1
-    map[0] . rm. r2dx 100
+    map[0] . rm. rs 100
     +mirror y +mirror x + n 0,128
-    shape_fern {2*w},70%,25 r2dx. {-2,3*w/4} to_rgb. ri. ..,0,0,0.5,0.5 n. 0,196 +[-2,-1] c. 0,255
+    shape_fern {2*w},70%,25 rs. {-2,3*w/4} to_rgb. ri. ..,0,0,0.5,0.5 n. 0,196 +[-2,-1] c. 0,255
   } else k[0] r[0] 100,100,1,3,2 fi
   i[0] (20;80;0^20;80;0^20;80;0) r[0] 400,300,1,3,3 water[0] 100,2
 
@@ -41335,7 +41307,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   # Render title.
   l[] {
     if ['"$1"']!=0 msg="$1" else msg=" " fi
-    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c r2dx. {min(w,arg(1,$sizw)-8)}
+    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg(1,$sizw)-8)}
     r. 100%,140%,1,100%,0,0
     onfail rm
   }
@@ -42411,7 +42383,7 @@ _fx_drawn_montage :
     # Render thumbnail of current layer, for preview.
     l:=1+$1
     if $l<=$nb_layers
-      if {$l,w>h} +r2dx[$l] {(0$_preview_area_width?0$_preview_area_width:400)/6}
+      if {$l,w>h} +rs[$l] {(0$_preview_area_width?0$_preview_area_width:400)/6}
       else +r2dy[$l] {(0$_preview_area_height?0$_preview_area_height:400)/6} fi
       frame. 1,1,0,0,0,255 drgba. to. "#"$l,0,-2,13 to_rgba.
       mv. -3
@@ -42658,7 +42630,7 @@ fx_loose_photos :
           i>=0?[[i0*$frame_R,i1*$frame_G,i2*$frame_B]/255,i3]:
           i==-2?[0,0,0,0]:
                 I(#0,x0 + x/2,y0 + y/2)"
-      r2dx. 50%
+      rs. 50%
 
       if u<$image_rot_prob%
         rotate. {"const M_angle = $image_max_angle;
@@ -42764,7 +42736,7 @@ fx_frame_seamless_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/14/01</i>.</small>")
 fx_ministeck :
   foreach {
-    if w>h r2dx {min($2,w)} else r2dy {min($2,h)} fi
+    if w>h rs {min($2,w)} else r2dy {min($2,h)} fi
     split_opacity l[0] {
       +colormap. $1 index.. .
       [0],[0],1,1 rand[2] 0,1 dilate[2] $4 +[0,2]
@@ -43437,7 +43409,7 @@ fx_diffusiontensors :
   foreach {
     wh:=w,h
     +diffusiontensors ${5-8}
-    r2dx. {max(1,w*$1%)}
+    rs. {max(1,w*$1%)}
     dt. {round(125/max(1,$1))},$2,{$3<3?$3:0},$4
     if $3==3
       remove_opacity.. r.. .,.,1,100%,3 blend[0] [1],shapeaverage0 dilate. {1+2*$4} a c
@@ -47634,7 +47606,7 @@ fx_customize_clut_preview :
 
     # Try to find the best layout for displaying preview.
     if $w>$h # Landscape mode
-      r2dx[0,1] {0,round(w/2)}
+      rs[0,1] {0,round(w/2)}
       to[0] "Before",2,0,13,1,0.75
       to[1] "After",2,0,13,1,0.75
       a[0,1] y r[0] 100%,$h,1,3,0
@@ -54448,7 +54420,7 @@ fx_illuminate_shape2d_preview_interactive :
         if [$ox,$oy,$ob,$olightz]!=[$x,$y,$b,$lightz]
           +fx_illuminate_shape2d[normal,rgb] 4,0,${3-6},1,1,""$9,0,${11-15},""${16-25},$lightx,$lighty,$lightz,$29,""0,0
           +j[background] .,0,0,0,0,1,[alpha],255 rm..
-          +r2dx[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
+          +rs[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
           r. $wsiz,1,100% to. "Light: ("{``{_round([$lightx,$lighty,$lightz],0.1)}}")",2,2,16
           w.  rm. wait 20
         else wait
@@ -54456,7 +54428,7 @@ fx_illuminate_shape2d_preview_interactive :
         clicked=$b
       elif $b&2
         +j[background] [rgb],0,0,0,0,1,[alpha],255
-        +r2dx[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
+        +rs[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
         w. rm. wait
       fi
       if {*,CTRLLEFT}" && "{*,-D} w[] {1.5*[{*,w},{*,h}]} wsiz={*,w,h}
@@ -57152,7 +57124,7 @@ fx_blocks3d :
   foreach {
     nm=${"-gui_layer_name"}
     W,H,M:=w,h,max(w,h)
-    if w>h r2dx $1 else r2dy $1 fi
+    if w>h rs $1 else r2dy $1 fi
     w,h,m:=w,h,max(w,h)
     if $3>0 mirror y fi
     imageblocks3d $3,$2%
@@ -57709,7 +57681,7 @@ fx_equation_plot :
 fx_generate_random_portrait :
   file_tmp=${-path_tmp}fx_random_portrait.png
   if $! rm[0] fi
-  if isfile(['{/$file_tmp}']) $file_tmp r2dx. $1 delete $file_tmp
+  if isfile(['{/$file_tmp}']) $file_tmp rs. $1 delete $file_tmp
   else +portrait[] $1
   fi
   mv. 0
@@ -58490,7 +58462,7 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
       if $21 ${"arg $21,hsi8,hsl8,hsv8,lab8"}2rgb fi # Convert to RGB colors
     fi
 
-    r2dx $_size
+    rs $_size
 
     if $32 ac "+equalize 1024 j.. .,0,0,0,0,{$32%} rm.",ycbcr_y fi
     adjust_colors ${27-31},0,0,0,255
@@ -58526,7 +58498,7 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   fx_newton_fractal $x0,$y0,$x1,$y1,$5,"$6","$7","$8",${9-22},"$23","$24","$25",${26-32},0,${34-37},$angle,${39--1}
 
   foreach {
-    r2dx $_size0,1
+    rs $_size0,,1
     x0r,y0r,x1r,y1r:="C = [ "$px,$py" ]%*w; dC = 0.5*w*(1 - 0.98*$37); round([ C - dC, C + dC - 1 ])"
     rectangle $x0r,$y0r,$x1r,$y1r,0.7,0xF0F0F0F0,255,255,255,255
     rectangle $x0r,$y0r,$x1r,$y1r,0.7,0x0F0F0F0F,0,0,0,255
@@ -59516,7 +59488,7 @@ fx_text_pointcloud3d :
     i[0] 100%,100%,1,4 fc[0] ${8-11} +channels. 3,3 +negate. b[-2,-1] $14% to_rgba.
     j[0] .,$12%,$13%,0,0,1,..,255 rm[-2,-1] blend alpha
   } fi
-  if $W>$H r2dx $W else r2dy $H fi
+  if $W>$H rs $W else r2dy $H fi
   if $15>1
     i[{int($1/2)}] [{int($1/2)}]x{$15-1}
     i[0] [0]x{$15-1}
@@ -59986,7 +59958,7 @@ fx_cupid :
   w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_cupid {($7?2:1)*min($w,$h)}
-    if $7 r2dx 50% fi
+    if $7 rs 50% fi
     frame {2.5*$2}%,{2.5*$2}%,0 b $2% * $6 round c 0,255 autocrop
     100%,100%,1,3 fc. ${3-5} rv[-2,-1] a c
     gui_set_layer_name "Heart"
@@ -60013,7 +59985,7 @@ fx_gear :
   w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_gear {($11?2:1)*min($w,$h)},${2-5}
-    if $11 r2dx 50% fi
+    if $11 rs 50% fi
     frame {2.5*$6}%,{2.5*$6}%,0 b $6% * $10 round c 0,255 autocrop
     100%,100%,1,3 fc. ${7-9} rv[-2,-1] a c
     gui_set_layer_name "Gear"
@@ -60036,7 +60008,7 @@ fx_heart :
   w,h:=S=[$max_wh]*$1%;[max(S[0],1),max(S[1],1)]
   l[] {
     shape_heart {($7?2:1)*min($w,$h)}
-    if $7 r2dx 50% fi
+    if $7 rs 50% fi
     frame {2.5*$2}%,{2.5*$2}%,0 b $2% * $6 round c 0,255 autocrop
     100%,100%,1,3 fc. ${3-5} rv[-2,-1] a c
     gui_set_layer_name "Heart"
