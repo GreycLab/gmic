@@ -2691,8 +2691,7 @@ _display : skip ${1=},${3=}
 
         if {thumb_is_cached,$thumb_is_visible" && "i[$selected]<2" && "!$is_volumetric}
           w,h,Mwh={$thumb_coords,wh=I[$selected][2,2];[wh,max(wh,256)]}
-          +rr2d[area_3d_view] $Mwh,$Mwh,1,2
-          r. $Mwh,$Mwh,1,100%,0,0,0.5,0.5
+          +rs[area_3d_view] $Mwh,$Mwh,2,3
           store. 1,thumb_cache_$selected
           =[thumb_is_cached] 2,0,$selected
           thumb_view_update,window_no_wait=1
@@ -4156,7 +4155,7 @@ _display_camera :
     if $angle rotate. {90*$angle} fi
     if $brightness +. {10*$brightness} c. 0,255 fi
     if $contrast /. 255 *. {1.2^$contrast} *. 255 c. 0,255 fi
-    rr2d. $ww,$wh,2,1 w.
+    rs. $ww,$wh,1,1 w.
     rm
     wait 30
 
@@ -6665,7 +6664,7 @@ parse_cli_images :
               if $!
                 if $!>1 repeat $! { o[$>] ${_parse_cli_images_path}f$>_$basename,85 }
                 else o ${_parse_cli_images_path}f_$basename,85 fi
-                rr2d 480,320,0,2
+                rs 480,320,2
                 if $!>1 repeat $! { o[$>] ${_parse_cli_images_path}t$>_$basename,75 }
                 else o ${_parse_cli_images_path}t_$basename,75 fi
                 rm
@@ -6673,7 +6672,7 @@ parse_cli_images :
             # onfail
             #   rm gui_error_preview "Unable to generate preview image"
             #   o ${_parse_cli_images_path}f_$basename,85
-            #   rr2d 480,320,0,2
+            #   rs 480,320,2
             #   o ${_parse_cli_images_path}t_$basename,75
             #   rm
             #   etime="failed"
@@ -6712,7 +6711,7 @@ _parse_cli_images : l[] { check "isbool(${1=1})" is_arg=1 arg1=$1 onfail is_arg=
         +slices 50%
         +z[0] 50%,0,0,50%,100%,100% permute. zyxc
         +z[0] 0,50%,0,100%,50%,100% permute. xzyc
-        rr2d... $W,$H,0,2
+        rs... $W,$H,2
         rs.. ,{-3,h},,1
         rs. {-3,w},,1
         s:=min(w#-2,h)
@@ -6735,7 +6734,7 @@ _parse_cli_images : l[] { check "isbool(${1=1})" is_arg=1 arg1=$1 onfail is_arg=
     fi
     if w>5*h r $W,{$H/3},1,100%,1
     elif h>5*w r {$W/3},$H,1,100%,1
-    else rr2d $W,$H,0,{w<$W&&h<$H?1:2}
+    else rs $W,$H,2
     fi
     n 0,255
 
@@ -6746,7 +6745,7 @@ _parse_cli_images : l[] { check "isbool(${1=1})" is_arg=1 arg1=$1 onfail is_arg=
       0 t. $label" "$label2,5,0,32,1,1
       if w>w#0" || "h>h#0
          rm. 0 t. $label\n$label2,5,0,32,1,1
-         if w>w#0" || "h>h#0 rr2d. {0,[w,h]},0,2 fi
+         if w>w#0" || "h>h#0 rs. {0,[w,h]},2 fi
       fi
       *. -1 n. 0,255 to_rgb.
       - 245 a y,0.5 + 245
@@ -10678,22 +10677,22 @@ update_gallery_html : check "isbool(${1=0})"
               e "\r"$_vt100_g"        $ "${example$nex}" (done in "$_vt100_n${etime}"s"$_vt100_g")."$_vt100_n
 
               crop 5,5,{w-6},{h-6} # Remove frame added by '_gallery'
-              frame 3%,3%,255 rr2d 440,440,0,3 drop_shadow 2,2,2
-              if $_is_animated rr2d 230,230,0,3 else rr2d 300,300,0,3 fi
+              frame 3%,3%,255 rs 440,440,3 drop_shadow 2,2,2
+              if $_is_animated rs 230,230,3 else rs 300,300,3 fi
               100%,100%,1,3,245 blend[^-1] .,alpha,1,1 rm.
               if $_is_animated o $filename_thumb,$_fps else o $filename_thumb,60 fi
               rm
 
               if $is_input
                 image.jpg _gallery
-                rr2d $width,$height,0,5 c 0,255
+                rs $width,$height,5 c 0,255
                 to "Input",2%,2%,6%
                 - 255 r $width,$height,1,3,0,0,0.5,0.5 + 255
                 o $filename_original,60
 
                 crop 5,5,{w-6},{h-6} # Remove frame added by '_gallery'
-                frame 3%,3%,255 rr2d 440,440,0,3 drop_shadow 2,2,2
-                if $_is_animated rr2d 230,230,0,3 else rr2d 300,300,0,3 fi
+                frame 3%,3%,255 rs 440,440,3 drop_shadow 2,2,2
+                if $_is_animated rs 230,230,3 else rs 300,300,3 fi
                 100%,100%,1,3,245 blend[^-1] .,alpha,1,1 rm.
                 o $filename_thumb_original,60
                 rm
@@ -10812,7 +10811,7 @@ _gallery :
     if w<=h" && "h>620 rs ,620,2 elif h<=w" && "w>620 rs 620 fi
     if h<48 r 100%,48 fi
     if w<48 r 48,100% fi
-    if $_is_animated" && "(w>480" || "h>480) rr2d 480,480,0,2 fi
+    if $_is_animated" && "(w>480" || "h>480) rs 480,480,2 fi
     frame 1,1,0 frame 4,4,255
   }
 
@@ -16528,7 +16527,7 @@ append_tiles : check "isint(${1=0}) && isint(${2=0}) && ${3=0}>=0 && $3<=1 && ${
     e[0--3] "Append image$?, as $1x$2-tiled images."
     M=$1 N=$2
   fi
-  W,H=${-max_wh} rr2d $W,$H,2,1
+  W,H=${-max_wh} rs $W,$H,2,1
   MN:=$M*$N if $!%$MN 0x{$MN-($!%$MN)} fi
   repeat $!/$MN { l[$>-{$>+$MN-1}] {
     repeat $!/$M { a[$>-{$>+$M-1}] x,$3 }
@@ -16995,24 +16994,6 @@ _montage :
 #@cli : e.g. 'xycz', 'cxyz', ...
 #@cli : $ image.jpg permute yxzc
 
-#@cli r : eq. to 'resize'. : (+)
-
-#@cli resize : {[image_w] | width>0[%]},_{[image_h] | height>0[%]},_{[image_d] | depth>0[%]},\
-# _{[image_s] | spectrum>0[%]},_interpolation,_boundary_conditions,_ax,_ay,_az,_ac : (+)
-#@cli : Resize selected images with specified geometry.
-#@cli : (eq. to 'r').\n
-#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
-# 4=grid | 5=bicubic | 6=lanczos }.
-#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
-#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
-#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
-#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0 or 4'
-#@cli : (set to '0' by default, must be defined in range [0,1]).
-#@cli : Default values: 'interpolation=1', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
-#@cli : $ image.jpg +resize[-1] 256,128,1,3,2 +resize[-1] 120%,120%,1,3,0,1,0.5,0.5 \
-# +resize[-1] 120%,120%,1,3,0,0,0.2,0.2 +resize[-1] [0],[0],1,3,4
-
 #@cli rs : eq. to 'rescale2d'.
 rs :
   _gmic_s="$?" v + _rescale2d $*
@@ -17100,6 +17081,24 @@ _rescale3d : check "${1=0}>=0 && ${2=0}>=0 && ${3=0}>=0 && isin(${4=3},-1,0,1,2,
     );
     end($4<0?set('{}',string(cw,',',ch,',',cd)))" rm.
 
+#@cli r : eq. to 'resize'. : (+)
+
+#@cli resize : {[image_w] | width>0[%]},_{[image_h] | height>0[%]},_{[image_d] | depth>0[%]},\
+# _{[image_s] | spectrum>0[%]},_interpolation,_boundary_conditions,_ax,_ay,_az,_ac : (+)
+#@cli : Resize selected images with specified geometry.
+#@cli : (eq. to 'r').\n
+#@cli : 'interpolation' can be { -1:none (memory content) | 0:none | 1:nearest | 2:average | 3:linear | \
+# 4=grid | 5=bicubic | 6=lanczos }.
+#@cli : 'boundary_conditions' has different meanings, according to the chosen 'interpolation' mode :
+#@cli : . When 'interpolation=={ -1 | 1 | 2 | 4 }', 'boundary_conditions' is meaningless.
+#@cli : . When 'interpolation==0', 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
+#@cli : . When 'interpolation=={ 3 | 5 | 6 }', 'boundary_conditions' can be { 0:none | 1:neumann }.
+#@cli : 'ax,ay,az,ac' set the centering along each axis when 'interpolation=0 or 4'
+#@cli : (set to '0' by default, must be defined in range [0,1]).
+#@cli : Default values: 'interpolation=1', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
+#@cli : $ image.jpg +resize[-1] 256,128,1,3,2 +resize[-1] 120%,120%,1,3,0,1,0.5,0.5 \
+# +resize[-1] 120%,120%,1,3,0,0,0.2,0.2 +resize[-1] [0],[0],1,3,4
+
 #@cli ri : eq. to 'resize_as_image'.
 ri : skip "${2=1},${3=0},${4=0},${5=0},${6=0},${7=0}" # Faster than the non-shortcut version of the command
   pass$1 r[^-1] .,.,.,.,${2--1} rm.
@@ -17169,26 +17168,6 @@ resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
 resize_pow2 : check "isint(${1=0}) && $1>=-1 && $1<=6" skip ${2=0},${3=0},${4=0},${5=0},${6=0}
   e[^-1] "Resize image$? so that each dimension is a power of 2."
   foreach { r {2^(ceil(log2([w,h,d])))},100%,${1-6} }
-
-#@cli rr2d : eq. to 'resize_ratio2d'.
-rr2d :
-  _gmic_s="$?" v + _resize_ratio2d $*
-
-#@cli resize_ratio2d : width>0,height>0,_mode={ 0:inside | 1:outside | 2:padded },0=<_interpolation<=6
-#@cli : Resize selected images while preserving their aspect ratio.
-#@cli : (eq. to 'rr2d').
-#@cli : Default values: 'mode=0' and 'interpolation=6'.
-resize_ratio2d :
-  _gmic_s="$?" v + _$0 $*
-
-_resize_ratio2d : check "$1>0 && $2>0 && ${3=0}>=0 && $3<=2 && ${4=6}>=0 && $4<=6"
-  e[0--3] "Resize 2D image"$_gmic_s" to $1x$2 with ratio-"${arg0\ $3,inside,outside,padded}\
-           " mode and interpolation type $4."
-  foreach {
-    ratio:=$3==1?max($1/w,$2/h):min($1/w,$2/h)
-    r {[max(1,round(w*$ratio)),max(1,round(h*$ratio))]},100%,100%,$4
-  }
-  if $3==2 r $1,$2,100%,100%,0,0,0.5,0.5 fi
 
 #@cli r2din : eq. to 'resize2din'
 r2din :
@@ -21262,7 +21241,7 @@ shape2bump : check "isint(${1=256}) && $1>=0 && ${2=0.75}>=0 && $2<=1 && isnum($
 
     # Downsize for faster computation.
     is_resized=0
-    if $1" && "max(w,h)>$1 rr2d $1,$1,0,2 gt. 0 thinning. 1 *.. {$1/max([$siz])} is_resized=1 fi
+    if $1" && "max(w,h)>$1 rs $1,$1,2 gt. 0 thinning. 1 *.. {$1/max([$siz])} is_resized=1 fi
     rmax={0,iM}
 
     # Generate z-map (max method).
@@ -33413,7 +33392,7 @@ register_rigid : check ${is_image_arg\ $1}" && ${2=0.1%}>=0 && isint(${3=0}) && 
     rm.
   else # Large image: two-steps registration
     +r. {[min(w,1024),min(h,1024),min(d,1024)]},100%,0,0,0.5,0.5
-    rr2d.. 1024,1024,0,2
+    rs.. 1024,1024,2
     _register_rigid[-2,-1]
     repeat $!-2 {
       if {$>,w!=$W||h!=$H||d!=$D}
@@ -33421,7 +33400,7 @@ register_rigid : check ${is_image_arg\ $1}" && ${2=0.1%}>=0 && isint(${3=0}) && 
       fi
 
       # Low scale.
-      +rr2d[$>] 1024,1024,0,2 _register_rigid.
+      +rs[$>] 1024,1024,2 _register_rigid.
       phase_correlation. ...
       s:=$f*crop() rm.
 
@@ -38720,7 +38699,7 @@ x_morph : check "isint(${1=16}) && isint(${2=3}) && $2>=0 && $2<=4" check_displa
   repeat $!-1 { l[{[$>,$>+1]+$offset}] {
     nm0={0,n} nm1={1,n}
     to_colormode 0
-    rr2d ${-max_wh},2
+    rs ${-max_wh},2,1
     => img0,img1
     256,1,1,1,"x>=4?x-2:1" map. 2 => colormap
 
@@ -40781,7 +40760,7 @@ x_warp : check "isint(${1=2}) && $1>=2 && isint(${2=$1}) && $2>=2 && isint(${3=0
 
   foreach {
     nm={n} => img
-    if narg($background) $background rr2d. {-2,[w,h]},2,3 store. rbackground fi
+    if narg($background) $background rs. {-2,[w,h]},3,1 store. rbackground fi
 
     # Start interactive window.
     selected_keypoint=-1
@@ -41185,7 +41164,7 @@ gui_split_preview : check "isint(${2=0}) && $2>=0 && $2<=12 && ${5=0}>=0" skip "
 
     if $is_failed" || "!$2 k.
     else
-      drgba rr2d $pw,$ph,0,2
+      drgba rs $pw,$ph,2
       r {[max(w#0,w#1),max(h#0,h#1)]},1,100%,0,0,0.5,0.5
       posx,posy:=round([$posx,$posy]*([w,h]-1)%)
 
@@ -41271,7 +41250,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
        0$_preview_width?[0$_preview_width,0$_preview_height]:\
        [${fitscreen\ {[max(w,1),max(h,1),1]},400,800}]
   sizw:=arg(1,$siz)-8
-  if $! rr2d $siz,2,3 drgba else $siz,1,3,128 fi
+  if $! rs $siz,3,1 drgba else $siz,1,3,128 fi
   (1;0.5^1;0.5^0;1)
   (0,0.5,0;0.5,1,0.5;0,0.5,0) *. 0.65
   ri[-2,-1] ...,3 * c 0,255
@@ -41600,7 +41579,7 @@ fx_support_us :
     rv a y,0.5 drgba 200 frame 4,4,200 frame 2,2,0 to_rgba
     onfail rm
   }
-  if w>w#0" || "h>h#0 rr2d. {-2,[w,h]},0 fi
+  if w>w#0" || "h>h#0 rs. {-2,[w,h]} fi
   j.. .,{([w#0,h#0]-[w,h])/2},0,0,0.85
   rm.
 
@@ -41951,7 +41930,7 @@ fx_gmicky :
   fi
 
 fx_gmicky_preview :
-  fx_gmicky $* rr2d $_preview_area_width,$_preview_area_height,0,2
+  fx_gmicky $* rs $_preview_area_width,$_preview_area_height,2
 
 #@gui Privacy Notice : _none_, _none_
 #@gui : note = note{"This plugin may download up-to-date filter definitions from the
@@ -42411,7 +42390,7 @@ _fx_drawn_montage :
   # Manage preview.
   if $boundaries blend[0,-1] alpha fi # Add shape boundaries.
   if $thumbnail # Add current layer thumbnail over preview
-    drgba[0] rr2d[0] ${-gui_preview_wh}
+    drgba[0] rs[0] ${-gui_preview_wh}
     j[0] .,3,3,0,0,0.75
     rm.
   fi
@@ -42805,7 +42784,7 @@ fx_montage_preview : skip "${2=A}"
        dilate. {3+2*$fs/20} a.. .,c j[0] [1],5,0,0,0,1,[2],255 k[0]
      fi "
   nw,nh:=w,h
-  resize_ratio2d $w,{$h-16},2,2
+  rs $w,{$h-16},2,1
   drgba
   i[0] 100%,15,1,3,240 t[0] "Estimated size : "{round(100*$nw/$w)}%" x "{round(100*$nh/$h)}%,2,0,16 r[0] 100%,16,1,3,0
   a y
@@ -43160,8 +43139,8 @@ fx_brushify :
 
 _fx_brushify : # Insert brush at the end of the list
   N:=0.9*$4
-  if !$1 +autocrop. i.. 100%,100%,1,3,1 blend[-2,-1] alpha rr2d. $N,$N,0,3
-  elif $1==1 +autocrop[0] i.. 100%,100%,1,3,1 blend[-2,-1] alpha rr2d. $N,$N,0,3
+  if !$1 +autocrop. i.. 100%,100%,1,3,1 blend[-2,-1] alpha rs. $N,$N,3
+  elif $1==1 +autocrop[0] i.. 100%,100%,1,3,1 blend[-2,-1] alpha rs. $N,$N,3
   elif $1==2 $4,$4 rectangle. 10%,10%,90%,90%,1,1
   elif $1==3 shape_diamond. $N
   elif $1==4 shape_polygon $N,5
@@ -43185,7 +43164,7 @@ fx_brushify_preview :
   if $19
     _fx_brushify $*
     if !$1 rm.. elif $1==1 rm[0] fi
-    rr2d. {0,max(1,w/5)},{0,max(1,h/5)},0,2 n. 0,255
+    rs. {0,max(1,w/5)},{0,max(1,h/5)},2 n. 0,255
     frame. 3,3,0 frame. 1,1,255 frame. 1,1,0
     to_rgb. to. "Brush",4,2,13,2,1,255,255,0 to_a.
     j[^-1] .,2,2 rm.
@@ -44578,7 +44557,7 @@ fx_stylize :
   is_window=0
   repeat $N { l[{$ind_first+$>},-1] {
     nm={0,n}
-    if $2 +rr2d[1] {0,[w,h]*arg($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},1,2 fi
+    if $2 +rs[1] {0,[w,h]*arg($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},2,2 fi
     if $3==1 . +mirror. x +mirror[-2,-1] y a[-4--1] z
     elif $3==2 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 3 { +rotate[0] {90*$>},1,3,50%,50% } a z }
     elif $3==3 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 7 { +rotate[0] {45*$>},1,3,50%,50% } a z }
@@ -44603,7 +44582,7 @@ fx_stylize_preview :
   fi
   repeat $N { l[{$ind_first+$>},-1] {
     gui_no_preview[0] ,
-    +rr2d[1] {0,[w,h]*2/3},0,2 frame. 1,1,255 frame. 1,1,0,0,0,255 j[0] .,1%,30 rm. to[0] "Style:",1%,0,24
+    +rs[1] {0,[w,h]*2/3},2 frame. 1,1,255 frame. 1,1,0,0,0,255 j[0] .,1%,30 rm. to[0] "Style:",1%,0,24
   } } rm.
   if narg($ind_style) rm[$ind_style] fi
 
@@ -46772,7 +46751,7 @@ fx_color_presets :
     if $normalize==2" || "$normalize==3 foreach { split_opacity n[0] 0,255 a c } fi # Post-normalization
 
   else # Collage
-    foreach { if max(w,h)>$thumbsize rr2d $thumbsize,$thumbsize,0,2 fi }
+    foreach { if max(w,h)>$thumbsize rs $thumbsize,$thumbsize,2 fi }
     N=$! +to "Original",1%,1%,7.5%,2
     Np:=narg($presets)
     repeat $Np {
@@ -48032,7 +48011,7 @@ fx_mix_pca :
     # Get image covariance (and remember it to speed up multiple calls of the filter).
     if [$14]==round(stats()[0,4],0.1) _avg:=[$15][0,3] C:=[$15][3,9] status=
     else
-      +rr2d 256,256,0,2 C=${"covariance_vectors. _avg"} rm.
+      +rs 256,256,2 C=${"covariance_vectors. _avg"} rm.
       __status="{$1}{$2}{$3}{$4}"\
                "{$5}{$6}{$7}{$8}"\
                "{$9}{$10}{$11}{$12}"\
@@ -48100,7 +48079,7 @@ fx_mix_pca_preview :
   foreach {
     gui_split_preview "fx_mix_pca ${1-13},\"$14\",\"$15\",${16-18}",${-3--1}
     if $13
-      rr2d ${-gui_preview_wh},0,1
+      rs ${-gui_preview_wh},1
       ($__cols) r. 3,6,1,1,-1 permute. yzcx s. x,3
       r[-3--1] {w#0/2},13,1,3,3 c[-3--1] 0,255
       frame[-3--1] 1,1,0
@@ -48555,7 +48534,7 @@ fx_simulate_film :
     if $normalize==2" || "$normalize==3 foreach { split_opacity n[0] 0,255 a c } fi # Post-normalization
 
   else # Collage
-    foreach { if max(w,h)>$thumbsize rr2d $thumbsize,$thumbsize,0,2 fi }
+    foreach { if max(w,h)>$thumbsize rs $thumbsize,$thumbsize,2 fi }
     N=$! +to "Original",1%,1%,7.5%,2,0.5
     Np:=narg($presets)
     repeat $Np {
@@ -48721,7 +48700,7 @@ fx_transfer_rgb_preview :
 
   mv[$ref] $!
   repeat $!-1 { l[$>,-1] {
-    rr2d[0] $_preview_area_width,$_preview_area_height,0,3 rr2d. {0,[w,h]/3},0,3
+    rs[0] $_preview_area_width,$_preview_area_height,3 rs. {0,[w,h]/3},3
     to. Reference,2,2,13,1,1,255 frame. 2,2,255 frame. 1,1,0
     j[0] .,$6%,$7%
     rm.
@@ -48764,7 +48743,7 @@ fx_transfer_histogram_preview :
 
   mv[$ref] $!
   repeat $!-1 { l[$>,-1] {
-    rr2d[0] $_preview_area_width,$_preview_area_height,0,3 rr2d. {0,[w,h]/3},0,3
+    rs[0] $_preview_area_width,$_preview_area_height,3 rs. {0,[w,h]/3},3
     to. Reference,2,2,13,1,1,255 frame. 2,2,255 frame. 1,1,0
     j[0] .,$3%,$4%
     rm.
@@ -48807,7 +48786,7 @@ fx_transfer_pca_preview :
 
   mv[$ref] $!
   repeat $!-1 { l[$>,-1] {
-    rr2d[0] $_preview_area_width,$_preview_area_height,0,3 rr2d. {0,[w,h]/3},0,3
+    rs[0] $_preview_area_width,$_preview_area_height,3 rs. {0,[w,h]/3},3
     to. Reference,2,2,13,1,1,255 frame. 2,2,255 frame. 1,1,0
     j[0] .,$3%,$4%
     rm.
@@ -49001,7 +48980,7 @@ fx_tune_hsv_preview :
     gui_split_preview "_is_preview=1 _fx_tune_hsv $*",${-3--1}
     if $preview_mapping
       $__preview_mapping
-      if narg($_preview_area_width) rr2d[0] $_preview_area_width,$_preview_area_height,0,2 fi
+      if narg($_preview_area_width) rs[0] $_preview_area_width,$_preview_area_height,2 fi
       s. c,-3 to_colormode.. {-3,s}
       j... ..,$__px~,$__py~,0,0,1,.,255 rm[-2,-1]
     fi
@@ -49496,7 +49475,7 @@ fx_morphological_preview :
   gui_split_preview "fx_morphological ${1-3},\"$4\",${5--1}",${-3--1}
   if $2==3
     ('"$4"') f. "(i>=_'0' && i<=_'9') || i==_',' || i==_';'?i:-1"
-    discard. -1 ({t}) rr2d. {0,max(24,w/6)},{0,max(24,h/6)},0,1 >. 0 *. 255
+    discard. -1 ({t}) rs. {0,max(24,w/6)},{0,max(24,h/6)},1 >. 0 *. 255
     to_rgba. frame. 1,1,0,0,0,0,255 frame. 1,1,255 frame. 1,1,0,0,0,0,255
     j[^-1] .,2,2,0,0,0.75 rm.
   else
@@ -49731,7 +49710,7 @@ fx_circle_transform :
 fx_circle_transform_preview :
   fx_circle_transform $*
   if $10
-    rr2d ${-gui_preview_wh},0,1
+    rs ${-gui_preview_wh},1
     foreach {
       x0,y0:=[$1,$2]*([w,h]-1)%
       r:=dx=($3-$1)*(w-1)%;dy=($4-$2)*(h-1)%;norm(dx,dy)
@@ -50070,7 +50049,7 @@ fx_morph_interactive :
 
 fx_morph_interactive_preview :
   if $!<2 gui_warning_preview "This filter requires at least two input layers!" return fi
-  rr2d ${-max_wh},0,3 + n 0,255
+  rs ${-max_wh},3 + n 0,255
   if [$3][0]!=-1 gui_warning_preview "No preview available\n\nKeypoints from previous\nrun have been saved"
   else gui_warning_preview "No preview available"
   fi
@@ -50191,7 +50170,7 @@ fx_quadrangle :
 fx_quadrangle_preview :
   foreach {
     if !$10 to_a fi
-    if $11 +fx_quadrangle $* rr2d. {0,[w,h]},2,3 fi
+    if $11 +fx_quadrangle $* rs. {0,[w,h]},3,1 fi
     polygon[{$11==1}] 4,$1%,$2%,$3%,$4%,$5%,$6%,$7%,$8%,0.25,255
     if $11>=2
       circle[0] $1%,$2%,4,1,0 circle[0] $1%,$2%,3,1,255,0,0
@@ -50203,7 +50182,7 @@ fx_quadrangle_preview :
     fi
     if $!==2
       drgba to[0] Quadrangle to[1] Result frame 1,1,0
-      +a x a[0,1] y rr2d ${-gui_preview_wh},0,3
+      +a x a[0,1] y rs ${-gui_preview_wh},3
       k[{max(w#0,h#0)<=max(w#1,h#1)}]
     fi
   }
@@ -50557,7 +50536,7 @@ fx_symmetrize :
 
 fx_symmetrize_preview :
   fx_symmetrize $*
-  rr2d ${-gui_preview_wh},0,1
+  rs ${-gui_preview_wh},1
   u,v:=angle=isnan($3)?$5*pi/180:atan2($4-$2,$3-$1);[cos(angle),sin(angle)]
   foreach {
     x0,y0,x1,y1:=V=[$u,$v];([${1,2},${1,2}]+10000*[V,-V])*([w,h,w,h]-1)%
@@ -50639,7 +50618,7 @@ fx_warp_interactive :
 fx_warp_interactive_preview :
   if [$4][0]!=-1 __x_warp_keypoints=$4 fi
   foreach {
-    rr2d $_preview_area_width,$_preview_area_height,0,3 to_color drgba
+    rs $_preview_area_width,$_preview_area_height,3 to_color drgba
     if narg($__x_warp_keypoints) ($__x_warp_keypoints) r. 1,{w/4},1,4,-1
     else
 
@@ -53250,7 +53229,7 @@ fx_frame_mirror :
 fx_frame_mirror_preview :
   foreach {
     ws,hs:=w,h fx_frame_mirror $* wd,hd:=w,h
-    rr2d $_preview_area_width,$_preview_area_height wp,hp:=w,h
+    rs $_preview_area_width,$_preview_area_height wp,hp:=w,h
     ws,hs:=[$ws,$hs]*[$wp,$hp]/[$wd,$hd]
     coords:=off=([$wp,$hp]-[$ws,$hs])*[$3,$4]%;[off,off+[$ws,$hs]-1]
     split_opacity 100%,100%,1,1,$9 rectangle. $coords,1,1 *[0,-1] a c
@@ -53937,7 +53916,7 @@ fx_pack_preview : skip "${8=}"
   filled=0 repeat $! { filled={$>,$filled+w*h} }
   fx_pack $1,$2,$3,$4,$5,$6,0
   area:=wh
-  to_rgba rr2d $w,$h,0
+  to_rgba rs $w,$h
   i[0] $w,16,1,4,255 t[0] "Filled: "{round(100*$filled/$area)}%,3,1,14,1,0,0,0,255
   a y,0.5
   u "{$1}{$2}{$3}{$4}"\
@@ -55655,7 +55634,7 @@ fx_random_pattern :
 
 fx_random_pattern_preview :
   _fx_random_pattern {max($_preview_area_width,$_preview_area_height)},${2--1}
-  k[0] rr2d $_preview_area_width,$_preview_area_height,2,2
+  k[0] rs $_preview_area_width,$_preview_area_height,2,1
   to "Seed: \#"$_seed,5,5,5%,2
   u "{$1}{$2}{"{$4?$_seed:$3}"}{0}{$5}{$6}{$7}{$8}{$9}"
 
@@ -59778,7 +59757,7 @@ fx_moire :
   foreach {
     if [w,h]!=[$W,$H]
       - 255
-      rr2d {(100-$6)%*[$W,$H]},2,2
+      rs {(100-$6)%*[$W,$H]},2,1
       r $W,$H,1,100%,0,0,0.5,0.5
       + 255
     fi
@@ -60199,13 +60178,13 @@ fx_custom_code_preview : skip "${1=-skip ,}"
     fi
   onfail
     error_msg=${}
-    rr2d $w,$h,2,1
+    rs $w,$h,1,1
     gui_print_preview "Syntax error:",,{``$error_msg},20,40
   }
   if $4 # Display debug infos on preview
     if !$3 % 256 fi
     if $!>1 gui_preview fi
-    rr2d $_preview_area_width,$_preview_area_height,0,1
+    rs $_preview_area_width,$_preview_area_height,1
     siz0=13 siz1=17 siz2=19 siz3=22
     if ['$_status_out']==0 _status_out=(empty) fi
     info="Input images: "#$_nb_in"\n"\
@@ -60214,7 +60193,7 @@ fx_custom_code_preview : skip "${1=-skip ,}"
          $_dim_out"\n\n"\
          "Output status: "$_status_out
     0 t. {``$info},0,0,${siz$5},1,255 expand_xy. 5,0 +dilate. 3 a[-2,-1] c
-    rr2d[^-1] ${-max_wh},2,2
+    rs[^-1] ${-max_wh},2,1
     r. ..,..,1,100%,0 drgba[^-1]
     /[^-1] 2 blend[^-1] .,alpha rm.
   fi
@@ -60340,7 +60319,7 @@ fx_intarsia :
     nm=${gui_layer_name.}
 
     # Constrain image for size and number of colors, and index it with colormap.
-    if max(w,h)>$3 rr2d $3,$3,0 fi
+    if max(w,h)>$3 rs $3,$3 fi
     +colormap 0
     if w>$4 rm. +colormap $4,1 fi
     round[1] index[0] [1]
@@ -60377,7 +60356,7 @@ fx_intarsia :
 
     +map[0] [1]
     +fx_intarsia_preview. ${1-7},63 drgba.
-    rr2d.. 200,200,1,1
+    rs.. 200,200,1,2
     to_rgba[-2,-1] frame[-2,-1] 1,1,0,0,0,255 frame[-2,-1] 0,20,0,0,0,0
     t.. "Result",0,0,16,1,0,0,0,255
     t. "Ordering overview",0,0,16,1,0,0,0,255
@@ -60435,11 +60414,11 @@ fx_intarsia :
 fx_intarsia_preview :
   to_rgb
   foreach {
-    if max(w,h)>$3 rr2d $3,$3,0 fi
+    if max(w,h)>$3 rs $3,$3 fi
     to_rgba
     _fx_intarsia $5,$6,0
     100%,100%,1,1,"(y%2?y*w+w-1-x:y*w+x)<$8*wh/100" *
-    if min(w,h)<140 rr2d 140,140,1,1 fi
+    if min(w,h)<140 rs 140,140,1,2 fi
     expand_xy 16,0
 
     100%,100% circle. 16,16,1%,1,1
