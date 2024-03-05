@@ -25752,12 +25752,13 @@ tensors3d : check "${1=1}>=0 && isint(${2=2}) && $2>=0 && ${3=0.05}>=0"
   b. $3 isosurface3d. 25%
   c3d. n3d. => "[3D text pointcloud]"
 
-#@cli text3d : text,_font_height>0,_depth>0,_smoothness
+#@cli text3d : text,_{ font_height>=0 | custom_font },_depth>0,_smoothness
 #@cli : Input a 3D text object from specified text.
 #@cli : Default values: 'font_height=53', 'depth=10' and 'smoothness=1.5'.
 #@cli : $ text3d "G'MIC as a\n3D logo!"
 +text3d : skip ${2=53},${3=10},${4=1.5}
-  e[^-1] "Input 3D text object '$1' with size $2, depth $3 and smoothness $4."
+  if "isexpr($2)" str="height $2" is_custom_font=0 else str="'$2'" is_custom_font=1 fi
+  e[^-1] "Input 3D text object '$1', with font "$str", depth $3 and smoothness $4."
   0 t. "$1",0,0,$2,1,1 autocrop. 0 r. 100%,100%,$3 expand_xyz. 10,0
   b. $4 isosurface3d. 40% rv3d. => "[3D text '$1']"
 
@@ -36921,7 +36922,7 @@ x_fire : skip "${1=}" check_display $0
   if {*,w}<0.5*{*,u} w[] {[{*,w},{*,h}]*1.5} fi
   i[1] (0,255,255,255,255^0,0,255,255,255^0,0,0,128,255) r[1] 256,1,1,3,3
   i[2] (0,0,0;0,0,0;1,1,1;0,1,0) *[2] 0.21
-  text3d $label,33,3,1
+  text3d $label,${"font \"macondo\",70"},10,1
   mv. 3 c3d[3] n3d[3] *3d[3] 320 col3d[3] 255,205,130 db3d 0 f3d 300
   100,100 rand. 0,255 ellipse. 50%,50%,5,5,0,1,300 b. 10
   sharpen. 1000 shrink_xy. 1 n. 0,255 to_rgb. light3d . rm.
