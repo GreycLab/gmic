@@ -23666,6 +23666,44 @@ _color3d :
   } fi
   => [3D\ colorcube]
 
+#@cli colorize3d : _color_function,_passed_images_for_color_function
+#@cli : Colorize primitives of selected 3D objects, according to a specified function.
+#@cli : - 'color_function' returns a G,GA,RGB or RGBA vector that can depend on variables 'x','y' and 'z', which are \
+# defined as the barycenter coordinates for each primitive.
+#@cli : - 'passed_images_for_color_function' can be specified as a selection (e.g. '[0,2]') of images that will be \
+# inserted at the end of the image list while modifying 3D objects, so that the 'color_function' can have access to \
+# their content.
+#@cli : Default value: 'color_function=[x,y,z]' and 'passed_images_for_color_function='.
+colorize3d : skip "${1=[x,y,z]},${2=}"
+  e[^-1] "Colorize 3D objects$?, according to color function '$1'."
+  check3d 0 p3d 2
+  N=$! if narg($2) is_passed=1 pass$2 1 fi
+  foreach[0-{$N-1}] {
+    s3d nbp={1,@1}
+    if $is_passed pass[$N--1] 1 fi
+    eval "
+      begin(
+        fn() = ($1);
+        x = y = z = 0; col = fn();
+        P = [ 0,0,0 ];
+      );
+      for (p = off = 0, off<h#3, ++p,
+        n = i[#3,off++];
+        col = 0;
+        repeat (n,
+          ind = i[#3,off++];
+          copy(P,i[#2,3*ind],3);
+          x = P[0]; y = P[1]; z = P[2];
+          col+=fn();
+        );
+        col/=n;
+        copy(i[#4,3*p],col,3,1,size(col)>=3);
+        size(col)==2 || size(col)>3?(i[#5,p] = col[size(col)-1]/255);
+      )"
+    k[0-5] a y
+  }
+  if $is_passed rm[$N--1] fi
+
 #@cli cone3d : _radius,_height,_nb_subdivisions>0
 #@cli : Input 3D cone at (0,0,0), with specified geometry.
 #@cli : Default value: 'radius=1','height=1' and 'nb_subdivisions=24'.
@@ -24458,7 +24496,7 @@ _moded3d :
 
 #@cli n3d : eq. to 'normalize3d'.
 n3d :
-  _normalize3d
+  v + _normalize3d
 
 #@cli normalize3d
 #@cli : Normalize selected 3D objects to unit size.
@@ -24466,7 +24504,7 @@ n3d :
 #@cli : $ repeat 100 { circle3d {u(3)},{u(3)},{u(3)},0.1 } add3d color3d[-1] 255,0,0 +normalize3d[-1] \
 # color3d[-1] 0,255,0 add3d
 normalize3d :
-  _$0
+  v + _$0
 
 _normalize3d :
   e[0--3] "Normalize size of 3D object$?."
