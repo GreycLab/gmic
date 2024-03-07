@@ -87,8 +87,9 @@ INCLUDE ?= include
 PIC = -fPIC
 EXE =
 WGET = wget --no-check-certificate --quiet -O
-PLUGINDIR = $(shell gimptool-2.0 --gimpplugindir)/plug-ins
-BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion || echo $(PREFIX)/share/bash-completion/completions)
+PLUGIN = $(shell gimptool-2.0 --gimpplugindir)/plug-ins
+SHARE = $(PREFIX)/share
+BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion || echo $(SHARE)/bash-completion/completions)
 VERSION = $(shell grep -F 'gmic_version ' gmic.h | tail -c4 | head -c3)
 VERSION1 = $(shell grep -F 'gmic_version ' gmic.h | tail -c4 | head -c1)
 VERSION2 = $(shell grep -F 'gmic_version ' gmic.h | tail -c3 | head -c1)
@@ -141,7 +142,7 @@ endif
 ifeq ($(OS),Darwin)
 ifeq (,$(wildcard /opt/local))
 PREFIX = /usr/local
-PLUGINDIR = $(HOME)/Library/Application\ Support/Gimp/plug-ins
+PLUGIN = $(HOME)/Library/Application\ Support/Gimp/plug-ins
 else
 PREFIX = /opt/local
 endif
@@ -760,17 +761,17 @@ man:
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/$(INCLUDE)
 	mkdir -p $(DESTDIR)$(PREFIX)/$(BIN)
-	mkdir -p $(DESTDIR)$(PLUGINDIR)
-	mkdir -p $(DESTDIR)$(PREFIX)/share
+	mkdir -p $(DESTDIR)$(PLUGIN)
+	mkdir -p $(DESTDIR)$(SHARE)/gmic
 	mkdir -p $(DESTDIR)$(PREFIX)/$(LIB)
 	@if [ -f gmic ]; then cp -f gmic $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f gmic_libc.h ]; then cp -f gmic_libc.h $(DESTDIR)$(PREFIX)/$(INCLUDE)/; fi
-	@if [ -f ../resources/gmic_cluts.gmz ]; then cp -f ../resources/gmic_cluts.gmz $(DESTDIR)$(PLUGINDIR); fi
-	@if [ -f ../resources/gmic_fonts.gmz ]; then cp -f ../resources/gmic_fonts.gmz $(DESTDIR)$(PLUGINDIR); fi
-	@if [ -f ../resources/gmic_denoise_cnn.gmz ]; then cp -f ../resources/gmic_denoise_cnn.gmz $(DESTDIR)$(PLUGINDIR); fi
+	@if [ -f ../resources/gmic_cluts.gmz ]; then cp -f ../resources/gmic_cluts.gmz $(DESTDIR)$(SHARE)/gmic; fi
+	@if [ -f ../resources/gmic_fonts.gmz ]; then cp -f ../resources/gmic_fonts.gmz $(DESTDIR)$(SHARE)/gmic; fi
+	@if [ -f ../resources/gmic_denoise_cnn.gmz ]; then cp -f ../resources/gmic_denoise_cnn.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../zart/zart ]; then cp -f ../zart/zart $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f ../gmic-qt/gmic_qt ]; then cp -f ../gmic-qt/gmic_qt $(DESTDIR)$(PREFIX)/$(BIN); fi
-	@if [ -f ../gmic-qt/gmic_gimp_qt ]; then cp -f ../gmic-qt/gmic_gimp_qt $(DESTDIR)$(PLUGINDIR); fi
+	@if [ -f ../gmic-qt/gmic_gimp_qt ]; then cp -f ../gmic-qt/gmic_gimp_qt $(DESTDIR)$(PLUGIN); fi
 	@if [ -f libgmic.so ]; then \
 	  cp -f gmic.h $(DESTDIR)$(PREFIX)/$(INCLUDE); \
           cp -f libgmic.so $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so.$(VERSION); \
@@ -784,34 +785,34 @@ install:
           ln -fs libcgmic.so.$(VERSION1) $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so; \
         fi
 	@if [ -f ../man/gmic.1.gz ]; then \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/man/man1; \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/man/fr/man1; \
-	  cp -f ../man/gmic.1.gz $(DESTDIR)$(PREFIX)/share/man/man1/gmic.1.gz; \
-	  cp -f ../man/gmic.1.gz $(DESTDIR)$(PREFIX)/share/man/fr/man1/gmic.1.gz; \
+	  mkdir -p $(DESTDIR)$(SHARE)/man/man1; \
+	  mkdir -p $(DESTDIR)$(SHARE)/man/fr/man1; \
+	  cp -f ../man/gmic.1.gz $(DESTDIR)$(SHARE)/man/man1/gmic.1.gz; \
+	  cp -f ../man/gmic.1.gz $(DESTDIR)$(SHARE)/man/fr/man1/gmic.1.gz; \
 	fi
 	@if [ -f ../resources/gmic_bashcompletion.sh ]; then \
 	  mkdir -p $(DESTDIR)$(BASH_COMPLETIONSDIR); \
           cp -f ../resources/gmic_bashcompletion.sh $(DESTDIR)$(BASH_COMPLETIONSDIR)/gmic; \
         fi
 	@if [ -f ../zart/zart ]; then \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/applications; \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps; \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps; \
-	  cp -f ../zart/zart.desktop $(DESTDIR)$(PREFIX)/share/applications; \
-	  cp -f ../zart/icons/48-zart.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/zart.png; \
-	  cp -f ../zart/icons/zart.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps; \
+	  mkdir -p $(DESTDIR)$(SHARE)/applications; \
+	  mkdir -p $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps; \
+	  mkdir -p $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps; \
+	  cp -f ../zart/zart.desktop $(DESTDIR)$(SHARE)/applications; \
+	  cp -f ../zart/icons/48-zart.png $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps/zart.png; \
+	  cp -f ../zart/icons/zart.svg $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps; \
 	fi
 	@if [ -f ../gmic-qt/gmic_qt ]; then \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/applications; \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps; \
-	  mkdir -p $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps; \
-	  cp -f ../gmic-qt/gmic_qt.desktop $(DESTDIR)$(PREFIX)/share/applications; \
-	  cp -f ../gmic-qt/icons/application/48-gmic_qt.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/gmic_qt.png; \
-	  cp -f ../gmic-qt/icons/application/gmic_qt.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps; \
+	  mkdir -p $(DESTDIR)$(SHARE)/applications; \
+	  mkdir -p $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps; \
+	  mkdir -p $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps; \
+	  cp -f ../gmic-qt/gmic_qt.desktop $(DESTDIR)$(SHARE)/applications; \
+	  cp -f ../gmic-qt/icons/application/48-gmic_qt.png $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps/gmic_qt.png; \
+	  cp -f ../gmic-qt/icons/application/gmic_qt.svg $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps; \
 	fi
 
 uninstall:
-	rm -f $(DESTDIR)$(PLUGINDIR)/gmic_gimp_qt
+	rm -f $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/gmic
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/zart
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/gmic_qt
@@ -822,15 +823,15 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so.$(VERSION)
 	rm -f $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so.$(VERSION1)
 	rm -f $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so
-	rm -rf $(DESTDIR)$(PREFIX)/share/doc/gmic/
-	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/gmic.1.gz
-	rm -f $(DESTDIR)$(PREFIX)/share/man/fr/man1/gmic.1.gz
-	rm -f $(DESTDIR)$(PREFIX)/share/applications/zart.desktop
-	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/zart.png
-	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/zart.svg
-	rm -f $(DESTDIR)$(PREFIX)/share/applications/gmic_qt.desktop
-	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/48x48/apps/gmic_qt.png
-	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/gmic_qt.svg
+	rm -rf $(DESTDIR)$(SHARE)/doc/gmic/
+	rm -f $(DESTDIR)$(SHARE)/man/man1/gmic.1.gz
+	rm -f $(DESTDIR)$(SHARE)/man/fr/man1/gmic.1.gz
+	rm -f $(DESTDIR)$(SHARE)/applications/zart.desktop
+	rm -f $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps/zart.png
+	rm -f $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps/zart.svg
+	rm -f $(DESTDIR)$(SHARE)/applications/gmic_qt.desktop
+	rm -f $(DESTDIR)$(SHARE)/icons/hicolor/48x48/apps/gmic_qt.png
+	rm -f $(DESTDIR)$(SHARE)/icons/hicolor/scalable/apps/gmic_qt.svg
 
 distclean: clean
 
