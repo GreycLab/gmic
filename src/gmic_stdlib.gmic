@@ -44195,41 +44195,37 @@ fx_stringify :
   foreach {
     to_rgb
     repeat $smoothness { smooth 60,0,1,1,1 progress {50*$>/($>+$<)} }
-    +colormap. $levels,0 index.. .
+    +colormap. $levels,0 round. index.. .
     [0],[0],1,3 fc. $bgr,$bgg,$bgb
+
+    # Extract all closed components and sort them by decreasing size.
     repeat w#1 {
-      ind=$>
-      color:="I[#1,$>]"
-      +==[0] $ind
+      ind=$> color:="I[#1,$>]"
+      +==[0] $> N:=$!-1
       edgels. ,
-      repeat $!-3 {
-        p:=$>+3
-        if h#$p>$threshold
-          +channels[$p] 2 f. "arg0((j[1,2]-i)%4,0,1,0,-1)" is_hole:=is!=4 rm.
-          if !$is_hole" || "$fill_holes
-            channels[$p] 0,1 rs[$p] ,$sampling%,1
-            eval[$p] ":
-              begin(
-                color = [ "$color" ];
-                const offset = h/($link + 2)*$offset%;
-                ret = I
-              );
-              P = I;
-              Q = J[offset,2];
-              $link==0?polygon(#2,2,P,Q,$opacity%,color):( # 2-point link
-                R = J[2*offset,2];
-                $link==1?polygon(#2,-3,P,Q,R,$opacity%,0xFFFFFFFF,color):( # 3-points link
-                  S = J[3*offset,2]; polygon(#2,-4,P,Q,R,S,$opacity%,0xFFFFFFFF,color) # 4-points link
-                );
-              );
-              ret"
-          fi
-        fi
-      }
-      k[0-2]
+      foreach[$N--1] { if h<$threshold rm fi } =>[$N--1] {``$color}
+    }
+    sort_list[3--1] -,h
+
+    # Draw colored lines.
+    repeat $!-3 {
+      p:=$>+3 color={$p,n}
+      +sh[$p] 100% f. "arg0((j[1,2]-i)%4,0,1,0,-1)" is_hole:=is!=4 rm.
+      if !$is_hole" || "$fill_holes
+        channels[$p] 0,1 rs[$p] ,$sampling%,1
+        eval[$p] ":begin(color = [ "$color" ]; const offset = h/($link + 2)*$offset%; ret = I);
+          P = I;
+          Q = J[offset,2];
+          $link==0?polygon(#2,2,P,Q,$opacity%,color):( # 2-point link
+            R = J[2*offset,2];
+            $link==1?polygon(#2,-3,P,Q,R,$opacity%,0xFFFFFFFF,color):( # 3-points link
+              S = J[3*offset,2]; polygon(#2,-4,P,Q,R,S,$opacity%,0xFFFFFFFF,color) # 4-points link
+            );
+          ); ret"
+      fi
       progress {50+50*$>/($>+$<)}
     }
-    k. normalize_local {$normalization/10}
+    k[2] normalize_local {$normalization/10}
   }
 
 #@gui Stylize : fx_stylize,fx_stylize_preview
