@@ -5497,43 +5497,43 @@ _input_obj_parse_mtl2 : skip "${1=}"
         s_0_0_0 = '0,0,0';
         varname = string(#256,'default');
       );
-      siz = h#y; copy(line,i[#y,0],min(siz,size(line))); line[siz] = 0;
-      same(line,s_newmtl,size(s_newmtl))?( # New material
+      i[#y,0]!=_'#'?(
+        siz = h#y; copy(line,i[#y,0],min(siz,size(line))); line[siz] = 0;
+        same(line,s_newmtl,size(s_newmtl))?( # New material
 
-        # Convert material name to variable name.
-        p = 7; q = 0;
-        inrange(line[p],_'0',_'9')?varname[q++]=_'_';
-        while (p<size(line) && q<size(varname) && line[p],
-          c = line[p]; !(inrange(c,_'0',_'9') || inrange(c,_'a',_'z') || inrange(c,_'A',_'Z') || c==_'_')?(c = _'_');
-          c!=_'_' || !q || varname[q - 1]!=_'_'?(varname[q++] = c);
-          ++p;
+          # Convert material name to variable name.
+          p = 7; q = 0;
+          inrange(line[p],_'0',_'9')?varname[q++]=_'_';
+          while (p<size(line) && q<size(varname) && line[p],
+            c = line[p]; !(inrange(c,_'0',_'9') || inrange(c,_'a',_'z') || inrange(c,_'A',_'Z') || c==_'_')?(c = _'_');
+            c!=_'_' || !q || varname[q - 1]!=_'_'?(varname[q++] = c);
+            ++p;
+          );
+          q<size(varname)?(varname[q] = 0);
+
+          # Define default values for corresponding material.
+          set(string('_input_obj_rgb_',varname),s_200_200_200);
+          set(string('_input_obj_alpha_',varname),1);
+          set(string('_input_obj_whs_',varname),s_0_0_0);
+
+        ):same(line,s_Kd,size(s_Kd))?( # Diffuse color
+          p = 3;
+          while (p<size(line) && line[p]==_' ', ++p); R = p<size(line)?s2v(line,p):200;
+          while (p<size(line) && line[p]!=_' ', ++p);
+          while (p<size(line) && line[p]==_' ', ++p); G = p<size(line)?s2v(line,p):200;
+          while (p<size(line) && line[p]!=_' ', ++p);
+          while (p<size(line) && line[p]==_' ', ++p); B = p<size(line)?s2v(line,p):200;
+          set(string('_input_obj_rgb_',varname),v2s(round(255*[R,G,B])));
+
+        ):same(line,s_d,size(s_d))?( # Opacity
+          p = 2;
+          while (p<size(line) && line[p]==_' ', ++p); A = p<size(line)?s2v(line,p):1;
+          set(string('_input_obj_alpha_',varname),A);
+
+        ):same(line,s_map_Kd,size(s_map_Kd))?( # Diffuse texture
+          echo(line);
         );
-        q<size(varname)?(varname[q] = 0);
-
-        # Define default values for corresponding material.
-        set(string('_input_obj_rgb_',varname),s_200_200_200);
-        set(string('_input_obj_alpha_',varname),1);
-        set(string('_input_obj_whs_',varname),s_0_0_0);
-
-      ):same(line,s_Kd,size(s_Kd))?( # Diffuse color
-        p = 3;
-        while (p<size(line) && line[p]==_' ', ++p); R = p<size(line)?s2v(line,p):200;
-        while (p<size(line) && line[p]!=_' ', ++p);
-        while (p<size(line) && line[p]==_' ', ++p); G = p<size(line)?s2v(line,p):200;
-        while (p<size(line) && line[p]!=_' ', ++p);
-        while (p<size(line) && line[p]==_' ', ++p); B = p<size(line)?s2v(line,p):200;
-        set(string('_input_obj_rgb_',varname),v2s(round(255*[R,G,B])));
-
-      ):same(line,s_d,size(s_d))?( # Opacity
-        p = 2;
-        while (p<size(line) && line[p]==_' ', ++p); A = p<size(line)?s2v(line,p):1;
-        set(string('_input_obj_alpha_',varname),A);
-
-      ):same(line,s_map_Kd,size(s_map_Kd))?( # Diffuse texture
-        echo(line);
-      );
-
-    " rm.
+      )" rm.
     rm
   }
 
