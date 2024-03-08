@@ -44176,7 +44176,7 @@ fx_smooth_abstract_preview :
 #@gui : Smoothness = int(2,0,10)
 #@gui : Levels = int(32,2,64)
 #@gui : Sampling rate (%) = float(20,0,100)
-#@gui : Link = choice(1,"2 points","3 points","4 points")
+#@gui : Link = choice(1,"2 points","3 points","4 points","All points")
 #@gui : Offset (%) = float(100,0,100)
 #@gui : Threshold = int(32,0,1024)
 #@gui : Opacity (%) = float(20,0,100)
@@ -44219,11 +44219,13 @@ fx_stringify :
         channels[$p] 0,1 rs[$p] ,$sampling%,1
         eval[$p] ":begin(color = [ "$color" ]; const offset = h/($link + 2)*$offset%; ret = I);
           P = I;
-          Q = J[offset,2];
-          $link==0?polygon(#2,2,P,Q,$opacity%,color):( # 2-point link
-            R = J[2*offset,2];
-            $link==1?polygon(#2,-3,P,Q,R,$opacity%,0xFFFFFFFF,color):( # 3-points link
-              S = J[3*offset,2]; polygon(#2,-4,P,Q,R,S,$opacity%,0xFFFFFFFF,color) # 4-points link
+          $link==3?(repeat (h,k,polygon(#2,2,P,I[k],$opacity%,color))):( # All-points link
+            Q = J[offset,2];
+            !$link?polygon(#2,2,P,Q,$opacity%,color):( # 2-point link
+              R = J[2*offset,2];
+              $link==1?polygon(#2,-3,P,Q,R,$opacity%,0xFFFFFFFF,color):( # 3-points link
+                S = J[3*offset,2]; polygon(#2,-4,P,Q,R,S,$opacity%,0xFFFFFFFF,color) # 4-points link
+              );
             );
           ); ret"
       fi
