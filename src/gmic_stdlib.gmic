@@ -54363,7 +54363,7 @@ fx_lightglow_preview :
 #@gui : X-Scale = float(1,1,10)
 #@gui : Y-Scale = float(1,1,10)
 #@gui : Hue = float(0,-180,180)
-#@gui : Opacity = float(0.85,0,1)
+#@gui : Opacity (%) = float(85,0,100)
 #@gui : Blend Mode = choice(2,"Normal","Lighten","Screen","Dodge","Add","Darken","Multiply","Burn","Overlay",
 #@gui : "Soft Light","Hard Light","Difference","Subtract","Grain Extract","Grain Merge","Divide","Hue","Saturation",
 #@gui : "Value")
@@ -54379,22 +54379,23 @@ fx_lightglow_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/02/27</i>.</small>")
 fx_light_leaks :
-  l[] { input_cached gmic_lightleaks.gmz k[$1] rbf. 512,512,0,0,511,511 }
+  l[] {
+    input_cached gmic_lightleaks.gmz k[$1]
+    if i(0,0,2)==1" && "i(0,1,2)==1 decompress_from_keypoints. ,
+    else rbf. 512,512,0,0,511,511
+    fi
+  }
   mode=${arg0\ $7,normal,lighten,screen,dodge,add,darken,multiply,burn,overlay,softlight,hardlight,difference,\
          subtract,grainextract,grainmerge,divide,hue,saturation,value}
-  mv. 0
-  repeat $!-1 { l[0,{1+$<}] {
-    +r[0] {1,w},{1,h},1,3,5
-    rotate. $2,1,1,50%,50%
-    if $3>1" || "$4>1 f. "w2 = w/2; h2 = h/2; X = x - w2; Y = y - h2; i(w2+X/$3,h2+Y/$4,0,c,1,0)" fi
+  foreach[^-1] {
+    pass. +r. {0,[w,h]},1,100%,5 rm.. rotate. $2,1,1,50%,50%
+    if $3>1" || "$4>1 f. "w2 = w/2; h2 = h/2; X = x - w2; Y = y - h2; i(w2 + X/$3,h2 + Y/$4,0,c,1,0)" fi
     c. 0,255
     if $5 rgb2hsv. sh. 0 +. $5 rm. hsv2rgb. fi
-    if $8
-      nm=${gui_layer_name[1]}
-      => name($nm),opacity({$6*100}),mode($mode) rv[-2,-1]
-    else blend[1,-1] $mode,$6 fi
-  } }
-  rm[0]
+    if $8 nm=${gui_layer_name..} => {``name($nm),opacity($6),mode($mode)} rv
+    else blend $mode,$6% fi
+  }
+  rm.
 
 fx_light_leaks_preview :
   gui_split_preview "fx_light_leaks ${1--5},0",${-3--1}
