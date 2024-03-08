@@ -767,8 +767,9 @@ install:
 	@if [ -f gmic ]; then cp -f gmic $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f gmic_libc.h ]; then cp -f gmic_libc.h $(DESTDIR)$(PREFIX)/$(INCLUDE)/; fi
 	@if [ -f ../resources/gmic_cluts.gmz ]; then cp -f ../resources/gmic_cluts.gmz $(DESTDIR)$(SHARE)/gmic; fi
-	@if [ -f ../resources/gmic_fonts.gmz ]; then cp -f ../resources/gmic_fonts.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../resources/gmic_denoise_cnn.gmz ]; then cp -f ../resources/gmic_denoise_cnn.gmz $(DESTDIR)$(SHARE)/gmic; fi
+	@if [ -f ../resources/gmic_fonts.gmz ]; then cp -f ../resources/gmic_fonts.gmz $(DESTDIR)$(SHARE)/gmic; fi
+	@if [ -f ../resources/gmic_lightleaks.gmz ]; then cp -f ../resources/gmic_lightleaks.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../zart/zart ]; then cp -f ../zart/zart $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f ../gmic-qt/gmic_qt ]; then cp -f ../gmic-qt/gmic_qt $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f ../gmic-qt/gmic_gimp_qt ]; then cp -f ../gmic-qt/gmic_gimp_qt $(DESTDIR)$(PLUGIN); fi
