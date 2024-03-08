@@ -5453,7 +5453,7 @@ _input_glob :
 _input_obj_parse_mtl : skip "${1=}"
   img_ind=$! mtl_filename="$1$2"
   if !isfile(['{/$mtl_filename}']) return fi
-  l[]
+  l[] {
     it $mtl_filename f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
     s -,{'\n'} autocrop {'" "'} N:=$!-1
     m=default _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
@@ -5478,6 +5478,36 @@ _input_obj_parse_mtl : skip "${1=}"
       fi
     fi }
     rm[0-$N]
+  }
+
+_input_obj_parse_mtl2 : skip "${1=}"
+  img_ind=$! mtl_filename="$1$2"
+  if !isfile(['{/$mtl_filename}']) return fi
+  l[] {
+    it $mtl_filename f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
+    s -,{'\n'} autocrop {'" "'} N:=$!-1
+    m=default _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
+
+    1,$!,1,1,">begin(
+        line = vector1024();
+        s_newmtl = 'newmtl';
+        s_Kd = 'Kd ';
+        s_d = 'd ';
+        s_map_Kd = 'map_Kd ';
+      );
+      siz = h#y; copy(line,i[#y,0],min(siz,size(line))); line[siz] = 0;
+      same(line,s_newmtl,size(s_newmtl))?( # New material
+        echo(line);
+      ):same(line,s_Kd,size(s_Kd))?( # Diffuse color
+        echo(line);
+      ):same(line,s_d,size(s_d))?( # Opacity
+        echo(line);
+      ):same(line,s_map_Kd,size(s_map_Kd))?( # Diffuse texture
+        echo(line);
+      );
+
+    " rm.
+
   }
 
 _input_obj_set_mtl :
