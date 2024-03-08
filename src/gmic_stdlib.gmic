@@ -5489,15 +5489,32 @@ _input_obj_parse_mtl2 : skip "${1=}"
     m=default _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
 
     1,$!,1,1,">begin(
-        line = vector1024();
+        line = str1 = str2 = vector1024();
         s_newmtl = 'newmtl';
         s_Kd = 'Kd ';
         s_d = 'd ';
         s_map_Kd = 'map_Kd ';
+        s_200_200_200 = '200,200,200';
+        s_0_0_0 = '0,0,0';
+        var = vector256();
       );
       siz = h#y; copy(line,i[#y,0],min(siz,size(line))); line[siz] = 0;
       same(line,s_newmtl,size(s_newmtl))?( # New material
-        echo(line);
+
+        # Convert material name to variable name.
+        p = 7; q = 0;
+        inrange(line[p],_'0',_'9')?var[q++]=_'_';
+        while (p<size(line) && q<size(var) && line[p],
+          c = line[p]; !(inrange(c,_'0',_'9') || inrange(c,_'a',_'z') || inrange(c,_'A',_'Z') || c==_'_')?(c = _'_');
+          c!=_'_' || !q || var[q - 1]!=_'_'?(var[q++] = c);
+          ++p;
+        );
+
+        # Define default values for corresponding material.
+        set(string('_input_obj_rgb_',var),s_200_200_200);
+        set(string('_input_obj_alpha_',var),1);
+        set(string('_input_obj_whs_',var),s_0_0_0);
+
       ):same(line,s_Kd,size(s_Kd))?( # Diffuse color
         echo(line);
       ):same(line,s_d,size(s_d))?( # Opacity
