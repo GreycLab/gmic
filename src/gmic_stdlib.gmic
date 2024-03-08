@@ -5407,7 +5407,7 @@ _input_glob :
           len = find(line,0,q);
           len>0?(
             copy(line,line[q],len + 1);
-            run('_input_obj_parse_mtl2 \""{/$folder}"\",\"',line,'\"');
+            run('_input_obj_parse_mtl \""{/$folder}"\",\"',line,'\"');
           );
 
         ):line[0,7]==id_usemtl?( # Material: change material
@@ -5460,36 +5460,6 @@ _input_glob :
   }
 
 _input_obj_parse_mtl : skip "${1=}"
-  img_ind=$! mtl_filename="$1$2"
-  if !isfile(['{/$mtl_filename}']) return fi
-  l[] {
-    it $mtl_filename f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
-    s -,{'\n'} autocrop {'" "'} N:=$!-1
-    m=default _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
-
-    repeat $! { if {$>,i!=_'#'}
-      if "crop(#$>,0,0,1,7)=='newmtl '" # New material
-        rows[$>] 7,100% strcasevar {$>,t} m=${}
-        _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
-      elif "crop(#$>,0,0,1,3)=='Kd '" # Diffuse color
-        l[$>] { rows 3,100% s -,{'" "'} _input_obj_rgb_$m:="255*["{0,t},{1,t},{2,t}"]" k[0] }
-      elif "crop(#$>,0,0,1,2)=='d '" # Opacity
-        rows[$>] 2,100% _input_obj_alpha_$m:={$>,t}
-      elif "crop(#$>,0,0,1,7)=='map_Kd '" # Diffuse texture
-        rows[$>] 7,100% img_filename={$>,t}
-        l[] {
-          "$1"$img_filename
-          _input_obj_img_$m=$img_ind img_ind+=1
-          _input_obj_whs_$m:=w,h,s
-          y
-        onfail _input_obj_img_$m=-1 _input_obj_whs_$m=0,0,0
-        }
-      fi
-    fi }
-    rm[0-$N]
-  }
-
-_input_obj_parse_mtl2 : skip "${1=}"
   img_ind=$! mtl_filename="$1$2"
   if !isfile(['{/$mtl_filename}']) return fi
   l[] {
