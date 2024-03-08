@@ -5368,6 +5368,7 @@ _input_glob :
           vt2 = -1; line[q]==_'/'?(++q; vt2 = s2v(line,q) - 1; isnan(vt2)?(vt2 = -1); next_item()); # Texture coords
           line[q]==_'/'?(++q; next_item()); # Skip normal index
           is_colored = min(vt0,vt1,vt2)<0 || p_img<0;
+
           !is_colored?(xyt0 = I[#5,vt0]; xyt1 = I[#5,vt1]; xyt2 = I[#5,vt2]);
           !line[q]?( # Triangle
             is_colored?( # Colored triangle
@@ -5465,7 +5466,11 @@ _input_obj_parse_mtl : skip "${1=}"
   l[] {
     it $mtl_filename f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
     s -,{'\n'} autocrop {'" "'} N:=$!
-    m=default _input_obj_rgb_$m=200,200,200 _input_obj_alpha_$m=1 _input_obj_whs_$m=0,0,0
+    m=default
+    _input_obj_rgb_$m=200,200,200
+    _input_obj_alpha_$m=1
+    _input_obj_img_$m=-1
+    _input_obj_whs_$m=0,0,0
     1,$!,1,1,">
       begin(
         img_ind = $img_ind;
@@ -5497,6 +5502,7 @@ _input_obj_parse_mtl : skip "${1=}"
           set(string('_input_obj_rgb_',varname),s_200_200_200);
           set(string('_input_obj_alpha_',varname),1);
           set(string('_input_obj_whs_',varname),s_0_0_0);
+          set(string('_input_obj_img_',varname),-1);
 
         ):same(line,s_Kd,size(s_Kd))?( # Diffuse color
           p = 3;
