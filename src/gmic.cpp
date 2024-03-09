@@ -13398,6 +13398,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               *const command_code_back = &commands[hash_custom][ind_custom].back(),
               *const command_name = is_specialized_get?_command:command;
 
+            const char *curr_command = "";
+            for (unsigned int k = initial_callstack_size - 1; k>0 && *(curr_command = callstack[k])=='*'; --k) {}
+            const bool run_subcommand = *curr_command && *command=='_' &&
+              !std::strncmp(command + 1,curr_command,std::strlen(curr_command));
+
             if (is_debug) {
               CImg<char> command_code_text(264);
               const unsigned int ls = (unsigned int)std::strlen(command_code);
@@ -13690,8 +13695,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
             const CImgList<char>
               ncommands_line = commands_line_to_CImgList(substituted_command.data());
-            CImg<unsigned int> nvariables_sizes(gmic_varslots);
-            cimg_forX(nvariables_sizes,l) nvariables_sizes[l] = variables[l]->size();
+            CImg<unsigned int> nvariables_sizes;
+            if (!run_subcommand) {
+              nvariables_sizes.assign(gmic_varslots);
+              cimg_forX(nvariables_sizes,l) nvariables_sizes[l] = variables[l]->size();
+            }
             g_list.assign(selection.height());
             g_list_c.assign(selection.height());
 
@@ -13712,7 +13720,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               try {
                 is_debug_info = false;
                 --verbosity;
-                _run(ncommands_line,nposition,g_list,g_list_c,images,images_names,nvariables_sizes,&_is_noarg,
+                _run(ncommands_line,nposition,g_list,g_list_c,images,images_names,
+                     run_subcommand?variables_sizes:nvariables_sizes,&_is_noarg,
                      argument,&selection,false);
                 ++verbosity;
               } catch (gmic_exception &e) {
@@ -13750,7 +13759,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               try {
                 is_debug_info = false;
                 --verbosity;
-                _run(ncommands_line,nposition,g_list,g_list_c,images,images_names,nvariables_sizes,&_is_noarg,
+                _run(ncommands_line,nposition,g_list,g_list_c,images,images_names,
+                     run_subcommand?variables_sizes:nvariables_sizes,&_is_noarg,
                      argument,&selection,false);
                 ++verbosity;
               } catch (gmic_exception &e) {
@@ -13780,12 +13790,13 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 g_list.move_to(images,uind0);
               }
             }
-            for (unsigned int l = 0; l<gmic_varslots/2; ++l) if (variables[l]->size()>nvariables_sizes[l]) {
-                if (variables_lengths[l]->_width - nvariables_sizes[l]>variables_lengths[l]->_width/2)
-                  variables_lengths[l]->resize(nvariables_sizes[l],1,1,1,0);
-                variables_names[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
-                variables[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
-              }
+            if (!run_subcommand)
+              for (unsigned int l = 0; l<gmic_varslots/2; ++l) if (variables[l]->size()>nvariables_sizes[l]) {
+                  if (variables_lengths[l]->_width - nvariables_sizes[l]>variables_lengths[l]->_width/2)
+                    variables_lengths[l]->resize(nvariables_sizes[l],1,1,1,0);
+                  variables_names[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
+                  variables[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
+                }
             callstack.remove();
             debug_filename = previous_debug_filename;
             debug_line = previous_debug_line;
