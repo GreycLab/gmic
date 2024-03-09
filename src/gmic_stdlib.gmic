@@ -5280,7 +5280,7 @@ _input_glob :
     1 # [4]: opacity
     1,1,1,2 # [5]: texture 2D pts
     0 # [6]: vertices weights/colors (RGB)
-    _input_obj_rgb,_input_obj_alpha=
+    input_obj_rgb,input_obj_alpha=
     eval "
       next_item() = (
         while (line[q] && line[q]!=_' ' && line[q]!=_'/',++q);
@@ -5425,13 +5425,13 @@ _input_glob :
               ++pp;
             );
             qq<size(varname)?(varname[qq] = 0);
-            p_rgb = get(string('_input_obj_rgb_',varname),3);
+            p_rgb = get(string('input_obj_rgb_',varname),3);
             isnan(p_rgb[0])?(p_rgb = 200);
-            p_alpha = get(string('_input_obj_alpha_',varname));
+            p_alpha = get(string('input_obj_alpha_',varname));
             isnan(p_alpha)?(p_alpha = 1);
-            p_whs = get(string('_input_obj_whs_',varname),3);
+            p_whs = get(string('input_obj_whs_',varname),3);
             isnan(p_whs[0])?(p_whs = 0);
-            p_img = get(string('_input_obj_img_',varname));
+            p_img = get(string('input_obj_img_',varname));
             isnan(p_img)?(p_img = -1);
          );
         );
@@ -5471,10 +5471,10 @@ _input_obj_parse_mtl : skip "${1=}"
     it $mtl_filename f "i<=_' ' && i!=_'\n'?_' ':i" # Normalize blank characters.
     s -,{'\n'} autocrop {'" "'} N:=$!
     m=default
-    _input_obj_rgb_$m=200,200,200
-    _input_obj_alpha_$m=1
-    _input_obj_img_$m=-1
-    _input_obj_whs_$m=0,0,0
+    input_obj_rgb_$m=200,200,200
+    input_obj_alpha_$m=1
+    input_obj_img_$m=-1
+    input_obj_whs_$m=0,0,0
     1,$!,1,1,">
       begin(
         img_ind = $img_ind;
@@ -5503,10 +5503,10 @@ _input_obj_parse_mtl : skip "${1=}"
           q<size(varname)?(varname[q] = 0);
 
           # Define default values for material properties.
-          set(string('_input_obj_rgb_',varname),id_200_200_200);
-          set(string('_input_obj_alpha_',varname),1);
-          set(string('_input_obj_whs_',varname),id_0_0_0);
-          set(string('_input_obj_img_',varname),-1);
+          set(string('input_obj_rgb_',varname),id_200_200_200);
+          set(string('input_obj_alpha_',varname),1);
+          set(string('input_obj_whs_',varname),id_0_0_0);
+          set(string('input_obj_img_',varname),-1);
 
         ):same(line,id_Kd,size(id_Kd))?( # Diffuse color
           p = 3;
@@ -5515,20 +5515,20 @@ _input_obj_parse_mtl : skip "${1=}"
           while (p<size(line) && line[p]==_' ', ++p); G = p<size(line)?s2v(line,p):200;
           while (p<size(line) && line[p]!=_' ', ++p);
           while (p<size(line) && line[p]==_' ', ++p); B = p<size(line)?s2v(line,p):200;
-          set(string('_input_obj_rgb_',varname),v2s(round(255*[R,G,B])));
+          set(string('input_obj_rgb_',varname),v2s(round(255*[R,G,B])));
 
         ):same(line,id_d,size(id_d))?( # Opacity
           p = 2;
           while (p<size(line) && line[p]==_' ', ++p); A = p<size(line)?s2v(line,p):1;
-          set(string('_input_obj_alpha_',varname),A);
+          set(string('input_obj_alpha_',varname),A);
 
         ):same(line,id_map_Kd,size(id_map_Kd))?( # Diffuse texture
           p = find(line,0,7);
           p>0?(
             filename = 0; copy(filename,line[7],p - 7);
-            run(string('l[] { $1',filename,' _input_obj_img_',varname,'=',img_ind++,
-                       ' _input_obj_whs_',varname,':=w,h,s y u 0 onfail _input_obj_img_',
-                       varname,'=-1 _input_obj_whs_',varname,'=0,0,0 u=1 }'));
+            run(string('l[] { $1',filename,' input_obj_img_',varname,'=',img_ind++,
+                       ' input_obj_whs_',varname,':=w,h,s y u 0 onfail input_obj_img_',
+                       varname,'=-1 input_obj_whs_',varname,'=0,0,0 u=1 }'));
             get('{}')?--img_ind; # Error occured when loading texture
           );
         );
