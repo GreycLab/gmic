@@ -4888,21 +4888,13 @@ CImg<char> gmic::substitute_item(const char *const source,
             ncommands_line = commands_line_to_CImgList(strreplace_fw(inbraces));
           unsigned int nposition = 0;
           CImg<char>::string("*substitute").move_to(callstack);
-          CImg<unsigned int> nvariables_sizes(gmic_varslots);
-          cimg_forX(nvariables_sizes,l) nvariables_sizes[l] = variables[l]->size();
           const unsigned int psize = images.size();
           _run(ncommands_line,nposition,images,images_names,parent_images,parent_images_names,
-               nvariables_sizes,0,inbraces,command_selection,false);
+               variables_sizes,0,inbraces,command_selection,false);
           if (images.size()!=psize)
             error(true,0,0,
                   "Item substitution '${\"%s\"}': Expression incorrectly changes the number of images (from %u to %u).",
                   cimg::strellipsize(inbraces,64,false),psize,images.size());
-          for (unsigned int l = 0; l<gmic_varslots/2; ++l) if (variables[l]->size()>nvariables_sizes[l]) {
-              if (variables_lengths[l]->_width - nvariables_sizes[l]>variables_lengths[l]->_width/2)
-                variables_lengths[l]->resize(nvariables_sizes[l],1,1,1,0);
-              variables_names[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
-              variables[l]->remove(nvariables_sizes[l],variables[l]->size() - 1);
-            }
           callstack.remove();
           is_return = false;
         }
