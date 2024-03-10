@@ -29654,7 +29654,7 @@ frame_round : check "${1=5%}>=0 && ${2=$1}>=0 && ${3=30%}>=0 && ${4=0}>=0" skip 
 #@cli : Insert frame in selected images, so that tiling the resulting image makes less visible seams.
 #@cli : Default values: 'patch_size=7', 'blend_size=5' and 'frame_direction=1'.
 #@cli : $ image.jpg +frame_seamless 30 array 2,2
-frame_seamless : check "$1>=0 && isint(${2=7}) && $2>0 && isint(${3=5}) && $3>=0" skip ${4=1}
+  frame_seamless : check "$1>=0 && isint(${2=7},1) && isint(${3=5},0)" skip ${4=1}
   s0="inner" s1="outer"
   e[^-1] "Insert "${s{!!$4}}" seamless frame in image$?, with size $1, patch size $2 and blend size $3."
   foreach {
@@ -29786,7 +29786,7 @@ imagegrid : skip ${2=$1}
 #@cli : Create hexagonal grids from selected images.
 #@cli : Default values: 'resolution=32', 'outline=0.1' and 'is_antialiased=1'.
 #@cli : $ image.jpg imagegrid_hexagonal 24
-imagegrid_hexagonal : check "isint(${1=32}) && $1>0 && ${2=0.1}>=0 && $2<=1"
+imagegrid_hexagonal : check "isint(${1=32},1) && ${2=0.1}>=0 && $2<=1"
   e[^-1] "Create hexagonal grid(s) from image$?, with resolution $1 and outline $2."
   foreach {
 
@@ -29823,7 +29823,7 @@ imagegrid_hexagonal : check "isint(${1=32}) && $1>0 && ${2=0.1}>=0 && $2<=1"
 #@cli : Default values: 'pattern_width=24', 'pattern_height=pattern_width', 'pattern_type=0', 'outline_opacity=0.1' \
 # and 'outline_color1=0'.
 #@cli : $ image.jpg imagegrid_triangular 6,10,3,0.5
-imagegrid_triangular : check "$1>=1 && ${2=$1}>=1 && isint(${3=0}) && $3>=0 && $3<=5" skip ${4=0},${5=0}
+imagegrid_triangular : check "$1>=1 && ${2=$1}>=1 && isint(${3=0},0,5)" skip ${4=0},${5=0}
   s0="horizontal" s1="vertical" s2="crossed" s3="cube"
   e[^-1] "Create triangular grid(s) from image$?, with pattern width $1, height $2, pattern type '"${s$3}"', "\
           "outline opacity $4 and outline color (${5--1})."
@@ -29891,7 +29891,7 @@ linearize_tiles : check "$1>0 && ${2=$1}>0"
 #@cli : Map set of sprites (defined as the 'nb_sprites' latest images of the selection) to other selected images,
 #@cli : according to the luminosity of their pixel values.
 #@cli : $ image.jpg rescale2d ,48 repeat 16 ball {8+2*$>},${-rgb} mul[-1] {(1+$>)/16} done map_sprites 16
-map_sprites : check "isint($1) && $1>0 && isint(${2=0}) && $2>=0 && $2<=2"
+map_sprites : check "isint($1,1) && isint(${2=0},0,2)"
   e[^-1] "Map set of $1 sprites to image selection$?."
   norm[0--{$1+1}] quantize[0--{$1+1}] $1,0,1
   slices[-$1--1] 0 r[-$1--1] ${max_wh[-$1--1]},1,100%,0,0,0.5,0.5
@@ -30001,8 +30001,7 @@ pack : skip ${1=0},${2=max(w,h)}
 #@cli : Default values: 'width=height=512', 'M=N=5', 'curvature=0.5', 'centering=0.5', 'connectors_variability=0.5' \
 # and 'resolution=64'.
 #@cli : $ puzzle ,
-puzzle : check "isint(${1=512}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=5}) && $3>0 &&
-                isint(${4=$3}) && $4>0 && isint(${8=64}) && $8>0"
+puzzle : check "isint(${1=512},1) && isint(${2=$1},1) && isint(${3=5},1) && isint(${4=$3},1) && isint(${8=64},1)"
          skip ${5=0.5},${6=0.5},${7=0.5}
   e[^-1] "Draw $3x$4 puzzle pattern on image$?, with curvature $5, centering $6, connectors variability $7
           and resolution $8."
@@ -30076,7 +30075,7 @@ shift_tiles : check "${2=$1}>=0" skip ${3=20}
 #@cli : Create MxN taquin puzzle from selected images.
 #@cli : Default value: 'N=M', 'relief=50', 'border_thickness=5', 'border_outline=0' and 'remove_tile=0'.
 #@cli : $ image.jpg +taquin 8
-taquin : check "isint($1) && $1>0 && isint(${2=$1}) && $2>0"
+taquin : check "isint($1,1) && isint(${2=$1},1)"
          skip ${3=0},${4=50},${5=5%},${6=0},${7=0},${8=$7},${9=$8},${10=255}
  e[^-1] "Create $1x$2 taquin puzzle from image$?, with relief $4, border thickness $5, border outline $6 and
          outline color (${7--1})."
@@ -30121,7 +30120,7 @@ tunnel : check "${1=9}>=0 && ${2=80%}>0" skip ${3=0.5},${4=0.5},${5=0.1},${6=0}
 #@cli : <http://www.complexification.net/gallery/machines/boxFittingImg/>.
 #@cli : Default values: 'min_box_size=1', 'max_box_size=0', 'initial_density=0.25' and 'min_spacing=1'.
 #@cli : $ image.jpg boxfitting ,
-boxfitting : check "isint(${1=3}) && $1>=1 && isint(${2=0}) && $2>=0 && ${3=0.25}>=0 && isint(${4=1}) && $4>0"
+boxfitting : check "isint(${1=3},1) && isint(${2=0},0) && ${3=0.25}>=0 && isint(${4=1},1)"
   e[^-1] "Apply box fitting effect on image$?, with box sizes ($1,$2), initial density $3 and min spacing $4."
   min_spacing,min_size:=$4,$1+$4-1
   foreach {
