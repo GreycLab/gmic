@@ -2812,7 +2812,7 @@ _display : skip ${1=},${3=}
                        string(#256,v2s(vals,-1),', ... ,',v2s(vale,-1));
                      )"`}
           s_hex=
-          if {$selected,"s>4?0:(val = I($x,$y,$z); min(isint(val) & inrange(val,0,255)))"}
+          if {$selected,"s>4?0:(val = I($x,$y,$z); min(isint(val,0,255)))"}
             s_hex=" = \#"{$selected,`"
               to_hex(x) = (ref(x,_x); _x<10?_'0'+_x:_'A'+_x-10);
               res = vector(#2*s);
@@ -4184,7 +4184,7 @@ _display_camera :
   camera 0,0 w[] 0
 
 #@cli dclut : eq. to 'display_clut'.
-dclut : check "isint(${1=256}) && $1>0 && isint(${2=33}) && $2>0"
+dclut : check "isint(${1=256},1) && isint(${2=33},1)"
   v + _display_clut $*
 
 #@cli display_clut : _image_resolution>0,_clut_resolution>0
@@ -4194,7 +4194,7 @@ dclut : check "isint(${1=256}) && $1>0 && isint(${2=33}) && $2>0"
 display_clut :
   v + _$0 $*
 
-_display_clut : check "isint(${1=320}) && $1>0 && isint(${2=33}) && $2>0"
+_display_clut : check "isint(${1=320},1) && isint(${2=33},1)"
   e[0--3] "Display selected 3D color LUTs, with image resolution $1x$1 and CLUT resolution $2x$2x$2."
   foreach { nm={n}
     rs3d $2 pointcloud3d circles3d 1 o3d 0.1 *3d {255/($2-1)} colorcube3d 1 +3d
@@ -4489,7 +4489,7 @@ dq :
 display_quiver :
   _gmic_s="$?" v + _$0 $*
 
-_display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2}) && $3>=0 && $3<=2"
+_display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2)"
   e[0--3] "Render field of 2D arrows from image"$_gmic_s", with size factor $1, arrow size $2 in "\
           ${arg0\ $3,monochrome,grayscale,color}" mode."
   foreach {
@@ -4563,7 +4563,7 @@ dt :
 display_tensors :
   _gmic_s="$?" v + _$0 $*
 
-_display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2}) && $3>=0 && $3<=2 && ${4=2}>=0"
+_display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2}>=0"
   e[0--3] "Render field of 2x2 tensors from image"$_gmic_s", with size factor $1, ellipse size $2 in "\
           ${arg0\ $3,monochrome,grayscale,color}" mode and outline $4."
   foreach {
@@ -4677,7 +4677,7 @@ echo_file : skip "${2='\n'}"
 #@cli : If a filename 'font.gmz' is specified, it must be a file converted with command `font2gmz`.
 #@cli : Default values: 'font_height=64' and 'is_bold=0'.
 #@cli : $ 400,300,1,3 text "Hello World!",0.5~,0.5~,${"font \"Cheese Burger\",80"},1,255,255,128
-+font : check "isint(${2=24}) && $2>0 && isbool(${3=0})"
++font : check "isint(${2=24},1) && isbool(${3=0})"
   fonts="Acme","Arial","Arial Black","Black Ops One","BlackChancery","Cabin Sketch","Caprasimo","Carnevalee Freakshow",\
         "Cheese Burger","Cheque","Cheque-Black","Chlorinar","Comic Sans MS","Courier New","Creepster","Georgia",\
         "Impact","Lobster","Luckiest Guy","Macondo","MedievalSharp","Odin Rounded","Oswald","Palatino Linotype",\
@@ -4727,7 +4727,7 @@ echo_file : skip "${2='\n'}"
 #@cli : This command requires the command line tool `cutycapt` to be installed on your system.
 #@cli : Beware, 'font_size' is the size of font used for the rendering, it does **not** correspond to the font height.
 #@cli : Default values: 'font_name=Sofia', 'font_size=24' and 'font_qualifier=""'.
-+font2gmz : skip "${1=Sofia},${3=}" check "isint(${2=64}) && $2>0"
++font2gmz : skip "${1=Sofia},${3=}" check "isint(${2=64},1)"
 
   # Extract font name/file information.
   basename "$1",_dir basename=${}
@@ -5005,7 +5005,7 @@ update_fonts :
 #@cli : Insert an identity map of given size at the end of the image list.
 #@cli : Default values: 'height=width' and 'depth=1'.
 #@cli : $ identity 5,1 identity 8,8
-+identity : check "isint($1) && $1>=0 && isint(${2=$1}) && $2>=0 && isint(${3=1}) && $3>=0"
++identity : check "isint($1,0) && isint(${2=$1},0) && isint(${3=1},0)"
   e[^-1] "Input $1x$2x$3 identity map."
   if $3>1 $1,$2,$3,3,[x,y,z] # 3D
   elif $2>1 $1,$2,1,2,[x,y] # 2D
@@ -5036,7 +5036,7 @@ update_fonts :
 #@cli input_565 : filename,width>0,height>0,reverse_endianness={ 0 | 1 }
 #@cli : Insert image data from a raw RGB-565 file, at the end of the list.
 #@cli : Default value: 'reverse_endianness=0'.
-+input_565 : check "isint($2) && $2>0 && isint($3) && $3>0 && isbool(${4=0})"
++input_565 : check "isint($2,1) && isint($3,1) && isbool(${4=0})"
   e[^-1] "Input raw RGB-565 file '"{/"$1"}"', with size $2x$3."
   l[] {
     raw:"$1",uint16 if $4 endian uint16 fi
@@ -5555,7 +5555,7 @@ _input_text :
 #@cli lorem : _width>0,_height>0
 #@cli : Input random image of specified size, retrieved from Internet.
 #@cli : Default values: 'width=height=800'.
-+lorem : check "isint(${1=800}) && $1>0 && isint(${2=$1}) && $2>0"
++lorem : check "isint(${1=800},1) && isint(${2=$1},1)"
   e[^-1] "Input random image of size $1x$2."
   i jpg:"https://picsum.photos/$1/$2" => lorem
 
@@ -5976,7 +5976,7 @@ outputx :
 _outputx :
   $=arg
   is_last_arg=0 is_same_location=0
-  if isnum($-1) is_last_arg:=isint($-1)" && "$-1>=0" && "$-1<=1 is_same_location=$-1 fi
+  if isnum($-1) is_last_arg:=isbool($-1) is_same_location=$-1 fi
   N:=$#-$is_last_arg s0= s1=s
   if !$N e[0--3] "Output image"$_gmic_s" at same location, with same base filename but extension ''
                       (skipped, no extension provided)." return
@@ -7829,7 +7829,7 @@ _gmd_ascii2html :
 #@cli : Convert selected gmd-formatted text images to ascii format.
 #@cli : Default values: 'max_line_length=80' and 'indent_forced_newline=0'.
 gmd2ascii :
-  is_arg=1 l[] { check "isint(${1=80}) && $1>0 && isint(${2=0}) && $2>=0" onfail is_arg=0 }
+  is_arg=1 l[] { check "isint(${1=80},1) && isint(${2=0},0)" onfail is_arg=0 }
   max_line_length,indent_forced_newline=${1-2}
   if !$is_arg
     if !narg($_shell_cols) _shell_cols:=${-shell_cols}-5 fi
@@ -9265,8 +9265,8 @@ _parse_gui_strings :
 #@cli : Default values: 'size=1024', 'p=5', 'q=3', 'angle=0', 'tiling=0', 'nb_max_iter=20', \
 # 'xmin=ymin=-1' and 'xmax=ymax=1'.
 #@cli : repeat 4 { poincare_disk 1024,{3+$>} channels[-1] 2 mod[-1] 3 neq[-1] 2 } rescale2d 50%
-+poincare_disk : check "isint(${1=1024}) && $1>=0 && isint(${2=5}) && $2>2 && isint(${3=4}) && $3>2 && "\
-                       "isbool(${5=0}) && isint(${6=20}) && $6>=0" skip "${4=0},${7=-1},${8=-1},${9=1},${10=1}"
++poincare_disk : check "isint(${1=1024},1) && isint(${2=5},3) && isint(${3=4},3) && "\
+                       "isbool(${5=0}) && isint(${6=20},0)" skip "${4=0},${7=-1},${8=-1},${9=1},${10=1}"
   s0,s1=triangular,polygon
   e[^-1] "Input a $1x$1 poincare disk, with p = $2, q = $3, angle $4 deg., "$s$5" tiling, $6 max iterations, "\
          "in region ($7,$8)-($9,$10)."
@@ -9340,7 +9340,7 @@ _parse_gui_strings :
 #@cli portrait : _size>0
 #@cli : Input random portrait image of specified size, retrieved from Internet.
 #@cli : Default values: 'size=800'.
-+portrait : check "isint(${1=800}) && $1>0"
++portrait : check "isint(${1=800},1)"
   e[^-1] "Input random portrait image of size $1x$1."
   i jpg:"https://thispersondoesnotexist.com/" z. 12,0,1011,999
   rs. $1 => portrait
@@ -9448,7 +9448,7 @@ _print : skip ${1=},${3=}
 #@cli : Insert a new RGB image of specified size at the end of the image list, rendered with a random pattern.
 #@cli : Default values: 'width=height=512' and 'min_detail_level=2'.
 #@cli : $ repeat 6 { random_pattern 256 }
-+random_pattern : check "isint(${1=512}) && $1>0 && isint(${2=$1}) && $2>0 && ${3=2}>=0"
++random_pattern : check "isint(${1=512},1) && isint(${2=$1},1) && ${3=2}>=0"
   e[^-1] "Generate a RGB image $1x$2, with a random pattern."
   m "rgb2rgb:"
 
@@ -9706,7 +9706,7 @@ _random_pattern_check_image :
 #@cli : Input a 2D gear binary shape with specified size.
 #@cli : Default value: 'size=512', 'nb_teeth=12', 'height_teeth=20', 'offset_teeth=0' and 'inner_radius=40'.
 #@cli : $ shape_gear ,
-+shape_gear : check "${1=512}>=0 && isint(${2=12}) && $2>0 && ${3=20}>=0 && $3<=100 && ${4=0}>=0 && $4<=100 &&
++shape_gear : check "${1=512}>=0 && isint(${2=12},1) && ${3=20}>=0 && $3<=100 && ${4=0}>=0 && $4<=100 &&
                      ${5=40}>=0 && $5<=100"
   e[^-1] "Input a $1x$1 gear binary shape with $2 teeth, teeth height $3, teeth offset $4 and inner radius $5."
   ir:=round($1)
@@ -9750,7 +9750,7 @@ _random_pattern_check_image :
 #@cli : Input a 3D voxelized representation of the Menger sponge.
 #@cli : Default value: 'nb_iterations=3'.
 #@cli : $ shape_menger 4 surfels3d , color3d 200 m3d 3
-+shape_menger : l[] { check "isint(${1=3}) && $1>=0" nbi=$1 onfail noarg nbi=3 }
++shape_menger : l[] { check "isint(${1=3},0)" nbi=$1 onfail noarg nbi=3 }
   e[^-1] "Input a "$nbi"-iterated Menger sponge, as a 3D binary image."
   3,3,3,1,"norm([x,y,z]-1)>1" (1)
   repeat $nbi { r. {3*[w,h,d]},1,0,2 +ri[0] . *[-2,-1] }
@@ -9760,7 +9760,7 @@ _random_pattern_check_image :
 #@cli : Input a 3D voxelized representation of the Mosely snowflake.
 #@cli : Default value: 'nb_iterations=3'.
 #@cli : $ shape_mosely 4 surfels3d , color3d 200 m3d 3
-+shape_mosely : l[] { check "isint(${1=3}) && $1>=0" nbi=$1 onfail noarg nbi=3 }
++shape_mosely : l[] { check "isint(${1=3},0)" nbi=$1 onfail noarg nbi=3 }
   e[^-1] "Input a "$nbi"-iterated Mosely snowflake, as a 3D binary image."
   3,3,3,1,"norm1([x,y,z]-1)<=2" =. 0,1,1,1 (1)
   repeat $nbi { r. {3*[w,h,d]},1,0,2 +ri[0] . *[-2,-1] }
@@ -9770,7 +9770,7 @@ _random_pattern_check_image :
 #@cli : Input a 2D polygonal binary shape with specified geometry.
 #@cli : Default value: 'size=512', 'nb_vertices=5' and 'angle=0'.
 #@cli : $ repeat 6 { shape_polygon 256,{3+$>} }
-+shape_polygon : check "${1=512}>=0 && isint(${2=5}) && $2>=3" skip ${3=0}
++shape_polygon : check "${1=512}>=0 && isint(${2=5},3)" skip ${3=0}
   e[^-1] "Input a $1x$1 polygon binary shape, with $2 vertices and angle $3 deg."
   ir:=round($1)
   if !$ir 0
@@ -9790,7 +9790,7 @@ _random_pattern_check_image :
 # 'perspective=0.35' \
 # and 'is_antialias=0'.
 #@cli : $ shape_rays 400,50%,50%,7 shape_rays 400,50%,50%,3,0,3
-+shape_rays : check "isint(${1=512}) && $1>=0 && ${4=7} && $4>0 && inrange(${7=0.35},-1,1) && isbool(${8=0})"
++shape_rays : check "isint(${1=512},0) && ${4=7} && $4>0 && inrange(${7=0.35},-1,1) && isbool(${8=0})"
               skip "${2=50%},${3=50%},${5=50%},${6=0}"
   s0,s1=out,
   e[^-1] "Input a $1x$1 image of binary rays, with $2 branches, angle $3, twist $4, perspective $5 "\
@@ -9832,7 +9832,7 @@ _random_pattern_check_image :
 #@cli : Input a 2D snowflake binary shape with specified size.
 #@cli : Default values: 'size=512' and 'nb_recursions=5'.
 #@cli : $ repeat 6 { shape_snowflake 256,$> }
-+shape_snowflake : check "${1=512}>=0 && isint(${2=5}) && $2>=0 && $2<=6"
++shape_snowflake : check "${1=512}>=0 && isint(${2=5},0) && $2<=6"
   e[^-1] "Input a $1x$1 snowflake binary shape, with $2 recursions."
   ir:=round($1)
   if !$ir 0
@@ -9911,9 +9911,9 @@ __sample :
 
 _sample :
   l[] {
-    if "$#>=3 && isnum($-2) && isint($-2) && $-2>=0 && isnum($-1) && isint($-1) && $-1>=0" # W and H specified.
+    if "$#>=3 && isnum($-2) && isint($-2,0) && isnum($-1) && isint($-1,0)" # W and H specified.
       N:=$#-2 W=$-2 H=$-1
-    elif "$#>=2 && isnum($-1) && isint($-1) && $-1>=0" # Only W specified.
+    elif "$#>=2 && isnum($-1) && isint($-1,0)" # Only W specified.
       N:=$#-1 W=$-1 H=0
     else # No dimensions specified
       N=$# W,H=0
@@ -10005,7 +10005,7 @@ _sample :
 #@cli uniform_distribution : nb_levels>=1,spectrum>=1
 #@cli : Input set of uniformly distributed spectrum-d points in [0,1]^spectrum.
 #@cli : $ uniform_distribution 64,3 * 255 +distribution3d circles3d[-1] 10
-+uniform_distribution : check "isint($1) && $1>0 && isint($2) && $2>0"
++uniform_distribution : check "isint($1,1) && isint($2,1)"
   e[^1] "Input set of $1 uniformly distributed $2-d points in [0,1]^$2."
   l[] {
     dim=$2
@@ -10060,7 +10060,7 @@ _update :
 
 # Function that inserts a new 'New Version Available!' filter for a previous version number,
 # passed as an argument.
-update_deprecate : check "isint($1) && $1>0 && $1<999"
+update_deprecate : check "isint($1,1,999)"
   e[^-1] "Deprecate filter updates for G'MIC version $1."
   l[] {
     file=${_path_rc}update$1.gmic
@@ -12897,7 +12897,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
 #@cli : Set 'maximum_sequence_length=0' to disable maximum length constraint.
 #@cli : Default values: 'is_binary_data=0' and 'maximum_sequence_length=0'.
 #@cli : $ image.jpg rescale2d ,100 quantize 4 round +compress_rle , +decompress_rle[-1]
-compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
+compress_rle : check "isbool(${1=0}) && isint(${2=0},0)"
   s0=" for binary data" s1=""
   if $2 s=", with maximal sequence length "$2 else s="" fi
   e[^-1] "Compress image$? using RLE algorithm"${s{!$1}}$s"."
@@ -12935,7 +12935,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0}) && $2>=0"
 #@cli decompress_clut : _width>0,_height>0,_depth>0
 #@cli : Decompress selected colored keypoints into 3D CLUTs, using a mixed RBF/PDE approach.
 #@cli : Default values: 'width=height=depth=33' and 'reconstruction_colorspace=0'.
-decompress_clut : check "isint(${1=33}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=$1}) && $3>0"
+decompress_clut : check "isint(${1=33},1) && isint(${2=$1},1) && isint(${3=$1},1)"
   e[^-1] "Decompress colored keypoint$? into $1x$2x$3 CLUTs."
   foreach {
     +norm r. 1,2,1,1,2 is_rbf:=i[0]<i[1] rm.
@@ -12961,7 +12961,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
 
   # Parse arguments.
   l[] {
-    is_args:="isint($1) && $1>0 && (['$2']==0 || (isint($2) && $2>0)) && (['$3']==0 || (isint($3) && $3>0))"
+    is_args:="isint($1,1) && (['$2']==0 || isint($2,1)) && (['$3']==0 || isint($3,1))"
     check $is_args
     onfail noarg is_args=0
   }
@@ -13210,7 +13210,7 @@ _inrange : skip "${3=1},${4=$3}"
 #@cli : $ image.jpg +rgb2ycbcr split[-1] c (0,255,0) resize[-1] 256,1,1,1,3 map[-4] [-1] remove[-1] append[-3--1] c \
 # ycbcr2rgb[-1]
 #@cli : $$
-map : check "isint(${2=0}) && $2>=0 && $2<=3"
+map : check "isint(${2=0},0,3)"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror boundary=${s$2}
   names=${-_palette_names} N:=narg($names)
   l[] { if isint("$1") name=${"arg0 ($1%"$N"),"$names} else name="$1" fi onfail name="$1" }
@@ -13331,7 +13331,7 @@ noise_perlin : check "${1=16}>0 && ${2=$1}>0 && ${3=$1}>0 && isnum(${4=0}) && is
 #@cli : by Robert Bridson (SIGGRAPH'2007).
 #@cli : Default values: 'radius=8', 'max_sample_attempts=30' and 'p_norm=2'.
 #@cli : $ 300,300 noise_poissondisk 8
-noise_poissondisk : check "${1=8}>0 && isint(${2=30}) && $2>0 && ${3=2}>0"
+noise_poissondisk : check "${1=8}>0 && isint(${2=30},1) && ${3=2}>0"
   e[^-1] "Add poisson disk sampling points to image$?, with radius $1, max sample attempts $2 and p-norm $3."
   R0,K,P=${1-3}
   foreach {
@@ -13497,7 +13497,7 @@ oneminus :
 #@cli : The computed thresholds are returned as a list of values in the status.
 #@cli : Default value: 'nb_levels=256'.
 #@cli : $ image.jpg luminance +otsu ,
-otsu : check "isint(${1=256}) && $1>0"
+otsu : check "isint(${1=256},1)"
   e[^-1] "Hard-threshold image$? using Otsu\47s method, with $1 histogram levels."
   foreach {
     imM:=[im,iM] +histogram $1,$imM
@@ -13536,7 +13536,7 @@ polar2complex :
 #@cli : Default value: 'keep_values=1' and 'quantization_type=0'.
 #@cli : $ image.jpg luminance +quantize 3
 #@cli : $ 200,200,1,1,'cos(x/10)*sin(y/10)' +quantize[0] 6 +quantize[0] 4 +quantize[0] 3 +quantize[0] 2
-quantize : check "isint($1) && $1>=1 && isbool(${2=1}) && isint(${3=0}) && $3>=-1 && $3<=1"
+quantize : check "isint($1,1) && isbool(${2=1}) && isint(${3=0},-1,1)"
   e[^-1] "Quantize image$? using $1 levels, "${arg0\ !$2,with,without}" keeping value range."
   foreach {
     if $3==1 # Uniform quantization.
@@ -13613,7 +13613,7 @@ quantize_area : check "${1=10}>0"
 #@cli : For each image, 'sum' must be greater or equal than 'width*height*depth*spectrum'.
 #@cli : Default value: 'random_function=u'.
 #@cli : $ 100 rand_sum 1000
-rand_sum : check "isint($1) && isexpr(${3=u})"
+rand_sum : check "isint($1,1) && isexpr(${3=u})"
   e[^-1] "Fill image$? with strictly positive, random, integer values that sums to $1, with random function '$3'."
   foreach {
     if whds>$1
@@ -13805,7 +13805,7 @@ ac :
 apply_channels :
   _gmic_s="$?" v + _$0 $"*"
 
-_apply_channels : check "isint(${3=0}) && $3>=0 && $3<=2"
+_apply_channels : check "isint(${3=0},0) && $3<=2"
   channels=${"_ac_list \"$2\""}
   e[^-1] "Apply command '$1' on channels '"$channels"' of image"$_gmic_s"."
   ('$/') id:="h=0;for(k=0,k<w,((h*=31)+=i[k++])%=1048576)" rm.
@@ -13921,7 +13921,7 @@ _ac_yiq_q : _p="to_color" _f="rgb2yiq8" _b="yiq82rgb" _s=2
 #@cli : Index selected vector-valued images by adapted colormaps.
 #@cli : Default values: 'dithering=0' and 'method=1'.
 #@cli : $ image.jpg +autoindex[0] 4 +autoindex[0] 8 +autoindex[0] 16
-autoindex : check "isint($1) && $1>0 && ${2=0}>=0" skip ${3=1}
+autoindex : check "isint($1,1) && ${2=0}>=0" skip ${3=1}
   e[^-1] "Index colors in images$? by adapted colormap with $1 entries, dithering level $2 and "\
           ${arg0\ !$3,k-means,median-cut}" method."
   foreach {
@@ -14159,7 +14159,7 @@ bayer2rgb : skip ${1=1},${2=1},${3=0.5}
 # zilverfx_infrared | zilverfx_vintage_bw | zombieland_double_tap }
 #@cli : Default values: 'resolution=33' and 'cut_and_round=1'.
 #@cli : $ clut summer clut alien_green,17 clut orange_dark4,48
-+clut : check "isint(${2=33}) && $2>0 && isbool(${3=1})"
++clut : check "isint(${2=33},1) && isbool(${3=1})"
   strclut "$1" name=${} l[] {
   e[^-1] "Input CLUT '"$name"' with resolution $2."
     path_clut=${-path_cache}
@@ -14221,7 +14221,7 @@ cmyk2rgb :
 #@cli : The dichromacy matrices of the paper were adapted to sRGB (RGB->XYZ).
 #@cli : Anomalous trichromacy simulated via linear interpolation with the identity and a factor of 0.6.
 #@cli : $ image.jpg +colorblind 0
-colorblind : check "isint($1) && $1>=0 && $1<=7"
+colorblind : check "isint($1,0,7)"
   s0="protanopia" s1="protanomaly" s2="deuteranopia" s3="deuteranomaly" s4="tritanopia"
   s5="tritanomaly" s6="achromatopsia" s7="achromatomaly"
   e[^-1] "Simulate color blindness of type '"${s$1}"' on image$?."
@@ -14242,7 +14242,7 @@ colorblind : check "isint($1) && $1>=0 && $1<=7"
 #@cli : Default value: 'method=1' and 'sort_vectors=1'.
 #@cli : $ image.jpg +colormap[0] 4 +colormap[0] 8 +colormap[0] 16
 #@cli : $$ https://gmic.eu/oldtutorial/_colormap
-colormap : check "isint($1) && $1>=0 && isbool(${2=1}) && isint(${3=1}) && inrange($3,0,2)"
+colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
   m0,m1="median-cut","k-means"
   s0,s1,s2="",", sorted by increasing norm",", sorted by decreasing occurence"
   if $1 e[0--3] "Estimate colormap with $1 entries for image$?, by "${m$2}" method"${s$3}"."
@@ -14347,7 +14347,7 @@ compose_channels : skip ${1="+"}
 #@cli : Count number of distinct colors in selected images until it reaches the specified max number of counted colors.
 #@cli : Set 'count_until' to '0' to disable limit on counted colors.
 #@cli : This command returns the number of distinct colors for each image (separated by commas).
-count_colors : check "isint(${1=0}) && $1>=0"
+count_colors : check "isint(${1=0},0)"
   if $1 e[0--3] "Count number of distinct colors in image$?, until it reaches $1."
   else e[0--3] "Count number of distinct colors in image$?."
   fi
@@ -14730,7 +14730,7 @@ lightness :
 #@cli : This function performs a specific score maximization to generate the result, so
 #@cli : it may take some time when 'nb_colors' is high.
 #@cli : Default values: 'nb_colors=256' and 'min_rgb_value=64'.
-+lut_contrast : check "isint(${1=256}) && $1>=1 && isnum(${2=48})"
++lut_contrast : check "isint(${1=256},1) && isnum(${2=48})"
   e[^-1] "Generate high-contrast RGB colormap with $1 colors and min RGB value $2."
   l[] {
 
@@ -14981,7 +14981,7 @@ _match_pca :
 #@cli : Default values: 'gamma=0.3','regularization=8', 'luminosity_constraints=0.1', 'rgb_resolution=64' and \
 # 'is_constraints=0'.
 #@cli : $ sample pencils,wall +match_rgb[0] [1],0,0.01
-match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isint(${6=0})"
+match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isbool(${6=0})"
   e[^-1] "Transfer colors of image $1 to image$?."
   sigma=1.5
   repeat $! { pass$1 0 l[$>,-1] {
@@ -15567,7 +15567,7 @@ premula :
 #@cli : If 'JND_threshold' is 0, no perceptual constraints are applied.
 #@cli : Default values: 'max_increment=5', 'JND_threshold=2.3' and 'bits_depth=8'.
 #@cli : $ pseudogray 5
-pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3>0"
+pseudogray : check "isint(${1=5},0) && ${2=2.3}>=0 && isint(${3=8},1)"
   e[^-1] "Generate pseudogray colormap with increment $1, JND threshold $2 and $3 bits depth."
 
   # Generate all possible sRGB colors with given increments.
@@ -15607,7 +15607,7 @@ pseudogray : check "isint(${1=5}) && $1>=0 && ${2=2.3}>=0 && isint(${3=8}) && $3
 #@cli : If specified 'seed' is positive, it is used as a seed for the random number generator \
 #@cli : (so that using the same seed will return the same CLUT).
 #@cli : $ image.jpg random_clut +map_clut.. .
-+random_clut : l[] { check "isint(${1=-1}) && $1>=-1" seed=$1 onfail seed=-1 noarg }
++random_clut : l[] { check "isint(${1=-1},-1)" seed=$1 onfail seed=-1 noarg }
   e[^-1] "Generate a random 3D color LUT."
   if $seed>=0 srand $seed fi
 
@@ -16085,7 +16085,7 @@ solarize :
 #@cli : Output images are sorted by decreasing area of extracted color regions and have an additional alpha-channel.
 #@cli : Default values: 'tolerance=0', 'max_nb_outputs=256' and 'min_area=8'.
 #@cli : $ image.jpg quantize 5 +split_colors , display_rgba
-split_colors : check "${1=0}>=0 && isint(${2=256}) && $2>0 && ${3=8}>=1"
+split_colors : check "${1=0}>=0 && isint(${2=256},1) && ${3=8}>=1"
   e[^-1] "Split image$? as single color outputs, with tolerance $1, $2 maximal outputs and minimal color area $3."
   foreach {
     +label 0,1 norm. area. 0,1
@@ -16166,7 +16166,7 @@ to_color :
 #@cli to_colormode : mode={ 0:adaptive | 1:G | 2:GA | 3:RGB | 4:RGBA }
 #@cli : Force selected images to be in a given color mode.
 #@cli : Default value: 'mode=0'.
-to_colormode : check "isint(${1=0}) && inrange($1,0,4)"
+to_colormode : check "isint(${1=0},0,4)"
   s,err:="$1?[ $1,$1 ]:(rgb = a = e = 0; repeat (l,k,rgb|=s#k>=3; a|=!(s#k%2); e|=!s#k||s#k>4); [ (rgb?3:1) + a,e ])"
   if $err foreach {
     if !s||s>4 error[0--5] "Command '$0': Image ["$>"] is not a G,GA,RGB or RGBA image ("{s}" channels)." fi
@@ -16204,7 +16204,7 @@ to_graya :
 #@cli : Default values: 'max_step=5', 'is_perceptual_constraint=1' and 'bits_depth=8'.
 #@cli : The original pseudo-gray technique has been introduced by Rich Franzen <http://r0k.us/graphics/pseudoGrey.html>.
 #@cli : Extension of this technique to arbitrary increments for more tones, has been done by David Tschumperlé.
-to_pseudogray : check "isint(${1=5}) && $1>=0 && isint(${3=8}) && $3>0" skip ${2=1}
+to_pseudogray : check "isint(${1=5},0) && isint(${3=8},1)" skip ${2=1}
   e[^-1] "Convert scalar image$? to pseudo-gray color images, with steps $1."
   channels 0 srgb2rgb pseudogray $1,{2.3*$2},$3
 
@@ -16439,7 +16439,7 @@ yuv82rgb :
 #@cli : 'centering_x' and 'centering_y' tells about the centering of tiles when they have different sizes.
 #@cli : Default values: 'M=0', 'N=0', 'centering_x=centering_y=0.5'.
 #@cli : $ image.jpg split xy,4 append_tiles ,
-append_tiles : check "isint(${1=0}) && isint(${2=0}) && ${3=0}>=0 && $3<=1 && ${4=$3}>=0 && $4<=1"
+append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0},0,1) && inrange(${4=$3},0,1)"
   if !$!
     e[0--3] "Append image$? as a 0x0-tiled image."
     return
@@ -16468,8 +16468,7 @@ append_tiles : check "isint(${1=0}) && isint(${2=0}) && ${3=0}>=0 && $3<=1 && ${
 #@cli : 'interpolation' can be { 0:none | 1:nearest | 2:average | 3:linear | 4:grid | 5:bicubic | 6:lanczos }.
 #@cli : Default value: 'min_scale=25%', 'max_scale=100%' and 'interpolation=3'.
 #@cli : $ image.jpg apply_scales "blur 5 sharpen 1000",4
-apply_scales : check "isint($2) && $2>0 && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && isint(${6=3}) && $6>=0"
-               skip "${1=}"
+apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && isint(${6=3},0" skip "${1=}"
   s0="no" s1="nearest-neighbor" s2="average" s3="linear" s4="grid" s5="bicubic" s6="lanczos"
   e[^-1] "Apply command '$1' on image$? for $2 scales ($3 -> $4) and "${s{min(6,$6)}}" interpolation."
   foreach {
@@ -16499,7 +16498,7 @@ apply_scales : check "isint($2) && $2>0 && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}
 #@cli : Default values: 'threshold=0%', 'min_area=0.1%', 'is_high_connectivity=0' and 'output_type=1'.
 #@cli : $ 256,256 noise 0.1,2 eq 1 dilate_circ 20 label_fg 0,1 normalize 0,255 +neq 0 *[-1] 255 append c \
 # +autocrop_components ,
-autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isint(${4=1}) && $4>=0 && $4<=2"
+autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isint(${4=1},0,2)"
   e[^-1] "Autocrop connected components from image$?, with threshold $1, minimal area $2, "\
          ${arg0\ $3,low,high}" connectivity "\
          "and output type set to '"${arg0\ $4,crop,segmentation,coordinates}"'.\n"
@@ -17037,8 +17036,8 @@ ri : skip "${2=1},${3=0},${4=0},${5=0},${6=0},${7=0}" # Faster than the non-shor
 #@cli : (eq. to 'ri').
 #@cli : Default values: 'interpolation=1', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
 #@cli : $ image.jpg sample duck +resize_as_image[-1] [-2]
-resize_as_image : check ${"is_image_arg $1"}" && isint(${2=1}) && $2>=-1 && $2<=6 && "\
-   "isint(${3=0}) && $3>=0 && $3<=3 && isnum(${4=0}) && isnum(${5=0}) && isnum(${6=0}) && isnum(${7=0})"
+resize_as_image : check ${"is_image_arg $1"}" && isint(${2=1},-1,6) && "\
+   "isint(${3=0},0,3) && isnum(${4=0}) && isnum(${5=0}) && isnum(${6=0}) && isnum(${7=0})"
   pass$1 r[^-1] .,.,.,.,${2--1} rm.
 
 #@cli resize_mn : width[%]>=0,_height[%]>=0,_depth[%]>=0,_B_value,_C_value
@@ -17094,7 +17093,7 @@ resize_mn : check "${2=100%}>=0 && ${3=100%}>=0" skip "${4=0.333},${5=0.333}"
 #@cli : (set to '0' by default, must be defined in range [0,1]).
 #@cli : Default values: 'interpolation=0', 'boundary_conditions=0' and 'ax=ay=az=ac=0'.
 #@cli : $ image.jpg +resize_pow2[-1] 0
-resize_pow2 : check "isint(${1=0}) && $1>=-1 && $1<=6" skip ${2=0},${3=0},${4=0},${5=0},${6=0}
+resize_pow2 : check "isint(${1=0},-1,6)" skip ${2=0},${3=0},${4=0},${5=0},${6=0}
   e[^-1] "Resize image$? so that each dimension is a power of 2."
   foreach { r {2^(ceil(log2([w,h,d])))},100%,${1-6} }
 
@@ -17490,7 +17489,7 @@ upscale_smart : skip ${2=100%},${3=100%} check "${4=2}>=0 && ${5=0.4}>=0 && $5<=
 #@cli : Convert selected 3D volumetric images into a 2D representation.
 #@cli : Default values: 'x=y=z=50%' and 'separator_size=0'.
 #@cli : $ image.jpg rescale2d 64 animate noise,0,100,50 cut 0,255 append z volumetric2d 50%,50%,50%,1
-volumetric2d : skip ${1=50%},${2=50%},${3=50%} check "isint(${4=0}) && $4>=0"
+volumetric2d : skip ${1=50%},${2=50%},${3=50%} check "isint(${4=0},0)"
   e[^-1] "Convert 3D volumetric image$? into a 2D representation, with coordinates (${1-3}) and separator size $4."
   foreach { nm={n}
     {[w+d+$4,h+d+$4]},1,100%,{im}
@@ -17564,8 +17563,7 @@ blur_angular : skip ${2=50%},${3=50%}
 #@cli : Default values: 'amplitude=1', 'ratio=2', 'nb_iter=5', 'blend_operator=+', 'kernel=1', 'normalize_scales=0' \
 # and 'axes=(all)'
 #@cli : $ image.jpg blur_bloom ,
-blur_bloom : check "${1=1}>=0 && ${2=2}>=0 && isint(${3=5}) && $3>=0 && isint(${5=1}) && $5>=0 && $5<=4 &&
-                    isnum(${6=0})" skip "${4=+},${7=}"
+blur_bloom : check "${1=1}>=0 && ${2=2}>=0 && isint(${3=5},0) && isint(${5=1},0,4) && isnum(${6=0})" skip "${4=+},${7=}"
   e[^-1] "Apply bloom effect on image$?, with amplitude $1, ratio $2, $3 iterations, blend operator '$4' and "\
          ${"arg0 !$6,\"\",\"no \""}"scale normalization."
   if narg("$7") axes=$7, fi
@@ -17616,7 +17614,7 @@ blur_radial : skip ${2=50%},${3=50%}
 #@cli : Default values: 'sigma=5', 'edges=0.5' and 'nb_scales=5'.
 #@cli : $ image.jpg noise 20 cut 0,255 +local[-1] repeat 4 { blur_selective , } done
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_selective
-blur_selective : check "${1=5}>=0 && ${2=0.5}>=0 && isint(${3=5}) && $3>0"
+blur_selective : check "${1=5}>=0 && ${2=0.5}>=0 && isint(${3=5},1)"
   e[^-1] "Blur image$? using $3 selective gaussian scales, with sigma $1 and edges $2."
   foreach {
     nm={n}
@@ -17630,7 +17628,7 @@ blur_selective : check "${1=5}>=0 && ${2=0.5}>=0 && isint(${3=5}) && $3>0"
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $ image.jpg +blur_x 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_x
-blur_x : check "isint(${2=1}) && inrange($2,0,3)"
+blur_x : check "isint(${2=1},0,3)"
   e[^-1] "Blur image$? along the x-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$2
 
@@ -17639,7 +17637,7 @@ blur_x : check "isint(${2=1}) && inrange($2,0,3)"
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $ image.jpg +blur_xy 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_y
-blur_xy : skip ${2=$1} check "isint(${3=1}) && inrange($3,0,3)"
+blur_xy : skip ${2=$1} check "isint(${3=1},0,3)"
   e[^-1] "Blur image$? along the xy-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$3 deriche $2,0,y,$3
 
@@ -17648,7 +17646,7 @@ blur_xy : skip ${2=$1} check "isint(${3=1}) && inrange($3,0,3)"
 #@cli : Blur selected images along the X, Y and Z axes.
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_xyz
-blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1}) && inrange($4,0,3)"
+blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1},0,3)"
   e[^-1] "Blur image$? along the xyz-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,x,$4 deriche $2,0,y,$4 deriche $3,0,z,$4
 
@@ -17657,7 +17655,7 @@ blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1}) && inrange($4,0,3)"
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $ image.jpg +blur_y 6
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_y
-blur_y : check "isint(${2=1}) && inrange($2,0,3)"
+blur_y : check "isint(${2=1},0,3)"
   e[^-1] "Blur image$? along the y-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,y,$2
 
@@ -17665,7 +17663,7 @@ blur_y : check "isint(${2=1}) && inrange($2,0,3)"
 #@cli : Blur selected images along the z-axis.
 #@cli : Default value: 'boundary_conditions=1'.
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_z
-blur_z : check "isint(${2=1}) && inrange($2,0,3)"
+blur_z : check "isint(${2=1},0,3)"
   e[^-1] "Blur image$? along the z-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
   deriche $1,0,z,$2
 
@@ -17985,7 +17983,7 @@ deinterlace : skip ${1=0}
 #@cli : Set 'nb_scales==0' to automatically determine the optimal number of scales.
 #@cli : Default values: 'threshold=1.4', 'nb_scale=0' and 'cycle_spinning=10'.
 #@cli : $ image.jpg noise 20 cut 0,255 +denoise_haar[-1] 0.8
-denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) && $3>0"
+denoise_haar : check "${1=1.4}>=0 && isint(${2=0},0) && isint(${3=10},1)"
   e[^-1] "Denoise image$? using haar-wavelet thresholding, with threshold $1, "\
           ${arg0\ ($2>0),auto,$2}" scales and $3 spinning cycles."
   foreach {
@@ -18014,7 +18012,7 @@ denoise_haar : check "${1=1.4}>=0 && isint(${2=0}) && $2>=0 && isint(${3=10}) &&
 #@cli : $ image.jpg noise 20 cut 0,255 +denoise_cnn
 denoise_cnn : skip "${1=0},${2=64}"
   N=$!
-  if isint($1)" && "inrange($1,0,4) check "isint($2) && $2>0" type=$1 else type=0 noarg fi
+  if isint($1,0,4) check "isint($2,1)" type=$1 else type=0 noarg fi
   s0,s1,s2,s3,s4=soft,heavy,heavy,poisson+gaussian,poisson+gaussian2
   e[^-1] "Denoise image$? using a convolutional neural network (for "${s$type}"-noise), with patch size $2."
 
@@ -18064,7 +18062,7 @@ denoise_cnn : skip "${1=0},${2=64}"
 #@cli : Denoise selected images using the patch-pca algorithm.
 #@cli : Default values: 'patch_size=7', 'lookup_size=11', 'details=1.8' and 'spatial_sampling=5'.
 #@cli : $ image.jpg +noise 20 cut[-1] 0,255 +denoise_patchpca[-1] ,
-denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7}) && $2>0 && isint(${3=11}) && $3>0 && isint(${4=5}) && $4>0"
+denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},1) && isint(${4=5},1)"
   e[^-1] "Denoise image$? using patch-pca, with strength $1, patch size $2, lookup size $3 and spatial sampling $4."
   foreach {
     nm={n} N2:=$2^2 M2:=$3^2 stdnoise=${-std_noise}
@@ -18137,7 +18135,7 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7}) && $2>0 && isint(${
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate_circ 7
-dilate_circ : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
+dilate_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply circular dilation of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   if $1<2 return fi
@@ -18147,7 +18145,7 @@ dilate_circ : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})
 #@cli : Apply octagonal dilation of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate_oct 7
-dilate_oct : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
+dilate_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply octagonal dilation of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   if $1<2 return fi
@@ -18184,8 +18182,7 @@ _jf_circle :
 #@cli : Dilate selected images in the (X,Y,Z,I) space.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'size_y=size_x', 'size_z=1', 'threshold=255' and 'boundary_conditions=1'.
-dilate_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint(${3=1}) && $3>=1 && ${4=255}>=0 &&
-                          isbool(${5=1})"
+dilate_threshold : check "isint($1,1) && isint(${2=$1},1) && isint(${3=1},1) && ${4=255}>=0 && isbool(${5=1})"
   e[^-1] "Dilate image$? with mask $1x$2x$3, threshold $4 and "${arg0\ $5,dirichlet,neumann}" boundary conditions."
   l[] {
     dx1:=int($1/2) dx2:=$1-$dx1-1
@@ -18257,7 +18254,7 @@ edges : skip ${1=15%}
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode_circ 7
-erode_circ : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
+erode_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply circular erosion of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   if $1<2 return fi
@@ -18267,7 +18264,7 @@ erode_circ : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
 #@cli : Apply octagonal erosion of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode_oct 7
-erode_oct : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
+erode_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply octagonal erosion of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   if $1<2 return fi
@@ -18286,8 +18283,7 @@ erode_oct : check "$1>=0 && isint(${2=1}) && inrange($2,0,3) && isbool(${3=0})"
 #@cli : Erode selected images in the (X,Y,Z,I) space.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'size_y=size_x', 'size_z=1', 'threshold=255' and 'boundary_conditions=1'.
-erode_threshold : check "isint($1) && $1>=1 && isint(${2=$1}) && $2>=1 && isint(${3=1}) && $3>=1 && ${4=255}>=0 &&
-                         isbool(${5=1})"
+erode_threshold : check "isint($1,1) && isint(${2=$1},1) && isint(${3=1},1) && ${4=255}>=0 && isbool(${5=1})"
   e[^-1] "Erode image$? with mask $1x$2x$3, threshold $4 and "${arg0\ $5,dirichlet,neumann}" boundary conditions."
   l[] {
     dx1:=int($1/2) dx2:=$1-$dx1-1
@@ -18340,11 +18336,11 @@ _gradient_get_args : skip "${1=},${2=},${3=}"
       if !$is_axes axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 1st arg
       elif ['$2']==0 axes,scheme,boundary=$1,0,1 # No 2nd arg
       else
-        is_scheme:="isint($2) && inrange($2,-1,5)"
+        is_scheme:="isint($2,-1,5)"
         if !$is_scheme axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 2nd arg
         elif ['$3']==0 axes,scheme,boundary=$1,$2,1 # No 3rd arg
         else
-          is_boundary:="isint($3) && inrange($3,0,3)"
+          is_boundary:="isint($3,0,3)"
           if !$is_boundary axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 3rd arg
           else axes,scheme,boundary=${1-3}
           fi
@@ -18422,7 +18418,7 @@ gradient_norm :
 #@cli : Compute N-d gradient orientation of selected images.
 #@cli : Default value: 'dimension=3'.
 #@cli : $ image.jpg +gradient_orientation 2
-gradient_orientation : check "isint(${1=3}) && inrange($1,1,3)"
+gradient_orientation : check "isint(${1=3},1,3)"
   e[^-1] "Compute $1-d gradient orientation of image$?."
   foreach {
     if $1==1 g x +abs. +. 1e-8 -/
@@ -18444,7 +18440,7 @@ gradient_orientation : check "isint(${1=3}) && inrange($1,1,3)"
 #@cli : Compute the direct haar multiscale wavelet transform of selected images.
 #@cli : See also: ''ihaar''.
 #@cli : $$ https://gmic.eu/oldtutorial/_haar
-haar : check "isint(${1=1}) && $1>=0"
+haar : check "isint(${1=1},0)"
   e[^-1] "Compute haar transform of image$? with $1 scales."
   foreach {
     _haar
@@ -18496,7 +18492,7 @@ hessian : skip "${1=},${2=}"
       if !$is_axes axes,boundary=,1 noarg # Invalid 1st arg
       elif ['$2']==0 axes,boundary=$1,1 # No 2nd arg
       else
-        is_boundary:="isint($2) && inrange($2,0,3)"
+        is_boundary:="isint($2,0,3)"
         if !$is_boundary axes,boundary=,1 noarg # Invalid 2nd arg
         else axes,boundary=$1,$2
         fi
@@ -18605,7 +18601,7 @@ iee :
 #@cli : Compute the inverse haar multiscale wavelet transform of selected images.
 #@cli : See also: ''haar''.
 #@cli : $$ https://gmic.eu/oldtutorial/_haar
-ihaar : check "isint(${1=1}) && $1>=0"
+ihaar : check "isint(${1=1},0)"
   e[^-1] "Compute inverse haar transform of image$? with $1 scales."
   foreach {
     repeat $1-1 {
@@ -18722,8 +18718,7 @@ inn :
 #@cli : to guide the diffusion process.
 #@cli : Default values: 'nb_scales=-9', 'diffusion_type=1' and 'diffusion_iter=20'.
 #@cli : $ image.jpg 100%,100% ellipse[-1] 30%,30%,40,30,0,1,255 +inpaint_pde[0] [1]
-inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1}) && inrange($3,0,3) && "\
-                    "isint(${4=20}) && $4>=0"
+inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3) && isint(${4=20},0)"
   s0="isotropic" s1="Delaunay-guided" s2="edge-guided" s3="mask-guided"
   e[^-1] "Inpaint image$? by mask $1, using a multiscale diffusion algorithm with $2 scales"\
          "and $4 iterations of "${s$3}" diffusion."
@@ -18860,8 +18855,8 @@ inpaint_morpho : check ${is_image_arg\ $1}
 #@cli : Default values: 'nb_scales=0', 'patch_size=9', 'nb_iterations_per_scale=10', 'blend_size=5',\
 # 'allow_outer_blending=1' and 'is_already_initialized=0'.
 #@cli : $ image.jpg 100%,100% ellipse[-1] 30%,30%,40,30,0,1,255 +inpaint_matchpatch[0] [1]
-inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9}) && $3>0 && isint(${4=10}) && $4>0 &&
-                           isint(${5=5}) && $5>=0" skip ${6=1},${7=0}
+inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9},1) && isint(${4=10},1) && isint(${5=5},0)"
+                     skip ${6=1},${7=0}
   e[^-1] "Inpaint image$? with mask $1, using a multiscale patch-matching algorithm with "\
          ${"if $2 u \"$2 \" else u auto- fi"}\
          "scales, $3x$3 patches, $4 iterations per scale and blending size $5."
@@ -19680,7 +19675,7 @@ sharpen : check "$1>=0 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
 #@cli sharpen_alpha : _amplitude[%]>=0,_nb_scales>0,0<=_anisotropy<=1,0<=_minimize_alpha<=1
 #@cli : Sharpen selected images using a multi-scale and alpha boosting algorithm.
 #@cli : Default values: 'amplitude=1', 'nb_scales=5', 'anisotropy=0' and 'minimize_alpha=1'.
-sharpen_alpha : check "${1=1}>=0 && isint(${2=5}) && $2>0 && inrange(${3=0},0,1) && inrange(${4=1},0,1)"
+sharpen_alpha : check "${1=1}>=0 && isint(${2=5},1) && inrange(${3=0},0,1) && inrange(${4=1},0,1)"
   e[^-1] "Sharpen image$? with a multi-scale and alpha boosting algorithm, with amplitude $1, $2 scales, "\
     "anisotropy $3 and alpha minimization factor $4."
   foreach {
@@ -19846,7 +19841,7 @@ structuretensors : skip "${1=}"
 #@cli : Solidify selected transparent images.
 #@cli : Default values: 'smoothness=75%', 'diffusion_type=1' and 'diffusion_iter=20'.
 #@cli : $ image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
-solidify : check "${1=75%}>=0 && isint(${2=1}) && $2>=0 && $2<=2 && ${3=20}>=0"
+solidify : check "${1=75%}>=0 && isint(${2=1},0,2) && ${3=20}>=0"
   s0="isotropic" s1="Delaunay-guided" s2="edge-oriented"
   e[^-1] "Solidify transparent image$? with smoothness $1 and $3 iterations of "${s$2}" diffusion."
   foreach { split_opacity if $!>1 <=. 128 inpaint_pde.. [1],${1-3} rm. c 0,255 fi }
@@ -19903,8 +19898,8 @@ syntexturize : check "${1=100%}>0 && ${2=$1}>0"
 #@cli : If 'nbscales==0', the number of scales used is estimated from the image size.
 #@cli : Default values: 'width=height=100%', 'nb_scales=0', 'patch_size=7', 'blending_size=5' and 'precision=1'.
 #@cli : $ image.jpg crop 25%,25%,75%,75% syntexturize_matchpatch 512,512
-syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3>=0 && isint(${4=7}) && $4>0 &&
-                                 ${5=5}>=0 && ${6=1}>=0"
+syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0},0) && isint(${4=7},1) && "\
+                                "${5=5}>=0 && ${6=1}>=0"
   e[^-1] "Resynthetize $1x$2 version(s) of texture$? using a patch-matching algorithm with "\
          ${"if $3 u \"$3 \" else u auto- fi"}"scales, $4x$4 patches, blending size $5 and precision $6."
   foreach {
@@ -19961,7 +19956,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0}) && $3
   }
 
 # _syntexturize_matchpatch : [correspondence_map],blend_size>0
-_syntexturize_matchpatch : check ${is_image_arg\ $1}" && isint(${2=3}) && $2>=0"
+_syntexturize_matchpatch : check ${is_image_arg\ $1}" && isint(${2=3},0)"
   if $2<=1 pass$1 warp[^-1] .,0 rm.
   else repeat $! { pass$1 l[$>,-1] {
     [1],[1],1,[0]
@@ -20263,7 +20258,7 @@ betti :
 #@cli : Locate image edges using Canny edge detector.
 #@cli : Default values: 'sigma=1', 'low_threshold=0.05', 'high_threshold=0.15'.
 #@cli : $ image.jpg canny 1
-canny : check "${1=1}>=0 && ${2=0.05}>=0 && ${3=0.15}>=0 && isint(${4=0}) && inrange($4,0,2)"
+canny : check "${1=1}>=0 && ${2=0.05}>=0 && ${3=0.15}>=0 && isint(${4=0},0,2)"
   e[^-1] "Apply Canny edge detection on image$?, with sigma $1, low threshold $2 and high threshold $3."
   low,high:=$2*$3,$3
   foreach {
@@ -20408,7 +20403,7 @@ fftpolar :
 #@cli histogram_masked : [mask],nb_levels>0[%],_min_value[%],_max_value[%]
 #@cli : Compute the masked histogram of selected images.
 #@cli : Default values: 'min_value=0%' and 'max_value=100%'.
-histogram_masked : check ${"is_image_arg $1"}" && isint($2) && $2>0" skip ${3=0%},${4=100%}
+histogram_masked : check ${"is_image_arg $1"}" && isint($2,1)" skip ${3=0%},${4=100%}
   e[^-1] "Compute histogram of image$?, with mask $1, $2 levels in range [$3,$4]."
   pass$1
   foreach[^-1] {
@@ -20513,7 +20508,7 @@ ifftpolar :
 #@cli : Default values: 'overlap=0' and 'boundary_conditions=0'.
 #@cli : See also: ''patches2img''.
 #@cli : $ image.jpg img2patches 64
-img2patches : check "isint($1) && $1>0 && ${2=0}>=0 && isint(${3=0}) && $3>=0 && $3<=3"
+img2patches : check "isint($1,1) && ${2=0}>=0 && isint(${3=0},0,3)"
   e[^-1] "Decompose 2D images$? as $1x$1 patch-image, with overlap $2."
   foreach {
     if d>1 error[0--4] "Command 'img2patches': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
@@ -20669,7 +20664,7 @@ _laar : skip "${3=}"
 #@cli : Return locations of maximal values in local patch-based neighborhood of given size for selected images.
 #@cli : Default value: 'patch_size=16'.
 #@cli : $ image.jpg norm +max_patch 16
-max_patch : check "isint(${1=16}) && $1>=1"
+max_patch : check "isint(${1=16},1)"
   e[^-1] "Return locations of maximal values in local patch neighborhood of size $1, in image$?."
   foreach { +dilate $1 == }
 
@@ -20677,7 +20672,7 @@ max_patch : check "isint(${1=16}) && $1>=1"
 #@cli : Return locations of minimal values in local patch-based neighborhood of given size for selected images.
 #@cli : Default value: 'patch_size=16'.
 #@cli : $ image.jpg norm +min_patch 16
-min_patch : check "isint(${1=16}) && $1>=1"
+min_patch : check "isint(${1=16},1)"
   e[^-1] "Return locations of minimal values in local patch neighborhood of size $1, in image$?."
   foreach { +erode $1 == }
 
@@ -20763,7 +20758,7 @@ mse_matrix :
 #@cli : Default value: 'overlap=0' and 'overlap_std=-1'.
 #@cli : See also: ''img2patches''.
 #@cli : $ image.jpg +img2patches 32,0,3 mirror[-1] xy patches2img[-1] {0,[w,h]}
-patches2img : check "isint($1) && $1>0 && isint($2) && $2>0 && ${3=0}>=0 && (${4=-1}==-1 || $4>=0)"
+patches2img : check "isint($1,1) && isint($2,1) && ${3=0}>=0 && (${4=-1}==-1 || $4>=0)"
   e[^-1] "Recompose 2D images from patch-image$?, with size ($1,$2), overlap $3 and overlap_std $4."
   foreach {
     if w!=h error[0--4] "Command 'patches2img': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
@@ -20804,7 +20799,7 @@ patches2img : check "isint($1) && $1>0 && isint($2) && $2>0 && ${3=0}>=0 && (${4
 #@cli patches : patch_width>0,patch_height>0,patch_depth>0,x0,y0,z0,_x1,_y1,_z1,...,_xN,_yN,_zN
 #@cli : Extract N+1 patches from selected images, centered at specified locations.
 #@cli : $ image.jpg +patches 64,64,1,153,124,0,184,240,0,217,126,0,275,38,0
-patches : check "isint($1) && $1>0 && isint($2) && $2>0 && isint($3) && $3>0"
+patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   e[^-1] "Extract $1x$2x$3 patches from image$?, at locations (${4--1})."
   (${4--1}) r. 3,{w/3},1,1,-1 permute. yzcx N:=w
   H:=int(sqrt(w)) W:=round(w/$H,1,1) r. {$W*$H},1,1,3,0 r. $W,$H,1,3,-1
@@ -20965,7 +20960,7 @@ segment_watershed : check "${1=2}>=0"
 #@cli shape2bump : _resolution>=0,0<=_weight_std_max_avg<=1,_dilation,_smoothness>=0
 #@cli : Estimate bumpmap from binary shape in selected images.
 #@cli : Default value: 'resolution=256', 'weight_std_max=0.75', 'dilation=0' and 'smoothness=100'.
-shape2bump : check "isint(${1=256}) && $1>=0 && ${2=0.75}>=0 && $2<=1 && isnum(${3=0}) && ${4=100}>=0"
+shape2bump : check "isint(${1=256},0) && ${2=0.75}>=0 && $2<=1 && isnum(${3=0}) && ${4=100}>=0"
   e[^-1] "Estimate bumpmap from binary shape in image$?, using "\
          ${"if $1 u \"resolution $1\" else u \"full resolution\" fi"}", avg/max weight $2, dilation $3
           and smoothness $4."
@@ -21216,7 +21211,7 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
 #@cli : \nThe implementation of this command is a direct translation of the reference code (in Matlab), found at :
 #@cli : https://ece.uwaterloo.ca/~z70wang/research/ssim/
 #@cli : Default values: 'patch_size=11', and 'max_value=255'.
-+ssim : check ${"is_image_arg $1"}" && isint(${2=11}) && $2>0 && ${3=255}>0"
++ssim : check ${"is_image_arg $1"}" && isint(${2=11},1) && ${3=255}>0"
   e[^-1] "Compute the SSIM between image$? and reference image $1, with patch size $2 and max_value $3."
   C1,C2:=([0.01,0.03]*$3)^2
   $2,$2 gaussian. 1.5 /. {is} store. gaussian_weights
@@ -21255,11 +21250,11 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
 #@cli : Compute SSIM (Structural Similarity Index Measure) matrix between selected images.
 #@cli : Default values: 'patch_size=11', and 'max_value=255'.
 #@cli : $ image.jpg +noise 30 +noise[0] 35 +noise[0] 38 cut. 0,255 +ssim_matrix
-ssim_matrix : check "isint(${1=11}) && $1>0 && ${2=255}>0"
+ssim_matrix : check "isint(${1=11},1) && ${2=255}>0"
   e[^-1] "Compute the "$!x$!" matrix of SSIM values, for image$?, with patch size $1 and max value $2."
   +ssim_matrix ${1,2} k.
 
-+ssim_matrix : check "isint(${1=11}) && $1>0 && ${2=255}>0"
++ssim_matrix : check "isint(${1=11},1) && ${2=255}>0"
   e[^-1] "Compute the "$!x$!" matrix of SSIM values, for image$?, with patch size $1 and max value $2."
   N=$! $N,$N
   repeat $N { i=$>
@@ -21359,7 +21354,7 @@ tones : check $1>0
 #@cli : Render selected images as topographic maps.
 #@cli : Default values: 'nb_levels=16' and 'smoothness=2'.
 #@cli : $ image.jpg topographic_map 10
-topographic_map : check "isint(${1=16}) && $1>0" skip ${2=2}
+topographic_map : check "isint(${1=16},1)" skip ${2=2}
   e[^-1] "Render topographic maps from image$?, with $1 levels and smoothness $2."
   foreach { +b $2 isophotes. $1 compose_channels. + ==. 0 blend shapeaverage0 }
 
@@ -21439,7 +21434,7 @@ tsp : check "${1=256}>=0"
 #@cli : Compute variance of each images patch centered at (x,y), in selected images.
 #@cli : Default value: 'patch_size=16'
 #@cli : $ image.jpg +variance_patch
-variance_patch : check "isint(${1=16}) && $1>=1"
+variance_patch : check "isint(${1=16},1)"
   e[^-1] "Compute variance of image patches in image$?, with patch size $1."
   $1,$1,1,1,1 normalize_sum.
   repeat $!-1 { l[$>,-1] {
@@ -21490,7 +21485,7 @@ arrow : check "${5=1%}>=0 && ${6=10%}>=0 && ${7=3%}" skip ${8=1}
 #@cli : To draw only one y-axis at column X, set both 'x0' and 'x1' to X.
 #@cli : Default values: 'font_height=14', 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
 #@cli : $ 400,400,1,3,255 axes -1,1,1,-1
-axes : check "isint(${5=14}) && $5>=0 && ${6=1}>=0" skip ${7=0},${8=0}
+axes : check "isint(${5=14},0) && ${6=1}>=0" skip ${7=0},${8=0}
   if ${"is_pattern \"$7\""}
     e[0--3] "Draw xy-axes on image$?, with x-range ($1,$2), y-range ($3,$4), font height $5, opacity $6,
              pattern $7 and color (${8--1})."
@@ -22479,7 +22474,7 @@ marble : skip ${1=0.2},${2=0.1},${3=45},${4=0},${5=0.4},${6=0.8},${7=0.6},${8=1.
 #@cli maze : _width>0,_height>0,_cell_size>0
 #@cli : Input maze with specified size.
 #@cli : $ maze 30,20 negate normalize 0,255
-+maze : check "isint(${1=15}) && $1>0 && isint(${2=$1}) && $2>0 && isint(${3=24}) && $3>0"
++maze : check "isint(${1=15},1) && isint(${2=$1},1) && isint(${3=24},1)"
   e[^-1] "Input $1x$2 maze."
   ({v($1-1)},{v($2-1)})  # Starting cell.
   $1,$2,1,1,15 +f. 0 a[-2,-1] c   # Starting maze data.
@@ -22534,7 +22529,7 @@ _render_maze :
 #@cli : Input maze according to size and shape of selected mask images.
 #@cli : Mask may contain disconnected shapes.
 #@cli : $ 0 text "G'MIC",0,0,53,1,1 dilate 3 autocrop 0 frame 1,1,0 maze_mask 8 dilate 3 negate mul 255
-maze_mask : check "isint(${1=24}) && $1>0"
+maze_mask : check "isint(${1=24},1)"
   e[^-1] "Input masked maze from image$? with cell size $1."
   compose_channels + >= 50%
   foreach {
@@ -22632,8 +22627,8 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 # and 'max_iterations=256'.
 #@cli : $ 512,512,1,3,"min(255,y*c/2)" 100%,100% circle 50%,50%,100,1,255 append c image.jpg rescale2d[-1] ,24 \
 # to_rgba pack_sprites 3,25
-pack_sprites : check "isint(${1=5}) && $1>=0 && ${2=25}>=0 && $2<=100 && isint(${3=3}) && $3>=0 && $3<=3 &&
-                      isint(${4=1}) && isint(${5=7}) && $5>=0 && isint(${6=256}) && $6>=0"
+pack_sprites : check "isint(${1=5},0) && ${2=25}>=0 && $2<=100 && isint(${3=3},0,3) &&
+                      isint(${4=1}) && isint(${5=7},0) && isint(${6=256},0)"
   e[^-1] "Randomly pack image$? with $1 scales, minimum scale $2%, "${arg0\ $3,no,180\"\ \"deg.,90\"\ \"deg.,any}\
          " rotation, spacing $4, precision $5 and $6 maximum iterations."
   N:=$!-1 is_first_time=1
@@ -22862,7 +22857,7 @@ rectangle : skip ${5=1},${6=0},${7=$6}
 #@cli : Render rorschach-like inkblots on selected images.
 #@cli : Default values: 'smoothness=5%' and 'mirroring=1'.
 #@cli : $ 400,400 rorschach 3%
-rorschach : check "${1=5%}>=0 && isint(${2=1}) && $2>=0 && $2<=3"
+rorschach : check "${1=5%}>=0 && isint(${2=1},0,3)"
   e[^-1] "Render rorschach-like inkblots on image$?, with smoothness $1 and "${arg0\ $2,no,x,y,xy}"-mirroring."
   if !$2 # No mirroring.
    rand -1,1 b $1 >= 0
@@ -23065,7 +23060,7 @@ triangle_shade :
 #@cli : Fill selected images with random truchet patterns.
 #@cli : Default values: 'scale=32', 'radius=5' and 'pattern_type=1'.
 #@cli : $ 400,300 truchet ,
-truchet : check "isint(${1=32}) && $1>0 && ${2=3}>=0" skip ${3=1}
+truchet : check "isint(${1=32},1) && ${2=3}>=0" skip ${3=1}
   e[^-1] "Render "${arg0\ !$3,curved,straight}" truchet patterns in image$?, with scale $1 and radius $2."
   foreach {
     nm={n} w,h,s={w},{h},{s} rm
@@ -23143,7 +23138,7 @@ yinyang :
 #@cli :   - 'parent' is the index of the next vertex that must be followed to reaches the 'starting_vertex' \
 # through the minimal path.
 #@cli : Default value: 'ending_vertex=-1'
-+dijkstra : check "isint($1) && $1>=0 && isint(${2=-1}) && $2>=-1"
++dijkstra : check "isint($1,0) && isint(${2=-1},-1)"
   s0,s1=x,ces t0,t1=," to vertex \#$2"
   e[^-1] "Compute minimal distances/path from vertex \#$1"${t{$2>=0}}", for adjacency matri"${s{$!>1}}" [$[]]."
   if $2!=-1 str_check_end_vertex="C[1]==$2?break();" fi
@@ -23194,7 +23189,7 @@ dijkstra :
 #@cli eye : _size>0
 #@cli : Insert an identity matrix of given size at the end of the image list.
 #@cli : $ eye 3 eye 7 eye 10
-+eye : check "isint($1) && $1>=0"
++eye : check "isint($1,0)"
   e[^-1] "Input $1x$1 identity matrix."
   if $1 $1,$1,1,1,x==y else 0 fi
 
@@ -23207,7 +23202,7 @@ dijkstra :
 #@cli : The command returns a new set of random vectors with similar geometry.
 #@cli : Default values: 'relevant_dimension=100%', and \
 # 'average_vector_varname=orientation_matrix_varname=dilation_matrix_varname=(undefined)'.
-fitsamples : check "isint($1) && $1>0 && ${2=100%}>0" skip "${3=},${4=},${5=}"
+fitsamples : check "isint($1,1) && ${2=100%}>0" skip "${3=},${4=},${5=}"
   e[^-1] "Generate $1 new vectors for input vector set$? with $2 relevant dimensions."
   fwd0,fwd1,fwd2,fwd3,fwd4,fwd5=xzcy,xycz,,yxcz,yxzc,zxyc
   bwd0,bwd1,bwd2,bwd3,bwd4,bwd5=xcyz,xycz,,yxcz,yxzc,yzxc
@@ -23260,7 +23255,7 @@ fitsamples : check "isint($1) && $1>0 && ${2=100%}>0" skip "${3=},${4=},${5=}"
 #@cli : using the Arnoldi iteration method (https://en.wikipedia.org/wiki/Arnoldi_iteration).
 #@cli : A larger 'm' goes with better numerical precision.
 #@cli : $ (1,0,0;0,2,0;0,0,3) +meigen 3
-meigen : check "isint($1) && $1>0"
+meigen : check "isint($1,1)"
   if $!!=1 s="ce" else s="x" fi
   e[^-1] "Compute $1 largest eigen-values of matri"$s"$?."
   foreach {
@@ -23322,7 +23317,7 @@ orthogonalize :
 #@cli : Compute the 'nb_eigenvectors' largest eigenvectors of the selected symmetric matrices,
 #@cli : using the power iteration algorithm.
 #@cli : Default values: 'nb_eigenvectors=1', 'epsilon=1e-5' and 'max_iter=100'.
-poweriteration : check "isint(${1=1}) && $1>0 && ${2=1e-6}>0 && isint(${3=1000}) && $3>0"
+poweriteration : check "isint(${1=1},1) && ${2=1e-6}>0 && isint(${3=1000},1)"
   s0,s1=,s if $!>1 c=ces else c=x fi
   e[^-1] "Compute the $1 first eigenvector"${s{$1>1}}" of matri"$c" [$[]] with epsilon $2."
   foreach {
@@ -23402,7 +23397,7 @@ transpose :
 #@cli : Frame size is the same as the size of the '[background]' image (or 800x800 if no background specified).
 #@cli : Default values: 'step_angle_x=0', 'step_angle_y=5', 'step_angle_z=0', 'zoom_factor=1', 'fake_shadow_level=50' \
 # and 'background=(undefined)'.
-animate3d : check "isint($1) && $1>0 && isnum(${2=0}) && isnum(${3=5}) && isnum(${4=0}) && ${5=1}>0 && "\
+animate3d : check "isint($1,1) && isnum(${2=0}) && isnum(${3=5}) && isnum(${4=0}) && ${5=1}>0 && "\
                   "inrange(${6=50},0,100)" skip "${7=}"
   e[^-1] "Generate 3D animation frames from 3D object$?, with $1 frames, angle steps (${2-4}), zoom factor $5 "\
          "and $6% fake shadow."
@@ -23457,7 +23452,7 @@ apply_matrix3d :
 #@cli : Duplicate a 3D object along the X,Y and Z axes.
 #@cli : Default values: 'size_y=1', 'size_z=1' and 'offset_x=offset_y=offset_z=100%'.
 #@cli : $ torus3d 10,1 +array3d 5,5,5,110%,110%,300%
-array3d : check "isint($1) && $1>0 && isint(${2=1}) && $2>0 && isint(${3=1}) && $3>0"
+array3d : check "isint($1,1) && isint(${2=1},1) && isint(${3=1},1)"
   skip ${4=100%},${5=100%},${6=100%}
   e[^-1] "Duplicate 3D object$? along X,Y,Z axes with factors ($1,$2,$3) and offsets ($4,$5,$6)."
   foreach {
@@ -23612,7 +23607,7 @@ _center3d :
 #@cli : 'nb_links' should be preferably even.
 #@cli : Default values: 'nb_links=16', 'x_scale=0.5', 'y_scale=1' and 'z_scale=1'.
 #@cli : $ chainring3d
-chainring3d : check "isint(${1=16}) && $1>=3 && ${2=0.5}>0 && ${3=1}>0 && ${4=1}>0"
+chainring3d : check "isint(${1=16},3) && ${2=0.5}>0 && ${3=1}>0 && ${4=1}>0"
   e[^-1] "Input 3D chain ring, with $1 links and scales (${2-4})."
   l[] {
     torus3d 1,0.1 *3d ${2-4} shift:=0.75*$1/pi
@@ -23834,7 +23829,7 @@ cubes3d : check ${1=1}>=0
 #@cli : Default values: 'x(t)=cos(2*pi*t)', 'y(t)=sin(2*pi*t)', 'z(t)=t', 'r(t)=0.025', 'resolution=128', \
 # 'tmin=0', 'tmax=1', 'nb_sides=16' and 'is_closed_curve=0'.
 #@cli : $ curve3d ,
-+curve3d : check "isint(${5=128}) && $5>1 && isbool(${9=0}) && isint(${8=16}) && $8>=0"
++curve3d : check "isint(${5=128},2) && isbool(${9=0}) && isint(${8=16},0)"
            skip "${1=0.25*cos(4*pi*t)},${2=0.25*sin(4*pi*t)},${3=t},${4=0.025},${6=0},${7=1}"
   xt,yt,zt,rt,resolution,tmin,tmax,nb_sides,is_closed=$"*"
   nb_sides:="$nb_sides<3 || ['"$rt"']=='0'?1:$nb_sides"
@@ -24128,7 +24123,7 @@ _focale3d :
 # with specified resolution.
 #@cli : Return corresponding value of the focale in status.
 #@cli : Default value: 'fov_angle=45' and 'image_size=max(w,h)' (max size of the latest image).
-fov3d : check "${1=45}>=0 && isint(${2=max(w,h)}) && $2>0"
+fov3d : check "${1=45}>=0 && isint(${2=max(w,h)},1)"
   e[^-1] "Set 3D focale to have FOV angle of $1 for image size $2."
   if !$1 f3d=0 else f3d:=($2)/2/tan(($1)°/2) fi
   f3d $f3d u $f3d
@@ -24490,14 +24485,14 @@ lathe3d : check "${1=128}>0 && ${2=0.5%}>=0 && ${3=361}>=0"
 #@cli : Input 3D lissajous curves `x(t)=sin(a*t+A*2*pi)`, `y(t)=sin(b*t+B*2*pi)`, `z(t)=sin(c*t+C*2*pi)`.
 #@cli : Default values: 'resolution=1024', 'a=2', 'A=0', 'b=1', 'B=0', 'c=0' and 'C=0'.
 #@cli : $ lissajous3d ,
-+lissajous3d : check "isint(${1=1024}) && $1>1" skip ${2=2},${3=0},${4=1},${5=0},${6=0},${7=0}
++lissajous3d : check "isint(${1=1024},2)" skip ${2=2},${3=0},${4=1},${5=0},${6=0},${7=0}
   e[^-1] "Input 3D lissajous curve, with resolution $1, (a,A)=($2,$3), (b,B)=($4,$5) and (c,C)=($6,$7)."
   curve3d[] "const pi2 = 2*pi; sin($2*t + $3*pi2)","sin($4*t + $5*pi2)","sin($6*t + $7*pi2)",0,$1,0,{2*pi}
   => [3D\ lissajou]
 
 #@cli m3d : eq. to 'mode3d'.
 m3d :
-  l[] { check "isint(${1=4}) && inrange($1,-1,5)" mode=$1 onfail noarg mode=4 }
+  l[] { check "isint(${1=4},-1,5)" mode=$1 onfail noarg mode=4 }
   v + _mode3d $mode
 
 #@cli mode3d : _mode
@@ -24510,7 +24505,7 @@ m3d :
 #@cli : $ (0,1,2,3,4,5) double3d 0 repeat w { torus3d 100,30 rotate3d[-1] 1,1,0,60 mode3d {0,@$>} \
 # snapshot3d[-1] 300 } remove[0]
 mode3d :
-  l[] { check "isint(${1=4}) && inrange($1,-1,5)" mode=$1 onfail noarg mode=4 }
+  l[] { check "isint(${1=4},-1,5)" mode=$1 onfail noarg mode=4 }
   v + _$0 $mode
 
 _mode3d :
@@ -24522,7 +24517,7 @@ _mode3d :
 
 #@cli md3d : eq. to 'moded3d'.
 md3d :
-  l[] { check "isint(${1=-1}) && inrange($1,-1,5)" mode=$1 onfail noarg mode=-1 }
+  l[] { check "isint(${1=-1},-1,5)" mode=$1 onfail noarg mode=-1 }
   v + _moded3d $mode
 
 #@cli moded3d : _mode
@@ -24532,7 +24527,7 @@ md3d :
 # 5:phong-shaded }.
 #@cli : Default value: 'mode=-1'.
 moded3d :
-  l[] { check "isint(${1=-1}) && inrange($1,-1,5)" mode=$1 onfail noarg mode=-1 }
+  l[] { check "isint(${1=-1},-1,5)" mode=$1 onfail noarg mode=-1 }
   v + _$0 $mode
 
 _moded3d :
@@ -24624,8 +24619,7 @@ _opacity3d :
 #@cli : Default values: 'patch_size=7', 'M=1000', 'N=3000', 'normalize_input=1', 'normalize_output=0', \
 # and 'lambda_xy=0'.
 #@cli : $ image.jpg pca_patch3d 7
-pca_patch3d : check "isint(${1=7}) && $1>0 && isint(${2=1000}) && $2>0 && isint(${3=3000}) && $3>0"
-              skip ${4=1},${5=0},${6=0}
+pca_patch3d : check "isint(${1=7},1) && isint(${2=1000},1) && isint(${3=3000},1)" skip ${4=1},${5=0},${6=0}
   e[^-1] "Get 3D patch-pca representation"${arg0\ ($!>1),s,""}" of image$?, from $2 $1x$1 input patches,
           with $3 output patches, input normalization "${arg0\ !$4,enabled,disabled}", output normalization "\
           ${arg0\ !$5,enabled,disabled}" and lambda_xy $6."
@@ -24740,7 +24734,7 @@ pose3d :
   }
 
 #@cli p3d : eq. to 'primitives3d'.
-p3d : check "isint($1) && inrange($1,0,2)"
+p3d : check "isint($1,0,2)"
   _gmic_s="$?" v + _primitives3d $*
 
 #@cli primitives3d : mode
@@ -24748,7 +24742,7 @@ p3d : check "isint($1) && inrange($1,0,2)"
 #@cli : (eq. to 'p3d').\n
 #@cli : 'mode' can be { 0:points | 1:outlines | 2:non-textured }.
 #@cli : $ sphere3d 30 primitives3d 1 torus3d 50,10 color3d[-1] ${-rgb} add3d
-primitives3d : check "isint($1) && inrange($1,0,2)"
+primitives3d : check "isint($1,0,2)"
   _gmic_s="$?" v + _$0 $*
 
 _primitives3d :
@@ -24961,12 +24955,12 @@ _primitives3d :
 #@cli projections3d : _x[%],_y[%],_z[%],_is_bounding_box={ 0 | 1 },nb_subdivisions>0
 #@cli : Generate 3D xy,xz,yz projection planes from specified volumetric images.
 #@cli : Default values: 'x=y=z=50%', 'is_bounding_box=1' and 'nb_subdividions=5'
-projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5}) && $5>0"
+projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5},1)"
   e[^-1] "Generate 3D projection planes (XY,XZ,ZY) from image$?, from point ($1,$2,$3)."
   foreach { +projections3d ${1-4} k. }
 
 # Fast version that avoid image copy.
-+projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5}) && $5>0"
++projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5},1)"
   e[^-1] "Generate 3D projection planes (XY,XZ,ZY) from image$?, from point ($1,$2,$3)."
   foreach {
     w,h,d,x,y,z:="[ w,h,d,
@@ -25144,7 +25138,7 @@ size3d :
 #@cli : 'metric' can be { 0:chebyshev | 1:manhattan | 2:euclidean }.
 #@cli : Default values: 'metric=2', 'bones_type=3', 'skeleton_opacity=1' and 'frame_opacity=0.1'.
 #@cli : $ shape_cupid 480 +skeleton3d ,
-skeleton3d : check "isint(${1=2}) && $1>=0 && $1<=2 && isint(${2=3}) && $2>=0 && $2<=3" skip ${3=1},${4=0.1},${5=1}
+skeleton3d : check "isint(${1=2},0,2) && isint(${2=3},0,3)" skip ${3=1},${4=0.1},${5=1}
   e[^-1] "Build 3D skeletal structure object from image$?, with "${arg0\ $1,chebyshev,manhattan,euclidean}" metric, "\
           ${arg0\ $2,squares,diamonds,circles,auto}" bones, skeleton opacity $3 and frame opacity $4 ."
   foreach {
@@ -25193,8 +25187,8 @@ skeleton3d : check "isint(${1=2}) && $1>=0 && $1<=2 && isint(${2=3}) && $2>=0 &&
 #@cli : Default values: 'size=1024', 'zoom=1', '[background_image]=(default)' and 'fov_angle=45'.
 #@cli : $ torus3d 100,20 rotate3d 1,1,0,60 snapshot3d 400,1.2,128,64,32
 #@cli : $ torus3d 100,20 rotate3d 1,1,0,60 sample ? +snapshot3d[0] [1],1.2
-snapshot3d : check "("${"is_image_arg $1"}" || (isint(${1=1024}) && $1>0)) && "\
-                   "${2=1}>=0 && ${7=45}>=0" skip ${3=""},${4=$3},${5=$4},${6=255}
+snapshot3d : check "("${"is_image_arg $1"}" || isint(${1=1024},1)) && ${2=1}>=0 && ${7=45}>=0" \
+             skip ${3=""},${4=$3},${5=$4},${6=255}
   fov=$7
   if ${"is_image_arg $1"} # Background image specified
     pass$1 0 to_color.
@@ -25784,7 +25778,7 @@ surfels3d : check "${1=1}>0 && ${2=1}>0 && ${3=1}>0"
 #@cli : when 'shape'>0, it gives the ellipsoid shape precision.
 #@cli : Default values: 'radius_factor=1', 'shape=2' and 'radius_min=0.05'.
 #@cli : $ 6,6,6,9,"U = [x,y,z] - [w,h,d]/2; U/=norm(U); mul(U,U,3) + 0.3*eye(3)" tensors3d 0.8
-tensors3d : check "${1=1}>=0 && isint(${2=2}) && $2>=0 && ${3=0.05}>=0"
+tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
   e[^-1] "Generate 3D tensor field(s) from image$?, with radius factor $1, "\
           ${"if $2 u ellipsoid else u box fi"}" shape and radius min $3."
   foreach {
@@ -26228,7 +26222,7 @@ _apply_parallel_channels :
   repeat $N { a[$>-{$>+${s$>}-1}] c }
 
 #@cli apo : eq. to 'apply_parallel_overlap'.
-apo : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
+apo : check "${2=0}>=0 && isint(${3=0},0)"
   _gmic_s="$?" v + _apply_parallel_overlap "$1",${2--1}
 
 #@cli apply_parallel_overlap : "command",overlap[%],nb_threads={ 0:auto | 1 | 2 | 4 | 8 | 16 }
@@ -26238,10 +26232,10 @@ apo : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
 #@cli : 'nb_threads' must be a power of 2.
 #@cli : Default values: 'overlap=0','nb_threads=0'.
 #@cli : $ image.jpg +apply_parallel_overlap "smooth 500,0,1",1
-apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
+apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0},0)"
   _gmic_s="$?" v + _$0 "$1",${2--1}
 
-_apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0}) && $3>=0"
+_apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0},0)"
   N:=$3?max(1,round($3)):$_cpus N:=2^int(log2(min(16,$N)))
   e[0--3] "Apply parallelized command '$1' on image"$_gmic_s", with overlap $2 and "$N" threads."
   __apo_exception=""
@@ -26291,8 +26285,7 @@ _apply_parallel_overlap16 :
   _apply_parallel_overlap2 "_apply_parallel_overlap8 \"$1\",$2",$2
 
 #@cli at : eq. to 'apply_tiles'.
-at : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=0}>=0 && ${7=0}>=0 &&
-            isint(${8=1}) && $8>=0 && $8<=3"
+at : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=0}>=0 && ${7=0}>=0 && isint(${8=1},0,3)"
   _gmic_s="$?" v + _apply_tiles "$1",${2--1}
 
 #@cli apply_tiles : "command",_tile_width[%]>0,_tile_height[%]>0,_tile_depth[%]>0,_overlap_width[%]>=0,\
@@ -26302,8 +26295,7 @@ at : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=0}>=0 && 
 #@cli : Default values: 'tile_width=tile_height=tile_depth=10%','overlap_width=overlap_height=overlap_depth=0' \
 # and 'boundary_conditions=1'.
 #@cli : $ image.jpg +equalize[0] 256 +apply_tiles[0] "equalize 256",16,16,1,50%,50%
-apply_tiles : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=0}>=0 && ${7=0}>=0 &&
-                     isint(${8=1}) && $8>=0 && $8<=3"
+apply_tiles : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=0}>=0 && ${7=0}>=0 && isint(${8=1},0,3)"
   _gmic_s="$?" v + _$0 "$1",${2--1}
 
 _apply_tiles :
@@ -26458,7 +26450,7 @@ exec_out :
 
 _exec_out :
   l[] {
-    if "isint($1) && isin($1,0,1,2)" mode=$1 command="${2--1}"
+    if "isint($1,0,2)" mode=$1 command="${2--1}"
     else mode=0 command="$*"
     fi
     onfail mode=0 command="$*"
@@ -28368,7 +28360,7 @@ nn_append : if ['$2']=='.' in0=$_nn_latest else in0=$2 fi nn_check_layer $in0
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_avgpool2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'avgpool2d' layer '$1', with input '"$in"' and patch size $3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=avgpool2d,
@@ -28385,7 +28377,7 @@ nn_avgpool2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_avgpool3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'avgpool3d' layer '$1', with input '"$in"' and patch size $3x$3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=avgpool3d,
@@ -28423,9 +28415,8 @@ nn_clone : if ['${3=.}']=='.' in=$_nn_latest else in=$3 fi nn_check_layer $in
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
 # 'border_shrink=0', 'boundary_conditions=1' and 'learning_mode=3'.
 nn_conv2d : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-            check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && "\
-                  "${5=1}>0 && isint(${7=0}) && $7>=0 && "\
-                  "isint(${8=1}) && inrange($8,0,3) && isint(${9=3}) && inrange($9,0,3)" skip "${6=1}"
+            check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
+                  "isint(${8=1},0,3) && isint(${9=3},0,3)" skip "${6=1}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv2d' layer '$1', with input '"$in"', $3 channels, $4x$4 kernels, stride $5, dilation $6, "\
          "border shrink $7 and "$s$8" boundary conditions."
@@ -28465,8 +28456,8 @@ _nn_conv2d :
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'border_shrink=0', \
 # 'boundary_conditions=1', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_conv2dnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-              check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && ${5=1}>0 && "\
-                    "isint(${7=0}) && $7>=0 && isint(${8=1}) && inrange($8,0,3) && isint(${10=3}) && inrange($10,0,3)"
+              check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
+                    "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv2d+nl' layer '$1', with input '"$in"', $3 channels, $4x$4 kernels, "\
@@ -28486,8 +28477,8 @@ nn_conv2dnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'border_shrink=0', \
 # 'boundary_conditions=1', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_conv2dnnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && ${5=1}>0 && "\
-                     "isint(${7=0}) && $7>=0 && isint(${8=1}) && inrange($8,0,3) && isint(${10=3}) && inrange($10,0,3)"
+               check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
+                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv2d+normalize+nl' layer '$1', with input '"$in"', $3 channels, $4x$4 kernels, "\
@@ -28507,9 +28498,8 @@ nn_conv2dnnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'border_shrink=0', \
 # 'boundary_conditions=1' and 'learning_mode=3'.
 nn_conv3d : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-            check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && "\
-                  "${5=1}>0 && isint(${7=0}) && $7>=0 && "\
-                  "isint(${8=1}) && inrange($8,0,3) && isint(${9=3}) && inrange($9,0,3)" skip "${6=1}"
+            check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
+                  "isint(${8=1},0,3) && isint(${9=3},0,3)" skip "${6=1}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv3d' layer '$1', with input '"$in"', $3 channels, $4x$4x$4 kernels, stride $5, "\
          "dilation $6, border shrink $7 and "$s$8" boundary conditions."
@@ -28549,8 +28539,8 @@ _nn_conv3d :
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'border_shrink=0', \
 # 'boundary_conditions=1', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_conv3dnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-              check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && ${5=1}>0 && "\
-                    "isint(${7=0}) && $7>=0 && isint(${8=1}) && inrange($8,0,3) && isint(${10=3}) && inrange($10,0,3)"
+              check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
+                    "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv3d+nl' layer '$1', with input '"$in"', $3 channels, $4x$4x$4 kernels, "\
@@ -28570,8 +28560,8 @@ nn_conv3dnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'border_shrink=0', \
 # 'boundary_conditions=1', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_conv3dnnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && $4>0 && ${5=1}>0 && "\
-                     "isint(${7=0}) && $7>=0 && isint(${8=1}) && inrange($8,0,3) && isint(${10=3}) && inrange($10,0,3)"
+               check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
+                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'conv3d+normalize+nl' layer '$1', with input '"$in"', $3 channels, $4x$4x$4 kernels, "\
@@ -28645,7 +28635,7 @@ nn_dropout : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default value: 'learning_mode=3'.
 nn_fc : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-        check "isvarname('$1') && isint($3) && $3>0 && isint(${4=3}) && inrange($4,0,3)"
+        check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3)"
   e[^-1] "[nn_lib] Add 'fc' layer '$1', with input '"$in"' and $3 channels."
   init=$_nn_init
   _nn_fc $1_fc,$in,${3-4}
@@ -28679,7 +28669,7 @@ _nn_fc :
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'activation=leakyrelu' and 'learning_mode=3'.
 nn_nlfc : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-          check "isvarname('$1') && isint($3) && $3>0 && isint(${5=3}) && inrange($5,0,3)"
+          check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3)"
           skip ${4=leakyrelu}
   e[^-1] "[nn_lib] Add 'nlfc' layer '$1', with input '"$in"', $3 channels and '$4' activation."
   init=$_nn_init
@@ -28714,7 +28704,7 @@ _nn_nlfc :
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'activation=leakyrelu' and 'learning_mode=3'.
 nn_fcnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-          check "isvarname('$1') && isint($3) && $3>0 && isint(${5=3}) && inrange($5,0,3)"
+          check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3)"
           skip ${4=leakyrelu}
   e[^-1] "[nn_lib] Add 'fc+nl' layer '$1' to the network, with input '"$in"', $3 channels and '$4' activation."
   init=$_nn_init
@@ -28729,7 +28719,7 @@ nn_fcnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'activation=leakyrelu' and 'learning_mode=3'.
 nn_fcnnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-           check "isvarname('$1') && isint($3) && $3>0 && isint(${5=3})"
+           check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3)"
            skip ${4=leakyrelu}
   e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '$1' to the network, with input '"$in"', $3 channels "\
          "and '$4' activation."
@@ -28743,8 +28733,7 @@ nn_fcnnl : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli nn_input : name,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
-nn_input : check "isvarname('$1') && isint($2) && $2>0 && isint(${3=1}) && $3>0 && isint(${4=1}) && $4>0 && "\
-                 "isint(${5=1}) && $5>0"
+nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4=1},1) && isint(${5=1},1)"
   e[^-1] "[nn_lib] Add input '$1', with size ($2,$3,$4,$5)."
   _nn_modules_names.=$1,
   _nn_modules_types.=input,
@@ -28757,7 +28746,7 @@ nn_input : check "isvarname('$1') && isint($2) && $2>0 && isint(${3=1}) && $3>0 
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_maxpool2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'maxpool2d' layer '$1', with input '"$in"' and patch size $3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=maxpool2d,
@@ -28774,7 +28763,7 @@ nn_maxpool2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_maxpool3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'maxpool3d' layer '$1', with input '"$in"' and patch size $3x$3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=maxpool3d,
@@ -28835,7 +28824,7 @@ nn_nl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : 'learning_mode' can be { 0:no learning | 1:alpha only | 2:beta only | 3:alpha+beta }
 #@cli : Default values: 'in=. (previous layer)','normalization_mode=0' and 'learning_mode=3'.
 nn_normalize : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isbool(${3=0}) && isint(${4=3}) && inrange($4,0,3)"
+               check "isvarname('$1') && isbool(${3=0}) && isint(${4=3},0,3)"
   s0,s1=global,channel-by-channel
   e[^-1] "[nn_lib] Add 'normalize' layer '$1', with input '"$in"' and "${s$3}" normalization."
   _nn_normalize $1_normalize,$in,${3-4}
@@ -28867,7 +28856,7 @@ _nn_normalize :
 #@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchdown2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                 check "isvarname('$1') && isint(${3=2}) && $3>1"
+                 check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'patchdown2d' layer '$1', with input '"$in"' and patch size $3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=patchdown2d,
@@ -28888,7 +28877,7 @@ nn_patchdown2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer 
 #@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchdown3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                 check "isvarname('$1') && isint(${3=2}) && $3>1"
+                 check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'patchdown3d' layer '$1', with input '"$in"' and patch size $3x$3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=patchdown3d,
@@ -28909,7 +28898,7 @@ nn_patchdown3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer 
 #@cli : Add a 'patchup2d' (2D upscale by patch) layer to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchup2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2},2)"
   e[^-1] "[nn_lib] Add 'patchup2d' layer '$1', with input '"$in"' and patch size $3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=patchup2d,
@@ -28926,7 +28915,7 @@ nn_patchup2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 #@cli : Add a 'patchup3d' (3D upscale by patch) layer to the network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchup3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2}) && $3>1"
+               check "isvarname('$1') && isint(${3=2,2})"
   e[^-1] "[nn_lib] Add 'patchup3d' layer '$1', with input '"$in"' and patch size $3x$3x$3."
   _nn_modules_names.=$1,
   _nn_modules_types.=patchup3d,
@@ -28961,8 +28950,7 @@ nn_rename : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1' \
 # and 'learning_mode=3'.
 nn_resconv2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                     "isint(${6=3}) && inrange($6,0,3)"
+               check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3)"
                skip "${4=1}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'resconv2d' layer '$1', with input '"$in"', $3x$3 kernels, dilation $4 and "\
@@ -28981,8 +28969,7 @@ nn_resconv2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # 'activation=leakyrelu' and 'learning_mode=3'.
 nn_resconv2dnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                 check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                       "isint(${7=3}) && inrange($7,0,3)"
+                 check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3)"
                  skip "${4=1}","${6=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'resconv2dnl' layer '$1', with input '"$in"', $3x$3 kernels, dilation $4, "\
@@ -29003,8 +28990,7 @@ nn_resconv2dnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer 
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # 'activation=leakyrelu' and 'learning_mode=3'.
 nn_resconv2dnnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                  check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                        "isint(${7=3}) && inrange($7,0,3)"
+                  check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3)"
                   skip "${4=1}","${6=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '$1', with input '"$in"', $3x$3 kernels, dilation $4, "\
@@ -29025,8 +29011,7 @@ nn_resconv2dnnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1' \
 # and 'learning_mode=3'.
 nn_resconv3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                     "isint(${6=3}) && inrange($6,0,3)"
+               check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3)"
                skip "${4=1}"
   e[^-1] "[nn_lib] Add 'resconv3d' layer '$1', with input '"$in"', $3x$3x$3 kernels, dilation $4 and "\
          $s$5" boundary conditions."
@@ -29044,8 +29029,7 @@ nn_resconv3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # activation='leakyrelu' and 'learning_mode=3'.
 nn_resconv3dnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                 check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                       "isint(${7=1}) && inrange($7,0,3)"
+                 check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3)"
                  skip "${4=1}","${6=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'resconv3dnl' layer '$1', with input '"$in"', $3x$3x$3 kernels, dilation $4, "\
@@ -29066,8 +29050,7 @@ nn_resconv3dnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer 
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # 'activation=leakyrelu' and 'learning_mode=3'.
 nn_resconv3dnnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                  check "isvarname('$1') && isint(${3=3}) && $3>0 && isint(${5=1}) && inrange($5,0,3) && "\
-                        "isint(${7=3}) && inrange($7,0,3)"
+                  check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3)"
                   skip "${4=1}","${6=leakyrelu}"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
   e[^-1] "[nn_lib] Add 'resconv3dnnl' layer '$1', with input '"$in"', $3x$3x$3 kernels, dilation $4, "\
@@ -29086,7 +29069,7 @@ nn_resconv3dnnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)' and 'learning_mode=3'.
 nn_resfc : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-           check "isvarname('$1') && isint(${3=3}) && inrange($3,0,3)"
+           check "isvarname('$1') && isint(${3=3},0,3)"
   e[^-1] "[nn_lib] Add 'resfc' layer '$1', with input '"$in"'."
   init=$_nn_init
   nn_clone $1_clone0,$1_clone1,$in
@@ -29100,7 +29083,7 @@ nn_resfc : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_resfcnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-             check "isvarname('$1') && isint(${4=3}) && inrange($4,0,3)"
+             check "isvarname('$1') && isint(${4=3},0,3)"
              skip ${3=leakyrelu}
   e[^-1] "[nn_lib] Add 'resfc+nl' layer '$1' to the network, with input '"$in"' and '$4' activation."
   init=$_nn_init
@@ -29117,7 +29100,7 @@ nn_resfcnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu' and 'learning_mode=3'.
 nn_resfcnnl : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-              check "isvarname('$1') && isint(${4=3}) && inrange($4,0,3)"
+              check "isvarname('$1') && isint(${4=3},0,3)"
               skip ${3=leakyrelu}
   e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '$1' to the network, with input '"$in"' and '$4' activation."
   init=$_nn_init
@@ -29258,7 +29241,7 @@ nn_loss_mse : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
 #@cli : Add a 'normp' loss to the network (||out - ground_truth||_p).
 #@cli : Default value: 'metric=1'.
 nn_loss_normp : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-                check "isvarname('$1') && isvarname('$3') && isint(${4=1}) && $4>=0"
+                check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
   e[^-1] "[nn_lib] Add normp loss '$1', with input '"$in"', ground truth '$3' and metric $4."
   _nn_modules_names.=$1,
   _nn_modules_types.=loss_normp,
@@ -29442,7 +29425,7 @@ nn_store : check "isbool(${2=1})"
 #@cli : Create MxN array from selected images.
 #@cli : Default values: 'N=M' and 'expand_type=0'.
 #@cli : $ image.jpg array 3,2,2
-array : check "isint($1) && $1>0 && isint(${2=$1}) && $2>0" skip ${3=0}
+array : check "isint($1,1) && isint(${2=$1},1)" skip ${3=0}
   e[^-1] "Create $1x$2 array from image$?, with expand type $3."
   r0:=100/max($1,$2) r1:=100/min($1,$2) r2=100
   r ${r$3}%,${r$3}%,1,100%,2 r {$1*100}%,{$2*100}%,1,100%,0,2
