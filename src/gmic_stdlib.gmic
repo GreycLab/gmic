@@ -33205,7 +33205,7 @@ transition : check ${is_image_arg\ $1}" && $2>=0 && ${3=0}>=0 && $3<=100" skip $
 #@cli : Default values: 'nb_frames=10', 'nb_xtiles=nb_ytiles=3', 'axis_x=1', 'axis_y=1', 'axis_z=0' \
 # and 'is_antialias=1'.
 #@cli : $ image.jpg +blur 5 transition3d 9 display_rgba
-transition3d : check "isint(${1=10}) && $1>=2 && isint(${2=3}) && $2>0 && isint(${3=$2}) && $3>0"
+transition3d : check "isint(${1=10},2) && isint(${2=3},1) && isint(${3=$2},1)"
                skip ${4=1},${5=1},${6=0},${7=1}
   e[^-1] "Create 3D transition sequence between image$?, with $1 frames, $2x$3 tiles and rotation axis ($4,$5,$6).\n"
   if $!<2 return fi
@@ -33260,7 +33260,7 @@ transition3d : check "isint(${1=10}) && $1>=2 && isint(${2=3}) && $2>0 && isint(
 #@cli : Split specified input video file into image files, one for each frame.
 #@cli : First and last frames as well as step between frames can be specified.
 #@cli : Default values: 'output_filename=frame.png', 'first_frame=0', 'last_frame=-1' and 'frame_step=1'.
-video2files : check "isint(${3=0}) && $3>=0 && isint(${4=-1}) && ($4>=0 || $4==-1) && isint(${5=1}) && $5>=1"
+video2files : check "isint(${3=0},0) && isint(${4=-1},-1) && isint(${5=1},1)"
               skip ${2="frame.png"}
   e[^-1] "Split input video file '$1' into image frames '$2', with first frame $3, last frame $4, and frame step $5.\n"
   frame=$3 stopflag=0
@@ -33404,12 +33404,12 @@ alert : skip "${1=[G"{`39`}"MIC Alert]},${2=This is an alert box.},${3=OK}"
 
 #@cli arg : n>=1,_arg1,...,_argN
 #@cli : Return the n-th argument of the specified argument list.
-arg : check "isint($1) && ($1)>0"
+arg : check "isint($1,1)"
   $=arg u ${arg{1+($1)}}
 
 #@cli arg0 : n>=0,_arg0,...,_argN
 #@cli : Return the n-th argument of the specified argument list (where 'n' starts from '0').
-arg0 : check "isint($1) && ($1)>=0"
+arg0 : check "isint($1,0)"
   $=arg u ${arg{2+($1)}}
 
 #@cli arg2img : argument_1,...,argument_N
@@ -33806,7 +33806,7 @@ fitscreen : skip "${2=},${3=},${4=},${5=}"
 #@cli : 'display_mode' can be { 0: List of characters | N: List of fonts with height 'N'}.
 #@cli : Default value: 'display_mode=0'.
 #@cli : $ fontchart 0 fontchart 64
-+fontchart : check "isint(${1=0}) && $1>=0"
++fontchart : check "isint(${1=0},0)"
   s0,s1=characters,"fonts, with height $1"
   e[^-1] "Generate G'MIC font chart (list of "${s{!!$1}}")."
   if !$1 l[] { # List of characters
@@ -35337,7 +35337,7 @@ uint82base64 : skip "${1=0}"
 
 #@cli demos : _run_in_parallel={ 0:no | 1:yes | 2:auto }
 #@cli : Show a menu to select and view all G'MIC interactive demos.
-demos : check "isint(${1=2}) && $1>=0 && $1<=2" check_display $0
+demos : check "isint(${1=2},0,2)" check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   strver=${strver" "$_version,$_prerelease}
   e "\n
@@ -38427,7 +38427,7 @@ x_minimal_path : check_display $0
 #@cli x_morph : _nb_frames>=2,_preview_fidelity={ 0:coarsest | 1:coarse | 2:normal | 3:fine | 4:finest }
 #@cli : Launch the interactive image morpher.
 #@cli : Default values: 'nb_frames=16' and 'preview_fidelity=3'.
-x_morph : check "isint(${1=16}) && isint(${2=3}) && $2>=0 && $2<=4" check_display $0
+x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
   if $!<2 error[0--3] "Command '$0': Requires at least two input images!" return fi
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
   e "\n
@@ -39099,7 +39099,7 @@ x_plasma : check_display $0
 
 #@cli x_quantize_rgb : _nbcolors>=2
 #@cli : Launch the RGB color quantization demo.
-x_quantize_rgb : check "isint(${1=16}) && $1>1" check_display $0
+x_quantize_rgb : check "isint(${1=16},2)" check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e "\n
 ------ "${g}"RGB Quantization"$n" --------------------------------------\n
@@ -40497,8 +40497,8 @@ _x_tictactoe6 : # Generate a +- diagonal stroke and his mask.
 # _[background_image],0<=_background_opacity<=1
 #@cli : Launch the interactive image warper.
 #@cli : Default values: 'nb_keypoints_xgrid=nb_keypoints_ygrid=2', 'nb_keypoints_contours=0' and 'preview_fidelity=1'.
-x_warp : check "isint(${1=2}) && $1>=2 && isint(${2=$1}) && $2>=2 && isint(${3=0}) && $3>=0 &&
-                isint(${4=1}) && $4>=0 && $4<=4 && ${6=0.5}>=0 && $6<=1" skip "${5=}" check_display $0
+x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(${4=1},0,4) 0 && ${6=0.5}>=0 && $6<=1"
+         skip "${5=}" check_display $0
   if !$! error[0--3] "Command '$0': Requires at least one input image!" return fi
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e "\n
@@ -40905,7 +40905,7 @@ _gui_merge_layers :
 # 11:checkered | 12:checkered inv. }
 # if 'posx' or 'posy' are equal to 'nan', splitting is done at the middle, and moving is not possible.
 # 'compute_entire_image' can be { 0:no | 1:yes }.
-gui_split_preview : check "isint(${2=0}) && $2>=0 && $2<=12 && ${5=0}>=0" skip "${3=nan},${4=nan}"
+gui_split_preview : check "isint(${2=0},0,12) && ${5=0}>=0" skip "${3=nan},${4=nan}"
   __split_preview="$1" m "_split_preview : run $__split_preview k[0]"
   is_movable:=!isnan($3)" && "!isnan($4)
   posx,posy:=$is_movable?cut([$3,$4],0,100):[50,50]
@@ -60108,7 +60108,7 @@ fx_import_image : skip "${1=}"
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/05/03</i>.</small>")
 fx_input_565 : skip "${1=}"
   l[] {
-    check "isint($2) && $2>0 && isint($3) && $3>0"
+    check "isint($2,1) && isint($3,1)"
     onfail error "Invalid Specified Dimensions"
   }
   if ['"$1"']==0 gui_warning_preview "Choose a filename"
