@@ -53769,8 +53769,15 @@ fx_pack_preview : skip "${8=}"
 #@gui : P4 = point(100,50,0,0,255,255,255,255,10)_0
 #@gui : pP0 = value(0,50)
 #@gui : pP4 = value(100,50)
-#@gui : Sigma = float(3,0,10)
+#@gui : Sigma (%) = float(5,0,50)
 #@gui : Reverser order = bool()
+#@gui : sep = separator()
+#@gui : note = note{"<b>Note</b>: This filter requires several input layers. It creates a spatial blending of all \
+# layers, oriented along the specified axis shown in the preview..\n\n\
+# For <b>N</b> input frames, the colored dots corresponds respectively to frames \
+# <b>\#1</b> (Red), <b>\#N/4</b> (Dark Orange), <b>\#N/2</b> (Orange), <b>3*\#N/4</b> (Yellow) and \
+# <b>\#N</b> (White).\n\n\
+# Move the dots on the preview to modify how the spatial blending is done."}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/03/11</i>.</small>")
 fx_smbl :
@@ -53786,14 +53793,13 @@ fx_smbl :
 
   # Spatially blend all frames together.
   [0],[0],1,3,"
-    begin(const N = ($!) - 1; const sigma = max($13,0.1));
+    begin(const N = ($!) - 1; const sigma = max($13*N%,0.1));
 
     # Find float-valued index.
     F = [ w,h ]%;
     P0 = [ $1,$2 ]*F; P4 = [ $9,$10 ]*F;
     P0P4 = P4 - P0; U = unitnorm(P0P4); n = norm(P0P4);
     z = i(#-1,dot([x,y] - P0,U)/n*w#-1,0,0,0,1,1);
-
 
     res = sum_weights = 0;
     repeat (N,k,
