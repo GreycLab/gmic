@@ -16681,48 +16681,48 @@ elevate : check "${1=64}>0" skip ${2=1},${3=1}
     }
   rm[0,1] => $nm }
 
-#@cli expand_x : size_x>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
+#@cli expand_x : size,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
 #@cli : Expand selected images along the x-axis.
 #@cli : Default value: 'boundary_conditions=0'.
 #@cli : $ image.jpg expand_x 30,0
-expand_x : check "$1>=0 && ${2=0}>=0 && $2<=3"
+expand_x : check "isint($1) && isint(${2=0},0,3)"
   e[^-1] "Expand image$? along the x-axis with size $1 and "${"arg0 $2,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  foreach { r {w+2*$1},100%,100%,100%,0,$2,0.5,0.5,0.5 }
+  repeat $! { l[$>] { r {w+2*$1},100%,100%,100%,0,$2,0.5 onfail rm 0 } }
 
-#@cli expand_xy : size>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
+#@cli expand_xy : size,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
 #@cli : Expand selected images along the xy-axes.
 #@cli : Default value: 'boundary_conditions=0'.
 #@cli : $ image.jpg expand_xy 30,0
-expand_xy : check "$1>=0 && ${2=0}>=0 && $2<=3"
+expand_xy : check "isint($1) && isint(${2=0},0,3)"
   e[^-1] "Expand image$? along the xy-axes with size $1 and "${"arg0 $2,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  foreach { r {[w,h]+2*$1},100%,100%,0,$2,0.5,0.5,0.5 }
+  repeat $! { l[$>] { r {[w,h]+2*$1},100%,100%,0,$2,0.5,0.5 onfail rm 0 } }
 
-#@cli expand_xyz : size>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
+#@cli expand_xyz : size,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
 #@cli : Expand selected images along the xyz-axes.
 #@cli : Default value: 'boundary_conditions=0'.
-expand_xyz : check "$1>=0 && ${2=0}>=0 && $2<=3"
+expand_xyz : check "isint($1) && isint(${2=0},0,3)"
   e[^-1] "Expand image$? along the xyz-axes with size $1 and "${"arg0 $2,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  foreach { r {[w,h,d]+2*$1},100%,0,$2,0.5,0.5,0.5 }
+  repeat $! { l[$>] { r {[w,h,d]+2*$1},100%,0,$2,0.5,0.5,0.5 onfail rm 0 } }
 
-#@cli expand_y : size_y>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
+#@cli expand_y : size,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
 #@cli : Expand selected images along the y-axis.
 #@cli : Default value: 'boundary_conditions=0'.
 #@cli : $ image.jpg expand_y 30,0
-expand_y : check "$1>=0 && ${2=0}>=0 && $2<=3"
+expand_y : check "isint($1) && isint(${2=0},0,3)"
   e[^-1] "Expand image$? along the y-axis with size $1 and "${"arg0 $2,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  foreach { r 100%,{h+2*$1},100%,100%,0,$2,0.5,0.5,0.5 }
+  repeat $! { l[$>] { r 100%,{h+2*$1},100%,100%,0,$2,0,0.5 onfail rm 0 } }
 
-#@cli expand_z : size_z>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
+#@cli expand_z : size_z,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
 #@cli : Expand selected images along the z-axis.
 #@cli : Default value: 'boundary_conditions=0'.
-expand_z : check "$1>=0 && ${2=0}>=0 && $2<=3"
+expand_z : check "isint($1) && isint(${2=0},0,3)"
   e[^-1] "Expand image$? along the z-axis with size $1 and "${"arg0 $2,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  foreach { r 100%,100%,{d+2*$1},100%,0,$2,0.5,0.5,0.5 }
+  repeat $! { l[$>] { r 100%,100%,{d+2*$1},100%,0,$2,0,0,0.5 onfail rm 0 } }
 
 #@cli extract : "condition",_output_type={ 0:xyzc-coordinates | 1:xyz-coordinates | 2:scalar-values | 3:vector-values }
 #@cli : Extract a list of coordinates or values from selected image, where
@@ -17347,48 +17347,38 @@ _seamcarve :
 #@cli : Default value: 'boundary_conditions=0' and 'interpolation=0'.
 #@cli : $ image.jpg +shift[0] 50%,50%,0,0,0 +shift[0] 50%,50%,0,0,1 +shift[0] 50%,50%,0,0,2
 
-#@cli shrink_x : size_x>=0
+#@cli shrink_x : size
 #@cli : Shrink selected images along the x-axis.
 #@cli : $ image.jpg shrink_x 30
-shrink_x : check "$1>=0"
+shrink_x : check "isint($1)"
   e[^-1] "Shrink image$? along the x-axis with size $1."
-  foreach {
-    l { r. {w-2*$1},100%,100%,100%,0,0,0.5 onfail rm 0 }
-  }
+  expand_x {-$1}
 
-#@cli shrink_xy : size>=0
+#@cli shrink_xy : size
 #@cli : Shrink selected images along the xy-axes.
 #@cli : $ image.jpg shrink_xy 30
-shrink_xy : check "$1>=0"
+shrink_xy : check "isint($1)"
   e[^-1] "Shrink image$? along the xy-axes with size $1."
-  foreach {
-    l { r. {[w,h]-2*$1},100%,100%,0,0,0.5,0.5 onfail rm 0 }
-  }
+  expand_xy {-$1}
 
-#@cli shrink_xyz : size>=0
+#@cli shrink_xyz : size
 #@cli : Shrink selected images along the xyz-axes.
-shrink_xyz : check "$1>=0"
+shrink_xyz : check "isint($1)"
   e[^-1] "Shrink image$? along the xyz-axes with size $1."
-  foreach {
-    l { r. {[w,h,d]-2*$1},100%,0,0,0.5,0.5,0.5 onfail rm 0 }
-  }
+  expand_xyz {-$1}
 
-#@cli shrink_y : size_y>=0
+#@cli shrink_y : size
 #@cli : Shrink selected images along the y-axis.
 #@cli : $ image.jpg shrink_y 30
-shrink_y : check "$1>=0"
+shrink_y : check "isint($1)"
   e[^-1] "Shrink image$? along the y-axis with size $1."
-  foreach {
-    l { r. 100%,{h-2*$1}%,100%,100%,0,0,0,0.5 onfail rm 0 }
-  }
+  expand_y {-$1}
 
-#@cli shrink_z : size_z>=0
+#@cli shrink_z : size
 #@cli : Shrink selected images along the z-axis.
-shrink_z : check "$1>=0"
+shrink_z : check "isint($1)"
   e[^-1] "Shrink image$? along the z-axis with size $1."
-  foreach {
-    l { r. 100%,100%,{d-2*$1}%,100%,0,0,0,0,0.5 onfail rm 0 }
-  }
+  expand_z {$-1}
 
 #@cli slices : z0[%],_z1[%]
 #@cli : Keep only specified slices of selected images.
