@@ -13958,12 +13958,12 @@ bayer2rgb : skip ${1=1},${2=1},${3=0.5}
     (1,-1) r. ..,..,1,1,0,2  # Horizontal estimate
     *. ...
     (0.25,0.5,0.25) convolve.. . transpose. convolve.. . rm.
-    blur_y. $2 blur_x. $3
+    b. y,$2 b. x,$3
 
     (1;-1) r. ..,..,1,1,0,2  # Vertical estimate
     *. [-4]
     (0.25,0.5,0.25) convolve.. . transpose. convolve.. . rm.
-    blur_x. $2 blur_y. $3
+    b. x,$2 b. y,$3
 
     +[-2,-1] /. 2
 
@@ -17561,7 +17561,7 @@ blur_linear : skip ${2=0},${3=0},${4=1}
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_radial
 blur_radial : skip ${2=50%},${3=50%}
   e[^-1] "Apply radial blur on image$?, with amplitude $1 and center point ($2,$3)."
-  euclidean2polar $2,$3,5,1 blur_x $1 polar2euclidean $2,$3,5,1
+  euclidean2polar $2,$3,5,1 b x,$1 polar2euclidean $2,$3,5,1
 
 #@cli blur_selective : sigma>=0,_edges>0,_nb_scales>0
 #@cli : Blur selected images using selective gaussian scales.
@@ -17576,50 +17576,6 @@ blur_selective : check "${1=5}>=0 && ${2=0.5}>=0 && isint(${3=5},1)"
     repeat $3 { +==. $> *. ... +[-2,-1] b.. {$1/($3+1)} }
     rm.. => $nm
   }
-
-#@cli blur_x : amplitude[%]>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
-#@cli : Blur selected images along the x-axis.
-#@cli : Default value: 'boundary_conditions=1'.
-#@cli : $ image.jpg +blur_x 6
-#@cli : $$ https://gmic.eu/oldtutorial/_blur_x
-blur_x : check "isint(${2=1},0,3)"
-  e[^-1] "Blur image$? along the x-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
-  deriche $1,0,x,$2
-
-#@cli blur_xy : amplitude_x[%],amplitude_y[%],_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
-#@cli : Blur selected images along the X and Y axes.
-#@cli : Default value: 'boundary_conditions=1'.
-#@cli : $ image.jpg +blur_xy 6
-#@cli : $$ https://gmic.eu/oldtutorial/_blur_y
-blur_xy : skip ${2=$1} check "isint(${3=1},0,3)"
-  e[^-1] "Blur image$? along the xy-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
-  deriche $1,0,x,$3 deriche $2,0,y,$3
-
-#@cli blur_xyz : amplitude_x[%],amplitude_y[%],amplitude_z,\
-# _boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
-#@cli : Blur selected images along the X, Y and Z axes.
-#@cli : Default value: 'boundary_conditions=1'.
-#@cli : $$ https://gmic.eu/oldtutorial/_blur_xyz
-blur_xyz : skip ${2=$1},${3=$1} check "isint(${4=1},0,3)"
-  e[^-1] "Blur image$? along the xyz-axes, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
-  deriche $1,0,x,$4 deriche $2,0,y,$4 deriche $3,0,z,$4
-
-#@cli blur_y : amplitude[%]>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
-#@cli : Blur selected images along the y-axis.
-#@cli : Default value: 'boundary_conditions=1'.
-#@cli : $ image.jpg +blur_y 6
-#@cli : $$ https://gmic.eu/oldtutorial/_blur_y
-blur_y : check "isint(${2=1},0,3)"
-  e[^-1] "Blur image$? along the y-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
-  deriche $1,0,y,$2
-
-#@cli blur_z : amplitude[%]>=0,_boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
-#@cli : Blur selected images along the z-axis.
-#@cli : Default value: 'boundary_conditions=1'.
-#@cli : $$ https://gmic.eu/oldtutorial/_blur_z
-blur_z : check "isint(${2=1},0,3)"
-  e[^-1] "Blur image$? along the z-axis, with sigma $1 and "${arg0\ !$2,neumann,dirichlet}" boundary conditions."
-  deriche $1,0,z,$2
 
 #@cli boxfilter : size>=0[%],_order,_boundary_conditions,_nb_iter>=0 : \
 # axes,size>=0[%],_order,_boundary_conditions,_nb_iter>=0 : (+)
@@ -31946,7 +31902,7 @@ stripes_y : skip ${1=10}
 texturize_canvas : check "${1=20}>=0 && ${2=3}>=0 && ${3=0.6}>=0 && ${4=80}"
   e[^-1] "Add canvas texture to image$?, with amplitude $1, fibrousness $2 and emboss level $3."
   foreach {
-    {w},{h} rand. 0,255 +blur_x. $2 blur_y.. $2 +[-2,-1] g. a[-2,-1] c
+    {w},{h} rand. 0,255 +b x,$2 b.. y,$2 +[-2,-1] g. a[-2,-1] c
     +compose_channels. + orientation.. compose_channels.. + n.. $3,1 n. 0,255
     sharpen. 80 *[-2,-1] n. -$1,$1 + c 0,255
   }
@@ -37626,7 +37582,7 @@ x_jawbreaker : check "${1=12}>0 && $1<20 && ${2=13}>0 && $2<20 && ${3=5}>0 && $3
   autocrop. 0 expand. xy,1 *. 1.5 c. 0,255 r. {{board,w}*w},{{board,h}*h},1,1,0,2 /. 255
   {w},{h},1,3 => back
   l. {
-    rand 0,255 blur_xy 6,20 equalize 100,0,255 blur_xy 2,4
+    rand 0,255 b x,6 b y,20 equalize 100,0,255 b x,2 b y,4
     sh 0 sh.. 1 sh... 2 /... 4 /.. 8 /. 2 rm[-3--1]
   }
   [back] => visu
@@ -39252,7 +39208,7 @@ x_reflection3d : check_display $0
 -------------------------------------------"
 
   # Render background.
-  200,400,1,3 rand. 0,255 plasma. 1,100 blur_xy. 30,2
+  200,400,1,3 rand. 0,255 plasma. 1,100 b. x,30 b. y,2
   sh. 0 n. 0,90 rm. sh. 1 n. 0,60 rm. sh. 2 n. 0,180 rm.
   +mirror. x [-2,-1] a[-4--1] x
   +luminance. mirror. x b. 2 n. 0,255
@@ -40228,8 +40184,8 @@ x_tetris : check_display $0
   W=12 H=20
   $W,$H . => board,curr_board
   {$fact*$W},{$fact*$H},1,3 . => render,curr_render +channels. 0 => curr_render_mask
-  +rows[render] 0,50% plasma. 1,2 noise. 20 blur_y. 40%,1 +mirror. y a[-2,-1] y ri. [render]
-  n. 0,64 blur_x. 1 100%,100% noise. 0.5,2 ==. 1 b. 1 *. 300 +[-2,-1] c. 0,255 => background
+  +rows[render] 0,50% plasma. 1,2 noise. 20 b. y,40%,1 +mirror. y a[-2,-1] y ri. [render]
+  n. 0,64 b. x,1 100%,100% noise. 0.5,2 ==. 1 b. 1 *. 300 +[-2,-1] c. 0,255 => background
 
   # Start game.
   time=$| score=0 fall_mode=0 gameover=0 n=-1 nn:=v(0,$N-1)
@@ -50359,7 +50315,7 @@ fx_textured_glass :
       +gradient_norm... +. 1 b. $6 ^. -$5
       *... . *[-2,-1]
     fi
-    blur_xy[-2,-1] $3,$4
+    b[-2,-1] x,$3 b[-2,-1] y,$4
     *.. {-2,$1/max(abs(im),abs(iM))}
     *. {$2/max(abs(im),abs(iM))}
     a[-2,-1] c
@@ -53946,7 +53902,7 @@ fx_contrast_swm :
   foreach {
     split_opacity l[0] {
      +luminance to_rgb
-      blur_xy[1] $1,$1
+      b $1
       if !$2 negate[1] fi
       rv blend hardlight,$3
     }
