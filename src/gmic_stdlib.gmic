@@ -1173,7 +1173,7 @@ reference : skip "${2=}"
 "\n~~~\n$ gmic mode3d 5 moded3d 5 double3d 0 isosurface3d \"'x^2+y^2+abs(z)^abs(4*cos(x*y*z*3))'\",3\n~~~"\n\
 "===\n![3D Isosurface](../img/example_isosurface3d.png)\n==="\n\n\
 "### Render a G'MIC 3D logo: "\n\
-"\n~~~\n$ gmic 0 text G\\\47MIC,0,0,53,1,1,1,1 expand_xy 10,0 blur 1 normalize 0,100 +plasma 0.4 add blur 1 "\
+"\n~~~\n$ gmic 0 text G\\\47MIC,0,0,53,1,1,1,1 expand xy,10 blur 1 normalize 0,100 +plasma 0.4 add blur 1 "\
 "elevation3d -0.1 moded3d 4\n~~~"\n\
 "===\n![3D G'MIC Logo](../img/example_logo.png)\n==="\n\n\
 "### Generate a 3D ring of torii: "\n\
@@ -4615,8 +4615,8 @@ _display_voxels3d :
       im,iM:=im,iM
       eval. "*begin(is_bin = 1); i!=$im && i!=$iM?(is_bin = 0; break()); end(merge(is_bin,&&); set('is_bin',is_bin))"
       if $is_bin # Colorize binary images according to rough normal estimation
-        >. {lerp($im,$iM,0.5)} +expand_xyz. 1 b. {min(w,h,d)*2%},0 g. xyz a[-3--1] c orientation. n. 0,220
-        shrink_xyz. 1 *. .. k. args=0.9,1.1,1
+        >. {lerp($im,$iM,0.5)} +expand. xyz,1 b. {min(w,h,d)*2%},0 g. xyz a[-3--1] c orientation. n. 0,220
+        shrink. xyz,1 *. .. k. args=0.9,1.1,1
       fi
     fi
     surfels3d $args +3d. 0.5,0.5,0.5
@@ -4699,7 +4699,7 @@ echo_file : skip "${2='\n'}"
     else input_cached gmic_fonts.gmz k[$fontname] unserialize
     fi
     if $3 # Bold face
-      dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand_xy {round($dsiz/2)} dilate $dsiz
+      dsiz:="s = round(h/32); s+=1 - (s%2); max(3,s)" expand xy,{round($dsiz/2)} dilate $dsiz
     fi
     if h!=$height
       if h>$height foreach { r {max(1,round(w*$height/h))},$height,1,1,2 }
@@ -13942,7 +13942,7 @@ bayer2rgb : skip ${1=1},${2=1},${3=0.5}
   foreach {
 
     # Expand image size to avoid problems with borders.
-    expand_x {"2 + 4*$1"},0 expand_y {"2 + 4*$1"},0
+    expand xy,{"2 + 4*$1"}
 
     # Compute green-magenta chromaticity.
     (-1,1;1,-1) r. ..,..,1,1,0,2
@@ -13977,7 +13977,7 @@ bayer2rgb : skip ${1=1},${2=1},${3=0.5}
     mix_rgb. 1,-1,2,1,1,0,1,-1,-2
 
     # Shrink to original image size.
-    shrink_x {"2 + 4*$1"},0 shrink_y {"2 + 4*$1"},0
+    shrink xy,{"2 + 4*$1"}
     c 0,255
   }
 
@@ -17328,7 +17328,7 @@ _seamcarve :
 #@cli : Shrink selected images along the specified axes.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
 #@cli : Default value: 'boundary_conditions=0'.
-#@cli : $ image.jpg shrink_xy 100
+#@cli : $ image.jpg shrink xy,100
 shrink : check "isint(${3=0},0,3)"
   e[^-1] "Shrink image$? along $1 with size $2 and "${"arg0 $3,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
@@ -17549,9 +17549,9 @@ blur_linear : skip ${2=0},${3=0},${4=1}
   stdM:=round(1.25*max($std1,$std2))
   if $stdM<=0 return fi
   foreach {
-    expand_xy $stdM,{$4!=0}
+    expand xy,$stdM,{$4!=0}
     {s=2*$stdM;[s,s]} gaussian. $1,$2,$3 normalize_sum.
-    convolve_fft[0] [1] rm. shrink_xy $stdM
+    convolve_fft[0] [1] rm. shrink xy,$stdM
   }
 
 #@cli blur_radial : amplitude[%],_center_x[%],_center_y[%]
@@ -18348,9 +18348,9 @@ _gradient :
         s4,s5=deriche,vanvliet com=${s$scheme}
         if $boundary<2 +$com[0] 0,1,$a,$boundary
         else
-          if _'$a'==_'x' +r[0] {0,[w+2,h,d,s]},0,$boundary,0.5 $com. 0,1,$a shrink_x. 1
-          elif _'$a'==_'y' +r[0] {0,[w,h+2,d,s]},0,$boundary,0,0.5 $com. 0,1,$a shrink_y. 1
-          elif _'$a'==_'z' +r[0] {0,[w,h,d+2,s]},0,$boundary,0,0,0.5 $com. 0,1,$a shrink_z. 1
+          if _'$a'==_'x' +r[0] {0,[w+2,h,d,s]},0,$boundary,0.5 $com. 0,1,$a shrink. x,1
+          elif _'$a'==_'y' +r[0] {0,[w,h+2,d,s]},0,$boundary,0,0.5 $com. 0,1,$a shrink. y,1
+          elif _'$a'==_'z' +r[0] {0,[w,h,d+2,s]},0,$boundary,0,0,0.5 $com. 0,1,$a shrink. z,1
           fi
         fi
       fi
@@ -20199,11 +20199,11 @@ betti :
     histogram. 4,1,4 Xi:=i[0]-i[1]+i[2]-i[3] rm. # Euler characteristic
 
     # Compute Betti numbers B0, B1 and B2.
-    expand_xyz. 1,0 # Make sure borders are 0
+    expand. xyz,1 # Make sure borders are 0
     +label. 0,1 {iM+1} eval.. "*i(#-3)?(i[#-1,i] = 1)" B0:=is rm[-2,-1] # Number of connected components
     +label. 0,0 {iM+1} eval.. "*!i(#-3) && i?(i[#-1,i] = 1)" B2:=is rm[-2,-1] # Number of cavities
     B1:=$B0+$B2-$Xi
-    shrink_xyz. 1
+    shrink. xyz,1
     res.=$c$B0,$B1,$B2 c=,
   }
   u $res
@@ -22970,7 +22970,7 @@ _text_outline : skip "${1=}"
     else
       t. "$1",0,0,{-2,$is_fontpercent?h*$4:$4},1,1
     fi
-    expand_xy. {1+$5},0
+    expand. xy,{1+$5}
     +dilate. {2*$5+1}
     i[-3] (${7--1}) r... {s#0},1,1,1,0,2 y... c r... .,.,1,100%
     if $5 *[-3,-2] else rm.. fi
@@ -24048,7 +24048,7 @@ extrude3d : check "${1=16}>0 && ${2=1024}>0 && ${3=0.5%}>=0"
     wr:=round(max(1,w>h?min($2,w):min($2,h)*w/h))
     hr:=round(max(1,w>h?min($2,w)*h/w:min($2,h)))
     fact:=$1/max(w/$wr,h/$hr)
-    b $3,0 r $wr,$hr,1,1,2 expand_xyz 1,0
+    b $3,0 r $wr,$hr,1,1,2 expand xyz,1
     isosurface3d 50% *3d 1,1,$fact rv3d => $nm
   }
 
@@ -24368,7 +24368,7 @@ imagesphere3d : check "${1=32}>=3 && ${2=16}>=3"
 #@cli isosurface3d : isovalue[%] : 'formula',value,_x0,_y0,_z0,_x1,_y1,_z1,_size_x>0[%],_size_y>0[%],_size_z>0[%] : (+)
 #@cli : Extract 3D isosurfaces with specified value from selected images or from specified formula.
 #@cli : Default values: 'x0=y0=z0=-3', 'x1=y1=z1=3' and 'size_x=size_y=size_z=32'.
-#@cli : $ image.jpg rescale2d ,128 luminance threshold 50% expand_z 2,0 blur 1 isosurface3d 50% mul3d 1,1,30
+#@cli : $ image.jpg rescale2d ,128 luminance threshold 50% expand z,2 blur 1 isosurface3d 50% mul3d 1,1,30
 #@cli : $ isosurface3d 'x^2+y^2+abs(z)^abs(4*cos(x*y*z*3))',3
 
 #@cli label3d : "text",font_height>=0,_opacity,_color1,...
@@ -24417,7 +24417,7 @@ lathe3d : check "${1=128}>0 && ${2=0.5%}>=0 && ${3=361}>=0"
     *. {2*({-2,w}-1)/(w-1)} r. $wr,$hr,$wr
     (0;{{-2,h}-1}) r. $wr,$hr,$wr,1,3 a[-2--1] c
     warp.. .,0,1,0 rm.
-    expand_xyz 10,0 b $2 isosurface3d 50% rv3d
+    expand xyz,10 b $2 isosurface3d 50% rv3d
   }
 
 #@cli l3d : eq. to 'light3d'. : (+)
@@ -25818,7 +25818,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
   0 t. "$1",0,0,53,1,1
   0 t. "$2",0,0,53,1,1 mirror. y
   autocrop[-2,-1] 0
-  expand_xy[-2,-1] 2,0 dilate[-2,-1] 2
+  expand[-2,-1] xy,2 dilate[-2,-1] 2
   permute. zyxc r[-2,-1] ${-max_whd} &[-2,-1]
 
   100%,100% rand. 0,{-2,d-1} round. ri. .. f. z==i
@@ -25841,7 +25841,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
 +text3d : skip ${2=53},${3=10},${4=1.5}
   if "isexpr($2)" str="height $2" is_custom_font=0 else str="'$2'" is_custom_font=1 fi
   e[^-1] "Input 3D text object '$1', with font "$str", depth $3 and smoothness $4."
-  0 t. "$1",0,0,$2,1,1 autocrop. 0 r. 100%,100%,$3 expand_xyz. 10,0
+  0 t. "$1",0,0,$2,1,1 autocrop. 0 r. 100%,100%,$3 expand. xyz,10
   b. $4 isosurface3d. 40% rv3d. => "[3D text '$1']"
 
 #@cli t3d : eq. to 'texturize3d'.
@@ -26121,7 +26121,7 @@ voxelize3d : check "${1=128}>0 && isbool(${2=1}) && isbool(${3=0})" check3d
 
       $3?++label" rm.
 
-    if $2 expand_xyz[out] 1,0 flood[out] 0,0,0,0,0,1,-1 +<[out] 2 +[out,-1] shrink_xyz[out] 1 fi # Fill interior
+    if $2 expand[out] xyz,1 flood[out] 0,0,0,0,0,1,-1 +<[out] 2 +[out,-1] shrink[out] xyz,1 fi # Fill interior
     if $3 r[cols] 1,{cols,h+2},1,100%,0,0,0,1 point[cols] 0,1,0,1,1 map[out] [cols] # Output colors
     else >[out] 0 # Output scalars
     fi
@@ -36802,7 +36802,7 @@ x_connect4 : check_display $0
       x:=arg(1,$winner) y:=arg(2,$winner) c:=arg(3,$winner)
       if $x<0 # Draw game
         if !narg($text)
-          0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand_xy. 3,0 +dilate. 5 n.. 0,255 to_rgb..
+          0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand. xy,3 +dilate. 5 n.. 0,255 to_rgb..
           => text,textm
         fi
         j[tmpvisu] [text],{tmpvisu,([w,h]-[w#$text,h#$text])/2},0,0,{0.7+0.3*sin(5*$|)},[textm]
@@ -36994,7 +36994,7 @@ x_fire : skip "${1=}" check_display $0
   text3d $label,${"font macondo,50"},8,1
   mv. 3 c3d[3] n3d[3] *3d[3] 320 col3d[3] 255,205,130 db3d 0 f3d 300
   100,100 rand. 0,255 ellipse. 50%,50%,5,5,0,1,300 b. 10
-  sharpen. 1000 shrink_xy. 1 n. 0,255 to_rgb. light3d . rm.
+  sharpen. 1000 shrink. xy,1 n. 0,255 to_rgb. light3d . rm.
 
   # Start animation loop.
   angle=0
@@ -37623,7 +37623,7 @@ x_jawbreaker : check "${1=12}>0 && $1<20 && ${2=13}>0 && $2<20 && ${3=5}>0 && $3
   $1,$2 => board rand[board] 1,$3 round[board] 1
   . => undo
   40,40,1,4 => balls _x_jawbreaker_ball.
-  autocrop. 0 expand_xy. 1,0 *. 1.5 c. 0,255 r. {{board,w}*w},{{board,h}*h},1,1,0,2 /. 255
+  autocrop. 0 expand. xy,1 *. 1.5 c. 0,255 r. {{board,w}*w},{{board,h}*h},1,1,0,2 /. 255
   {w},{h},1,3 => back
   l. {
     rand 0,255 blur_xy 6,20 equalize 100,0,255 blur_xy 2,4
@@ -37942,7 +37942,7 @@ x_light : check_display $0
 -------------------------------------------"
 
   # Create warping and color images.
-  0 t. "    G\47MIC\nLight effect",0,0,${"font \"Acme\",120"},1,255 expand_xy. 15,0 b. 3
+  0 t. "    G\47MIC\nLight effect",0,0,${"font \"Acme\",120"},1,255 expand. xy,15 b. 3
   . n.. 0,1 r.. 100%,100%,1,3
   sh.. 0 *. 120 rm.
   sh.. 1 *. 70 rm.
@@ -38619,13 +38619,13 @@ x_pacman : check_display $0
   20,2,1,3,200 => gate
   score0,score1,score2,score3,score4=10,100,1000,5000,"Argh!"
   repeat 5 {
-    0 t. ${score$>},0,0,13,1,255,255,255 autocrop. 0 expand_xy. 1,0 +dilate. 3 => score$>,scorem$>
+    0 t. ${score$>},0,0,13,1,255,255,255 autocrop. 0 expand. xy,1 +dilate. 3 => score$>,scorem$>
   }
   time4=255,255,255 time3=255,255,32 time2=255,128,32 time1=255,32,32
   repeat 11 { 0 t. $<" s",0,0,23,1,${time{min(4,round(($<+1)/2))}} => time$< }
-  0 t. "Get Ready!",0,0,${"font Acme,32"},1,255 autocrop. 0 expand_xy. 4,0 +dilate. 8 r.. 100%,100%,1,3
+  0 t. "Get Ready!",0,0,${"font Acme,32"},1,255 autocrop. 0 expand. xy,4 +dilate. 8 r.. 100%,100%,1,3
   => get_ready,get_readym
-  0 t. "Game\nOver!",0,0,${"font Acme,53"},1,255 autocrop. 0 expand_xy. 4,0 +dilate. 8 r.. 100%,100%,1,3
+  0 t. "Game\nOver!",0,0,${"font Acme,53"},1,255 autocrop. 0 expand. xy,4 +dilate. 8 r.. 100%,100%,1,3
   => game_over,game_overm
 
   # Start game.
@@ -38648,8 +38648,8 @@ x_pacman : check_display $0
     fi
 
     # Render board gfx.
-    f[map] "i>=4?0:i" +==[map] 1 expand_xy. 1,0 r. 1600%,1600% erode. 9 b. 2
-    g. xy abs[-2,-1] +[-2,-1] >=. 80% b. 2 n. 0,1 shrink_xy. 16
+    f[map] "i>=4?0:i" +==[map] 1 expand. xy,1 r. 1600%,1600% erode. 9 b. 2
+    g. xy abs[-2,-1] +[-2,-1] >=. 80% b. 2 n. 0,1 shrink. xy,16
     +*. $_glevel +*.. $_blevel *... $_rlevel a[-3--1] c
     16,16,1,1,'x' +-[map] 1 max. 0 *. 16 r. 1600%,1600%
     16,16,1,1,'y' ri[-3,-1] ..,0,2 +[-2,-1] a[-2,-1] c
@@ -38658,7 +38658,7 @@ x_pacman : check_display $0
     t. "Lives :",10,0,24,1,255 t. "Score :",{w-140},0,24,1,255
     if $lives +r[pacman_2] 12,12,1,4,2 r. {100*$lives}%,100%,1,4,0,2 j.. .,90,7 rm. fi => visu
     w[visu] {visu,f=h<0.5*{*,v}?1.5:1;[w,h]*=f},0,"[G"{`39`}"MIC] Pacman" cursor[0] 0
-    0 t. "Level "$level,0,0,${"font Acme,64"},1,1 autocrop. 0 expand_xy. 4,0 (0,255^0,255^0,0) +map.. . rm.. dilate.. 8
+    0 t. "Level "$level,0,0,${"font Acme,64"},1,1 autocrop. 0 expand. xy,4 (0,255^0,255^0,0) +map.. . rm.. dilate.. 8
     => levelm_N,level_N
 
     repeat 4 { xg$>:=16*$mw2 yg$>:=16*$mh2+4*$> dg$>=3 mg$>=0 }
@@ -40126,7 +40126,7 @@ x_starfield3d : check_display $0
   l[] {
     ('G\47MIC') s x
     x=0 N=$! repeat $N { 0 t. {$>,t},0,0,48,1,1 x$>=$x y$>=0 z$>:=-3200-150*$> x:=$x+w+8 } k[50%--1]
-    expand_xy 6,0 dilate_circ 5 b 0.5 expand_z 1,0 isosurface3d 10% *3d 1,1,5 rv3d
+    expand xy,6 dilate_circ 5 b 0.5 expand z,1 isosurface3d 10% *3d 1,1,5 rv3d
     repeat $N { col3d[$>] ${-rgb} }
     0 t. "Version "${-strver},0,0,48,1,1 rs. ,18 +f. 255 to_rgb.
     random3d 2500 col3d. 255 *3d. 320,200,1000 -3d. 160,100
@@ -42505,11 +42505,11 @@ fx_montage_preview : skip "${2=A}"
        r {max(1,$""4-2*($5+$6))},{max(1,$""5-2*($5+$6))},1,100%,2 fs:=min(53,max(w,h)/3)
        frame $6,$6,${7-10}
        r {w+2*$5},{h+2*$5},1,100%,0,0,0.5,0.5
-       0 t. \\\#$""1,0,0,$fs,1,255 expand_xy. 3,0 [-1]x3 a[-4--2] c
+       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
        dilate. {3+2*$fs/20} a.. .,c j[0] [1],{5+$5+$6},{$5+$6},0,0,1,[2],255 k[0]
      else
        r $""4,$""5,1,100%,2 fs:=min(53,max(w,h)/3)
-       0 t. \\\#$""1,0,0,$fs,1,255 expand_xy. 3,0 [-1]x3 a[-4--2] c
+       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
        dilate. {3+2*$fs/20} a.. .,c j[0] [1],5,0,0,0,1,[2],255 k[0]
      fi "
   nw,nh:=w,h
@@ -42569,7 +42569,7 @@ fx_puzzle :
       if $16 # One piece by layer.
         foreach {
           rs ,{max(0.1,$10+$11*v)}% rotate {$12+$13*v}
-          if $15 expand_xy 1,0 fi
+          if $15 expand xy,1 fi
           cx,cy:=round([w,h]/2)
           sh 100% if $15 dilate. 3 fi
           i[0] $w,$h,1,4
@@ -42580,7 +42580,7 @@ fx_puzzle :
         i[0] $w,$h,1,{s}
         repeat $!-1 {
           rs. ,{max(0.1,$10+$11*v)}% rotate. {$12+$13*v}
-          if $15 expand_xy. 1,0 fi
+          if $15 expand. xy,1 fi
           cx,cy:=round([w,h]/2)
           sh. 100% if $15 dilate. 3 fi
           j[0] ..,{${x$<}-$cx},{${y$<}-$cy},0,0,1,.,255 rm[-2,-1]
@@ -44034,7 +44034,7 @@ fx_shapeism :
       if $5 {2*$size},{2*$size} _fx_shapeism$1. ${2-4} rs. ,$size
       else $size,$size _fx_shapeism$1. ${2-4}
       fi
-      +!=. 0 expand_xy[-2,-1] 1,0 n[-2,-1] 0,1
+      +!=. 0 expand[-2,-1] xy,1 n[-2,-1] 0,1
       if $10<1 dilate. 3 fi
       . a[-3--1] c
 
@@ -45247,7 +45247,7 @@ fx_freaky_bw :
       to_rgb
 
       # Estimate gradient field of B&W result.
-      +expand_xy 1,0 channels. 0,4
+      +expand xy,1 channels. 0,4
       f. ">if (c!=4,i,
             Rx = i(x+1,y,0,0) - i(x,y,0,0);
             Ry = i(x,y+1,0,0) - i(x,y,0,0);
@@ -45274,7 +45274,7 @@ fx_freaky_bw :
       f. "i - i(x,y-1,0,0)"
       +[-2,-1]
       ilaplacian. 0
-      shrink_xy. 1 +. $ia n. 0,255
+      shrink. xy,1 +. $ia n. 0,255
 
       # Merge result with original color image.
       j[0] [1],0,0,0,0,{$1%} rm.
@@ -53819,7 +53819,7 @@ fx_stroke :
   to_a
   foreach {
     nm={n}
-    if !$26" && "$5 expand_xy $1,0 is_frame1=0 else expand_xy 1,0 is_frame1=1 fi
+    if !$26" && "$5 expand xy,$1 is_frame1=0 else expand xy,1 is_frame1=1 fi
     split_opacity +l. {
       b $3
       if $6>=100
@@ -53837,7 +53837,7 @@ fx_stroke :
       a[-3--1] x map.. .,1 rm.
     }
     a[0,1] c
-    if $is_frame1 shrink_xy 1 fi
+    if $is_frame1 shrink xy,1 fi
     if $25 rv fi
     =>[^] $nm
   }
@@ -54678,7 +54678,7 @@ fx_camouflage :
     split_opacity l[0] {
       channels 0 r {w+16},{h+16},1,1,0 rand 0,16
       amp=$3 do smooth {min(50,$amp)},0,1 amp-=50 while $amp>0
-      shrink_xy. 8 n 1,$2 round
+      shrink. xy,8 n 1,$2 round
       repeat $1 { +area 0,0 <. {1+2^$>} inpaint[0] [1],0,3 rm. }
       +colormap 0 n.. 0,{w-1}
       4,1,1,3,"col=[${4-15}];col[3*x,3]"
@@ -55213,25 +55213,25 @@ _fx_shapes10 :
   +mirror xy max
 
 _fx_shapes11 :
-  _fx_shapes0 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes0 $* expand xy,1 +erode 3 -
 
 _fx_shapes12 :
-  _fx_shapes1 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes1 $* expand xy,1 +erode 3 -
 
 _fx_shapes13 :
-  _fx_shapes2 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes2 $* expand xy,1 +erode 3 -
 
 _fx_shapes14 :
-  _fx_shapes3 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes3 $* expand xy,1 +erode 3 -
 
 _fx_shapes15 :
-  _fx_shapes7 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes7 $* expand xy,1 +erode 3 -
 
 _fx_shapes16 :
-  _fx_shapes8 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes8 $* expand xy,1 +erode 3 -
 
 _fx_shapes17 :
-  _fx_shapes9 $* expand_xy 1,0 +erode 3 -
+  _fx_shapes9 $* expand xy,1 +erode 3 -
 
 #@gui Pack Ellipses : fx_pack_ellipses, fx_pack_ellipses_preview(0)
 #@gui : Min Radius (px) = float(3,1,256)
@@ -60064,7 +60064,7 @@ fx_custom_code_preview : skip "${1=-skip ,}"
          "Output images: "#$_nb_out"\n"\
          $_dim_out"\n\n"\
          "Output status: "$_status_out
-    0 t. {``$info},0,0,${siz$5},1,255 expand_xy. 5,0 +dilate. 3 a[-2,-1] c
+    0 t. {``$info},0,0,${siz$5},1,255 expand. xy,5 +dilate. 3 a[-2,-1] c
     rs[^-1] ${-max_wh},2,1
     r. ..,..,1,100%,0 drgba[^-1]
     /[^-1] 2 blend[^-1] .,alpha rm.
@@ -60291,7 +60291,7 @@ fx_intarsia_preview :
     _fx_intarsia $5,$6,0
     100%,100%,1,1,"(y%2?y*w+w-1-x:y*w+x)<$8*wh/100" *
     if min(w,h)<140 rs 140,140,1,2 fi
-    expand_xy 16,0
+    expand xy,16
 
     100%,100% circle. 16,16,1%,1,1
     arrow3d. 0,0,0,{w/4},0,0,2%,15%,10% col3d. 1 j3d.. .,16,16,0,1,2,0,0 rm.
