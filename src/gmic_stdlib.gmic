@@ -16690,19 +16690,14 @@ elevate : check "${1=64}>0" skip ${2=1},${3=1}
 expand : check "isint(${3=0},0,3)"
   e[^-1] "Expand image$? along $1 with size $2 and "${"arg0 $3,dirichlet,neumann,periodic,mirror"}"
           boundary conditions."
-  $!,1,1,1,"begin(
-      arg = ['$1'];
-      const ipc = ispercentage($2);
-      const siz2 = 2*$2;
-      is_x = find(arg,_'x')>=0;
-      is_y = find(arg,_'y')>=0;
-      is_z = find(arg,_'z')>=0;
-      is_c = find(arg,_'c')>=0;
-    );
-    nw = w#x + (!is_x?0:ipc?w#x*siz2:siz2);
-    nh = h#x + (!is_y?0:ipc?h#x*siz2:siz2);
-    nd = d#x + (!is_z?0:ipc?d#x*siz2:siz2);
-    ns = s#x + (!is_c?0:ipc?s#x*siz2:siz2);
+  no_x,no_y,no_z,no_c:="arg = ['$1']; [ find(arg,_'x')<0, find(arg,_'y')<0, find(arg,_'z')<0, find(arg,_'c')<0 ]"
+  $!,1,1,1,"
+    const ipc = ispercentage($2);
+    const siz2 = 2*$2;
+    nw = w#x + ($no_x?0:ipc?w#x*siz2:siz2);
+    nh = h#x + ($no_y?0:ipc?h#x*siz2:siz2);
+    nd = d#x + ($no_z?0:ipc?d#x*siz2:siz2);
+    ns = s#x + ($no_c?0:ipc?s#x*siz2:siz2);
     nw>0 && nh>0 && nd>0 && nd>0?resize(#x,nw,nh,nd,ns,0,$3,0.5,0.5,0.5,0.5):resize(#x,0);
   " rm.
 
