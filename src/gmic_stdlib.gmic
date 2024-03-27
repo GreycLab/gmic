@@ -50738,6 +50738,94 @@ fx_blur_linear :
 fx_blur_linear_preview :
   gui_split_preview "fx_blur_linear $*",${-3--1}
 
+#@gui Blur [Motion] : fx_blur_motion, fx_blur_motion_preview(0)
+#@gui : Strength = float(1,0,5)
+#@gui : sep = separator()
+#@gui : Control Points = choice("2","3","4","5")
+#@gui : Previous Control Points = value(-1)
+#@gui : Point0 = point(50,50,0,0,255,255,255,0,16)_0
+#@gui : Point1 = point(50,50,0,0,255,255,255,0,14)_0
+#@gui : Point2 = point(50,50,0,0,255,255,255,0,12)_0
+#@gui : Point3 = point(50,50,0,0,255,255,255,0,10)_0
+#@gui : Point4 = point(50,50,0,0,255,255,255,0,8)_0
+#@gui : Ramp (%) = float(75,0,100)
+#@gui : sep = separator()
+#@gui : Boundary = choice(3,"Transparent","Nearest","Periodic","Mirror")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/03/27</i>.</small>")
+fx_blur_motion :
+
+  # Generate convolution kernel.
+  _fx_blur_motion_preview_coords $*
+  if $nb_ptsm2==0 ($x0,$x1^$y0,$y1^1,0)
+  elif $nb_ptsm2==1 ($x0,$x1,$x2^$y0,$y1,$y2^1,0.5,0)
+  elif $nb_ptsm2==2 ($x0,$x1,$x2,$x3^$y0,$y1,$y2,$y3^1,0.75,0.25,0)
+  else ($x0,$x1,$x2,$x3,$x4^$y0,$y1,$y2,$y3,$y4^1,0.75,0.5,0.25,0)
+  fi
+  r. {max(w#0,h#0)},1,1,3,5
+  sh. 2 n. {1-$ramp%},1 rm.
+  size:=max(8,round(100*$strength))
+  sh. 0,1 *. $strength rm.
+  $size,$size eval.. "i(#-1,i0,i1) = i2" rm.. normalize_sum.
+  autocrop.
+  if !$boundary to_a[^-1] fi
+  mirror. xy
+  convolve_fft[^-1] .,$boundary
+  rm.
+
+fx_blur_motion_preview :
+  _fx_blur_motion_preview_coords $*
+  palette[] hot z. {100-$ramp}%,100% store. palette
+
+  foreach {
+
+    # Apply effect.
+    fx_blur_motion $*
+
+    # Draw spline curve.
+    if $nb_ptsm2==0 ($x0,$x1^$y0,$y1^1,0)
+    elif $nb_ptsm2==1 ($x0,$x1,$x2^$y0,$y1,$y2^1,0.5,0)
+    elif $nb_ptsm2==2 ($x0,$x1,$x2,$x3^$y0,$y1,$y2,$y3^1,0.75,0.25,0)
+    else ($x0,$x1,$x2,$x3,$x4^$y0,$y1,$y2,$y3,$y4^1,0.75,0.5,0.25,0)
+    fi
+    r. {max(w#0,h#0)},1,1,3,5 $palette
+    eval.. ">begin(pP = round([i0*(w#0-1)%,i1*(h#0-1)%]));
+      x>0?(
+        P = round([i0*(w#0-1)%,i1*(h#0-1)%]);
+        col = [ I(#-1,i2*(w#-1-1),0,0,1),255 ];
+        polygon(#0,4,pP - [1,0],pP + [1,0],P + [1,0],P - [1,0],1,col);
+        polygon(#0,4,pP - [0,1],pP + [0,1],P + [0,1],P - [0,1],1,col);
+        pP = P;
+      ); I"
+    rm[-2,-1]
+
+    # Draw control points.
+    $palette (0,1) r. {$nb_ptsm2+2},1,1,1,3 n. 0,{-2,w-1} warp.. .,0,1 rm.
+    _$0_circle[0] $x0%,$y0%,16,{I[-1,2]}
+    _$0_circle[0] $x1%,$y1%,14,{I[-2,2]}
+    if $nb_ptsm2>0 _$0_circle[0] $x2%,$y2%,12,{I[-3,2]} fi
+    if $nb_ptsm2>1 _$0_circle[0] $x3%,$y3%,10,{I[-4,2]} fi
+    if $nb_ptsm2>2 _$0_circle[0] $x4%,$y4%,8,{I[-5,2]} fi
+    rm.
+  }
+
+  u \{$strength\}\{$nb_ptsm2\}\{$nb_ptsm2\}\
+    \{$x0,$y0\}\{$x1,$y1\}\{$x2,$y2\}\{$x3,$y3\}\{$x4,$y4\}\
+    \{$ramp\}\{$boundary\}
+
+_fx_blur_motion_preview_coords :
+  strength,nb_ptsm2,p_nb_ptsm2,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,ramp,boundary=${1-15}
+  if $nb_ptsm2!=$p_nb_ptsm2
+    if $nb_ptsm2==0 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,70,70,-1,-1,-1,-1,-1,-1
+    elif $nb_ptsm2==1 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,30,70,70,70,-1,-1,-1,-1
+    elif $nb_ptsm2==2 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,70,30,30,70,70,70,-1,-1
+    else x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=50,30,50,40,30,50,70,60,30,70
+    fi
+  fi
+
+_fx_blur_motion_preview_circle :
+  circle ${1-3},1,0,0,0,255 circle ${1-2},{$3-3},1,${4-6},255
+
 #@gui Blur [Multidirectional] : fx_blur_multidirectional, fx_blur_multidirectional_preview(0)
 #@gui : Number of Orientations = int(5,1,16)
 #@gui : Reference Angle (deg.) = float(0,0,360)
