@@ -50748,6 +50748,7 @@ fx_blur_linear_preview :
 #@gui : Point2 = point(50,50,0,0,255,255,255,0,12)_0
 #@gui : Point3 = point(50,50,0,0,255,255,255,0,10)_0
 #@gui : Point4 = point(50,50,0,0,255,255,255,0,8)_0
+#@gui : Centering = bool(1)
 #@gui : Ramp (%) = float(75,0,100)
 #@gui : Subsampling = int(0,0,20)
 #@gui : note = note("<small>Set <i>Subsampling</i> to <b>0</b> to disable subsampling.</small>")
@@ -50758,7 +50759,7 @@ fx_blur_linear_preview :
 fx_blur_motion :
 
   # Generate convolution kernel.
-  _fx_blur_motion_preview_coords $*
+  _fx_blur_motion_preview_args $*
   if $nb_ptsm2==0 ($x0,$x1^$y0,$y1^1,0)
   elif $nb_ptsm2==1 ($x0,$x1,$x2^$y0,$y1,$y2^1,0.5,0)
   elif $nb_ptsm2==2 ($x0,$x1,$x2,$x3^$y0,$y1,$y2,$y3^1,0.75,0.25,0)
@@ -50772,12 +50773,14 @@ fx_blur_motion :
   sh. 0,1 *. $strength rm.
 
   $size,$size eval.. "i(#-1,i0,i1) = i2" rm.. normalize_sum.
+  if $centering autocrop. 0 fi
+
   if !$boundary to_a[^-1] fi
   convolve_fft[^-1] .,$boundary
   rm. c 0,255
 
 fx_blur_motion_preview :
-  _fx_blur_motion_preview_coords $*
+  _fx_blur_motion_preview_args $*
   palette[] hot z. {100-$ramp}%,100% store. palette
 
   foreach {
@@ -50815,10 +50818,10 @@ fx_blur_motion_preview :
 
   u \{$strength\}\{$nb_ptsm2\}\{$nb_ptsm2\}\
     \{$x0,$y0\}\{$x1,$y1\}\{$x2,$y2\}\{$x3,$y3\}\{$x4,$y4\}\
-    \{$ramp\}\{$subsampling\}\{$boundary\}
+    \{$centering\}\{$ramp\}\{$subsampling\}\{$boundary\}
 
-_fx_blur_motion_preview_coords :
-  strength,nb_ptsm2,p_nb_ptsm2,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,ramp,subsampling,boundary=${1-16}
+_fx_blur_motion_preview_args :
+  strength,nb_ptsm2,p_nb_ptsm2,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,centering,ramp,subsampling,boundary=${1-17}
   if $nb_ptsm2!=$p_nb_ptsm2
     if $nb_ptsm2==0 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,70,70,-1,-1,-1,-1,-1,-1
     elif $nb_ptsm2==1 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,30,70,70,70,-1,-1,-1,-1
