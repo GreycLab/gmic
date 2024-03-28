@@ -4375,11 +4375,10 @@ CImg<char> gmic::substitute_item(const char *const source,
               else {
                 CImgDisplay &disp = gmic_display_window(wind);
                 bool flush_request = false;
-                if (*feature=='-' &&
-                    feature[1]!='w' && feature[1]!='h' && feature[1]!='d' && feature[1]!='e' &&
-                    feature[1]!='u' && feature[1]!='v' && feature[1]!='n' && feature[1]!='t') {
-                  flush_request = true; ++feature;
-                }
+                char c = 0;
+                if (*feature=='-' && (c = feature[1]) &&
+                    c!='u' && c!='v' && c!='d' && c!='e' && c!='w' && c!='h' && c!='i' && c!='j' &&
+                    c!='f' && c!='n' && c!='t') { flush_request = true; ++feature; }
                 if (!*feature) { // Empty feature
                   cimg_snprintf(substr,substr.width(),"%d",disp?(disp.is_closed()?0:1):0);
                   is_substituted = true;
