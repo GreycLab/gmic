@@ -18558,10 +18558,10 @@ ilaplacian : check "${1=0}>=0" skip "${2=}"
       e[0--4] "Invert Laplacian image$? in Fourier space."
       ia=0
     fi
-    foreach {
+    foreach { nm={n}
       fft 100%,100%,1,1,"2*(cos(x*2*pi/w) + cos(y*2*pi/h)) - 4" =. 1
       /[-3,-2] . rm.
-      = 0 ifft rm.
+      = 0 ifft rm. => $nm
     }
     + '"begin(S = resize(["$ia"],s,0)); S"'
 
@@ -18569,15 +18569,16 @@ ilaplacian : check "${1=0}>=0" skip "${2=}"
     if $is_estimate
       e[0--4] "Invert Laplacian image$? using $1 iterations of PDE flow and
                    initial estimate $2."
-      repeat $! { pass$2 0 l[$>,-1] {
+      repeat $! { nm={$>,n} pass$2 0 l[$>,-1] {
         *[0] 5 i[1] (0,5,0;5,0,5;0,5,0)
         repeat $1 { +convolve. [1] -. [0] +[-2,-1] /. 21 } k. # Optimized semi-implicit scheme, with dt=5
-      } }
+      } => $nm }
     else
       e[0--4] "Invert Laplacian image$? using $1 iterations of PDE flow."
-      foreach {
+      foreach { nm={n}
         * 5 (0,5,0;5,0,5;0,5,0) +f.. 0
         repeat $1 { +convolve. [1] -. [0] +[-2,-1] /. 21 } k. # Optimized semi-implicit scheme, with dt=5
+        => $nm
       }
     fi
   fi
