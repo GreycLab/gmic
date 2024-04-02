@@ -50740,6 +50740,7 @@ fx_blur_linear_preview :
   gui_split_preview "fx_blur_linear $*",${-3--1}
 
 #@gui Blur [Motion] : fx_blur_motion, fx_blur_motion_preview(0)
+#@gui : Mode = choice{"Average","Max (Slower)"}
 #@gui : Strength = float(1,0,5)
 #@gui : sep = separator()
 #@gui : Control Points = choice("2","3","4","5")
@@ -50756,7 +50757,7 @@ fx_blur_linear_preview :
 #@gui : sep = separator()
 #@gui : Boundary = choice(3,"Transparent","Nearest","Periodic","Mirror")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/03/27</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/04/02</i>.</small>")
 fx_blur_motion :
 
   # Generate convolution kernel.
@@ -50773,11 +50774,25 @@ fx_blur_motion :
   sh. 2 n. {1-$wdecay%},1 rm.
   sh. 0,1 *. $strength rm.
 
-  $size,$size eval.. "i(#-1,i0,i1) = i2" rm.. normalize_sum.
+  $size,$size eval.. "i(#-1,i0,i1) = i2" rm..
   if $centering autocrop. 0 fi
 
   if !$boundary to_a[^-1] fi
-  convolve_fft[^-1] .,$boundary
+
+  if $mode==0
+    normalize_sum.
+    convolve_fft[^-1] .,$boundary
+  else
+    n. 0,1
+    foreach[^-1] {
+      +f 0
+      pass. 1
+      eval. ">i?(const cx = int(w/2); const cy = int(h/2); p = x - cx; q = y - cy;
+        run('+shift[0] ',p,',',q,',0,0,',$boundary,' *. ',i,' max[1,-1]');
+      )"
+      k..
+    }
+  fi
   rm. c 0,255
 
 fx_blur_motion_preview :
@@ -50817,12 +50832,12 @@ fx_blur_motion_preview :
     rm.
   }
 
-  u \{$strength\}\{$nb_ptsm2\}\{$nb_ptsm2\}\
+  u \{$mode\}\{$strength\}\{$nb_ptsm2\}\{$nb_ptsm2\}\
     \{$x0,$y0\}\{$x1,$y1\}\{$x2,$y2\}\{$x3,$y3\}\{$x4,$y4\}\
     \{$centering\}\{$wdecay\}\{$subsampling\}\{$boundary\}
 
 _fx_blur_motion_preview_args :
-  strength,nb_ptsm2,p_nb_ptsm2,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,centering,wdecay,subsampling,boundary=${1-17}
+  mode,strength,nb_ptsm2,p_nb_ptsm2,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,centering,wdecay,subsampling,boundary=${1-18}
   if $nb_ptsm2!=$p_nb_ptsm2
     if $nb_ptsm2==0 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,70,70,-1,-1,-1,-1,-1,-1
     elif $nb_ptsm2==1 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4=30,30,30,70,70,70,-1,-1,-1,-1
