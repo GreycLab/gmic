@@ -31711,7 +31711,7 @@ warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
   foreach[^-1] { nm={n}
     im,iM:=im,iM
     pass.
-    if $bdim==3 # 3D warp
+    if $bdim==3 # 3D blending
       100%,100%,100%,{0,4*s},"
         const boundary = 1;
         u = round(i(#1,x,y,z,0));
@@ -31721,17 +31721,33 @@ warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
         [ Iccc,I(#0,u + 1,v,w) - Iccc,I(#0,u,v + 1,w) - Iccc,I(#0,u,v,w + 1) - Iccc ]"
       s. c,4
       expand[-3--1] xyz,1 g... x,-1 g.. y,-1 g. z,-1 +[-3--1] ilaplacian. 0 shrink. xyz,1
-    elif $bdim==2 # 2D warp
+      b.. xyz,$2 +b. xyz,$2 -[-2,-1] +[-2,-1]
+
+    elif $bdim==2 # 2D blending
       100%,100%,100%,{0,3*s},"
         const boundary = 1;
         u = round(i(#1,x,y,z,0));
         v = round(i(#1,x,y,z,1));
-        Icc = I(#0,u,v,0);
-        [ Icc,I(#0,u + 1,v,0) - Icc,I(#0,u,v + 1,0) - Icc ]"
+        w = round(i(#1,x,y,z,2));
+        Iccc = I(#0,u,v,w);
+        [ Iccc,I(#0,u + 1,v,w) - Iccc,I(#0,u,v + 1,w) - Iccc ]"
       s. c,3
-      expand[-2,-1] xy,1 g.. x,-1 g. y,-1 +[-2,-1] ilaplacian. 0 shrink. xy,1
+      expand[-2,-1] xy,1 g.. x,-1 g. y,-1 +[-2,-1] l. { s z ilaplacian 0 a z } shrink. xy,1
+      b.. xy,$2 +b. xy,$2 -[-2,-1] +[-2,-1]
+
+    else # 1D blending
+      100%,100%,100%,{0,2*s},"
+        const boundary = 1;
+        u = round(i(#1,x,y,z,0));
+        v = round(i(#1,x,y,z,1));
+        w = round(i(#1,x,y,z,2));
+        Iccc = I(#0,u,v,w);
+        [ Iccc,I(#0,u + 1,v,w) - Iccc ]"
+      s. c,2
+      expand. x,1 g. x,-1 l. { s z ilaplacian 0 a z } shrink. x,1
+      b.. x,$2 +b. x,$2 -[-2,-1] +[-2,-1]
     fi
-    b.. $2 +b. $2 -[-2,-1] +[-2,-1]
+
     k. c $im,$iM => $nm
   }
   rm.
