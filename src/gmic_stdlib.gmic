@@ -18541,49 +18541,38 @@ _ihaar_z : # Inverse haar transform along the z-axis.
   if d%2 error "Command 'ihaar': Invalid image depth="{h}" (is not even)." fi
   s z,2 r 100%,100%,200% (-1/1) r. {-2,w},{-2,h} *[-2,-1] + / {sqrt(2)}
 
-#@cli ilaplacian : { nb_iterations>0 | 0 },_axes,_[initial_estimate]
+#@cli ilaplacian : { nb_iterations>0 | 0 },_[initial_estimate]
 #@cli : Invert selected Laplacian images.
 #@cli : If given 'nb_iterations' is '0', inversion is done in Fourier space (single iteration),
 #@cli : otherwise, by applying 'nb_iterations' of a Laplacian-inversion PDE flow.
 #@cli : Note that the resulting inversions are just estimation of possible/approximated solutions.
 #@cli : Default values: 'nb_iterations=0', 'axes=(undefined)' and '[initial_estimated]=(undefined)'.
 #@cli : $ image.jpg +laplacian +ilaplacian[-1] 0
-ilaplacian : check "${1=0}>=0 && isin('${2=}',0,'x','y','z','xy','xz','yz','xyz')" skip "${3=}"
+ilaplacian : check "${1=0}>=0" skip "${2=}"
   nb_iter:=round($1)
-  is_estimate=${"is_image_arg $3"}
+  is_estimate=${"is_image_arg $2"}
 
   if !$nb_iter # Inversion in Fourier space
     if $is_estimate
-      e[0--4] "Invert Laplacian image$? in Fourier space, with initial estimate $3."
-      pass$3 1 ia=${-average_vectors} rm.
+      e[0--4] "Invert Laplacian image$? in Fourier space, with initial estimate $2."
+      pass$2 1 ia=${-average_vectors} rm.
     else
       e[0--4] "Invert Laplacian image$? in Fourier space."
       ia=0
     fi
     foreach { nm={n}
-      if !narg($2)
-        axes={`"str = [ 0,0,0 ]; k = 0; w>1?(str[k++]=_'x'); h>1?(str[k++]=_'y'); d>1?(str[k++]=_'z'); str"`}
-      else axes=$2
-      fi
-      fft $axes
-      if '$axes'=='x' .,.,.,1,"const pi2 = 2*pi; 2*cos(x*pi2/w) - 2"
-      elif '$axes'=='y' .,.,.,1,"const pi2 = 2*pi; 2*cos(y*pi2/h) - 2"
-      elif '$axes'=='z' .,.,.,1,"const pi2 = 2*pi; 2*cos(z*pi2/d) - 2"
-      elif '$axes'=='xy' .,.,.,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(y*pi2/h)) - 4"
-      elif '$axes'=='xz' .,.,.,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(z*pi2/d)) - 4"
-      elif '$axes'=='yz' .,.,.,1,"const pi2 = 2*pi; 2*(cos(y*pi2/h) + cos(z*pi2/d)) - 4"
-      else .,.,.,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(y*pi2/h) + cos(z*pi2/d)) - 6"
-      fi
+      fft
+      .,.,.,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(y*pi2/h) + cos(z*pi2/d)) - 6"
       =. 1 /[-3,-2] . rm. = 0
-      ifft $axes
+      ifft
       rm. => $nm
     }
     if $ia!=0 + '"begin(S = resize(["$ia"],s,0)); S"' fi
 
   else # Inversion with PDE-flow
     if $is_estimate
-      e[0--4] "Invert Laplacian image$? using $1 iterations of PDE flow and initial estimate $3."
-      repeat $! { nm={$>,n} pass$3 0 l[$>,-1] {
+      e[0--4] "Invert Laplacian image$? using $1 iterations of PDE flow and initial estimate $2."
+      repeat $! { nm={$>,n} pass$2 0 l[$>,-1] {
         *[0] 5 i[1] (0,5,0;5,0,5;0,5,0)
         repeat $1 { +convolve. [1] -. [0] +[-2,-1] /. 21 } k. # Optimized semi-implicit scheme, with dt=5
       } => $nm }
