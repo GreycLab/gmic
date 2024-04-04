@@ -31692,6 +31692,42 @@ warp_rbf :
     rbf. {0,[w,h]} warp[0] .,1,1,3 rm.
   }
 
+#@cli warp_seamless : [displacement_map],_sigma[%]>0
+#@cli : Warp selected 2D or 3D image by specified displacement field, using seamless blending.
+#@cli : Default value: 'sigma=5%'.
+#@cli : $ sp colorful,512 100%,100%,1,2,[x,y] l. { s xy,8 sort_list +,u append_tiles , } +warp[0] [1] +warp_seamless[0] [1]
+warp_seamless : check "${2=5%}>=0"
+  e[^-1] "Warp image$? using seamless blending, with displacement map $1, using sigma $2."
+  pass$1
+  if !$2 warp[^-1] . rm. return fi
+  foreach[^-1] { nm={n}
+    im,iM:=im,iM
+    pass.
+    if s==3 # 3D warp
+      100%,100%,100%,{0,4*s},"
+        const boundary = 1;
+        u = round(i(#1,x,y,z,0));
+        v = round(i(#1,x,y,z,1));
+        w = round(i(#1,x,y,z,2));
+        Iccc = I(#0,u,v,w);
+        [ Iccc,I(#0,u + 1,v,w) - Iccc,I(#0,u,v + 1,w) - Iccc,I(#0,u,v,w + 1) - Iccc ]"
+      s. c,4
+      expand[-3--1] xyz,1 g... x,-1 g.. y,-1 g. z,-1 +[-3--1] ilaplacian. 0 shrink. xyz,1
+    elif s==2 # 2D warp
+      100%,100%,100%,{0,3*s},"
+        const boundary = 1;
+        u = round(i(#1,x,y,z,0));
+        v = round(i(#1,x,y,z,1));
+        Icc = I(#0,u,v,0);
+        [ Icc,I(#0,u + 1,v,0) - Icc,I(#0,u,v + 1,0) - Icc ]"
+      s. c,3
+      expand[-2,-1] xy,1 g.. x,-1 g. y,-1 +[-2,-1] ilaplacian. 0 shrink. xy,1
+    fi
+    b.. $2 +b. $2 -[-2,-1] +[-2,-1]
+    k. c $im,$iM => $nm
+  }
+  rm.
+
 #@cli water : _amplitude,_smoothness>=0,_angle
 #@cli : Apply water deformation on selected images.
 #@cli : Default values: 'amplitude=30', 'smoothness=1.5' and 'angle=45'.
