@@ -18559,10 +18559,14 @@ ilaplacian : check "${1=0}>=0" skip "${2=}"
       ia=0
     fi
     foreach { nm={n}
-      if d>1 fft 100%,100%,100%,1,"2*(cos(x*2*pi/w) + cos(y*2*pi/h) + cos(z*2*pi/d)) - 6"
-      else fft 100%,100%,1,1,"2*(cos(x*2*pi/w) + cos(y*2*pi/h)) - 4"
+      fft
+      if d>1 100%,100%,100%,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(y*pi2/h) + cos(z*pi2/d)) - 6"
+      elif h>1 100%,100%,1,1,"const pi2 = 2*pi; 2*(cos(x*pi2/w) + cos(y*pi2/h)) - 4"
+      else 100%,1,1,1,"const pi2 = 2*pi; 2*cos(x*pi2/w) - 2"
       fi
-      =. 1 /[-3,-2] . rm. = 0 ifft rm. => $nm
+      =. 1 /[-3,-2] . rm. = 0
+      ifft
+      rm. => $nm
     }
     + '"begin(S = resize(["$ia"],s,0)); S"'
 
@@ -31694,19 +31698,21 @@ warp_rbf :
     rbf. {0,[w,h]} warp[0] .,1,1,3 rm.
   }
 
-#@cli warp_seamless : [displacement_map],_sigma[%]>0
+#@cli warp_seamless : [displacement_map],_sigma[%]>0,_blend_dimension={ 0:auto | 1:1D | 2:2D | 3:3D }
 #@cli : Warp selected 2D or 3D image by specified displacement field, using seamless blending.
-#@cli : Default value: 'sigma=5%'.
+#@cli : Default values: 'sigma=5%' and 'blend_dimension=0'.
 #@cli : $ sp colorful,512 100%,100%,1,2,[x,y] l. { s xy,8 sort_list +,u append_tiles , } \
 # +warp[0] [1] +warp_seamless[0] [1]
-warp_seamless : check "${2=5%}>=0"
+warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
   e[^-1] "Warp image$? using seamless blending, with displacement map $1, using sigma $2."
   pass$1
   if !$2 warp[^-1] . rm. return fi
+  bdim:=$3?$3:s
+  if $bdim>3 error[0--3] "Command 'warp_seamless': Invalid displacement map (size: "{[w,h,d,s]}")." fi
   foreach[^-1] { nm={n}
     im,iM:=im,iM
     pass.
-    if s==3 # 3D warp
+    if $bdim==3 # 3D warp
       100%,100%,100%,{0,4*s},"
         const boundary = 1;
         u = round(i(#1,x,y,z,0));
@@ -31716,7 +31722,7 @@ warp_seamless : check "${2=5%}>=0"
         [ Iccc,I(#0,u + 1,v,w) - Iccc,I(#0,u,v + 1,w) - Iccc,I(#0,u,v,w + 1) - Iccc ]"
       s. c,4
       expand[-3--1] xyz,1 g... x,-1 g.. y,-1 g. z,-1 +[-3--1] ilaplacian. 0 shrink. xyz,1
-    elif s==2 # 2D warp
+    elif $bdim==2 # 2D warp
       100%,100%,100%,{0,3*s},"
         const boundary = 1;
         u = round(i(#1,x,y,z,0));
