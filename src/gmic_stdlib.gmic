@@ -18219,8 +18219,8 @@ erode_threshold : check "isint($1,1) && isint(${2=$1},1) && isint(${3=1},1) && $
 
 #@cli g : eq. to 'gradient'. : (+)
 g :
-  _gmic_s="$?" axes,scheme,boundary,is_noarg=${"_gradient_get_args $*"}
-  v + _gradient $axes,$scheme,$boundary v -
+  _gmic_s="$?" axes,scheme,boundary,is_noarg=${"v + _gradient_get_args $*"}
+  _gradient $axes,$scheme,$boundary v -
   if $is_noarg noarg fi
 
 #@cli gradient : { x | y | z | c }...{ x | y | z | c },_scheme,_boundary_conditions : (no arg)
@@ -18234,8 +18234,8 @@ g :
 #@cli : $ image.jpg gradient
 #@cli : $$ https://gmic.eu/oldtutorial/_gradient
 gradient :
-  _gmic_s="$?" axes,scheme,boundary,is_noarg=${"_gradient_get_args $*"}
-  v + _gradient $axes,$scheme,$boundary v -
+  _gmic_s="$?" axes,scheme,boundary,is_noarg=${"v + _gradient_get_args $*"}
+  _gradient $axes,$scheme,$boundary v -
   if $is_noarg noarg fi
 
 # Parse and check arguments.
@@ -18261,54 +18261,47 @@ _gradient_get_args : skip "${1=},${2=},${3=}"
     fi
     onfail axes,scheme,boundary=,0,1 is_noarg=1 # Invalid arguments
   }
+  if ['$axes']!=0 s_axes=" along axes '"$axes"'" fi
+  e[0--4] "Compute gradient of image"$_gmic_s$s_axes", with "\
+   ${"arg0 $scheme+1,backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet"}" scheme and "\
+   ${"arg0 $boundary,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   u $axes,$scheme,$boundary,$is_noarg
 
-# Main command.
+# Process images.
 _gradient :
-  axes,scheme,boundary=${1=},${2=},${3=}
-
-  # Display log message.
-  if ['$axes']!=0 s_axes=" along axes '"$axes"'" fi
-  s0,s1,s2,s3,s4,s5,s6=backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet
-  s_scheme=${s{$scheme+1}}
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  s_boundary=${s$boundary}
-  e[0--3] "Compute gradient of image"$_gmic_s$s_axes", with "$s_scheme" scheme and "$s_boundary" boundary conditions."
   sx,sy,sz,sc=",",;,/,^
-
-  # Process images.
   foreach {
-    nm={n} laxes=$axes if ['$laxes']==0 if d>1 laxes=xyz else laxes=xy fi fi
-    ('$laxes')
+    nm={n} l_axes=$1 if ['$l_axes']==0 if d>1 l_axes=xyz else l_axes=xy fi fi
+    ('$l_axes')
     repeat w {
       a={`i[#1,$>]`} s=${s$a}
       if 0${gradient_$a}>0 [gradient_$a]
-      elif $scheme==-1 # Backward
-        (-1${s}1${s}0) +correlate[0] .,$boundary rm..
-      elif !$scheme # Centered
-        (-0.5${s}0${s}0.5) +correlate[0] .,$boundary rm..
-      elif $scheme==1 # Forward
-        (0${s}-1${s}1) +correlate[0] .,$boundary rm..
-      elif $scheme==2 # Sobel
+      elif $2==-1 # Backward
+        (-1${s}1${s}0) +correlate[0] .,$3 rm..
+      elif !$2 # Centered
+        (-0.5${s}0${s}0.5) +correlate[0] .,$3 rm..
+      elif $2==1 # Forward
+        (0${s}-1${s}1) +correlate[0] .,$3 rm..
+      elif $2==2 # Sobel
         if _'$a'==_'x' (-1,0,1;-2,0,2;-1,0,1)
         elif _'$a'==_'y' (-1,-2,-1;0,0,0;1,2,1)
         else (-0.5${s}0${s}0.5)
         fi
-        +correlate[0] .,$boundary rm..
-      elif $scheme==3 # Rotation-invariant
+        +correlate[0] .,$3 rm..
+      elif $2==3 # Rotation-invariant
         A,B:=[0.25*(2-sqrt(2)),0.5*(sqrt(2)-1)]
         if _'$a'==_'x' (-$A,0,$A;-$B,0,$B;-$A,0,$A)
         elif _'$a'==_'y' (-$A,-$B,-$A;0,0,0;$A,$B,$A)
         else (-0.5${s}0${s}0.5)
         fi
-        +correlate[0] .,$boundary rm..
+        +correlate[0] .,$3 rm..
       else # Deriche/Vanvliet
-        s4,s5=deriche,vanvliet com=${s$scheme}
-        if $boundary<2 +$com[0] 0,1,$a,$boundary
+        s4,s5=deriche,vanvliet com=${s$2}
+        if $3<2 +$com[0] 0,1,$a,$3
         else
-          if _'$a'==_'x' +r[0] {0,[w+2,h,d,s]},0,$boundary,0.5 $com. 0,1,$a shrink. x,1
-          elif _'$a'==_'y' +r[0] {0,[w,h+2,d,s]},0,$boundary,0,0.5 $com. 0,1,$a shrink. y,1
-          elif _'$a'==_'z' +r[0] {0,[w,h,d+2,s]},0,$boundary,0,0,0.5 $com. 0,1,$a shrink. z,1
+          if _'$a'==_'x' +r[0] {0,[w+2,h,d,s]},0,$3,0.5 $com. 0,1,$a shrink. x,1
+          elif _'$a'==_'y' +r[0] {0,[w,h+2,d,s]},0,$3,0,0.5 $com. 0,1,$a shrink. y,1
+          elif _'$a'==_'z' +r[0] {0,[w,h,d+2,s]},0,$3,0,0,0.5 $com. 0,1,$a shrink. z,1
           fi
         fi
       fi
@@ -18316,7 +18309,6 @@ _gradient :
     }
     rm[0,1] =>[^] $nm
   }
-  u $is_noaarg
 
 #@cli gradient_norm
 #@cli : Compute gradient norm of selected images.
@@ -18421,8 +18413,8 @@ hessian : skip "${1=},${2=}"
 
   # Process images.
   foreach {
-    nm={n} laxes=$axes if ['$laxes']==0 if d>1 laxes=xxxyxzyyyzzz else laxes=xxxyyy fi fi
-    ('$laxes')
+    nm={n} l_axes=$axes if ['$l_axes']==0 if d>1 l_axes=xxxyxzyyyzzz else l_axes=xxxyyy fi fi
+    ('$l_axes')
     repeat int(w/2) {
       a1,a2={`i[#1,2*$>]`},{`i[#1,2*$>+1]`}
       if _'$a1'>_'$a2' a1,a2=$a2,$a1 fi
