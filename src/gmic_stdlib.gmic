@@ -5119,7 +5119,7 @@ _input_csv_val :
     it[] "$1" f "i<_' ' && i!=10?_' ':i" s -,10
     i[0] 0
     range:="
-      ref(vector128(),line);
+      line = vector128();
       dmin = [ 0,0,0 ];
       dmax = [ 1,1,1 ];
       dim = size = 0;
@@ -6039,7 +6039,7 @@ parse_cli : skip "${1=print},${2=*}"
 
       ):( # Unexpected '#@cli' line -> Display warning
         r = find(#0,_'\n',r)%h;
-        ref(vector1024(),line);
+        line = vector1024();
         copy(line,i[q + 1],min(size(line),r - q - 1));
         run('warn[0--3] \"Unexpected line: \'',line,'\'.\"');
         copy(i[p],0,r - p,1,0); p = r; continue()
@@ -6052,8 +6052,8 @@ parse_cli : skip "${1=print},${2=*}"
   if $!
     $!,1,1,1,">
       begin(
-        ref(vector1024(),command);
-        ref(vector1024(),category);
+        command = vector1024();
+        category = vector1024();
       );
       for (p = 5, p<h#x && (c=i[#x,p])<=_' ' && c!=_'\n', ++p);
       p>=h#x || i[#x,p]==_'\n'?(run('=>[',x,'] __to_discard__'); break());
@@ -7843,9 +7843,9 @@ gmd2ascii :
     eval. ">
       begin("${-_gmd_tokens}${-_gmd_write}${-_gmd_vt100}"
         is_blockquote = is_code_block = is_center = is_right = 0;
-        ref(vector1024(),tmp);
+        tmp = vector1024();
         const nbcols = "${-shell_cols}";
-        ref(vector(#nbcols,_' '),whiteline);
+        whiteline = vector(#nbcols,_' ');
       );
       c = i;
 
@@ -7978,7 +7978,7 @@ _gmd2ascii_cut :
     . # [0] = Output, [1] = Input
     eval ${-_gmd_write}"
       const N = max(8,$1);
-      ref(vector(#$2+1,_' '),nl); nl[0] = _'\n';
+      nl = vector(#$2+1,_' '); nl[0] = _'\n';
 
       # p = pos of block start, q = pos of latest endable (>=p), l = text length in block (w/o VT100 codes).
       p = q = r = 0; l = 1;
@@ -8380,9 +8380,9 @@ parse_gui : skip "${1=print},${2=*}"
     else
       eval $macros"
         ref(crop(),source);
-        ref(vector256(),name);
-        ref(vector256(),type);
-        ref(vector65536(),argument);
+        name = vector256();
+        type = vector256();
+        argument = vector65536();
 
         p = nb_params = 0;
         while (p<size(source),
@@ -8726,7 +8726,7 @@ parse_gui_update :
       command_path={`"
         src = ['"$path"'];
         dest = ['"${_f${f}_path}'"];
-        ref(vector1024(),command);
+        command = vector1024();
         for (p = 0, p<min(size(src),size(dest)) && src[p]==dest[p], ++p); # Find common base
         while (p>0 && src[p]!=_'/' && dest[p]!=_'/', --p);
 
@@ -9717,7 +9717,7 @@ _random_pattern_check_image :
       const nb_teeth = $2;
       const height_teeth = $3%;
       const offset_teeth = 2*$4%;
-      ref(vector2048(),pts);
+      pts = vector2048();
       for (i = 0, i<size(pts),
         a = i*2*pi/size(pts);
         r =  1 - height_teeth + height_teeth*(int(a*nb_teeth/pi + 2*nb_teeth - offset_teeth)%2);
@@ -10630,7 +10630,7 @@ update_gallery_html : check "isbool(${1=0})"
               str[ind+7]==_' ' && str[ind+8]==_'$' && str[ind+9]==_' '?(
                 beg = ind + 10;
                 end = find(str,_'\n',beg) - 1;
-                ref(vector1024(0),com);
+                com = vector1024(0);
                 run('+rows[0] ',beg,',',end);
               );
             )";
@@ -11702,7 +11702,7 @@ html2utf8 :
   if h
     eval "
       ref(crop(),source);
-      ref(vector8(),svalue);
+      svalue = vector8();
       p = 0;
       while (1,
         p = p0 = find(source,'&#',p);
@@ -11744,7 +11744,7 @@ utf82html :
   if h
     eval "
       write_seq() = ( copy(res[q],'&#'); q+=2; s = v2s(val); l = find(s,0); copy(res[q],s,l); q+=l; res[q++]=_';' );
-      ref(vector(#4*wh),res);
+      res = vector(#4*wh);
       q = 0;
       repeat (wh,p,
         i = i[p];
@@ -17986,8 +17986,7 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},
       m1 = int($3/2); m2 = $3 - m1 - 1;
       patch(x,y) = crop(x - n1,y - n1,0,c,$2,$2,1,1,1);
       ngauss(x) = exp(-x*x/(2*n1*n1));
-      ref(vector"$N2"(0),zero);
-      ref(vector"$N2"(0),mask);
+      zero = mask = vector"$N2"(0);
       for (l = 0; q = -n1, q<=n2, ++q,
         for (p = -n1, p<=n2, ++p, mask[l++] = ngauss(p)*ngauss(q)
         )
@@ -17998,7 +17997,7 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},
       ref(patch(x,y),X);
 
       # Build correlation matrix for PCA.
-      ref(vector"{$N2*$N2}"(0),M);
+      M = vector"{$N2*$N2}"(0);
       for (q = -m1, q<=m2, ++q,
         for (p = -m1, p<=m2, ++p,
           ref(patch(x + p,y + q) - X,Xk);
@@ -19326,7 +19325,7 @@ rbf :
           phi(r) = ("$phi_r");
           ref(crop(#0,0,0,0,0,1,h#0,1,1),X);
           ref(crop(#0,1,0,0,0,s,h#0,1,1,1),F);
-          ref(vector(#h#0^2),M);
+          M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
               r = abs(X[k] - X[l]);
@@ -19336,7 +19335,7 @@ rbf :
           ref(solve(M,F,s,1),W);
           const fx = ("$x1-$x0")/(w-1);
         );
-        ref(vectors(),res); x = (x - "$x0")*fx;
+        res = vectors(); x = (x - "$x0")*fx;
         repeat (h#0,k, r = abs(x - X[k]); res+=W[s*k,s]*phi(r));
         res"
       k. => $nm
@@ -19356,7 +19355,7 @@ rbf :
           ref(crop(#0,0,0,0,0,1,h#0,1,1),X);
           ref(crop(#0,1,0,0,0,1,h#0,1,1),Y);
           ref(crop(#0,2,0,0,0,s,h#0,1,1,1),F);
-          ref(vector(#h#0^2),M);
+          M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
               r = norm(X[k] - X[l],Y[k] - Y[l]);
@@ -19367,7 +19366,7 @@ rbf :
           const fx = ("$x1-$x0")/(w-1);
           const fy = ("$y1-$y0")/(h-1);
         );
-        ref(vectors(),res); x = (x - "$x0")*fx; y = (y - "$y0")*fy;
+        res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy;
         repeat (h#0,k, r = norm(x - X[k], y - Y[k]); res+=W[s*k,s]*phi(r));
         res"
       k. => $nm
@@ -19388,7 +19387,7 @@ rbf :
           ref(crop(#0,1,0,0,0,1,h#0,1,1),Y);
           ref(crop(#0,2,0,0,0,1,h#0,1,1),Z);
           ref(crop(#0,3,0,0,0,s,h#0,1,1,1),F);
-          ref(vector(#h#0^2),M);
+          M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
               r = norm(X[k] - X[l],Y[k] - Y[l],Z[k] - Z[l]);
@@ -19400,7 +19399,7 @@ rbf :
           const fy = ("$y1-$y0")/(h - 1);
           const fz = ("$z1-$z0")/(d - 1);
         );
-        ref(vectors(),res); x = (x - "$x0")*fx; y = (y - "$y0")*fy; z = (z - "$z0")*fz;
+        res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy; z = (z - "$z0")*fz;
         repeat (h#0,k, r = norm(x - X[k], y - Y[k], z - Z[k]); res+=W[s*k,s]*phi(r));
         res"
       k. => $nm
@@ -31594,7 +31593,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
 
           # Pre-compute gaussian weights.
           if (stdf<5,
-            ref(vectorpwhd(),weights);
+            weights = vectorpwhd();
             offw = 0;
             for (zw = -pd1, zw<=pd2, ++zw,
               for (yw = -ph1, yw<=ph2, ++yw,
@@ -31630,7 +31629,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
 
           # Pre-compute gaussian weights.
           if (stdf<5,
-            ref(vectorpwh(),weights);
+            weights = vectorpwh();
             offw = 0;
             for (yw = -ph1, yw<=ph2, ++yw,
               for (xw = -pw1, xw<=pw2, ++xw,
@@ -33401,7 +33400,7 @@ average_vectors :
 +base642uint8 :
   0
   eval "
-    ref(vector256(),hash);
+    hash = vector256();
     for (k = _'A', k<=_'Z', ++k, hash[k] = k - _'A');
     for (k = _'a', k<=_'z', ++k, hash[k] = k - _'a' + 26);
     for (k = _'0', k<=_'9', ++k, hash[k] = k - _'0' + 52);
@@ -34024,8 +34023,8 @@ math_lib :
     const meig_m = min(m,meig_n);
 
     # Initialize data.
-    ref(vector(#meig_m*meig_n),meig_V);
-    ref(vector(#meig_m^2),meig_H);
+    meig_V = vector(#meig_m*meig_n);
+    meig_H = vector(#meig_m^2);
     ref(expr('u(-1,1)',1,meig_n),meig_vj); meig_vj/=norm(meig_vj);
 
     # Iteration loop.
@@ -34701,7 +34700,7 @@ _ovh2stats :
     # Discard IP duplicates.
     eval "
       const N = "$!";
-      ref(vector(#2*N),tab);
+      tab = vector(#2*N);
       repeat (N,k,
         ref(name(#k,256),nam);
         for (i = j = 0, i<size(nam) && nam[i], ++i, nam[i]!=_'.'?(nam[j++] = nam[i])); nam[j] = 0;
@@ -40631,8 +40630,8 @@ _x_warp_rbf :
       fact = ([w,h] - 1)/100;
       xy(p) = (I[#0,p])[0,2]*fact;
       const N = h#0;
-      ref(vector(#N*N),A);
-      ref(vector(#N*2),B);
+      A = vector(#N*N);
+      B = vector(#N*2);
       repeat (N,p,
         repeat (N,q,  A[q + N*p] = A[p + N*q] = norm(xy(p) - xy(q)));
         copy(B[2*p],(I[#0,p])[2,2]*fact - xy(p),2);
@@ -40844,7 +40843,7 @@ _gui_merge_layers :
     def = ['${2--1}'];
     ker = ['$1(']; const sker = size(ker);
     const N = max(size(str),size(def));
-    ref(vectorN(0),res);
+    res = vectorN(0);
     p = q = find(str,ker);
     p>=0?(
       q+=sker;
@@ -51533,7 +51532,7 @@ fx_jpeg_artefacts :
     repeat 3 {
       # Compute DCT of image with 8x8 blocks.
       [$>]
-      f[$>] "begin(boundary = 2; ref(vector64(),res));
+      f[$>] "begin(boundary = 2; res = vector64());
         if (!(x%8) && !(y%8),
           ref(crop(x,y,8,8),src);
           repeat (8,l, repeat (8,k, off = k + 8*l; res[off] = sum(src*crop(#"$dct",0,0,off,8,8,1))));
@@ -51545,7 +51544,7 @@ fx_jpeg_artefacts :
       +r[Q] {$>,w},100%,1,1,0,2 /.. . round.. *[-2,-1]
 
       # Compute iDCT of 8x8 blocks.
-      f. "begin(boundary = 2; ref(vector64(),res));
+      f. "begin(boundary = 2; res = vector64());
         if (!(x%8) && !(y%8),
           ref(crop(x,y,8,8),src);
           repeat (8,l, repeat (8,k, off = k + 8*l; res[off] = sum(src*crop(#"$idct",0,0,off,8,8,1))));
@@ -52256,13 +52255,13 @@ _fx_equalize_local_histograms :
       const boundary = 1;
       const N = $3;
       const sigma = ($6?1:-1)*(0.1+$4);
-      ref(vector512(),weights);
+      weights = vector512();
       repeat (size(weights),k, # Pre-compute exponentials
         weights[k] = sigma>=0?exp(-sqr(k/sigma)):1 - exp(-sqr(k/sigma))
       );
     );
 
-    ref(vector512(0),bins);
+    bins = vector512(0);
 
     repeat (s,c,
       ref(crop(x - N,y - N,0,c,2*N + 1,2*N + 1,1,1),V);
