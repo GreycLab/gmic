@@ -1667,9 +1667,9 @@ clean_cluts :
 
   # Convert RGB CLUTs to Grayscale when possible.
   foreach {
-    if "ref(crop(#0,0,0,0,3,1,h,1,1),R);
-        ref(crop(#0,0,0,0,4,1,h,1,1),G);
-        ref(crop(#0,0,0,0,5,1,h,1,1),B);
+    if "R = crop(#0,0,0,0,3,1,h,1,1);
+        G = crop(#0,0,0,0,4,1,h,1,1);
+        B = crop(#0,0,0,0,5,1,h,1,1);
         R==G && G==B"
       channels 0,3
     fi
@@ -1840,7 +1840,7 @@ compress_gmic :
       q = find(#-1,_'\n',p)%h;
       p==q?++p:(
         i[p]==_'#'?( # Line starts with a '#'
-          ref(crop(0,p,1,5),cr);
+          cr = crop(0,p,1,5);
           cr!='#@gui' && cr!='#@cli' && cr!='#@web'?copy(i[p],-1,q-p+1,1,0); # Remove comment line
         ):( # Line doesn't start with a '#' -> look for comment at line end
           l = find(#-1,_'#',p);
@@ -2686,7 +2686,7 @@ _display : skip ${1=},${3=}
                  copy(i[#-2,8+3*x],R*I)" rm.
           eval " # Colorize axes depending on their Z-sign
             const off = "$area_3d_axes_offset";
-            ref([ 255,0,0 ],col);
+            col = [ 255,0,0 ];
             i[13]>0?copy(i[off],col,3);
             i[19]>0?copy(i[off + 3],col,3);
             i[25]>0?copy(i[off + 6],col,3)"
@@ -4496,7 +4496,7 @@ _display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2)"
     +norm. /.. {max(1e-6,iM)} rm. # Normalize vector values.
     {$1*w},{$1*h},1,{"1<<cut($3,0,2)"}
     eval.. "
-      begin(ref(resize([255],s#1,1),C));
+      begin(C = resize([255],s#1,1));
       "${-math_lib}"
       len = norm(I(x,y));
       ang = atan2(i(x,y,0,1),i(x,y,0,0))*180/pi;
@@ -5669,7 +5669,7 @@ output_gmz : skip ${2=auto}
     draw([_'G',_'M',_'Z'],0,0,1,3);
     pos = 4;
     repeat (l - 1,k,
-      ref(name(#k,1026),nam);
+      nam = name(#k,1026);
       len = find(nam,0);
       len>=0?(
         pos + len>=h?resize(#-1,1,2*h + len,1,1,0);
@@ -5720,7 +5720,7 @@ output_obj : check "isbool(${2=1})" check3d
       0 => out_obj
       eval.. ">"$fnobj";
         !(y%10000)?run('e \"\r    - Export vertices: ',round(100*y/h),' %  \"');
-        ref(string('v ',tos(i0),' ',tos(i1),' ',tos(i2),'\n'),str);
+        str = string('v ',tos(i0),' ',tos(i1),' ',tos(i2),'\n');
          write(#"$out_obj",str); I;
         end(resize(#"$out_obj",1,out,1,1,0))"
       rm[0] i[0] ('"\n# Vertices.\n"':y) a y => out_obj
@@ -5743,7 +5743,7 @@ output_obj : check "isbool(${2=1})" check3d
           s_opac[0] = 0;
           opac = i[#0,off_o];
           i[off_p]!=-128?( # RGB[A] color
-            ref(cut(round(crop(0,off_p,1,4)),0,255),rgba);
+            rgba = cut(round(crop(0,off_p,1,4)),0,255);
             rgba[3] = opac!=-128?round(255*cut(opac,0,1)):255;
             strhex(rgba,s_rgba);
             vname = string('mat_',s_rgba);
@@ -6294,8 +6294,8 @@ parse_cli_text_ascii :
 parse_cli_trigger_ascii :
   if "['$1']!='*'"
     1,$!,1,1,"
-      begin(ref([lowercase(['$1']),_'@'],str));
-      ref(lowercase(name(#y)),nm);
+      begin(str = [ lowercase(['$1']),_'@' ]);
+      nm = lowercase(name(#y));
       !find(nm,str)?y:-1"
     discard. -1 if h k[{i}] else rm fi
   fi
@@ -6831,8 +6831,8 @@ parse_cli_print :
 parse_cli_trigger_print :
   if "['$1']!='*'"
     1,$!,1,1,"
-      begin(ref(lowercase(['$1']),str));
-      ref(lowercase(name(#y)),nm);
+      begin(str = lowercase(['$1']));
+      nm = lowercase(name(#y));
       arobace = find(nm,_'@');
       inrange(find(nm,str),0,arobace - 1)?y:-1"
     discard. -1 k[{^}]
@@ -8092,15 +8092,15 @@ _gmd_tokens :
 # Define variables corresponding to VT100 sequences, for the math parser.
 _gmd_vt100 :
   use_vt100
-  u "ref('"$_vt100_b"',vt100_b);
-     ref('"$_vt100_c"',vt100_c);
-     ref('"$_vt100_g"',vt100_g);
-     ref('"$_vt100_i"',vt100_i);
-     ref('"$_vt100_m"',vt100_m);
-     ref('"$_vt100_n"',vt100_n);
-     ref('"$_vt100_r"',vt100_r);
-     ref('"$_vt100_s"',vt100_s);
-     ref('"$_vt100_u"',vt100_u);"
+  u "vt100_b = '"$_vt100_b"';
+     vt100_c = '"$_vt100_c"';
+     vt100_g = '"$_vt100_g"';
+     vt100_i = '"$_vt100_i"';
+     vt100_m = '"$_vt100_m"';
+     vt100_n = '"$_vt100_n"';
+     vt100_r = '"$_vt100_r"';
+     vt100_s = '"$_vt100_s"';
+     vt100_u = '"$_vt100_u"'"
 
 # Define variables and functions to write strings and characters in a streamed way for the math parser.
 _gmd_write :
@@ -8290,8 +8290,8 @@ parse_gui : skip "${1=print},${2=*}"
   # Isolate only requested filters.
   if "['$2']!='*'"
     1,$!,1,1,"
-      begin(ref(lowercase(['$2']),str));
-      ref(lowercase(name(#y)),nm);
+      begin(str = lowercase(['$2']));
+      nm = lowercase(name(#y));
       find(nm,str)>=0?y:-1"
     discard. -1 k[{^}]
   fi
@@ -19323,8 +19323,8 @@ rbf :
       $dx,1,1,{w-1},"*
         begin(
           phi(r) = ("$phi_r");
-          ref(crop(#0,0,0,0,0,1,h#0,1,1),X);
-          ref(crop(#0,1,0,0,0,s,h#0,1,1,1),F);
+          X = crop(#0,0,0,0,0,1,h#0,1,1);
+          F = crop(#0,1,0,0,0,s,h#0,1,1,1);
           M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
@@ -19332,7 +19332,7 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          ref(solve(M,F,s,1),W);
+          W = solve(M,F,s,1);
           const fx = ("$x1-$x0")/(w-1);
         );
         res = vectors(); x = (x - "$x0")*fx;
@@ -19352,9 +19352,9 @@ rbf :
       $dx,$dy,1,{w-2},"*
         begin(
           phi(r) = ("$phi_r");
-          ref(crop(#0,0,0,0,0,1,h#0,1,1),X);
-          ref(crop(#0,1,0,0,0,1,h#0,1,1),Y);
-          ref(crop(#0,2,0,0,0,s,h#0,1,1,1),F);
+          X = crop(#0,0,0,0,0,1,h#0,1,1);
+          Y = crop(#0,1,0,0,0,1,h#0,1,1);
+          F = crop(#0,2,0,0,0,s,h#0,1,1,1);
           M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
@@ -19362,7 +19362,7 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          ref(solve(M,F,s,1),W);
+          W = solve(M,F,s,1);
           const fx = ("$x1-$x0")/(w-1);
           const fy = ("$y1-$y0")/(h-1);
         );
@@ -19383,10 +19383,10 @@ rbf :
       $dx,$dy,$dz,{w-3},"*
         begin(
           phi(r) = ("$phi_r");
-          ref(crop(#0,0,0,0,0,1,h#0,1,1),X);
-          ref(crop(#0,1,0,0,0,1,h#0,1,1),Y);
-          ref(crop(#0,2,0,0,0,1,h#0,1,1),Z);
-          ref(crop(#0,3,0,0,0,s,h#0,1,1,1),F);
+          X = crop(#0,0,0,0,0,1,h#0,1,1);
+          Y = crop(#0,1,0,0,0,1,h#0,1,1);
+          Z = crop(#0,2,0,0,0,1,h#0,1,1);
+          F = crop(#0,3,0,0,0,s,h#0,1,1,1);
           M = vector(#h#0^2);
           repeat (h#0,k,
             for (l = 0, l<=k, ++l,
@@ -19394,7 +19394,7 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          ref(solve(M,F,s,1),W);
+          W = solve(M,F,s,1);
           const fx = ("$x1-$x0")/(w - 1);
           const fy = ("$y1-$y0")/(h - 1);
           const fz = ("$z1-$z0")/(d - 1);
@@ -20972,7 +20972,7 @@ skeleton : check "!isnum(${1=1}) || ($1>=0 && $1<=1)"
           (icc && !i(#3,xc,yc))?(
             xp = xc - 1; yp = yc - 1;
             xn = xc + 1; yn = yc + 1;
-            ref(crop(#0,xp,yp,3,3),V);
+            V = crop(#0,xp,yp,3,3);
             val = dot(dotm,V>0);
             is_removable[val]?(
               i(#0,xc,yc) = 0;
@@ -21214,7 +21214,7 @@ thinning : check "!isnum(${1=1}) || ($1>=0 && $1<=1)"
           icc?(
             xp = xc - 1; yp = yc - 1;
             xn = xc + 1; yn = yc + 1;
-            ref(crop(#0,xp,yp,3,3),V);
+            V = crop(#0,xp,yp,3,3);
             val = dot(dotm,V>0);
             (val & hm_and[it8])==hm_eq[it8]?(
               da_push(#2,[xc,yc]);
@@ -21695,7 +21695,7 @@ close_binary :
 
     # Extract primary edgel normals.
     100%,100%,1,4,"
-      ref(crop(#"$strokes",x - 1,y - 1,0,0,3,3,1,1,1),N);
+      N = crop(#"$strokes",x - 1,y - 1,0,0,3,3,1,1,1);
       N[4]?[ N[5]?-2:0, N[7]?-2:90, N[3]?-2:180, N[1]?-2:270 ]:[-2,-2,-2,-2];
     " => e_normals
 
@@ -23199,16 +23199,16 @@ orthogonalize :
     eval ">
       proj(u,v) = (dot(u,v)/dot(u,u)*u);
       for (p = 1, p<w, ++p,
-        ref(crop(p,0,1,h),v);
+        v = crop(p,0,1,h);
         repeat (p,q,
-          ref(crop(q,0,1,h),u);
+          u = crop(q,0,1,h);
           v-=proj(u,v);
         );
         draw(v,p,0,0,1,h,1);
       )"
     if $mode
       eval. "*!y?(
-        ref(crop(x,0,1,h),v);
+        v = crop(x,0,1,h);
         n = norm(v);
         v/=n?norm(v):1;
         draw(v,x,0,0,1,h,1);
@@ -25211,11 +25211,11 @@ _specs3d :
             unit(V) = (ref(V,_V); _V/norm(_V));
             p = I[#1,y];
             P0 = I[#0,p[0]]; P1 = I[#0,p[1]]; P2 = I[#0,p[2]];
-            ref(string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])),varname); p01 = get(varname);
+            varname = string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])); p01 = get(varname);
             isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unit((P0 + P1)/2)));
-            ref(string(#48,'p',min(p[0],p[2]),'_',max(p[0],p[2])),varname); p02 = get(varname);
+            varname = string(#48,'p',min(p[0],p[2]),'_',max(p[0],p[2])); p02 = get(varname);
             isnan(p02)?(set(varname,p02 = da_size(#0)); da_push(#0,unit((P0 + P2)/2)));
-            ref(string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])),varname); p12 = get(varname);
+            varname = string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])); p12 = get(varname);
             isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unit((P1 + P2)/2)));
             da_push([p[0],p01,p02],[p01,p[1],p12],[p02,p12,p[2]],[p01,p12,p02])"
           rm[1,-1]
@@ -25232,13 +25232,13 @@ _specs3d :
             unit(V) = (ref(V,_V); _V/norm(_V));
             p = I[#1,y];
             P0 = I[#0,p[0]]; P1 = I[#0,p[1]]; P2 = I[#0,p[2]]; P3 = I[#0,p[3]];
-            ref(string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])),varname); p01 = get(varname);
+            varname = string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])); p01 = get(varname);
             isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unit((P0 + P1)/2)));
-            ref(string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])),varname); p12 = get(varname);
+            varname = string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])); p12 = get(varname);
             isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unit((P1 + P2)/2)));
-            ref(string(#48,'p',min(p[2],p[3]),'_',max(p[2],p[3])),varname); p23 = get(varname);
+            varname = string(#48,'p',min(p[2],p[3]),'_',max(p[2],p[3])); p23 = get(varname);
             isnan(p23)?(set(varname,p23 = da_size(#0)); da_push(#0,unit((P2 + P3)/2)));
-            ref(string(#48,'p',min(p[0],p[3]),'_',max(p[0],p[3])),varname); p03 = get(varname);
+            varname = string(#48,'p',min(p[0],p[3]),'_',max(p[0],p[3])); p03 = get(varname);
             isnan(p03)?(set(varname,p03 = da_size(#0)); da_push(#0,unit((P0 + P3)/2)));
             pc = da_size(#0);
             da_push(#0,unit((P0 + P1 + P2 + P3)/4));
@@ -25744,7 +25744,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
         R = eig[3,9];
         anisotropy = sqrt(((L[0] - L[1])^2 + (L[1] - L[2])^2 + (L[2] - L[0])^2)/(2*(L[0]^2 + L[1]^2 + L[2]^2)));
 
-        ref(crop(#ind,0,8,0,0,1,3*N,1,1),pts);
+        pts = crop(#ind,0,8,0,0,1,3*N,1,1);
         pts *= resize(L,size(pts),0,2);
         pts = mul(pts,R,3);
         pts += resize([x,y,z],size(pts),0,2);
@@ -26241,7 +26241,7 @@ _apply_tiles :
     $bw,$bh,$bd,[0]
     m "__at : $1 k. r "$bw,$bh,$bd,{0,s},0
     eval "
-      ref(crop(#2),mask);
+      mask = crop(#2);
       for (z = 0, z<d#0, z+="$sd",
         for (y = 0, y<h#0, y+="$sh",
           for (x = 0, x<w#0, x+="$sw",
@@ -31607,7 +31607,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
         u = i(x,y,z,0);
         v = i(x,y,z,1);
         w = i(x,y,z,2);
-        ref(crop(#0,u - pw1, v - ph1,w - pd1,pw,ph,pd,boundary),patch);
+        patch = crop(#0,u - pw1, v - ph1,w - pd1,pw,ph,pd,boundary);
         stdf<5?
           draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1,weights):
           draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1);
@@ -31640,7 +31640,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
         );
         u = i(x,y,z,0);
         v = i(x,y,z,1);
-        ref(crop(#0,u - pw1, v - ph1,pw,ph,boundary),patch);
+        patch = crop(#0,u - pw1, v - ph1,pw,ph,boundary);
         stdf<5?
           draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1,weights):
           draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1);
@@ -34702,7 +34702,7 @@ _ovh2stats :
       const N = "$!";
       tab = vector(#2*N);
       repeat (N,k,
-        ref(name(#k,256),nam);
+        nam = name(#k,256);
         for (i = j = 0, i<size(nam) && nam[i], ++i, nam[i]!=_'.'?(nam[j++] = nam[i])); nam[j] = 0;
         tab[2*k] = s2v(nam);
         tab[2*k + 1] = k;
@@ -34720,7 +34720,7 @@ _ovh2stats :
       prereleases = 0;
       ips = 0;
       repeat (l,k,
-        ref(lowercase(crop(#k,0,0,0,0,1,256,1,1)),str);
+        str = lowercase(crop(#k,0,0,0,0,1,256,1,1));
         find(str,'gimp')>=0?++gimp:
         find(str,'krita')>=0?++krita:
         find(str,'8bf')>=0?++_8bf:
@@ -35880,7 +35880,7 @@ tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
         j = [ 0,1 ];
       );
       i = x + 16*y;
-      ref([ x,y ],z);
+      z = [ x,y ];
       val = ("$expr");
       n = cabs(val);
       r = floor(0.48*b*cut(n,0,1));
@@ -40510,7 +40510,7 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
           if $nbc>0
             +b[imgb] 0.5 gradient_norm. sqrt. {round([w,h]/4)} gaussian. 20%
             1,$nbc,1,4,">
-              begin(ref(crop(#-1),gauss));
+              begin(gauss = crop(#-1));
               st = stats(#-2);
               iM = st[1];
               xM = st[8];
@@ -40983,7 +40983,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
     0 t. $msg,0,0,$4,1,255 i.. 100%,100%,1,3,255 a c
     ('$msg') is_err:="crop(0,4)=='*** '" rm.
     if $is_err
-      x:="ref(crop(0,0,0,3,32,h,1,1),T);
+      x:="T = crop(0,0,0,3,32,h,1,1);
           for (c = 32, c<w, ++c, crop(c,0,0,3,32,h,1,1)==T?break());
           c<w?for (0, c<w, ++c, max(crop(#-1,c-2,0,0,3,5,h,1,1))<=0?break());
           c<w?c:0"
@@ -42056,7 +42056,7 @@ _fx_drawn_montage :
     fi
 
     # Render region boundaries of layout layer, for preview.
-    +f. "const boundaries = 1; ref(crop(x - 2,y - 2,5,5),V); if (min(V)==max(V),0,i)"
+    +f. "const boundaries = 1; V = crop(x - 2,y - 2,5,5); if (min(V)==max(V),0,i)"
     (0,0,0,$cols) r. 3,{$nb_layers+1},1,1,-1 1,100%,1,1,y?255:0 a[-2,-1] x permute. yzcx map.. . rm.
 
     repeat $nb_layers {
@@ -50412,7 +50412,7 @@ fx_warp_interactive_preview :
       if $nbc>0
         +b[0] 0.5 gradient_norm. sqrt. {round([w,h]/4)} gaussian. 20%
         1,$nbc,1,4,">
-          begin(ref(crop(#-1),gauss));
+          begin(gauss = crop(#-1));
           st = stats(#-2);
           iM = st[1];
           xM = st[8];
@@ -51534,7 +51534,7 @@ fx_jpeg_artefacts :
       [$>]
       f[$>] "begin(boundary = 2; res = vector64());
         if (!(x%8) && !(y%8),
-          ref(crop(x,y,8,8),src);
+          src = crop(x,y,8,8);
           repeat (8,l, repeat (8,k, off = k + 8*l; res[off] = sum(src*crop(#"$dct",0,0,off,8,8,1))));
           draw(#-1,res,x,y,8,8);
         ); i"
@@ -51546,7 +51546,7 @@ fx_jpeg_artefacts :
       # Compute iDCT of 8x8 blocks.
       f. "begin(boundary = 2; res = vector64());
         if (!(x%8) && !(y%8),
-          ref(crop(x,y,8,8),src);
+          src = crop(x,y,8,8);
           repeat (8,l, repeat (8,k, off = k + 8*l; res[off] = sum(src*crop(#"$idct",0,0,off,8,8,1))));
           draw(#"$>",res,x,y,8,8);
         ); i"
@@ -51959,7 +51959,7 @@ fx_rebuild_from_similar_blocks :
       f. ":
         i<0?(
           ind = x + y*w;
-          ref(crop(#1,0,0,ind,w#1,h#1,1),S);
+          S = crop(#1,0,0,ind,w#1,h#1,1);
           kmin = 0;
           dmin = inf;
           repeat (wh,k, k!=ind?(
@@ -52264,7 +52264,7 @@ _fx_equalize_local_histograms :
     bins = vector512(0);
 
     repeat (s,c,
-      ref(crop(x - N,y - N,0,c,2*N + 1,2*N + 1,1,1),V);
+      V = crop(x - N,y - N,0,c,2*N + 1,2*N + 1,1,1);
       repeat (size(V),k, # Compute local weighted histogram
         val = V[k];
         diff = abs(val - V[size(V)/2]);
@@ -58818,9 +58818,9 @@ fx_sine_curve :
     $nresolution,1,1,2,"*
       begin(
         const is_rot = "$rotx" || "$roty" || "$rotz";
-        ref(rot(1,0,0,"$rotx"°),Rx);
-        ref(rot(0,1,0,"$roty"°),Ry);
-        ref(rot(0,0,1,"$rotz"°),Rz);
+        Rx = rot(1,0,0,"$rotx"°);
+        Ry = rot(0,1,0,"$roty"°);
+        Rz = rot(0,0,1,"$rotz"°);
         R = mul(Rz,mul(Ry,Rx,3),3); # 3D rotation
 
         # Variables to manage 2D rotation.
@@ -59114,11 +59114,11 @@ _fx_tree:
       1,8,1,9
       eval.. ">
         const dangle = "$avg_rightangle" - "$avg_leftangle";
-        ref(I,val);
-        ref(val[0,2],P0);
-        ref(val[2,2],P1);
-        ref(val[4,2],P2);
-        ref(val[6,2],P3);
+        val = I;
+        P0 = val[0,2];
+        P1 = val[2,2];
+        P2 = val[4,2];
+        P3 = val[6,2];
         ndepth = val[8] + 1;
 
         # Median axis.
@@ -59156,7 +59156,7 @@ _fx_tree:
     rm[-2,-1]
 
     # Make sure trunk starts at bottom when rotated.
-    eval "ref(I,T); P0 = T[0,2]; P1 = T[2,2]; P2 = T[4,2]; P3 = T[6,2];
+    eval "T = I; P0 = T[0,2]; P1 = T[2,2]; P2 = T[4,2]; P3 = T[6,2];
       I[0] = [ lerp(P0,P2,-2),lerp(P1,P2,-2),P2,P3,0 ]"
 
     # Draw tree.
@@ -59168,7 +59168,7 @@ _fx_tree:
         const gRGBA = 10^"$gammaRGBA";
         const gO = 10^"$gammaO";
       );
-      ref(I,val);
+      val = I;
       t = val[8]/"$recursion_depth"; # Between [0,1]
       RGBA = lerp(RGBAt,RGBAl,t^gRGBA);
       O = lerp("$Ot,$Ol",t^gO)%;
