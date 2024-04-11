@@ -58946,18 +58946,21 @@ fx_sine_curve_preview :
 # "Summer","Autumn","Winter","Bone","Copper","Pink","VGA","Algae","Amp","Balance","Curl","Deep","Delta","Dense","Diff",\
 # "Gray","Haline","Ice","Matter","Oxy","Phase","Rain","Solar","Speed","Tarn","Tempo","Thermal","Topo","Turbid",\
 # "Aurora","Hocuspocus","SRB2","Uzebox","Amiga7800","Amiga7800mess","Fornaxvoid1")
+#@gui : Alpha Channel = bool(0)
+#@gui : sep = separator()
 #@gui : Normalization Strength (%) = float(50,0,100)
-#@gui : Normalization Radius (%) = float(25,0,100)
+#@gui : Normalization Radius (%) = float(50,0,100)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/04/10</i>.</small>")
 fx_spline_spirograph :
-  seed,randomize_seed,complexity,sampling,radius,vertices,twist,offset,colors,\
-    normalization_strength,normalization_radius=${1-11}
+  seed,randomize_seed,complexity,sampling,radius,vertices,twist,\
+    offset,colors,is_alpha,normalization_strength,normalization_radius=${1-12}
   if $randomize_seed seed:=v(65535) fi
   foreach {
     nm={n}
-    100%,100%,1,3 rm.. => canvas
-    palette $colors r. 360,1,1,3,3 => palette
+    if $is_alpha to_a else remove_opacity fi
+    f 0 => canvas
+    palette $colors r. 360,1,1,3,3 to_colormode. {0,s} => palette
 
     # Parameterization of a random spline curve.
     rs[canvas] 100,100,-1,2 ${}
@@ -58979,7 +58982,7 @@ fx_spline_spirograph :
         pP = P;
       )"
     k[canvas]
-    n 0,255 normalize_local {10*$normalization_strength%},{max(1,$normalization_radius/10*max(w,h)%)}
+    n 0,255 normalize_local {10*$normalization_strength%},{max(1,($normalization_radius%)^3*10*max(w,h)%)}
   }
   u \{$seed\}\{0\}\{$density\}\{$radius\}\{$vertices\}\{$twist\}\{$offset\}\{$colors\}\
     \{$normalization_strength\}\{$normalization_radius\}
