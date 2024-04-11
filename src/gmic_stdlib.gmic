@@ -58935,7 +58935,8 @@ fx_sine_curve_preview :
 #@gui : Seed = int(0,0,65535)
 #@gui : Randomize Seed = button()
 #@gui : sep = separator()
-#@gui : Density (%) = float(80,0,100)
+#@gui : Complexity (%) = float(50,0,100)
+#@gui : Sampling (%) = float(100,0,100)
 #@gui : Radius (%) = float(20,0,100)
 #@gui : Vertices = int(3,2,16)
 #@gui : Twist = float(20,0,150)
@@ -58950,7 +58951,8 @@ fx_sine_curve_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/04/10</i>.</small>")
 fx_spline_spirograph :
-  seed,randomize_seed,density,radius,vertices,twist,offset,colors,normalization_strength,normalization_radius=${1-10}
+  seed,randomize_seed,complexity,sampling,radius,vertices,twist,offset,colors,\
+    normalization_strength,normalization_radius=${1-11}
   if $randomize_seed seed:=v(65535) fi
   foreach {
     nm={n}
@@ -58959,10 +58961,10 @@ fx_spline_spirograph :
 
     # Parameterization of a random spline curve.
     rs[canvas] 100,100,-1,2 ${}
-    srand $seed noise_poissondisk. {max(5,lerp(100,0,$density%^0.3))}
+    srand $seed noise_poissondisk. {max(5,lerp(100,0,$complexity%^0.3))}
     0 eval.. "i?da_push([u,x*w#$canvas%,y*h#$canvas%])" da_freeze. rm..
     sort. +,y channels. 1,2
-    r. 1,{h*max(w#0,h#0)},1,2,5 => coords
+    r. 1,{max(1,h*max(w#0,h#0)*($sampling%)^2)},1,2,5 => coords
 
     # Draw spirograph along spline.
     eval[coords] ":
