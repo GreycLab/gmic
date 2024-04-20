@@ -8817,7 +8817,9 @@ parse_gui_update :
       if isin(['${_f${f}_p${p}_type}'],'link','note','separator','value') name=_
       else strcapitalize ${_f${f}_p${p}_name} name=${}
       fi
-      ('"#@gui"$locale" :"{/$name}=$responsivity$randomizable\
+      # ('"#@gui"$locale" :"{/$name}=$responsivity$randomizable\
+      #    ${_f${f}_p${p}_type}{``$sep1}{``{/$args}}{``$sep2}$visibility\n')
+      ('"#@gui"$locale" :"{/$name}=$responsivity\
          ${_f${f}_p${p}_type}{``$sep1}{``{/$args}}{``$sep2}$visibility\n')
 
     }
@@ -11843,7 +11845,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  (336,$_version) sort. discard. store. compat
+  (335,336,$_version) sort. discard. store. compat
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -49603,6 +49605,37 @@ fx_crease :
 fx_distort_lens :
   if !$6 to_a fi
   undistort ${1-3},$4%,$5%,$6
+
+#@gui Distort [RBF] : fx_distort_rbf, fx_distort_rbf_preview
+#@gui : Upper-Left Corner = point(10,10,0,1,200,200,200,200,10)_0
+#@gui : Upper-Right Corner = point(90,10,0,1,200,200,200,200,10)_0
+#@gui : Lower-Left Corner = point(10,90,0,1,200,200,200,200,10)_0
+#@gui : Lower-Right Corner = point(90,90,0,1,200,200,200,200,10)_0
+#@gui : Sampling = int(3,2,8)
+#@gui : Radial Function = text{"r"}
+#@gui : Boundary = choice(0,"Transparent","Nearest","Periodic","Mirror")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/04/20</i>.</small>")
+fx_distort_rbf :
+  foreach {
+    if !$11 to_a fi
+    1,1,1,4
+    2,2,1,1,"
+      const w1 = w#0 - 1;
+      const h1 = h#0 - 1;
+      Ppp = [ ${1-2} ]*[ w1,h1 ]%;
+      Pnp = [ ${3-4} ]*[ w1,h1 ]%;
+      Ppn = [ ${5-6} ]*[ w1,h1 ]%;
+      Pnn = [ ${7-8} ]*[ w1,h1 ]%;
+      da_push(arg0(c2o(x,y),[ Ppp,Ppp ],[ Pnp,Pnp - [ w1,0 ]],[ Ppn,Ppn - [ 0,h1 ]],[ Pnn,Pnn - [ w1,h1 ]]));
+      end(da_freeze(#-1); resize(#-1,2,2,1,4,-1); resize(#-1,$9,$9,1,4,3))" rm.
+    rbf. {0,[w,h,0,0,w-1,h-1]},"$10"
+    warp.. .,1,1,$11 rm.
+  }
+
+fx_distort_rbf_preview :
+  fx_distort_rbf $"*"
+  polygon 4,$1%,$2%,$3%,$4%,$7%,$8%,$5%,$6%,1,0xF0F0F0F0,255
 
 #@gui Drop Water : fx_drop_water, fx_drop_water_preview(1)
 #@gui : note = note("<small><b>Shape geometry:</b></small>")
