@@ -331,14 +331,6 @@ CImg<T> get_draw_line(const int x0, const int y0, const int x1, const int y1, co
   return (+*this).draw_line(x0,y0,x1,y1,col,opacity,pattern);
 }
 
-CImg<T> get_draw_mandelbrot(const CImg<T>& color_palette, const float opacity,
-                            const double z0r, const double z0i, const double z1r, const double z1i,
-                            const unsigned int itermax, const bool normalized_iteration,
-                            const bool julia_set, const double paramr, const double parami) const {
-  return (+*this).draw_mandelbrot(color_palette,opacity,z0r,z0i,z1r,z1i,itermax,
-                                  normalized_iteration,julia_set,paramr,parami);
-}
-
 template<typename tp, typename tf, typename tc, typename to>
 CImg<T> get_draw_object3d(const float x0, const float y0, const float z0,
                           const CImg<tp>& vertices, const CImgList<tf>& primitives,
@@ -2482,7 +2474,7 @@ const char *gmic::builtin_commands_names[] = {
   "ifft","image","index","inpaint","input","invert","isoline3d","isosurface3d",
   "keep",
   "label","light3d","line","local","log10","log2",
-  "mandelbrot","matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
+  "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
   "parallel","pass","permute","plasma","plot","point","polygon","progress",
@@ -9114,43 +9106,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             if (is_lock) gmic_mutex().lock(number);
             else gmic_mutex().unlock(number);
           } else arg_error("mutex");
-          ++position;
-          continue;
-        }
-
-        // Draw mandelbrot/julia fractal.
-        if (!std::strcmp("mandelbrot",command)) {
-          gmic_substitute_args(false);
-          float z0r = -2, z0i = -2, z1r = 2, z1i = 2, paramr = 0, parami = 0;
-          double itermax = 100;
-          unsigned int is_julia = 0;
-          opacity = 1;
-          if ((cimg_sscanf(argument,"%f,%f,%f,%f%c",
-                           &z0r,&z0i,&z1r,&z1i,&end)==4 ||
-               cimg_sscanf(argument,"%f,%f,%f,%f,%lf%c",
-                           &z0r,&z0i,&z1r,&z1i,&itermax,&end)==5 ||
-               cimg_sscanf(argument,"%f,%f,%f,%f,%lf,%u%c",
-                           &z0r,&z0i,&z1r,&z1i,&itermax,&is_julia,&end)==6 ||
-               cimg_sscanf(argument,"%f,%f,%f,%f,%lf,%u,%f,%f%c",
-                           &z0r,&z0i,&z1r,&z1i,&itermax,&is_julia,&paramr,
-                           &parami,&end)==8 ||
-               cimg_sscanf(argument,"%f,%f,%f,%f,%lf,%u,%f,%f,%f%c",
-                           &z0r,&z0i,&z1r,&z1i,&itermax,&is_julia,
-                           &paramr,&parami,&opacity,&end)==9) &&
-              itermax>=0 && is_julia<=1) {
-            itermax = cimg::round(itermax);
-            print(0,"Draw %s fractal on image%s, from complex area (%g,%g)-(%g,%g) "
-                  "with c0 = (%g,%g) and %g iterations.",
-                  is_julia?"julia":"mandelbrot",
-                  gmic_selection.data(),
-                  z0r,z0i,
-                  z1r,z1i,
-                  paramr,parami,
-                  itermax);
-            cimg_forY(selection,l) gmic_apply(draw_mandelbrot(CImg<T>(),opacity,z0r,z0i,z1r,z1i,(unsigned int)itermax,
-                                                              true,(bool)is_julia,paramr,parami),true);
-          } else arg_error("mandelbrot");
-          is_change = true;
           ++position;
           continue;
         }

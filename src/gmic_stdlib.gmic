@@ -22363,10 +22363,22 @@ thickspline : skip ${9=3},${10=1},${11=0}
     eval ${-math_lib}"thickspline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,$10,[${11--1}])"
   }
 
-#@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0 | 1 },_c0r,_c0i,_opacity : (+)
+#@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0 | 1 },_c0r,_c0i,_opacity
 #@cli : Draw mandelbrot/julia fractal on selected images.
 #@cli : Default values: 'iteration_max=100', 'is_julia=0', 'c0r=c0i=0' and 'opacity=1'.
 #@cli : $ 400,400 mandelbrot -2.5,-2,2,2,1024 map 0 +blur 2 elevation3d[-1] -0.2
+mandelbrot : check "isnum($1) && isnum($2) && isnum($3) && isnum($4) && isint(${5=100},0) && isbool(${6=0}) && "\
+                   "isnum(${7=0}) && isnum(${8=0}) && isnum(${9=1})"
+  e[^-1] "Draw "${"arg0 $6,mandelbrot,julia"}" fractal on image$?, from complex area ($1,$2)-($3,$4), "\
+         "with $5 iterations, c0 = ($7,$8) and opacity $9."
+  foreach { if w
+    100%,100%,1,1,"begin(z0 = [ $1,$2 ]; z1 = [ $3,$4 ]; c0 = [ $7,$8 ]; zero = [ 0,0 ]; const log2 = log(2));
+      c = [ lerp(z0[0],z1[0],x/(w-1)), lerp(z0[1],z1[1],y/(h-1)) ];
+      $6?(z = c; c = c0):(z = zero);
+      for (it = 0, it<$5 && cabs(z)<2, ++it, z = z^^2 + c);
+      it>=$5?0:(it + 1 - log(log(cabs(z)))/log(2))"
+    to_colormode. {0,s} j.. .,0,0,0,0,$9 rm.
+  fi }
 
 #@cli marble : _image_weight,_pattern_weight,_angle,_amplitude,_sharpness>=0,_anisotropy>=0,_alpha,_sigma,\
 # _cut_low>=0,_cut_high>=0
