@@ -9116,18 +9116,22 @@ parse_gui_gmicol :
       if !narg($responsivity) responsivity=1 fi
       if $responsivity!=1 responsivity=" responsivity=\""$responsivity"\"" else responsivity= fi
 
+      randomizable=${_f${f}_p{$p}_randomizable}
+      if !narg($randomizable) randomizable=0 fi
+      if $randomizable!=0 randomizable=" randomizable=\""$randomizable"\"" else randomizable= fi
+
       if ['$type']=='bool'
         if lowercase(['$arg0'])=='false' arg0=0 elif lowercase(['$arg0'])=='true' arg0=1 elif !isnum($arg0) arg0=0 fi
-        ('"    <bool name=\""$name"\" value=\""$arg0"\""$responsivity$visibility"/>\n"')
+        ('"    <bool name=\""$name"\" value=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='button'
         if !$nbargs arg0=0.5 fi
-        ('"    <button name=\""$name"\" alignment=\""$arg0"\""$responsivity$visibility"/>\n"')
+        ('"    <button name=\""$name"\" alignment=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='choice'
         default=0 n=0 choices=
         l[] { if isnum($arg0)&&isint($arg0) default=$arg0 n+=1 fi onfail }
-        ('"    <choice name=\""$name"\" value=\""$default"\""$responsivity$visibility">\n"')
+        ('"    <choice name=\""$name"\" value=\""$default"\""$randomizable$responsivity$visibility">\n"')
         repeat $nbargs-$n { a=$>
           choice=${arg{$n+$a}}
           ('"      <item name=\""$choice"\"/>\n"')
@@ -9140,25 +9144,25 @@ parse_gui_gmicol :
         fi
         if $nbargs>3
           ('"    <rgba name=\""$name"\" red=\""$arg0"\" green=\""$arg1"\" blue=\""$arg2"\" alpha=\""$arg3"\""\
-            $responsivity$visibility"/>\n"')
+            $randomizable$responsivity$visibility"/>\n"')
         else
           ('"    <rgb name=\""$name"\" red=\""$arg0"\" green=\""$arg1"\" blue=\""$arg2"\""\
-            $responsivity$visibility"/>\n"')
+            $randomizable$responsivity$visibility"/>\n"')
         fi
 
       elif ['$type']=='int'
          ('"    <int name=\""$name"\" value=\""$arg0"\" min=\""$arg1"\" max=\""$arg2"\""\
-           $responsivity$visibility"/>"\n')
+           $randomizable$responsivity$visibility"/>"\n')
 
       elif ['$type']=='float'
          ('"    <float name=\""$name"\" value=\""$arg0"\" min=\""$arg1"\" max=\""$arg2"\""\
-           $responsivity$visibility"/>"\n')
+           $randomizable$responsivity$visibility"/>"\n')
 
       elif isin(['$type'],'file','filein','fileout')
-        ('"    <file name=\""$name"\" value=\""$arg0"\""$responsivity$visibility"/>\n"')
+        ('"    <file name=\""$name"\" value=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='folder'
-        ('"    <folder name=\""$name"\" value=\""$arg0"\""$responsivity$visibility"/>\n"')
+        ('"    <folder name=\""$name"\" value=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='link'
         align=0 name= url= n=0
@@ -9180,7 +9184,7 @@ parse_gui_gmicol :
         if narg($arg7) alpha=" alpha=\""$arg7"\"" else alpha= fi
         if narg($arg8) radius=" radius=\""$arg8"\"" else radius= fi
          ('"    <point name=\""$name"\" x=\""$arg0"\" y=\""$arg1"\""$removable$burst$red$green$blue$alpha\
-           $responsivity$visibility"/>\n"')
+           $randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='separator'
         ('"    <separator"$visibility"/>\n"')
@@ -9189,9 +9193,9 @@ parse_gui_gmicol :
         multiline=0 n=0
         l[] { if isnum($arg0) multiline=$arg0 n+=1 fi onfail }
         ('"    <text name=\""$name"\" multiline=\""$multiline"\""\
-          $responsivity$visibility">"')
+          $randomizable$responsivity$visibility">"')
         if ['${arg$n}']!=0
-          if $multiline ('\n${arg$n}\n</text>\n') else ('${arg$n}</text>\n') fi
+          if $multiline ({'\n${arg$n}\n</text>\n'}) else ({'${arg$n}</text>\n'}) fi
         else ('"</text>\n"') fi
 
       elif ['$type']=='value'
