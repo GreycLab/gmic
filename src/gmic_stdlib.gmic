@@ -47698,6 +47698,78 @@ fx_mix_cmyk :
 fx_mix_cmyk_preview :
   gui_split_preview "fx_mix_cmyk $*",${-3--1}
 
+#@gui Mixer [Generic] : fx_mixer_generic, fx_mixer_generic_preview(0)+
+#@gui : Colorspace = choice(7,"CMY","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKlab","RGB","RYB",\
+# "XYZ","YCbCr","YIQ","YUV")
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Channel #0:</b></span>")
+#@gui : Multiplier = float(1,0,5)
+#@gui : Offset (%) = float(0,-100,100)
+#@gui : Gamma = float(0,-3,3)
+#@gui : Smoothness = float(0,0,32)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Channel #1:</b></span>")
+#@gui : Multiplier = float(1,0,5)
+#@gui : Offset (%) = float(0,-100,100)
+#@gui : Gamma = float(0,-3,3)
+#@gui : Smoothness = float(0,0,32)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Channel #2:</b></span>")
+#@gui : Multiplier = float(1,0,5)
+#@gui : Offset (%) = float(0,-100,100)
+#@gui : Gamma = float(0,-3,3)
+#@gui : Smoothness = float(0,0,32)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Channel #3:</b></span>")
+#@gui : Multiplier = float(1,0,5)_1-
+#@gui : Offset (%) = float(0,-100,100)_1
+#@gui : Gamma = float(0,-3,3)_1
+#@gui : Smoothness = float(0,0,32)_1
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/04/29</i>.</small>")
+fx_mixer_generic :
+  colorspace,\
+  mul0,off0,gam0,smo0,\
+  mul1,off1,gam1,smo1,\
+  mul2,off2,gam2,smo2,\
+  mul3,off3,gam3,smo3=${1-17}
+  m "rgb2rgb:"
+  cs=${"arg0 "$colorspace",cmy,cmyk,hcy,hsi,hsl,hsv,jzazbz,lab,lch,oklab,rgb,ryb,xyz,ycbcr,yiq,yuv"}
+
+  # Auto-detect colorspace value range.
+  2,2,2,3,[x,y,z] *. 255 r. 64,64,64,3,3 rgb2${cs}. s. c
+  m0,M0,m1,M1,m2,M2,m3,M3:=im#-3,iM#-3,im#-2,iM#-2,im,iM,0,255 rm[-3--1]
+
+  # Process images.
+  foreach {
+    split_opacity l[0] {
+      to_color
+      rgb2${cs}
+      sh. 0 if $gam0 f. "$M0*(i/$M0)^(10^-$gam0)" fi *. $mul0 +. {($M0-$m0)*$off0%} b. $smo0 c. $m0,$M0 rm.
+      sh. 1 if $gam1 f. "$M1*(i/$M1)^(10^-$gam1)" fi *. $mul1 +. {($M1-$m1)*$off1%} b. $smo1 c. $m1,$M1 rm.
+      sh. 2 if $gam2 f. "$M2*(i/$M2)^(10^-$gam2)" fi *. $mul2 +. {($M2-$m2)*$off2%} b. $smo2 c. $m2,$M2 rm.
+      if s>3 sh. 3 if $gam0 f. "$M3*(i/$M3)^(10^-$gam3)" fi *. $mul3 +. {($M3-$m3)*$off3%} b. $smo3 c. $m3,$M3 rm. fi
+      ${cs}2rgb c 0,255
+    }
+    a c
+  }
+  um rgb2rgb
+
+fx_mixer_generic_preview :
+  gui_split_preview "fx_mixer_generic $*",${-3--1}
+  is_cmyk:=$1==1?2:1
+  u "{$1}"\
+    "{$2}{$3}{$4}{$5}"\
+    "{$6}{$7}{$8}{$9}"\
+    "{$10}{$11}{$12}{$13}"\
+    "{$14}_"$is_cmyk"{$15}_"$is_cmyk"{$16}_"$is_cmyk"{$17}_"$is_cmyk\
+    "{$-3}{$-2,$-1}"
+
 #@gui Mixer [HSV] : fx_mix_hsv, fx_mix_hsv_preview(1)+
 #@gui : Hue Factor = ~float(1,0,4)
 #@gui : Hue Shift = ~float(0,-180,180)
