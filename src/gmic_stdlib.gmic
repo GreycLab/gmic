@@ -44824,6 +44824,86 @@ fx_autofill_lineart_preview :
     if $5 k. else rv blend multiply fi
   }
 
+#@gui Colorize Lineart [Propagation] : fx_colorize_lineart, fx_colorize_lineart_preview(1) : *
+#@gui : note = note("<b>Layers ordering:</b>")
+#@gui : Input Layers = choice{0,"Color Spots + Lineart","Lineart + Color Spots",
+#@gui : "Color Spots + Extrapolated Colors + Lineart","Lineart + Color Spots + Extrapolated Colors"}
+#@gui : Output Layers = _choice{1,"Single (Merged)","Extrapolated Colors + Lineart",
+#@gui : "Lineart + Extrapolated Colors","Color Spots + Extrapolated Colors + Lineart",
+#@gui : "Lineart + Color Spots + Extrapolated Colors"}
+#@gui : Extrapolate Colors As = choice("One Layer","Two Layers","Three Layers","Four Layers","Five Layers",
+#@gui : "Six Layers","Seven Layers","Eight Layers","Nine Layers","Ten Layers","One Layer per Single Color",
+#@gui : "One Layer per Single Region")
+#@gui : sep = separator()
+#@gui : Smoothness = float(0.05,0,1)
+#@gui : sep = separator()
+#@gui : note = note{"<small><b>Note:</b> You probably need to select <i>All</i> for the <i>Input layers</i> option
+#@gui : on the left.\n
+#@gui : <i>Color Spots</i> = your layer with color indications.\n
+#@gui : <i>Lineart</i> = your layer with line-art (B&W or transparent).\n
+#@gui : <i>Extrapolated Colors</i> = the G'MIC generated layer with flat colors.\n\n
+#@gui : <b>Warnings:</b>
+#@gui : \n  - Do not rely too much on the preview, it is probably not accurate !
+#@gui : \n  - Activate option <i>Extrapolate color as one layer per single color/region</i> only if you have
+#@gui : <i>a lot</i> of available memory !
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : url = link("Click here for a detailed description of this filter.",\
+# "http://www.gimpchat.com/viewtopic.php?f=28&t=7567")
+#@gui : sep = separator()
+#@gui : note = note("<small>Authors: <i>David Tschumperlé</i>, <i>Timothée Giet</i> and <i>David Revoy</i>.
+#@gui :       Latest Update: <i>2013/19/06</i>.</small>")
+fx_colorize_lineart :
+  if $!<2 return fi
+  if $1<2 selection=0,1 else selection=0,1,2 fi
+  l[$selection] {
+
+    # Format input layers.
+    if !$1              # Color strokes + drawing
+    elif $1==1 rv       # Drawing + color strokes
+    elif $1==2 rm[1]    # Color strokes + extrapolated colors + drawing
+    elif $1==3 rm[2] rv # Drawing + color strokes + extrapolated colors.
+    fi
+
+    # Here we have only 'color strokes + drawing' -> process.
+    +to_rgba[0] split_opacity. +.. 1 !=. 0 *[-2,-1]   # Map of color labels to spread.
+    +norm[1] n. 0,1 +histogram. 2,0,1
+    if i(0)>i(1) *.. -1 +.. 1 fi rm.          # Determine color model of the drawing.
+    b. $4% watershed.. . rm.                         # Priority map.
+    -. 1
+    # Here we have 'color strokes + drawing + extrapolated colors'.
+
+    # Format output layers.
+    if !$2 rm[0] rv blend[0,1] multiply ind=-1
+    elif $2==1 rm[0] rv ind=0
+    elif $2==2 rm[0] ind=1
+    elif $2==3 rv[1,2] ind=1
+    elif $2==4 rv[0,1] ind=2
+    fi
+
+    # Separate extrapolated colors as multiple layers.
+    if $3" && "$ind>=0 l[$ind] {
+      +mix_channels (65536,256,1)
+      if $3==10 do  # Split by colors.
+        iM={1,iM}
+        if $iM>=0
+          +==[1] $iM area:=is replace[1] $iM,-1
+          +r. 100%,100%,1,3 *. [0]
+          rv[-2,-1] *. 255 a[-2,-1] c => $area
+        fi
+      while $iM>=0 else  # Split by disconnected regions.
+        label.
+        if $3<10 %. {$3+1} fi
+        repeat iM+1 { +==[1] $< area:=is +r. 100%,100%,1,[0] *. [0] rv[-2,-1] *. 255 a[-2,-1] c => $area }
+      fi
+      rm[0,1]
+      sort_list +,n
+    } fi
+  }
+
+fx_colorize_lineart_preview :
+  fx_colorize_lineart $1,0,$3,$4
+
 #@gui Colorize Lineart [Smart Coloring] : fx_colorize_lineart_smart, fx_colorize_lineart_smart_preview(0)
 #@gui : Colorize Mode = choice("Generate Random-Colors Layer","Extrapolate Color Spots on Transparent Top Layer",
 #@gui : "Auto-Clean Bottom Color Layer")
@@ -44986,86 +45066,6 @@ _fx_colorize_lineart_smart :
       blend[$ind_lineart,$ind_colors] multiply k[$ind_lineart]
     fi
   } }
-
-#@gui Colorize Lineart [Propagation] : fx_colorize_lineart, fx_colorize_lineart_preview(1)
-#@gui : note = note("<b>Layers ordering:</b>")
-#@gui : Input Layers = choice{0,"Color Spots + Lineart","Lineart + Color Spots",
-#@gui : "Color Spots + Extrapolated Colors + Lineart","Lineart + Color Spots + Extrapolated Colors"}
-#@gui : Output Layers = _choice{1,"Single (Merged)","Extrapolated Colors + Lineart",
-#@gui : "Lineart + Extrapolated Colors","Color Spots + Extrapolated Colors + Lineart",
-#@gui : "Lineart + Color Spots + Extrapolated Colors"}
-#@gui : Extrapolate Colors As = choice("One Layer","Two Layers","Three Layers","Four Layers","Five Layers",
-#@gui : "Six Layers","Seven Layers","Eight Layers","Nine Layers","Ten Layers","One Layer per Single Color",
-#@gui : "One Layer per Single Region")
-#@gui : sep = separator()
-#@gui : Smoothness = float(0.05,0,1)
-#@gui : sep = separator()
-#@gui : note = note{"<small><b>Note:</b> You probably need to select <i>All</i> for the <i>Input layers</i> option
-#@gui : on the left.\n
-#@gui : <i>Color Spots</i> = your layer with color indications.\n
-#@gui : <i>Lineart</i> = your layer with line-art (B&W or transparent).\n
-#@gui : <i>Extrapolated Colors</i> = the G'MIC generated layer with flat colors.\n\n
-#@gui : <b>Warnings:</b>
-#@gui : \n  - Do not rely too much on the preview, it is probably not accurate !
-#@gui : \n  - Activate option <i>Extrapolate color as one layer per single color/region</i> only if you have
-#@gui : <i>a lot</i> of available memory !
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : url = link("Click here for a detailed description of this filter.",\
-# "http://www.gimpchat.com/viewtopic.php?f=28&t=7567")
-#@gui : sep = separator()
-#@gui : note = note("<small>Authors: <i>David Tschumperlé</i>, <i>Timothée Giet</i> and <i>David Revoy</i>.
-#@gui :       Latest Update: <i>2013/19/06</i>.</small>")
-fx_colorize_lineart :
-  if $!<2 return fi
-  if $1<2 selection=0,1 else selection=0,1,2 fi
-  l[$selection] {
-
-    # Format input layers.
-    if !$1              # Color strokes + drawing
-    elif $1==1 rv       # Drawing + color strokes
-    elif $1==2 rm[1]    # Color strokes + extrapolated colors + drawing
-    elif $1==3 rm[2] rv # Drawing + color strokes + extrapolated colors.
-    fi
-
-    # Here we have only 'color strokes + drawing' -> process.
-    +to_rgba[0] split_opacity. +.. 1 !=. 0 *[-2,-1]   # Map of color labels to spread.
-    +norm[1] n. 0,1 +histogram. 2,0,1
-    if i(0)>i(1) *.. -1 +.. 1 fi rm.          # Determine color model of the drawing.
-    b. $4% watershed.. . rm.                         # Priority map.
-    -. 1
-    # Here we have 'color strokes + drawing + extrapolated colors'.
-
-    # Format output layers.
-    if !$2 rm[0] rv blend[0,1] multiply ind=-1
-    elif $2==1 rm[0] rv ind=0
-    elif $2==2 rm[0] ind=1
-    elif $2==3 rv[1,2] ind=1
-    elif $2==4 rv[0,1] ind=2
-    fi
-
-    # Separate extrapolated colors as multiple layers.
-    if $3" && "$ind>=0 l[$ind] {
-      +mix_channels (65536,256,1)
-      if $3==10 do  # Split by colors.
-        iM={1,iM}
-        if $iM>=0
-          +==[1] $iM area:=is replace[1] $iM,-1
-          +r. 100%,100%,1,3 *. [0]
-          rv[-2,-1] *. 255 a[-2,-1] c => $area
-        fi
-      while $iM>=0 else  # Split by disconnected regions.
-        label.
-        if $3<10 %. {$3+1} fi
-        repeat iM+1 { +==[1] $< area:=is +r. 100%,100%,1,[0] *. [0] rv[-2,-1] *. 255 a[-2,-1] c => $area }
-      fi
-      rm[0,1]
-      sort_list +,n
-    } fi
-  }
-
-fx_colorize_lineart_preview :
-  fx_colorize_lineart $1,0,$3,$4
 
 #@gui Dithering : fx_ditheredbw, fx_ditheredbw_preview(0)
 #@gui : Brightness (%) = ~float(0,-100,100)
