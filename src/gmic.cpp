@@ -10630,6 +10630,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                  cimg_sscanf(argument,"%u,%u,%lf,%lf,%lf,%lf,%u%c",
                              &plot_type,&vertex_type,&xmin,&xmax,&ymin,&ymax,&exit_on_anykey,&end)==7) &&
                 plot_type<=3 && vertex_type<=7 && exit_on_anykey<=1) ++position;
+            else { plot_type = 1; vertex_type = 0; ymin = ymax = xmin = xmax = 0; }
             if (!plot_type && !vertex_type) plot_type = 1;
             display_plots(images,images_names,variables_sizes,selection,plot_type,vertex_type,
                           xmin,xmax,ymin,ymax,exit_on_anykey);
