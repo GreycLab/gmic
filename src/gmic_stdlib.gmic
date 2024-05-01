@@ -16722,22 +16722,26 @@ expand : check "isint(${3=0},0,3)"
     nw>0 && nh>0 && nd>0 && nd>0?resize(#x,nw,nh,nd,ns,0,$3,0.5,0.5,0.5,0.5):resize(#x,0);
   " rm.
 
-#@cli extract : "condition",_output_type={ 0:xyzc-coordinates | 1:xyz-coordinates | 2:scalar-values | 3:vector-values }
+#@cli extract : "condition",_output_type={ 0:xyzc-coords | 1:xyz-coords | 2:scalar-values | 3:vector-values | \
+# 4:xyzc-coords + scalar value | 5:xyz-coords + vector-values }
 #@cli : Extract a list of coordinates or values from selected image, where
 #@cli : specified mathematical condition holds.
 #@cli : For N coordinates matching, result is a 1xNx1x4 image.
 #@cli : Default values: 'output_type=0'.
 #@cli : $ sp lena +extract "norm(I)>128",3
-extract : check "isin(${2=0},0,1,2,3)"
-  s0,s1,s2,s3=xyzc-coordinates,xyz-coordinates,scalar-values,vector-values
+extract : check "isint(${2=0},0,5)"
+  s0,s1,s2,s3,s4,s5=xyzc-coordinates,xyz-coordinates,scalar-values,vector-values,\
+    "xyzc-coords + scalar value","xyz-coords + vector-values"
   e[^-1] "Extract "$s$2" from image$? verifying condition '$1'."
-  str=">begin(run('1,32,1,',arg(1+$2,4,3,1,s)));($1)?("
+  str=">begin(run('1,32,1,',arg0($2,4,3,1,s,5,3 + s)));($1)?("
   if !$2     str.="da_push([x,y,z,c]));i"
   elif $2==1 str.="da_push([x,y,z]));I"
   elif $2==2 str.="da_push(i));i"
-  else       str.="da_push(I));I"
+  elif $2==3 str.="da_push(I));I"
+  elif $2==4 str.="da_push([x,y,z,c,i]));i"
+  else str.="da_push([x,y,z,I]));I"
   fi
-  str.=";end(resize(#-1,1,da_size(),1,s(#-1),0))"
+  str.=";end(da_freeze())"
   repeat $! { nm={$>,n} eval[$>] $str => $nm rv[$>,-1] rm. }
 
 #@cli extract_region : [label_image],_extract_xyz_coordinates={ 0 | 1 },_label_1,...,_label_M
@@ -41947,7 +41951,7 @@ fx_asciiart_preview :
 #@gui : First Offset = ~int(0,0,512)
 #@gui : Second Offset = ~int(0,0,512)
 #@gui : Angle = ~float(0,0,180)
-#@gui : Opacity = ~float(0.5,0,1)
+#@gui : Opacity = ~float(0.25,0,1)
 #@gui : First Color = ~color(0,0,0,255)
 #@gui : Second Color = ~color(255,255,255,255)
 #@gui : sep = separator()
@@ -42242,7 +42246,7 @@ fx_imagegrid_hexagonal :
 #@gui : Pattern Width = ~int(10,8,128)
 #@gui : Pattern Height = ~int(18,8,128)
 #@gui : Pattern Type = ~choice(0,"Horizontal","Vertical","Crossed","Cube","Decreasing","Increasing")
-#@gui : Outline Color = ~color(255,255,255,128)
+#@gui : Outline Color = ~color(0,0,0,128)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/08/07</i>.</small>")
 fx_imagegrid_triangular :
