@@ -50630,16 +50630,40 @@ fx_wind :
 fx_wind_preview :
   gui_split_preview "fx_wind $*",${-3--1}
 
-#@gui Zoom : fx_zoom, fx_zoom(1)
-#@gui : Factor = float(2,0.01,10)
-#@gui : Center (%) = point(50,50,0,1,255)
-#@gui : Boundary = choice(0,"Transparent","Nearest","Periodic","Mirror")
+#@gui Zoom : fx_zoom_v2, fx_zoom_v2_preview
+#@gui : Previous X-Center = value(50)
+#@gui : Previous Y-Center = value(50)
+#@gui : Center = point(50,50,0,1)_0
+#@gui : Vector = point(75,50,0,1)_0
+#@gui : Interpolation = choice(1,"Nearest Neighbor","Linear","Cubic")
+#@gui : Boundary = choice("Transparent","Nearest","Periodic","Mirror")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
-fx_zoom :
-  if !$4" && "$1<1 to_a fi
-  zoom $1,{$2%},{$3%},0,$4
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/09/09</i>.</small>")
+fx_zoom_v2 :
+  _fx_zoom_v2 ${3-8}
 
+fx_zoom_v2_preview :
+  px,py,x,y,p,q,interpolation,boundary=${1-8}
+  p,q+=$x-$px,$y-$py
+  px,py=$x,$y
+  _fx_zoom_v2 $x,$y,$p,$q,$interpolation,$boundary
+  line $x%,$y%,$p%,$q%,1,0xCCCCCCCC,255
+  line $x%,$y%,$p%,$q%,1,0x33333333,0
+  u \{$px\}\{$py\}\{$x,$y\}\{$p,$q\}\{$interpolation\}\{$boundary\}
+
+_fx_zoom_v2 :
+  if !$6 to_a fi
+  f "
+    const interpolation = $5;
+    const boundary = $6;
+    const cx = w/2;
+    const cy = h/2;
+    const ncx = $1*w%;
+    const ncy = $2*h%;
+    const fact = (25/norm($1 - $3,$2 - $4))^2;
+    nx = fact*(x - ncx) + ncx;
+    ny = fact*(y - ncy) + ncy;
+    I(nx,ny)"
 
 #@gui ____<b>Degradations</b>
 #-----------------------------
