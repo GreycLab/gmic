@@ -2467,7 +2467,7 @@ const char *gmic::builtin_commands_names[] = {
   "bilateral","blur","boxfilter","break",
   "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
-  "echo","eigen","eikonal","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
+  "echo","eigen","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
   "graph","guided",
   "histogram",
