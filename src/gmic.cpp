@@ -5105,7 +5105,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
       if (!callstack)
         error(true,"G'MIC encountered a fatal error (empty call stack). "
               "Please submit a bug report, at: https://github.com/GreycLab/gmic/issues");
-      if (callstack.size()>=64)
+      if (callstack.size()>128)
         error(true,"Call stack overflow (infinite recursion?).");
 
       // Substitute expressions in current item.
