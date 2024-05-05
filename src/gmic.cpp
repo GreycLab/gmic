@@ -2478,7 +2478,7 @@ const char *gmic::builtin_commands_names[] = {
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
   "screen","select","serialize","shared","shift","sign","sinc","sinh","skip",
     "smooth","solve","sort","split","sqrt","srand","status","store","streamline3d","sub3d",
-  "tanh","text","trisolve",
+  "tanh","text",
   "uncommand","unroll","unserialize",
   "vanvliet","verbose",
   "wait","warn","warp","watershed","while","window",
@@ -12369,24 +12369,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           } else arg_error("text");
           g_img.assign();
           g_list_c.assign();
-          is_change = true;
-          ++position;
-          continue;
-        }
-
-        // Tridiagonal solve.
-        if (!std::strcmp("trisolve",command)) {
-          gmic_substitute_args(true);
-          sep = *indices = 0;
-          if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 &&
-              sep==']' &&
-              (ind=selection2cimg(indices,images.size(),images_names,"trisolve")).height()==1) {
-            print(0,"Solve tridiagonal system AX = B, with B-vector%s and tridiagonal "
-                  "A-matrix [%d].",
-                  gmic_selection.data(),*ind);
-            const CImg<double> A = gmic_image_arg(*ind);
-            cimg_forY(selection,l) gmic_apply_double(solve_tridiagonal(A));
-          } else arg_error("trisolve");
           is_change = true;
           ++position;
           continue;
