@@ -22712,12 +22712,37 @@ piechart : check $1>=0
     rm.
   }
 
-#@cli plasma : _alpha,_beta,_scale>=0 : (+)
+#@cli plasma : _alpha,_beta,_scale>=0
 #@cli : Draw a random colored plasma fractal on selected images.
 #@cli : This command implements the so-called 'Diamond-Square' algorithm.
 #@cli : Default values: 'alpha=1', 'beta=1' and 'scale=8'.
 #@cli : $ 400,400,1,3 plasma
 #@cli : $$ https://gmic.eu/oldtutorial/_plasma
+plasma : check "isnum(${1=1}) && isnum(${2=1}) && isint(${3=8},0)"
+  e[^-1] "Draw plasma fractal on image$?, with alpha $1, beta $2 and scale $3."
+  foreach {
+    scale:=1<<$3
+    for $scale>1 {
+
+      # Square step.
+      {ceil([w,h]/$scale)},1,100%,":
+        const scale = $scale; const scale2 = scale/2; const noise = $1*scale + $2; const boundary = 3;
+        X0 = x*scale; Y0 = y*scale;
+        X1 = X0 + scale; Y1 = Y0 + scale;
+        X2 = X0 + scale2; Y2 = Y0 + scale2;
+        i(#0,X2,Y2) = 0.25*(i(#0,X0,Y0) + i(#0,X1,Y0) + i(#0,X1,Y1) + i(#0,X0,Y1)) + u(-noise,noise);
+      " rm.
+
+      # Diamond step.
+      {ceil([w,h]/$scale)*[1,2]},1,100%,":
+        const scale = $scale; const scale2 = scale/2; const noise = $1*scale + $2; const bounday = 3;
+        X0 = x*scale + (y%2?scale2:0); Y0 = y*scale2;
+        X_1 = X0 - scale2; X1 = X0 + scale2; Y1 = Y0 + scale2; Y2 = Y0 + scale;
+        i(#0,X0,Y1) = 0.25*(i(#0,X0,Y0) + i(#0,X1,Y1) + i(#0,X_1,Y1) + i(#0,X0,Y2)) + u(-noise,noise);
+      " rm.
+     scale>>=1;
+    }
+  }
 
 #@cli point : x[%],_y[%],_z[%],_opacity,_color1,... : (+)
 #@cli : Set specified colored pixel on selected images.

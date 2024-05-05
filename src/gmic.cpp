@@ -345,10 +345,6 @@ CImg<T> get_draw_object3d(const float x0, const float y0, const float z0,
                                 specular_shininess,g_opacity,zbuffer);
 }
 
-CImg<T> get_draw_plasma(const float alpha, const float beta, const unsigned int scale) const {
-  return (+*this).draw_plasma(alpha,beta,scale);
-}
-
 CImg<T> get_draw_point(const int x, const int y, const int z, const T *const col,
                        const float opacity) const {
   return (+*this).draw_point(x,y,z,col,opacity);
@@ -2477,7 +2473,7 @@ const char *gmic::builtin_commands_names[] = {
   "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
-  "parallel","pass","permute","plasma","plot","point","polygon","progress",
+  "parallel","pass","permute","plot","point","polygon","progress",
   "quit",
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
   "screen","select","serialize","shared","shift","sign","sinc","sinh","skip",
@@ -10537,29 +10533,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           g_img.assign();
           is_change = true;
           ++position;
-          continue;
-        }
-
-        // Draw plasma fractal.
-        if (!std::strcmp("plasma",command)) {
-          gmic_substitute_args(false);
-          float alpha = 1, beta = 1, scale = 8;
-          if ((cimg_sscanf(argument,"%f%c",
-                           &alpha,&end)==1 ||
-               cimg_sscanf(argument,"%f,%f%c",
-                           &alpha,&beta,&end)==2 ||
-               cimg_sscanf(argument,"%f,%f,%f%c",
-                           &alpha,&beta,&scale,&end)==3) &&
-              scale>=0) ++position;
-          else { alpha = beta = 1; scale = 8; }
-          const unsigned int _scale = (unsigned int)cimg::round(scale);
-          print(0,"Draw plasma fractal on image%s, with alpha %g, beta %g and scale %u.",
-                gmic_selection.data(),
-                alpha,
-                beta,
-                _scale);
-          cimg_forY(selection,l) gmic_apply(draw_plasma(alpha,beta,_scale),false);
-          is_change = true;
           continue;
         }
 
