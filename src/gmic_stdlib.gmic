@@ -4798,12 +4798,12 @@ echo_file : skip "${2='\n'}"
   repeat 256
     code:=[$codes][$>]
     bgcolor=${dec2hex\ {16752640+$>}}
-    if !($ind%16) ('"<tr>\n"') fi
+    if !($ind%4) ('"<tr>\n"') fi
     ('"<td style=\"background-color: \#"$bgcolor"; \">"')
     ('"&#"$code;')
     ('"</td>\n"')
     ind+=1
-    if !($ind%16)" || "!$< ('"</tr>\n"') fi
+    if !($ind%4)" || "!$< ('"</tr>\n"') fi
   done
   ({'"\
     </table>\n\
@@ -4846,7 +4846,10 @@ echo_file : skip "${2='\n'}"
 
   repeat narg($x0s) {
     x0,y0,x1,y1:=([$x0s][$>]),([$y0s][$>]),([$x1s][$>]),([$y1s][$>])
-    +z[0] $x0,$y0,0,0,$x1,$y1,0,0
+    if max(isinf([$x0,$x1,$y0,$y1]))
+       0 warn "Command '$0': Character code "$>" ('"{/{/{`$>`}}}"') could not be found!"
+    else +z[0] $x0,$y0,0,0,$x1,$y1,0,0
+    fi
   }
   rm[0] negate
 
@@ -22721,7 +22724,7 @@ piechart : check $1>=0
 plasma : check "isnum(${1=1}) && isnum(${2=1}) && isint(${3=8},0)"
   e[^-1] "Draw plasma fractal on image$?, with alpha $1, beta $2 and scale $3."
   foreach {
-    scale:=1<<min($3,31)
+    scale:="1<<min($3,31)"
     for $scale>1 {
 
       # Square step.
