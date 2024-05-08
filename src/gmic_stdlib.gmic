@@ -22726,23 +22726,31 @@ plasma : check "isnum(${1=1}) && isnum(${2=1}) && isint(${3=8},0)"
   e[^-1] "Draw plasma fractal on image$?, with alpha $1, beta $2 and scale $3."
   foreach {
     scale:="1<<min($3,31)"
+
+    # Init step.
+    {ceil([w,h]/$scale)},1,100%,":
+      const scale = $scale; const noise = $1*scale + $2; const boundary = 2;
+      Xt = x*scale; Yt = y*scale;
+      i(#0,Xt,Yt) = u(-noise,noise);
+    " rm.
+
     for $scale>1 {
 
       # Square step.
       {ceil([w,h]/$scale)},1,100%,":
         const scale = $scale; const scale2 = scale/2; const noise = $1*scale + $2; const boundary = 2;
-        X0 = x*scale; Y0 = y*scale;
-        X1 = X0 + scale; Y1 = Y0 + scale;
-        X2 = X0 + scale2; Y2 = Y0 + scale2;
-        i(#0,X2,Y2) = 0.25*(i(#0,X0,Y0) + i(#0,X1,Y0) + i(#0,X1,Y1) + i(#0,X0,Y1)) + u(-noise,noise);
+        Xt = x*scale + scale2; Yt = y*scale + scale2;
+        X0 = Xt - scale2; Y0 = Yt - scale2;
+        X1 = Xt + scale2; Y1 = Yt + scale2;
+        i(#0,Xt,Yt) = avg(i(#0,X0,Y0),i(#0,X1,Y0),i(#0,X1,Y1),i(#0,X0,Y1)) + u(-noise,noise);
       " rm.
 
       # Diamond step.
       {ceil([w,h]/$scale)*[1,2]},1,100%,":
         const scale = $scale; const scale2 = scale/2; const noise = $1*scale + $2; const bounday = 2;
-        X0 = x*scale + (y%2?scale2:0); Y0 = y*scale2;
-        X_1 = X0 - scale2; X1 = X0 + scale2; Y1 = Y0 + scale2; Y2 = Y0 + scale;
-        i(#0,X0,Y1) = 0.25*(i(#0,X0,Y0) + i(#0,X1,Y1) + i(#0,X_1,Y1) + i(#0,X0,Y2)) + u(-noise,noise);
+        Xt = x*scale + (y%2?0:scale2); Yt = y*scale2;
+        i(#0,Xt,Yt) = avg(i(#0,Xt - scale2,Yt),i(#0,Xt,Yt - scale2),
+                          i(#0,Xt + scale2,Yt),i(#0,Xt,Yt + scale2)) + u(-noise,noise);
       " rm.
      scale>>=1;
     }
