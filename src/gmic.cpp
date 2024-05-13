@@ -13996,36 +13996,62 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         } else {
 
           // New IxJxKxL image specified as array.
-          unsigned int l, cx = 0, cy = 0, cz = 0, cc = 0, maxcx = 0, maxcy = 0, maxcz = 0;
+          char unroll_axis = 0, permute_axes[5] = { 0 }, c;
+          unsigned int
+            pos[4] = { 0 },
+            ind_x = 0, ind_y = 0, ind_z = 0, ind_c = 0,
+            width = 0, height = 0, depth = 0, spectrum = 0,
+            l = 0, q = 0;
           const char *nargument = 0;
           CImg<char> s_value(256);
-          char separator = 0, unroll_axis = 0, permute_axes[5] = { 0 }, c;
 
-          for (nargument = arg_input.data() + 1; *nargument; ) {
-            *s_value = separator = 0;
+          for (nargument = arg_input.data() + 1; *nargument; ) { // Determine axis order of specified values
+            sep = *(nargument++);
+            switch (sep) {
+            case ',' : if (!ind_x) ind_x = ++q; break;
+            case ';' : if (!ind_y) ind_y = ++q; break;
+            case '/' : if (!ind_z) ind_z = ++q; break;
+            case '^' : if (!ind_c) ind_c = ++q; break;
+            }
+          }
+
+          for (nargument = arg_input.data() + 1; *nargument; ) { // Parse expression
+            *s_value = sep = 0;
             char *pd = s_value;
             // Do something faster than 'scanf("%255[0-9.eEinfa+-]")'.
-            for (l = 0; l<255 && (((c=*nargument)>='0' && c<='9') || c=='.' || c=='e' || c=='E' || c=='i' || c=='n'
-                                  || c=='f' || c=='a' || c=='+' || c=='-'); ++l) *(pd++) = *(nargument++);
+            for (l = 0; l<255 &&
+                   (((c=*nargument)>='0' && c<='9') || c=='.' || c=='e' || c=='E' || c=='i' || c=='n'
+                    || c=='f' || c=='a' || c=='+' || c=='-'); ++l) *(pd++) = *(nargument++);
             if (l<255) *pd = 0; else arg_error("input");
-            if (*nargument) separator = *(nargument++);
-            if ((separator=='^' || separator=='/' || separator==';' || separator==',' ||
-                 separator==')' || separator==':') &&
+            if (*nargument) sep = *(nargument++);
+            if ((sep=='^' || sep=='/' || sep==';' || sep==',' || sep==')' || sep==':') &&
                 cimg_sscanf(s_value,"%lf%c",&value,&end)==1) {
-              if (cx>maxcx) maxcx = cx;
-              if (cy>maxcy) maxcy = cy;
-              if (cz>maxcz) maxcz = cz;
-              if (cx>=img._width || cy>=img._height || cz>=img._depth || cc>=img._spectrum)
-                img.resize(cx>=img._width?7*cx/4 + 1:std::max(1U,img._width),
-                           cy>=img._height?7*cy/4 + 1:std::max(1U,img._height),
-                           cz>=img._depth?7*cz/4 + 1:std::max(1U,img._depth),
-                           cc>=img._spectrum?7*cc/4 + 1:std::max(1U,img._spectrum),0);
-              img(cx,cy,cz,cc) = (T)value;
-              switch (separator) {
-              case '^' : cx = cy = cz = 0; ++cc; break;
-              case '/' : cx = cy = 0; ++cz; break;
-              case ';' : cx = 0; ++cy; break;
-              case ',' : ++cx; break;
+
+              if (pos[ind_x]>=img._width || pos[ind_y]>=img._height ||
+                  pos[ind_z]>=img._depth || pos[ind_c]>=img._spectrum)
+                img.resize(pos[ind_x]>=img._width?7*pos[ind_x]/4 + 1:std::max(1U,img._width),
+                           pos[ind_y]>=img._height?7*pos[ind_y]/4 + 1:std::max(1U,img._height),
+                           pos[ind_z]>=img._depth?7*pos[ind_z]/4 + 1:std::max(1U,img._depth),
+                           pos[ind_c]>=img._spectrum?7*pos[ind_c]/4 + 1:std::max(1U,img._spectrum),0);
+              img(pos[ind_x],pos[ind_y],pos[ind_z],pos[ind_c]) = (T)value;
+
+              switch (sep) {
+              case ',' :
+                std::memset(pos + 1,0,(ind_x - 1)*sizeof(unsigned int)); ++pos[ind_x];
+                if (width<pos[ind_x]) width = pos[ind_x];
+                break;
+              case ';' :
+                std::memset(pos + 1,0,(ind_y - 1)*sizeof(unsigned int)); ++pos[ind_y];
+                if (height<pos[ind_y]) height = pos[ind_y];
+                break;
+              case '/' :
+                std::memset(pos + 1,0,(ind_z - 1)*sizeof(unsigned int)); ++pos[ind_z];
+                if (depth<pos[ind_z]) depth = pos[ind_z];
+                break;
+              case '^' :
+                std::memset(pos + 1,0,(ind_c - 1)*sizeof(unsigned int)); ++pos[ind_c];
+                if (spectrum<pos[ind_c]) spectrum = pos[ind_c];
+                break;
               case ':' : {
                 c = *nargument;
                 if ((is_xyzc(c) || c==',' || c==';' || c=='/' || c=='^') &&
@@ -14042,7 +14068,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               }
             } else arg_error("input");
           }
-          img.resize(maxcx + 1,maxcy + 1,maxcz + 1,cc + 1,0);
+          img.resize(++width,++height,++depth,++spectrum,0);
           if (unroll_axis) img.unroll(unroll_axis=='x' || unroll_axis==','?'x':
                                       unroll_axis=='y' || unroll_axis==';'?'y':
                                       unroll_axis=='z' || unroll_axis=='/'?'z':'c');
