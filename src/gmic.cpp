@@ -13998,7 +13998,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           // New IxJxKxL image specified as array.
           char unroll_axis = 0, permute_axes[5] = { 0 }, c;
           unsigned int
-            pos[4] = { 0 },
+            pos[5] = { 0 },
             ind_x = 0, ind_y = 0, ind_z = 0, ind_c = 0,
             width = 0, height = 0, depth = 0, spectrum = 0,
             l = 0, q = 0;
@@ -14026,7 +14026,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             if (*nargument) sep = *(nargument++);
             if ((sep=='^' || sep=='/' || sep==';' || sep==',' || sep==')' || sep==':') &&
                 cimg_sscanf(s_value,"%lf%c",&value,&end)==1) {
-
               if (pos[ind_x]>=img._width || pos[ind_y]>=img._height ||
                   pos[ind_z]>=img._depth || pos[ind_c]>=img._spectrum)
                 img.resize(pos[ind_x]>=img._width?7*pos[ind_x]/4 + 1:std::max(1U,img._width),
