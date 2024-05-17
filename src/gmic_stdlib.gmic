@@ -12029,52 +12029,48 @@ _update_header_html : check "narg(${1=}) && ${2=0}>0 && isbool(${3=0})"
     it[] $filename
     s +,{'\n'}
     foreach { if h>=64
-      +autocrop {'" "'} autocrop. {'\t'}
+      autocrop {'" "'} autocrop. {'\t'}
       if "find(#0,['Latest stable version: '])>=0"
         is_gmic:="find(#-1,'gmic.eu')>=0"
         is_cimg:="find(#-1,'cimg.eu')>=0"
         if !$is_gmic" && "!$is_cimg error "Cannot determine CImg or G'MIC header file." fi
 
-        # Retrieve latest stable version specified in the header file.
-        +l. {
-          s -,{'>'}
-          if {2,"inrange(i[0],_'0',_'9') && i[1]==_'.' &&
-                 inrange(i[2],_'0',_'9') && i[3]==_'.' &&
-                 inrange(i[4],_'0',_'9')"}
-            stable_ver={2,`crop(0,0,1,5)`}
-          fi
-          if $3
-            x "date +%Y%m%d >"${-path_tmp}/gmic_date it ${-path_tmp}/gmic_date discard. 10 date={t} rm.
-            pre_ver=${strver\ $2}
-            pre_date={`s=['$date'];string(s[0,4],'/',s[4,2],'/',s[6,2])`}
-          else
-            stable_ver=${strver\ $2}
-            pre_ver,pre_date=
-          fi
-          rm
-        }
-
-        rm[0]
-        if $is_gmic
-          i[0] ('"        Latest stable version: <b>"\
-                 "<a href=\"https://gmic.eu/download.html\">"$stable_ver"</a></b>"')
-          if ['$pre_ver']!=0
-            i[1] ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
-                   "Current pre-release: <b><a href=\"https://gmic.eu/files/prerelease\">"$pre_ver"</a></b> "\
-                   "("$pre_date")"')
-          fi
-        else
-          i[0] ('"        Latest stable version: "\
-                 "<b><a href=\"http://cimg.eu/files/CImg_"$ver".zip\">"$stable_ver"</a></b>"')
-          if ['$pre_ver']!=0
-            i[1] ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
-                   "Current pre-release: <b><a href=\"http://cimg.eu/files/CImg_latest.zip\">"$pre_ver"</a></b> "\
-                   "("$pre_date")"')
-          fi
+           # Retrieve latest stable version specified in the header file.
+        s -,{'>'}
+        if {2,"inrange(i[0],_'0',_'9') && i[1]==_'.' &&
+               inrange(i[2],_'0',_'9') && i[3]==_'.' &&
+               inrange(i[4],_'0',_'9')"}
+          stable_ver={2,`crop(0,0,1,5)`}
         fi
-        y
+        if $3
+          pre_ver=${strver\ $2}
+        else
+          stable_ver=${strver\ $2}
+          pre_ver=
+        fi
+        rm
+        date=${-date}
+
+        if $is_gmic
+          ('"        Latest stable version: <b>"\
+            "<a href=\"https://gmic.eu/download.html\">"$stable_ver"</a></b>"')
+          if ['$pre_ver']!=0
+            ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
+              "Current pre-release: <b><a href=\"https://gmic.eu/files/prerelease\">"$pre_ver"</a></b>"')
+          fi
+          ('" ("$date")"')
+
+        else
+          ('"        Latest stable version: "\
+            "<b><a href=\"http://cimg.eu/files/CImg_"$ver".zip\">"$stable_ver"</a></b>"')
+          if ['$pre_ver']!=0
+            ('" &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "\
+              "Current pre-release: <b><a href=\"http://cimg.eu/files/CImg_latest.zip\">"$pre_ver"</a></b>"')
+          fi
+          ('" ("$date")"')
+        fi
+        y a y
       fi
-      rm.
     fi }
     a y
     ot $filename
@@ -33723,6 +33719,11 @@ covariance_vectors : skip "${1=avg}"
 da_freeze :
   e[^-1] "Freeze dynamic array$?."
   $! eval. "da_freeze(#x)" rm.
+
+#@cli date
+#@cli : Return current date as a string 'YYYY/MM/DD'.
+date :
+  u {`[v2s(date(0),-4,4),_'/',v2s(date(1),-2,2),_'/',v2s(date(2),-2,2)]`}
 
 #@cli dec : decimal_int1,...
 #@cli : Print specified decimal integers into their binary, octal, hexadecimal and string representations.
