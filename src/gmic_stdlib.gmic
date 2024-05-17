@@ -1497,7 +1497,7 @@ reference_end_pdf :
 "      <h1 class=\"ref_h1\">The Handbook</h1>"\n\
 "      <h3>Version "${strver" "$_version,$_prerelease}"</h3>"\n\
 "      <p>&copy; David Tschumperlé / GREYC / CNRS</p>"\n\
-"      <p>"{date(0)}"/"{date(1)}"/"{date(2)}"</p>"\n\
+"      <p>"{$-date}"</p>"\n\
 "    </div>"':y)
   ('"<img style=\"margin-top: 2em; width: 100%;\" src=\"reference_pdf.png\"/>"\n\
     "<p style=\"text-align: center;\">&squ; End of document</p>"\n\
@@ -5885,9 +5885,7 @@ output_obj : check "isbool(${2=1})" check3d
            "# Primitives: "$nb_primitives\n\
            "# Materials: "$nb_materials\n\
            "# Textures: "$nb_textures\n\
-           {`"d2(x) = (s = date(x); s>9?v2s(s,-1,2):[0,s]+_'0');
-              string('# Generated on ',date(0),'/',d2(1),'/',d2(2),' at ',d2(4),':',d2(5),':',d2(6),
-                     ' by G\47MIC (https://gmic.eu).\n')"`}
+           "# Generated on "${-date}" at "${-time}", by G\47MIC (https://gmic.eu).\n"
 
     # Save object geometry (.obj file).
     l[out_obj] {
@@ -8699,12 +8697,7 @@ parse_gui_whatsnew :
 parse_gui_parseparams_list : u 0 # Tell parser to not parse filter parameters
 parse_gui_list :
   e "  >> Generate output, in 'list' mode.\n"
-  ('"*** List of filters in the G\47MIC plug-in ("$_nb_filters" filters, on "\
-               {date(0)}"/"\
-               {`v=date(1);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}"/"\
-               {`v=date(2);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}", "\
-               {`v=date(4);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}":"\
-               {`v=date(5);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}") ***\n\n"')
+  ('"*** List of filters in the G\47MIC plug-in ("$_nb_filters" filters, on "${-date}", "${-time}") ***\n\n"')
 
   ('"* List of filters, sorted by path:\n\n"')
   l[] {
@@ -8858,12 +8851,7 @@ parse_gui_update :
          "#  License      : CeCILL v2.1"\n\
          "#                 ( https://cecill.info/licences/Licence_CeCILL_V2.1-en.html )"\n\
          "#"\n\
-         "#  Generated on : "\
-         {date(0)}"/"\
-         {`v=date(1);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}"/"\
-         {`v=date(2);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}", "\
-         {`v=date(4);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}":"\
-         {`v=date(5);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}\n\
+         "#  Generated on : "${-date}", "${-time}\n\
          "#"\n')
   ('"\n# Local Variables:"\n\
     "# mode: sh"\n\
@@ -9081,12 +9069,7 @@ parse_gui_gmicol :
     "   -  License      : CeCILL v2.1\n"\
     "   -                 ( https://cecill.info/licences/Licence_CeCILL_V2.1-en.html )\n"\
     "   -\n"\
-    "   -  Generated on : "\
-    {date(0)}"/"\
-    {`v=date(1);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}"/"\
-    {`v=date(2);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}", "\
-    {`v=date(4);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}":"\
-    {`v=date(5);sv=v2s(v);v<10?[_'0',sv]:[sv,0]`}\n\
+    "   -  Generated on : "${-date}", "${-time}\n\
     "   -\n"\
     "   -->\n\n"\
     "<categories>\n"')
@@ -33812,15 +33795,8 @@ filename_rand :
 filename_dated :
   0 => "$1" ext={x} folder={f} basename={b} rm.
   if ['$ext']!=0 ext..=. fi
-  u ${folder}${basename}_{`"
-      str='00000000_000000';
-      copy(str,v2s(date(0)),4);
-      v = date(1); copy(str[4 + (v<10)],v2s(v),2);
-      v = date(2); copy(str[6 + (v<10)],v2s(v),2);
-      v = date(4); copy(str[9 + (v<10)],v2s(v),2);
-      v = date(5); copy(str[11 + (v<10)],v2s(v),2);
-      v = date(6); copy(str[13 + (v<10)],v2s(v),v<10?1:2);
-      str"`}$ext
+  u ${folder}${basename}_{`v2s(date(0),-4,4)`}{`v2s(date(1),-2,2)`}{`v2s(date(2),-2,2)`}_\
+    {`v2s(date(4),-2,2)`}{`v2s(date(5),-2,2)`}{`v2s(date(6),-2,2)`}$ext
 
 #@cli files : _mode,path : (+)
 #@cli : Return the list of files and/or subfolders from specified path.
@@ -35367,6 +35343,11 @@ strver : skip "${1=},${2=}"
 tic :
   e[^-1] "Initialize timer."
   if !narg($_ticpos) _ticpos=0 fi _tic$_ticpos=$| _ticpos+=1
+
+#@cli time
+#@cli : Return current time as a string 'hh:mm:ss'.
+time :
+  u {`[v2s(date(4),-2,2),_':',v2s(date(5),-2,2),_':',v2s(date(6),-2,2)]`}
 
 #@cli toc
 #@cli : Display elapsed time of the tic-toc timer since the last call to 'tic'.
