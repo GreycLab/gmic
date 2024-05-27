@@ -9130,14 +9130,19 @@ parse_gui_gmicol :
         ('"    <button name=\""$name"\" alignment=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='choice'
-        default=0 n=0 choices=
-        l[] { if isnum($arg0)&&isint($arg0) default=$arg0 n+=1 fi onfail }
-        ('"    <choice name=\""$name"\" value=\""$default"\""$randomizable$responsivity$visibility">\n"')
-        repeat $nbargs-$n { a=$>
-          choice=${arg{$n+$a}}
-          ('"      <item name=\""$choice"\"/>\n"')
-        }
-        ('"    </choice>\n"')
+
+        if ['$name']=='Preview\ Type' # Replace 'Preview Type' by a value
+          ('"    <value name=\""$name"\" value=\"0\"/>\n"')
+        else
+          default=0 n=0 choices=
+          l[] { if isnum($arg0)&&isint($arg0) default=$arg0 n+=1 fi onfail }
+          ('"    <choice name=\""$name"\" value=\""$default"\""$randomizable$responsivity$visibility">\n"')
+          repeat $nbargs-$n { a=$>
+            choice=${arg{$n+$a}}
+            ('"      <item name=\""$choice"\"/>\n"')
+          }
+          ('"    </choice>\n"')
+        fi
 
       elif ['$type']=='color'
         if $nbargs==1" && "['$arg0'][0]==_'#' # Convert colors specified as '#RRGGBB[AA]'
@@ -9177,15 +9182,21 @@ parse_gui_gmicol :
         ('"    <note name=\""$name"\""$visibility">\n"$arg0"\n    </note>"\n')
 
       elif ['$type']=='point'
-        if $nbargs>2 removable=" removable=\""$arg2"\"" else removable= fi
-        if $nbargs>3 burst=" burst=\""$arg3"\"" else burst= fi
-        if $nbargs>4 red=" red=\""$arg4"\"" else red= fi
-        if $nbargs>5 green=" green=\""$arg5"\"" else green= fi
-        if $nbargs>6 blue=" blue=\""$arg6"\"" else blue= fi
-        if $nbargs>7 alpha=" alpha=\""$arg7"\"" else alpha= fi
-        if $nbargs>8 radius=" radius=\""$arg8"\"" else radius= fi
-         ('"    <point name=\""$name"\" x=\""$arg0"\" y=\""$arg1"\""$removable$burst$red$green$blue$alpha\
-           $randomizable$responsivity$visibility"/>\n"')
+
+        if ['$name']=='Preview\ Split' # Replace 'Preview Split' by a value
+          ('"    <value name=\""$name" (X)\" value=\"50\"/>\n"')
+          ('"    <value name=\""$name" (Y)\" value=\"50\"/>\n"')
+        else
+          if $nbargs>2 removable=" removable=\""$arg2"\"" else removable= fi
+          if $nbargs>3 burst=" burst=\""$arg3"\"" else burst= fi
+          if $nbargs>4 red=" red=\""$arg4"\"" else red= fi
+          if $nbargs>5 green=" green=\""$arg5"\"" else green= fi
+          if $nbargs>6 blue=" blue=\""$arg6"\"" else blue= fi
+          if $nbargs>7 alpha=" alpha=\""$arg7"\"" else alpha= fi
+          if $nbargs>8 radius=" radius=\""$arg8"\"" else radius= fi
+            ('"    <point name=\""$name"\" x=\""$arg0"\" y=\""$arg1"\""$removable$burst$red$green$blue$alpha\
+             $randomizable$responsivity$visibility"/>\n"')
+        fi
 
       elif ['$type']=='separator'
         ('"    <separator"$visibility"/>\n"')
@@ -41667,6 +41678,9 @@ fx_support_us :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/16/04</i>.</small>")
 gui_download_all_data :
 
+  # Fonts.
+  l[] { input_cached gmic_fonts.gmz rm onfail rm }
+
   # Color Presets.
   l[] { input_cached gmic_cluts.gmz rm onfail rm }
 
@@ -53467,7 +53481,7 @@ fx_old_photo :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_polaroid :
-  vignette ${8-10} polaroid $1,$2 drop_shadow $3%,$4%,$5%,$6,$7 rotate $8,1,0
+  vignette ${9-11} polaroid $1,$2 drop_shadow $3%,$4%,$5%,$6,$7 rotate $8,1,0
 
 #@gui Tunnel : fx_tunnel, fx_tunnel(1)
 #@gui : Depth = int(4,1,100)
