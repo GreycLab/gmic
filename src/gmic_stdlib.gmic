@@ -32170,62 +32170,6 @@ blend : skip "${1=},${2=},${3=}" check "isbool(${4=0})"
   } }
   => $nm0
 
-
-# blend : skip "${1=},${2=},${3=},${4=}"
-#   if !${"is_image_arg $1"}
-#     if ['$1']!=0 mode=$1 else mode=alpha fi
-#     if ['$2']!=0 opacity=$2 else opacity=1 fi
-#     e[0--3] "Blend image$? together, using '"$mode"' mode and opacity "$opacity"."
-#     repeat $!-1 { $0.. .,$mode,$opacity rm. }
-#     return
-#   fi
-#   if ['$2']!=0 mode=$2 else mode=alpha fi
-#   if ['$3']!=0 opacity:=$3 else opacity=1 fi
-#   if ['$4']!=0 selection_mode=$4 else selection_mode=0 fi
-#   if $selection_mode s0,s1=foreground,background else s0,s1=background,foreground fi
-
-#   e[^-1] "Blend "$s0" image$? with "$s1" image $1, using '"$mode"' mode and opacity "$opacity"."
-#   if !$opacity return fi
-#   is_alpha_blending:=isin(['$mode'],'alpha','normal')
-#   pass$1 1
-
-#   foreach[^-1] { nm={n}
-#     pass. 0 if $selection_mode rv fi # -> [0] = background, [1] = foreground
-#     nb_col_channels,is_alpha_b,is_alpha_f:=max(s#0,s)>=3?3:1,!(s#0%2),!(s%2)||w<w#0||h<h#0||d<d#0||$opacity!=1
-#     to_colormode[0] {$nb_col_channels+$is_alpha_b}
-#     to_colormode[1] {$nb_col_channels+$is_alpha_f}
-#     if $opacity<1 sh[1] 100% *. $opacity rm. fi
-#     r[1] [0],[0],[0],100%,0,0,0.5,0.5
-#     if ['$mode']=='seamless' blend_seamless 0
-#     elif ['$mode']=='seamless_mixed' blend_seamless 1
-#     else
-#       s[0,1] c,-$nb_col_channels
-#       if $is_alpha_b" && "$is_alpha_f" && "!$is_alpha_blending
-#         rm. is_alpha_f=0
-#       fi
-
-#       if $is_alpha_b # Background has alpha
-#         _$0_$mode[0,2]
-#         if $is_alpha_f # Foreground has alpha
-#           *[0] [1] /[0] 255 j[0] [2],0,0,0,0,1,[3],255 # Co = Cf*Af + Cb*Ab*(1-Af)
-#           +f. 255 j[1] .,0,0,0,0,1,[3],255 # Ao = Af + Ab*(1 - Af)
-#           k[0,1] +max. 1 /. 255 /[0,-1] a c # [ Co/Ao, Ao ]
-#         else # Foreground has no alpha
-#           j[0] [2],0,0,0,0,1 rm.
-#           if $is_alpha_blending f. 255 fi
-#           a c
-#         fi
-#       else # Background has no alpha
-#         _$0_$mode[0,1]
-#         if $is_alpha_f j[0] [1],0,0,0,0,1,.,255 k[0] # Foreground has alpha
-#         else k[1] # Foreground has no alpha
-#         fi
-#       fi
-#     fi
-#     => $nm
-#   }
-#   rm.
-
 _blend_alpha :
 _blend_normal :
 _blend_and :
