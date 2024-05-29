@@ -2262,7 +2262,7 @@ _display : skip ${1=},${3=}
               r. {[$w,$h]-2} # -2: Keep space for frame
               if $is_alpha
                 to_rgba.
-                if $setting_alpha==1 (64,96;96,64) r. 24,24,1,1 r. $w,$h,1,3,0,2
+                if $setting_alpha==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
                 else $w,$h,1,3,{arg($setting_alpha-1,0,128,255)}
                 fi
                 sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
@@ -2327,7 +2327,7 @@ _display : skip ${1=},${3=}
       $canvas_width,$canvas_height,1,3,{arg0($setting_background>>1,0,64,128,192,255)}
       if $setting_background&1
         amp:=$setting_background==1?32:12
-        24,24,1,1,-$amp +f. $amp a[-2,-1] x +mirror. x a[-2,-1] y
+        16,16,1,1,-$amp +f. $amp a[-2,-1] x +mirror. x a[-2,-1] y
         r. $canvas_width,$canvas_height,1,3,0,2 +[-2,-1] c. 0,255
       fi
       => canvas_background
@@ -2617,7 +2617,7 @@ _display : skip ${1=},${3=}
           fi
           r. $area_3d_width,$area_3d_height,1,3,3
           if $is_checkerboard
-            24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2
+            16,16,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2
           fi
           round.
           => canvas_3d_background
@@ -4546,7 +4546,7 @@ _display_rgba : skip "${1=},${2=$1},${3=$1}"
   foreach {
     if s==2" || "s==4
       if $is_rgb i[0] 100%,100%,100%,3 fc[0] {[$*]}
-      else i[0] (64,96;96,64) r[0] 24,24 r[0] [1],[1],[1],{s-1},0,2
+      else i[0] (64,96;96,64) r[0] 16,16 r[0] [1],[1],[1],{s-1},0,2
       fi
       =>[0] {1,n}
       sh. {s-1} j[0] [1],0,0,0,0,1,[2],255 k[0]
@@ -25225,7 +25225,7 @@ snapshot3d : check "("${"is_image_arg $1"}" || isint(${1=1024},1)) && ${2=1}>=0 
   else # Default background color
     e[0--3] "Take $1x$1 snapshot of 3D object$?, with zoom factor $2, default background and FOV "$fov"."
     3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx r. $1,$1,1,3,3
-    24,24,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2 round.
+    16,16,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2 round.
   fi
 
   ofocale3d=$_focale3d
@@ -32154,7 +32154,9 @@ blend : skip "${1=},${2=},${3=}" check "isbool(${4=0})"
       if !0$f_a [f_c],[f_c],[f_c],1,255 is_fa_255=1 => f_a # If foreground has no alpha, create a fully opaque one
       else is_fa_255=0
       fi
-      if !$is_mode_alpha min[f_a] [b_a] fi # For non-alpha blending modes, restrict effect to region of background alpha
+      if !$is_mode_alpha # For non-alpha blending modes, restrict effect to region of background alpha
+        *[f_a] [b_a] /[f_a] 255
+      fi
       if $is_fa_255 j[b_a] [f_a],0,0,0,0,$opacity,[f_a],255
       else +f[f_a] 255 j[b_a] .,0,0,0,0,$opacity,[f_a],255 rm.
       fi
@@ -39026,7 +39028,7 @@ _x_paint :
 
     # Open/refresh brush window.
     if $refresh_brush
-      rm. (32,64;64,32) r. 24,24,1,3,1 r. {8*48},{4*48},1,3,0,2
+      rm. (32,64;64,32) r. 16,16,1,3,1 r. {8*48},{4*48},1,3,0,2
       repeat 4 { y=$>
         repeat 8 {
           ellipse. {48*$>+24},{48*$y+24},{2*$>+1},{(2*$>+1)*$brushthickness},$brushangle,{1-$y/4},255
@@ -39856,7 +39858,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
       fi
       grid. {(w-1)/8},{(h-1)/8},0,0,0.2,0xCCCCCCCC,0
       line. 0,100%,100%,0,0.2,0
-       frame. 24,24,200
+      frame. xy,24,200
       rectangle. 23,23,{w-24},{h-24},1,0xFFFFFFFF,232 line. 23,23,23,{h-24},1,128 line. 23,23,{w-24},23,1,128
       if $is_additional_data" && "{0,h}>1 # Render colored X-axis guide.
         if {0,h}>2 +rows[0] 1,3 else +rows[0] 1 r. 100%,3 fi
@@ -54544,7 +54546,7 @@ fx_illuminate_shape2d_preview_interactive :
     r $siz,1,100%,3
     s. c,-3 !=. 0 l.. { - 128 / 127 s c,-2 / } a[-2,-1] c # Gradient map
     rv s. c,-3
-    (64,96;96,64) r. 24,24 r. ..,..,1,3,0,2
+    (64,96;96,64) r. 16,16 r. ..,..,1,3,0,2
     30,30,1,1 circle. 50%,50%,15%,1,1 b. 4 n. 0,1
     100%,100%,1,3,[255,255,0]
     => normal,rgb,alpha,background,light_alpha,light_rgb
