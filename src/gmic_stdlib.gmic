@@ -9737,10 +9737,22 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
           fi
         else
           if $1==2
-            dX0,dY0,dZ0,dX1,dY1,dZ1:=min($X0,$Xi),min($Y0,$Yi),min($Z0,$Zi),max($X0,$Xi),max($Y0,$Yi),max($Z0,$Zi)
-            sizX,sizY:="[ $dX1 - $dX0,$dY1 - $dY0 ] + 1"
-            t. "Box ("$dX0\,$dY0\,$dZ0") - ("$dX1\,$dY1\,$dZ1")"\n\
-               "Size = ("$sizX\,$sizY")",0,0,$fontsize,1,255
+            Xm,Ym,Zm,XM,YM,ZM,sizX,sizY,sizZ,len,ang={_"
+              const X0 = $X0; const Y0 = $Y0; const Z0 = $Z0;
+              const X1 = $X1; const Y1 = $Y1; const Z1 = $Z1;
+              Xm = min(X0,X1); Ym = min(Y0,Y1); Zm = min(Z0,Z1);
+              XM = max(X0,X1); YM = max(Y0,Y1); ZM = max(Z0,Z1);
+              U = [ X1 - X0, Y1 - Y0, Z1 - Z0 ];
+              [ Xm,Ym,Zm,XM,YM,ZM,abs(U) + 1,norm(U),rad2deg(atan2(U[1],U[0]))%360 ]"}
+            if $is_volumetric
+              t. "Box ("$Xm\,$Ym\,$Zm") - ("$XM\,$YM\,$ZM")"\n\
+                 "Size = ("$sizX\,$sizY\,$sizZ"), Length = "$len\n\
+                 "Angle = "$ang"\260",0,0,$fontsize,1,255
+            else
+              t. "Box ("$Xm\,$Ym") - ("$XM\,$YM")"\n\
+                 "Size = ("$sizX\,$sizY"), Length = "$len\n\
+                 "Angle = "$ang"\260",0,0,$fontsize,1,255
+            fi
           fi
         fi
         expand_xy. 4 to_rgb. j.. .,0,0,0,0,0.75 rm.
