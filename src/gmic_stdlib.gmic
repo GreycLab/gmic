@@ -9565,14 +9565,14 @@ _random_pattern_check_image :
 #@cli : Take screenshot, optionally grabbed with specified coordinates, and insert it
 #@cli : at the end of the image list.
 
-#@cli select : feature_type,_X[%]>=0,_Y[%]>=0,_Z[%]>=0,_exit_on_anykey={ 0 | 1 },_is_deep_selection={ 0 | 1 } : (+)
+#@cli select : feature_type,_X[%]>=0,_Y[%]>=0,_Z[%]>=0,_exit_on_anykey={ 0 | 1 },_is_multiaxes_selection={ 0 | 1 }
 #@cli : Interactively select a feature from selected images (use the instant display window [0] if opened).
 #@cli : 'feature_type' can be { 0:point | 1:segment | 2:rectangle | 3:ellipse }.
 #@cli : Arguments 'X','Y','Z' determine the initial selection view, for 3D volumetric images.
 #@cli : The retrieved feature is returned as a 3D vector (if 'feature_type==0') or as a 6d vector
 #@cli : (if 'feature_type!=0') containing the feature coordinates.
-#@cli : Default values: 'X=Y=Z=(undefined)', 'exit_on_anykey=0' and 'is_deep_selection=0'.
-nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 && isbool(${5=0}) && isbool(${6=0})"
+#@cli : Default values: 'X=Y=Z=(undefined)', 'exit_on_anykey=0' and 'is_multiaxes_selection=1'.
+nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 && isbool(${5=0}) && isbool(${6=1})"
   s0,s1,s2=point,segment,rectangle
   e[^-1] "Select "${s$1}" in image$? in interactive mode, from point (${2-4})."
   foreach {
@@ -9582,6 +9582,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
                      cut(ispercentage($3)?h*$3:$3,0,h-1),\
                      cut(ispercentage($4)?d*$4:$4,0,d-1)])
     X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1
+    is_multiaxes={img,"d>1 && $6"}
     step=0
 
     do
@@ -9757,10 +9758,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
 
       continue:={*}" && "!{*,ESC}
       if $5" && "!$is_CTRL" && "{*,k} continue=0 fi
-      if (!$1" && "$step)" || "\
-         ($1" && "!$6" && "$step>1)" || "($1" && "$step>2)
-        continue=0
-      fi
+      if (!$1" && "$step)" || "($1" && "$step>1+$is_multiaxes) continue=0 fi
 
     while $continue
     rm
