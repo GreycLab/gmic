@@ -9581,7 +9581,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
     sx,sy,sz:=round([cut(ispercentage($2)?w*$2:$2,0,w-1),\
                      cut(ispercentage($3)?h*$3:$3,0,h-1),\
                      cut(ispercentage($4)?d*$4:$4,0,d-1)])
-    X0,Y0,Z0,X1,Y1,Z1=-1
+    X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1
     step=0
 
     do
@@ -9621,7 +9621,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
 
       mx,my={*,x,y}
       area={areas,i($mx,$my)}
-      x,y,z={areas,"
+      X,Y,Z={areas,"
         isin($area,0,4)?[-1,-1,-1]:
         inrange($mx,$x0,$xc,1,0)?(
           x = lerp(0,w#$img,($mx - $x0)/($xc - $x0));
@@ -9633,10 +9633,15 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
           z = lerp(0,d#$img,($mx - $xc)/($x1 + 1 - $xc));
           [ $sx,y,z ];
         );"}
-      ix,iy,iz:=int([$x,$y,$z])
+      Xi,Yi,Zi:=int([$X,$Y,$Z])
+      if $X>=0
+        if !$step X0,Y0,Z0=$Xi,$Yi,$Zi
+        elif $step" && "$area==$area_clicked X1,Y1,Z1=$Xi,$Yi,$Zi
+        fi
+      fi
 
       # Render view.
-      cursor[0] {$x<0}
+      cursor[0] {isin($area,0,4)" || "($step" && "$area!=$area_clicked)}
       [view]
       if inrange($area,1,3)
         eval " # Draw cursor axes and selection.
@@ -9645,8 +9650,8 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
-          coords(s,$x,$y,$z);
-          $step?coords(e,$X0,$Y0,$Z0);
+          $step?(coords(s,$X1,$Y1,$Z1); coords(e,$X0,$Y0,$Z0)):coords(s,$X0,$Y0,$Z0);
+
           const xc1 = $xc - 1; const yc1 = $yc - 1;
           const hatch1 = 0x00FF00FF;
           const hatch2 = 0x55555555;
@@ -9693,8 +9698,10 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       wait
 
       # Manage user events.
-      is_CTRL:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
-      if {*,r} w[] {*,d,e} rmn view fi
+      is_CTRL,is_lmb,is_rmb:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,b}&1,{*,b}&2
+      if {*,r}
+        w[] {*,d,e} rmn view
+      fi
       if $is_CTRL" && "{*,D}
         nw,nh:=round(1.25*[{*,w,h}])
         if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh rmn view fi
@@ -9710,17 +9717,18 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         rmn view
         skip {*,-F}
       fi
-
-      if ({*,b}&2||$step)" && "$x>=0
+      if $is_rmb" && "$x>=0
         sx,sy,sz=$x,$y,$z rmn view
       fi
 
-      if $step==0
-        if $x>=0" && "{*,b}&1 X0,Y0,Z0=$ix,$iy,$iz step=1 rmn view fi
-      elif $step==1
-        if {*,b}&1" && "$x>=0 X1,Y1,Z1=$ix,$iz,$iz
-        elif !({*,b}&1)
-          if $x<0 step=0 X0,Y0,Z0,X1,Y1,Z1=-1 else step=2 fi
+      # Manage user selection.
+      if $step==0" && "$is_lmb" && "$X>=0
+        X0,Y0,Z0=$Xi,$Yi,$Zi
+        area_clicked,step=$area,1
+        rmn view
+      elif $step==1" && "!$is_lmb
+        if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
+        else X1,Y1,Z1,step=$Xi,$Yi,$Zi,2
         fi
       fi
 
