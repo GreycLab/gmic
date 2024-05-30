@@ -9582,7 +9582,8 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
                      cut(ispercentage($3)?h*$3:$3,0,h-1),\
                      cut(ispercentage($4)?d*$4:$4,0,d-1)])
     X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1
-    is_multiaxes={img,"d>1 && $6"}
+    is_volumetric={img,d>1}
+    is_multiaxes:=$is_volumetric" && "$6
     step=0
 
     do
@@ -9592,7 +9593,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       if !0$view
         rmn areas
         sh[img] 0,{img,min(3,s)-1}
-        if {img,d>1} # 3D Volumetric image -> 2D projections
+        if $is_volumetric # 3D Volumetric image -> 2D projections
           +slices. $Zs
           +columns.. $Xs permute. zyxc a[-2,-1] x
           +rows.. $Ys permute. xzyc a[-2,-1] y
@@ -9639,28 +9640,45 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
 
       if $X>=0
         if !$step
-          X0,Y0,Z0=$X,$Y,$Z
+          X0,Y0,Z0=$Xi,$Yi,$Zi
         elif $step==1" && "$area==$area_clicked
-          X1,Y1,Z1=$X,$Y,$Z
+          X1,Y1,Z1=$Xi,$Yi,$Zi
         elif $step==2" && "$area!=$area_clicked
-          if $area_clicked==1 Z1=$Z
-          elif $area_clicked==2 X1=$X
-          elif $area_clicked==3 Y1=$Y
+          if $area_clicked==1 Z1=$Zi
+          elif $area_clicked==2 X1=$Xi
+          elif $area_clicked==3 Y1=$Yi
           fi
         fi
       fi
 
       # Render view.
       cursor[0] {!$area" || "($step>1" && "$area==$area_clicked)}
-      [view]
       if inrange($area,1,3)
+        [view]
         eval " # Draw cursor axes and selection.
           coords(varname,x,y,z) = (
             varname#_x1 = round(lerp($x0,$xc,x/w#$img)); varname#_y1 = round(lerp($y0,$yc,y/h#$img));
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
-          $step?(coords(s,$X1,$Y1,$Z1); coords(e,$X0,$Y0,$Z0)):coords(s,$X0,$Y0,$Z0);
+          X0 = $X0; Y0 = $Y0; Z0 = $Z0;
+          $step?(
+            X1 = $X1; Y1 = $Y1; Z1 = $Z1;
+            $1>1?(
+              X0>X1?swap(X0,X1); Y0>Y1?swap(Y0,Y1); Z0>Z1?swap(Z0,Z1);
+              coords(s,X0,Y0,Z0);
+              ++X1; ++Y1; ++Z1; coords(e,X1,Y1,Z1); --e_x1; --e_y1; --e_x2; --e_y2; --e_x3; --e_y3;
+            ):(
+              X0+=0.5; Y0+=0.5; Z0+=0.5;
+              X1+=0.5; Y1+=0.5; Z1+=0.5;
+              coords(s,X0,Y0,Z0);
+              coords(e,X1,Y1,Z1);
+            );
+          ):(
+            X0+=0.5; Y0+=0.5; Z0+=0.5;
+            coords(s,X0,Y0,Z0);
+          );
+          coords(f,$X,$Y,$Z);
 
           const xc1 = $xc - 1; const yc1 = $yc - 1;
           const hatch1 = 0x00FF00FF;
@@ -9691,26 +9709,40 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             );
           );
 
-          polygon(#-1,-2,s_x1,$y0,s_x1,yc1,0.75,hatch1,0);
-          polygon(#-1,-2,s_x1,$y0,s_x1,yc1,0.75,~hatch1,255);
-          polygon(#-1,-2,$x0,s_y1,xc1,s_y1,0.75,hatch1,0);
-          polygon(#-1,-2,$x0,s_y1,xc1,s_y1,0.75,~hatch1,255);
+          polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,hatch1,0);
+          polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,~hatch1,255);
+          polygon(#-1,-2,$x0,f_y1,xc1,f_y1,0.75,hatch1,0);
+          polygon(#-1,-2,$x0,f_y1,xc1,f_y1,0.75,~hatch1,255);
           d#$img>1?(
-            polygon(#-1,-2,s_x2,$y0,s_x2,yc1,0.75,hatch1,0);
-            polygon(#-1,-2,s_x2,$y0,s_x2,yc1,0.75,~hatch1,255);
-            polygon(#-1,-2,$xc,s_y2,$x1,s_y2,0.75,hatch1,0);
-            polygon(#-1,-2,$xc,s_y2,$x1,s_y2,0.75,~hatch1,255);
+            polygon(#-1,-2,f_x2,$y0,f_x2,yc1,0.75,hatch1,0);
+            polygon(#-1,-2,f_x2,$y0,f_x2,yc1,0.75,~hatch1,255);
+            polygon(#-1,-2,$xc,f_y2,$x1,f_y2,0.75,hatch1,0);
+            polygon(#-1,-2,$xc,f_y2,$x1,f_y2,0.75,~hatch1,255);
 
-            polygon(#-1,-2,s_x3,$yc,s_x3,$y1,0.75,hatch1,0);
-            polygon(#-1,-2,s_x3,$yc,s_x3,$y1,0.75,~hatch1,255);
-            polygon(#-1,-2,$x0,s_y3,xc1,s_y3,0.75,hatch1,0);
-            polygon(#-1,-2,$x0,s_y3,xc1,s_y3,0.75,~hatch1,255);
+            polygon(#-1,-2,f_x3,$yc,f_x3,$y1,0.75,hatch1,0);
+            polygon(#-1,-2,f_x3,$yc,f_x3,$y1,0.75,~hatch1,255);
+            polygon(#-1,-2,$x0,f_y3,xc1,f_y3,0.75,hatch1,0);
+            polygon(#-1,-2,$x0,f_y3,xc1,f_y3,0.75,~hatch1,255);
           )"
 
-        to. \#$step": "$X0","$Y0","$Z0" - "$X1","$Y1","$Z1,0,0,24
+        fontsize:=min(24,h/24)
+        0
+        if !$step
+          if $is_volumetric t. "Point ("$Xi\,$Yi\,$Zi") = [ "{``{img,_I($Xi,$Yi,$Zi)}}" ]",0,0,$fontsize,1,255
+          else t. "Point ("$Xi\,$Yi") = [ "{``{img,_I($Xi,$Yi)}}" ]",0,0,$fontsize,1,255
+          fi
+        else
+          if $1==2
+            dX0,dY0,dZ0,dX1,dY1,dZ1:=min($X0,$Xi),min($Y0,$Yi),min($Z0,$Zi),max($X0,$Xi),max($Y0,$Yi),max($Z0,$Zi)
+            sizX,sizY:="[ $dX1 - $dX0,$dY1 - $dY0 ] + 1"
+            t. "Box ("$dX0\,$dY0\,$dZ0") - ("$dX1\,$dY1\,$dZ1")"\n\
+               "Size = ("$sizX\,$sizY")",0,0,$fontsize,1,255
+          fi
+        fi
+        expand_xy. 4 to_rgb. j.. .,0,0,0,0,0.75 rm.
+        w. rm.
+      else w[view]
       fi
-      w.
-      rm.
       wait
 
       # Manage user events.
@@ -9735,7 +9767,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       fi
       if {*,o}
         delta={*,o}
-        if {img,d>1}
+        if $is_volumetric
           if $area==1 Zs={img,cut($Zs+$delta,0,d-1)}
           elif $area==2 Xs={img,cut($Xs+$delta,0,w-1)}
           elif $area==3 Ys={img,cut($Ys+$delta,0,h-1)}
@@ -9746,24 +9778,24 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       fi
       if $is_rmb" && "$X>=0
         Xs,Ys,Zs=$Xi,$Yi,$Zi
-        if {img,d>1} rmn view fi
+        if $is_volumetric rmn view fi
       fi
 
       # Manage user selection.
       if $step==0" && "$is_lmb" && "$X>=0
         X0,Y0,Z0=$Xi,$Yi,$Zi
         area_clicked,step=$area,1
-        if {img,d>1} rmn view fi
+        if $is_volumetric rmn view fi
       elif $step==1" && "$is_lmb" && "$X>=0
         Xs,Ys,Zs:=int([$X1,$Y1,$Z1])
-        if {img,d>1} rmn view fi
+        if $is_volumetric rmn view fi
       elif $step==1" && "!$is_lmb
         if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0 # Reset selection
         else X1,Y1,Z1,step=$Xi,$Yi,$Zi,2
         fi
       elif $step==2" && "!$is_lmb
         Xs,Ys,Zs:=int([$X1,$Y1,$Z1])
-        if {img,d>1} rmn view fi
+        if $is_volumetric rmn view fi
       elif $step==2" && "$is_lmb
         if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
         else X1,Y1,Z1,step=$Xi,$Yi,$Zi,3
