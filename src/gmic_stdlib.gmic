@@ -9664,13 +9664,27 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
           const hatch3 = 0x33333333;
           const step = $step;
 
-          # Retrieve 2D coordinates.
-          coords(varname,x,y,z) = (
+          coords(varname,x,y,z) = ( # Convert 3D coords to 2D coords for each area
             varname#_x1 = round(lerp($x0,$xc,x/w#$img)); varname#_y1 = round(lerp($y0,$yc,y/h#$img));
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
 
+          draw_vector(x0,y0,x1,y1) = (
+            polygon(#-1,-2,x0,y0,x1,y1,1,hatch3,0);
+            polygon(#-1,-2,x0,y0,x1,y1,1,~hatch3,255);
+            ellipse(#-1,x0,y0,5,5,0,0.75,0);
+            ellipse(#-1,x1,y1,5,5,0,0.75,255);
+          );
+
+          draw_cursor(x,y0,y1,y,x0,x1) = (
+            polygon(#-1,-2,x,y0,x,y1,0.75,hatch1,0);
+            polygon(#-1,-2,x,y0,x,y1,0.75,~hatch1,255);
+            polygon(#-1,-2,x0,y,x1,y,0.75,hatch1,0);
+            polygon(#-1,-2,x0,y,x1,y,0.75,~hatch1,255);
+          );
+
+          # Retrieve 2D coordinates.
           box_opacity = step?0.25:0.15;
           X0 = $X0; Y0 = $Y0; Z0 = $Z0;
           !step?(X1 = X0; Y1 = Y0; Z1 = Z0):(X1 = $X1; Y1 = $Y1; Z1 = $Z1);
@@ -9701,31 +9715,18 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
           );
 
           step?( # Vector
-            polygon(#-1,-2,sc_x1,sc_y1,ec_x1,ec_y1,1,hatch3,0);
-            polygon(#-1,-2,sc_x1,sc_y1,ec_x1,ec_y1,1,~hatch3,255);
+            draw_vector(sc_x1,sc_y1,ec_x1,ec_y1);
             d#$img>1?(
-              polygon(#-1,-2,sc_x2,sc_y2,ec_x2,ec_y2,1,hatch3,0);
-              polygon(#-1,-2,sc_x2,sc_y2,ec_x2,ec_y2,1,~hatch3,255);
-              polygon(#-1,-2,sc_x3,sc_y3,ec_x3,ec_y3,1,hatch3,0);
-              polygon(#-1,-2,sc_x3,sc_y3,ec_x3,ec_y3,1,~hatch3,255);
+              draw_vector(sc_x2,sc_y2,ec_x2,ec_y2);
+              draw_vector(sc_x3,sc_y3,ec_x3,ec_y3);
             );
           );
 
           # Draw cursor axes.
-          polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,hatch1,0);
-          polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,~hatch1,255);
-          polygon(#-1,-2,$x0,f_y1,xc1,f_y1,0.75,hatch1,0);
-          polygon(#-1,-2,$x0,f_y1,xc1,f_y1,0.75,~hatch1,255);
+          draw_cursor(f_x1,$y0,yc1,f_y1,$x0,xc1);
           d#$img>1?(
-            polygon(#-1,-2,f_x2,$y0,f_x2,yc1,0.75,hatch1,0);
-            polygon(#-1,-2,f_x2,$y0,f_x2,yc1,0.75,~hatch1,255);
-            polygon(#-1,-2,$xc,f_y2,$x1,f_y2,0.75,hatch1,0);
-            polygon(#-1,-2,$xc,f_y2,$x1,f_y2,0.75,~hatch1,255);
-
-            polygon(#-1,-2,f_x3,$yc,f_x3,$y1,0.75,hatch1,0);
-            polygon(#-1,-2,f_x3,$yc,f_x3,$y1,0.75,~hatch1,255);
-            polygon(#-1,-2,$x0,f_y3,xc1,f_y3,0.75,hatch1,0);
-            polygon(#-1,-2,$x0,f_y3,xc1,f_y3,0.75,~hatch1,255);
+            draw_cursor(f_x2,$y0,yc1,f_y2,$xc,$x1);
+            draw_cursor(f_x3,$yc,$y1,f_y3,$x0,xc1);
           )"
 
         # Draw text label.
