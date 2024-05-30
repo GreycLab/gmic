@@ -9658,12 +9658,14 @@ select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
 
         # Draw selection and cursor axes.
         eval "
-          const xc1 = $xc - 1; const yc1 = $yc - 1;
+          const step = $step;
           const is_volumetric = $is_volumetric;
+          const box_opacity = step?0.25:0.15;
+          const vector_opacity = $1==1?0.95:0.35;
           const hatch1 = 0x00FF00FF;
           const hatch2 = 0x55555555;
           const hatch3 = 0x33333333;
-          const step = $step;
+          const xc1 = $xc - 1; const yc1 = $yc - 1;
 
           coords(varname,x,y,z) = ( # Convert 3D coords to 2D coords for each area
             varname#_x1 = round(lerp($x0,$xc,x/w#$img)); varname#_y1 = round(lerp($y0,$yc,y/h#$img));
@@ -9686,15 +9688,14 @@ select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
 
           draw_vector(x0,y0,x1,y1) = (
             ox = abs(y1 - y0)>abs(x1 - x0); oy = 1 - ox;
-            polygon(#-1,2,x0 - ox,y0 - oy,x1 - ox,y1 - oy,0.75,0);
-            polygon(#-1,2,x0 + ox,y0 + oy,x1 + ox,y1 + oy,0.75,0);
-            polygon(#-1,2,x0,y0,x1,y1,0.75,255);
-            ellipse(#-1,x0,y0,5,5,0,0.75,0);
-            ellipse(#-1,x1,y1,5,5,0,0.75,255);
+            polygon(#-1,2,x0 - ox,y0 - oy,x1 - ox,y1 - oy,vector_opacity,0);
+            polygon(#-1,2,x0 + ox,y0 + oy,x1 + ox,y1 + oy,vector_opacity,0);
+            polygon(#-1,2,x0,y0,x1,y1,vector_opacity,255);
+            ellipse(#-1,x0,y0,5,5,0,vector_opacity,0);
+            ellipse(#-1,x1,y1,5,5,0,vector_opacity,255);
           );
 
           # Retrieve 2D coordinates.
-          box_opacity = step?0.25:0.15;
           X0 = $X0; Y0 = $Y0; Z0 = $Z0;
           !step?(X1 = X0; Y1 = Y0; Z1 = Z0):(X1 = $X1; Y1 = $Y1; Z1 = $Z1);
           cX0 = X0 + 0.5; cY0 = Y0 + 0.5; cZ0 = Z0 + 0.5;
