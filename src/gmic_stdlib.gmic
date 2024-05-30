@@ -9656,59 +9656,58 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       if inrange($area,1,3)
         [view]
         eval " # Draw cursor axes and selection.
+          const xc1 = $xc - 1; const yc1 = $yc - 1;
+          const hatch1 = 0x00FF00FF;
+          const hatch2 = 0x55555555;
+          const hatch3 = 0x33333333;
+          const step = $step;
+
+          # Retrieve 2D coordinates.
           coords(varname,x,y,z) = (
             varname#_x1 = round(lerp($x0,$xc,x/w#$img)); varname#_y1 = round(lerp($y0,$yc,y/h#$img));
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
           X0 = $X0; Y0 = $Y0; Z0 = $Z0;
-          $step?(
+          !step?(X1 = X0 + 1; Y1 = Y0 + 1; Z1 = Z0 + 1):(
             X1 = $X1; Y1 = $Y1; Z1 = $Z1;
-            $1>1?(
+            $1==1?(X0+=0.5; Y0+=0.5; Z0+=0.5; X1+=0.5; Y1+=0.5; Z1+=0.5):(
               X0>X1?swap(X0,X1); Y0>Y1?swap(Y0,Y1); Z0>Z1?swap(Z0,Z1);
-              coords(s,X0,Y0,Z0);
-              ++X1; ++Y1; ++Z1; coords(e,X1,Y1,Z1); --e_x1; --e_y1; --e_x2; --e_y2; --e_x3; --e_y3;
-            ):(
-              X0+=0.5; Y0+=0.5; Z0+=0.5;
-              X1+=0.5; Y1+=0.5; Z1+=0.5;
-              coords(s,X0,Y0,Z0);
-              coords(e,X1,Y1,Z1);
+              ++X1; ++Y1; ++Z1;
             );
-          ):(
-            X0+=0.5; Y0+=0.5; Z0+=0.5;
-            coords(s,X0,Y0,Z0);
           );
+          coords(s,X0,Y0,Z0);
+          coords(e,X1,Y1,Z1);
           coords(f,$X,$Y,$Z);
+          !step || $1>1?(--e_x1; --e_y1; --e_x2; --e_y2; --e_x3; --e_y3);
 
-          const xc1 = $xc - 1; const yc1 = $yc - 1;
-          const hatch1 = 0x00FF00FF;
-          const hatch2 = 0x55555555;
-          const hatch3 = 0x33333333;
-
-          $step?(
-            polygon(#-1,-2,s_x1,s_y1,e_x1,e_y1,0.95,hatch3,0);
-            polygon(#-1,-2,s_x1,s_y1,e_x1,e_y1,0.95,~hatch3,255);
-            $1>1?(
-              polygon(#-1,4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.25,0);
-              polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,hatch2,0);
-              polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,~hatch2,255);
-            );
+          # Draw user selection.
+          !step || $1>1?( # Filled rectangle
+            polygon(#-1,4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.25,0);
+            polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,hatch2,0);
+            polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,~hatch2,255);
             d#$img>1?(
-              polygon(#-1,-2,s_x2,s_y2,e_x2,e_y2,0.95,hatch3,0);
-              polygon(#-1,-2,s_x2,s_y2,e_x2,e_y2,0.95,~hatch3,255);
-              polygon(#-1,-2,s_x3,s_y3,e_x3,e_y3,0.95,hatch3,0);
-              polygon(#-1,-2,s_x3,s_y3,e_x3,e_y3,0.95,~hatch3,255);
-              $1>1?(
-                polygon(#-1,4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.25,0);
-                polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,hatch2,0);
-                polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,~hatch2,255);
-                polygon(#-1,4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.25,0);
-                polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,hatch2,0);
-                polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,~hatch2,255);
-              );
+              polygon(#-1,4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.25,0);
+              polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,hatch2,0);
+              polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,~hatch2,255);
+              polygon(#-1,4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.25,0);
+              polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,hatch2,0);
+              polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,~hatch2,255);
             );
           );
 
+          step?( # Vector
+            polygon(#-1,-2,s_x1,s_y1,e_x1,e_y1,1,hatch3,0);
+            polygon(#-1,-2,s_x1,s_y1,e_x1,e_y1,1,~hatch3,255);
+            d#$img>1?(
+              polygon(#-1,-2,s_x2,s_y2,e_x2,e_y2,1,hatch3,0);
+              polygon(#-1,-2,s_x2,s_y2,e_x2,e_y2,1,~hatch3,255);
+              polygon(#-1,-2,s_x3,s_y3,e_x3,e_y3,1,hatch3,0);
+              polygon(#-1,-2,s_x3,s_y3,e_x3,e_y3,1,~hatch3,255);
+            );
+          );
+
+          # Draw cursor axes.
           polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,hatch1,0);
           polygon(#-1,-2,f_x1,$y0,f_x1,yc1,0.75,~hatch1,255);
           polygon(#-1,-2,$x0,f_y1,xc1,f_y1,0.75,hatch1,0);
