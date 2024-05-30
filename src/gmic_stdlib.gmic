@@ -9598,7 +9598,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
           to_rgb. => view rm..
           {img,[w,h]},1,1,1
           {img,[d,h]},1,1,2 a[-2,-1] x
-          {img,[w,d]},1,1,3 -[-2,-1] 4 a[-2,-1] y +. 4
+          {img,[w,d]},1,1,3 a[-2,-1] y
           => areas
         else # 2D image
           +n. 0,255 to_rgb. => view rm..
@@ -9619,24 +9619,33 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
           [ x0,y0,x1,y1,xc,yc ]"}
       fi
 
-      mx,my={*,x,y}
-      area={areas,i($mx,$my)}
-      X,Y,Z={areas,"
-        isin($area,0,4)?[-1,-1,-1]:
-        inrange($mx,$x0,$xc,1,0)?(
-          x = lerp(0,w#$img,($mx - $x0)/($xc - $x0));
-          y = lerp(0,h#$img,($my - $y0)/($yc - $y0));
-          z = lerp(0,d#$img,($my - $yc)/($y1 + 1 - $yc));
-          $my<$yc?[ x,y,$sz ]:[ x,$sy,z ];
-        ):(
-          y = lerp(0,h#$img,($my - $y0)/($yc - $y0));
-          z = lerp(0,d#$img,($mx - $xc)/($x1 + 1 - $xc));
-          [ $sx,y,z ];
-        );"}
-      Xi,Yi,Zi:=int([$X,$Y,$Z])
+      # Retrieve 3D coordinates from mouse pointer.
+      mx,my,area={*,x,y},{areas,i({*,x,y})}
+      X,Y,Z,Xi,Yi,Zi={img,"
+        XYZ =
+          !$area?[-1,-1,-1]:
+          inrange($mx,$x0,$xc,1,0)?(
+            X = lerp(0,w,($mx - $x0)/($xc - $x0));
+            Y = lerp(0,h,($my - $y0)/($yc - $y0));
+            Z = lerp(0,d,($my - $yc)/($y1 + 1 - $yc));
+            $my<$yc?[ X,Y,$sz ]:[ X,$sy,Z ];
+          ):(
+            Y = lerp(0,h,($my - $y0)/($yc - $y0));
+            Z = lerp(0,d,($mx - $xc)/($x1 + 1 - $xc));
+            [ $sx,Y,Z ];
+          );
+        [ XYZ,int(XYZ) ]"}
+
       if $X>=0
-        if !$step X0,Y0,Z0=$Xi,$Yi,$Zi
-        elif $step" && "$area==$area_clicked X1,Y1,Z1=$Xi,$Yi,$Zi
+        if !$step
+          X0,Y0,Z0=$Xi,$Yi,$Zi
+        elif $step==1" && "$area==$area_clicked
+          X1,Y1,Z1=$Xi,$Yi,$Zi
+        elif $step==2" && "$area!=$area_clicked
+          if $area_clicked==1 Z1=$Zi
+          elif $area_clicked==2 Y1=$Yi
+          elif $area_clicked==3 X1=$Xi
+          fi
         fi
       fi
 
@@ -9650,7 +9659,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
-          $step?(coords(s,$X1,$Y1,$Z1); coords(e,$X0,$Y0,$Z0)):coords(s,$X0,$Y0,$Z0);
+          $step?(coords(s,$X,$Y,$Z); coords(e,$X0,$Y0,$Z0)):coords(s,$X,$Y,$Z);
 
           const xc1 = $xc - 1; const yc1 = $yc - 1;
           const hatch1 = 0x00FF00FF;
@@ -9730,11 +9739,15 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
         else X1,Y1,Z1,step=$Xi,$Yi,$Zi,2
         fi
+      elif $step==2" && "$is_lmb
+        if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
+        else X1,Y1,Z1,step=$Xi,$Yi,$Zi,3
+        fi
       fi
 
       continue:={*}" && "!{*,ESC}
       if $5" && "!$is_CTRL" && "{*,k} continue=0 fi
-      if (!$1" && "$step)" || "($1" && "$step>1) continue=0  fi
+      if (!$1" && "$step)" || "($1==1" && "$step>1)" || "($1==2" && "$step>2) continue=0  fi
 
     while $continue
     rm
