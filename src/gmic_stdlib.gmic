@@ -9652,13 +9652,14 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
       fi
 
       # Render view.
-      cursor[0] {!$area" || "($step>1" && "$area==$area_clicked)}
+      cursor[0] {!$area}
       if inrange($area,1,3)
         [view]
 
         # Draw selection and cursor axes.
         eval "
           const xc1 = $xc - 1; const yc1 = $yc - 1;
+          const is_volumetric = $is_volumetric;
           const hatch1 = 0x00FF00FF;
           const hatch2 = 0x55555555;
           const hatch3 = 0x33333333;
@@ -9670,11 +9671,10 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
 
-          draw_vector(x0,y0,x1,y1) = (
-            polygon(#-1,-2,x0,y0,x1,y1,1,hatch3,0);
-            polygon(#-1,-2,x0,y0,x1,y1,1,~hatch3,255);
-            ellipse(#-1,x0,y0,5,5,0,0.75,0);
-            ellipse(#-1,x1,y1,5,5,0,0.75,255);
+          draw_box(x0,y0,x1,y1) = (
+            polygon(#-1,4,x0,y0,x1,y0,x1,y1,x0,y1,box_opacity,0);
+            polygon(#-1,-4,x0,y0,x1,y0,x1,y1,x0,y1,0.95,hatch2,0);
+            polygon(#-1,-4,x0,y0,x1,y0,x1,y1,x0,y1,0.95,~hatch2,255);
           );
 
           draw_cursor(x,y0,y1,y,x0,x1) = (
@@ -9682,6 +9682,13 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
             polygon(#-1,-2,x,y0,x,y1,0.75,~hatch1,255);
             polygon(#-1,-2,x0,y,x1,y,0.75,hatch1,0);
             polygon(#-1,-2,x0,y,x1,y,0.75,~hatch1,255);
+          );
+
+          draw_vector(x0,y0,x1,y1) = (
+            polygon(#-1,-2,x0,y0,x1,y1,1,hatch3,0);
+            polygon(#-1,-2,x0,y0,x1,y1,1,~hatch3,255);
+            ellipse(#-1,x0,y0,5,5,0,0.75,0);
+            ellipse(#-1,x1,y1,5,5,0,0.75,255);
           );
 
           # Retrieve 2D coordinates.
@@ -9701,30 +9708,21 @@ select : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
 
           # Draw user selection.
           !step || $1>1?( # Filled rectangle
-            polygon(#-1,4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,box_opacity,0);
-            polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,hatch2,0);
-            polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,~hatch2,255);
-            d#$img>1?(
-              polygon(#-1,4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,box_opacity,0);
-              polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,hatch2,0);
-              polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,~hatch2,255);
-              polygon(#-1,4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,box_opacity,0);
-              polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,hatch2,0);
-              polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,~hatch2,255);
+            draw_box(s_x1,s_y1,e_x1,e_y1);
+            is_volumetric?(
+              draw_box(s_x2,s_y2,e_x2,e_y2);
+              draw_box(s_x3,s_y3,e_x3,e_y3);
             );
           );
-
           step?( # Vector
             draw_vector(sc_x1,sc_y1,ec_x1,ec_y1);
-            d#$img>1?(
+            is_volumetric?(
               draw_vector(sc_x2,sc_y2,ec_x2,ec_y2);
               draw_vector(sc_x3,sc_y3,ec_x3,ec_y3);
             );
           );
-
-          # Draw cursor axes.
           draw_cursor(f_x1,$y0,yc1,f_y1,$x0,xc1);
-          d#$img>1?(
+          is_volumetric?(
             draw_cursor(f_x2,$y0,yc1,f_y2,$xc,$x1);
             draw_cursor(f_x3,$yc,$y1,f_y3,$x0,xc1);
           )"
