@@ -9655,7 +9655,9 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
       cursor[0] {!$area" || "($step>1" && "$area==$area_clicked)}
       if inrange($area,1,3)
         [view]
-        eval " # Draw cursor axes and selection.
+
+        # Draw selection and cursor axes.
+        eval "
           const xc1 = $xc - 1; const yc1 = $yc - 1;
           const hatch1 = 0x00FF00FF;
           const hatch2 = 0x55555555;
@@ -9668,6 +9670,8 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             varname#_x2 = round(lerp($xc,$x1 + 1,z/d#$img)); varname#_y2 = varname#_y1;
             varname#_x3 = varname#_x1; varname#_y3 = round(lerp($yc,$y1 + 1,z/d#$img));
           );
+
+          box_opacity = step?0.25:0.15;
           X0 = $X0; Y0 = $Y0; Z0 = $Z0;
           !step?(X1 = X0 + 1; Y1 = Y0 + 1; Z1 = Z0 + 1):(
             X1 = $X1; Y1 = $Y1; Z1 = $Z1;
@@ -9683,14 +9687,14 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
 
           # Draw user selection.
           !step || $1>1?( # Filled rectangle
-            polygon(#-1,4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.25,0);
+            polygon(#-1,4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,box_opacity,0);
             polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,hatch2,0);
             polygon(#-1,-4,s_x1,s_y1,e_x1,s_y1,e_x1,e_y1,s_x1,e_y1,0.95,~hatch2,255);
             d#$img>1?(
-              polygon(#-1,4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.25,0);
+              polygon(#-1,4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,box_opacity,0);
               polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,hatch2,0);
               polygon(#-1,-4,s_x2,s_y2,e_x2,s_y2,e_x2,e_y2,s_x2,e_y2,0.95,~hatch2,255);
-              polygon(#-1,4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.25,0);
+              polygon(#-1,4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,box_opacity,0);
               polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,hatch2,0);
               polygon(#-1,-4,s_x3,s_y3,e_x3,s_y3,e_x3,e_y3,s_x3,e_y3,0.95,~hatch2,255);
             );
@@ -9724,6 +9728,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             polygon(#-1,-2,$x0,f_y3,xc1,f_y3,0.75,~hatch1,255);
           )"
 
+        # Draw text label.
         fontsize:=min(24,h/24)
         0
         if !$step
