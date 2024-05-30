@@ -9572,20 +9572,12 @@ _random_pattern_check_image :
 #@cli : The retrieved feature is returned as a 3D vector (if 'feature_type==0') or as a 6d vector
 #@cli : (if 'feature_type!=0') containing the feature coordinates.
 #@cli : Default values: 'X=Y=Z=(undefined)', 'exit_on_anykey=0' and 'is_deep_selection=0'.
-
-#@cli nselect : feature_type,_X[%]>=0,_Y[%]>=0,_Z[%]>=0,_exit_on_anykey={ 0 | 1 },_is_deep_selection={ 0 | 1 } : (+)
-#@cli : Interactively select a feature from selected images (use the instant display window [0] if opened).
-#@cli : 'feature_type' can be { 0:point | 1:segment | 2:rectangle }.
-#@cli : Arguments 'X','Y','Z' determine the initial selection view, for 3D volumetric images.
-#@cli : The retrieved feature is returned as a 3D vector (if 'feature_type==0') or as a 6d vector
-#@cli : (if 'feature_type!=0') containing the feature coordinates.
-#@cli : Default values: 'X=Y=Z=(undefined)', 'exit_on_anykey=0' and 'is_deep_selection=0'.
 nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 && isbool(${5=0}) && isbool(${6=0})"
   s0,s1,s2=point,segment,rectangle
   e[^-1] "Select "${s$1}" in image$? in interactive mode, from point (${2-4})."
   foreach {
     nm={n} basename {n} title="[G'MIC] "${} => img
-    if !{*} w[] ${"fitscreen [img]"},1,$title fi
+    if !{*} w[] ${"fitscreen [img]"},0,$title fi
     sx,sy,sz:=round([cut(ispercentage($2)?w*$2:$2,0,w-1),\
                      cut(ispercentage($3)?h*$3:$3,0,h-1),\
                      cut(ispercentage($4)?d*$4:$4,0,d-1)])
@@ -9694,7 +9686,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         skip {*,-C}
       fi
       if $is_CTRL" && "{*,F}
-        if {*,f} w[] $w_width,$w_height,0,0 else w[] {*,u,v},0,1 fi
+        if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
         rmn view
         skip {*,-F}
       fi
