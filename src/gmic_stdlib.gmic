@@ -9578,7 +9578,7 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
   foreach {
     nm={n} basename {n} title="[G'MIC] "${} => img
     if !{*} w[] ${"fitscreen [img]"},0,$title fi
-    sx,sy,sz:=round([cut(ispercentage($2)?w*$2:$2,0,w-1),\
+    Xs,Ys,Zs:=round([cut(ispercentage($2)?w*$2:$2,0,w-1),\
                      cut(ispercentage($3)?h*$3:$3,0,h-1),\
                      cut(ispercentage($4)?d*$4:$4,0,d-1)])
     X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1
@@ -9592,9 +9592,9 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         rmn areas
         sh[img] 0,{img,min(3,s)-1}
         if {img,d>1} # 3D Volumetric image -> 2D projections
-          +slices. $sz
-          +columns.. $sx permute. zyxc a[-2,-1] x
-          +rows.. $sy permute. xzyc a[-2,-1] y
+          +slices. $Zs
+          +columns.. $Xs permute. zyxc a[-2,-1] x
+          +rows.. $Ys permute. xzyc a[-2,-1] y
           to_rgb. => view rm..
           {img,[w,h]},1,1,1
           {img,[d,h]},1,1,2 a[-2,-1] x
@@ -9628,11 +9628,11 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
             X = lerp(0,w,($mx - $x0)/($xc - $x0));
             Y = lerp(0,h,($my - $y0)/($yc - $y0));
             Z = lerp(0,d,($my - $yc)/($y1 + 1 - $yc));
-            $my<$yc?[ X,Y,$sz ]:[ X,$sy,Z ];
+            $my<$yc?[ X,Y,$Zs ]:[ X,$Ys,Z ];
           ):(
             Y = lerp(0,h,($my - $y0)/($yc - $y0));
             Z = lerp(0,d,($mx - $xc)/($x1 + 1 - $xc));
-            [ $sx,Y,Z ];
+            [ $Xs,Y,Z ];
           );
         [ XYZ,int(XYZ) ]"}
 
@@ -9726,8 +9726,9 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         rmn view
         skip {*,-F}
       fi
-      if $is_rmb" && "$x>=0
-        sx,sy,sz=$x,$y,$z rmn view
+      if $is_rmb" && "$X>=0
+        Xs,Ys,Zs=$Xi,$Yi,$Zi
+        rmn view
       fi
 
       # Manage user selection.
@@ -9735,10 +9736,16 @@ nselect : check "isint(${1=0},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 
         X0,Y0,Z0=$Xi,$Yi,$Zi
         area_clicked,step=$area,1
         rmn view
+      elif $step==1" && "$is_lmb" && "$X>=0
+        Xs,Ys,Zs:=int([$X1,$Y1,$Z1])
+        rmn view
       elif $step==1" && "!$is_lmb
-        if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
+        if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0 # Reset selection
         else X1,Y1,Z1,step=$Xi,$Yi,$Zi,2
         fi
+      elif $step==2" && "!$is_lmb
+        Xs,Ys,Zs:=int([$X1,$Y1,$Z1])
+        rmn view
       elif $step==2" && "$is_lmb
         if $X<0 X0,Y0,Z0,X1,Y1,Z1,area_clicked=-1 step=0
         else X1,Y1,Z1,step=$Xi,$Yi,$Zi,3
