@@ -9735,28 +9735,36 @@ select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
         # Draw text label.
         fontsize:=min(24,h/24)
         0
-        if !$step
+        if !$step # Point selection (or no selection started)
           if $is_volumetric t. "Point ("$Xi\,$Yi\,$Zi") = [ "{``{img,_I($Xi,$Yi,$Zi)}}" ]",0,0,$fontsize,1,255
           else t. "Point ("$Xi\,$Yi") = [ "{``{img,_I($Xi,$Yi)}}" ]",0,0,$fontsize,1,255
           fi
-        else
-          if $1==2
-            Xm,Ym,Zm,XM,YM,ZM,sizX,sizY,sizZ,len,ang={_"
-              const X0 = $X0; const Y0 = $Y0; const Z0 = $Z0;
-              const X1 = $X1; const Y1 = $Y1; const Z1 = $Z1;
-              Xm = min(X0,X1); Ym = min(Y0,Y1); Zm = min(Z0,Z1);
-              XM = max(X0,X1); YM = max(Y0,Y1); ZM = max(Z0,Z1);
-              U = [ X1 - X0, Y1 - Y0, Z1 - Z0 ];
-              [ Xm,Ym,Zm,XM,YM,ZM,abs(U) + 1,norm(U),round(rad2deg(atan2(U[1],U[0]))%360,0.01) ]"}
-            if $is_volumetric
-              t. "Box ("$Xm\,$Ym\,$Zm") - ("$XM\,$YM\,$ZM")"\n\
-                 "Size = ("$sizX\,$sizY\,$sizZ"), Length = "$len\n\
-                 "Angle = "$ang"\260",0,0,$fontsize,1,255
-            else
-              t. "Box ("$Xm\,$Ym") - ("$XM\,$YM")"\n\
-                 "Size = ("$sizX\,$sizY"), Length = "$len\n\
-                 "Angle = "$ang"\260",0,0,$fontsize,1,255
-            fi
+        elif $1==1 # Vector selection
+          len,ang={_"
+            U = [ $X1 - $X0, $Y1 - $Y0, $Z1 - $Z0 ];
+            [ norm(U),round(rad2deg(atan2(U[1],U[0]))%360,0.01) ]"}
+          if $is_volumetric
+            t. "Vector ("$X0\,$Y0\,$Z0") - ("$X1\,$Y1\,$Z1")"\n\
+               "Length = "$len,0,0,$fontsize,1,255
+          else
+            t. "Vector ("$X0\,$Y0") - ("$X1\,$Y1")"\n\
+               "Length = "$len", Angle = "$ang"\260",0,0,$fontsize,1,255
+          fi
+        elif $1==2
+          Xm,Ym,Zm,XM,YM,ZM,sizX,sizY,sizZ,len,ang={_"
+            const X0 = $X0; const Y0 = $Y0; const Z0 = $Z0;
+            const X1 = $X1; const Y1 = $Y1; const Z1 = $Z1;
+            Xm = min(X0,X1); Ym = min(Y0,Y1); Zm = min(Z0,Z1);
+            XM = max(X0,X1); YM = max(Y0,Y1); ZM = max(Z0,Z1);
+            U = [ X1 - X0, Y1 - Y0, Z1 - Z0 ];
+            [ Xm,Ym,Zm,XM,YM,ZM,abs(U) + 1,norm(U),round(rad2deg(atan2(U[1],U[0]))%360,0.01) ]"}
+          if $is_volumetric
+            t. "Box ("$Xm\,$Ym\,$Zm") - ("$XM\,$YM\,$ZM")"\n\
+               "Size = ("$sizX\,$sizY\,$sizZ"), Length = "$len,0,0,$fontsize,1,255
+          else
+            t. "Box ("$Xm\,$Ym") - ("$XM\,$YM")"\n\
+               "Size = ("$sizX\,$sizY"), Length = "$len\n\
+               "Angle = "$ang"\260",0,0,$fontsize,1,255
           fi
         fi
         label_y:=$my<1.5*h?1:$my>{*,h}-1.5*h?0:$label_y
