@@ -9573,8 +9573,14 @@ _random_pattern_check_image :
 #@cli : (if 'feature_type!=0') containing the feature coordinates.
 #@cli : Default values: 'feature_type=2', 'X=Y=Z=50%', 'exit_on_anykey=0' and 'is_multiaxes_selection=1'.
 select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 && isbool(${5=0}) && isbool(${6=1})"
+  _gmic_s="$?" v + _select ${1--1} rm[0--1:2]
+
++select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 && isbool(${5=0}) && isbool(${6=1})"
+  _gmic_s="$?" v + _select ${1--1} mv[1--1:2] $!
+
+_select :
   s0,s1,s2=point,segment,rectangle
-  e[^-1] "Select "${s$1}" in image$? in interactive mode, from point (${2-4})."
+  e[0--3] "Select "${s$1}" in image"$_gmic_s" in interactive mode, from point (${2-4})."
   foreach {
     nm={n} basename {n} title="[G'MIC] "${} => img
     w_width,w_height=${"fitscreen [img]"}
@@ -9836,12 +9842,12 @@ select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
       if (!$1" && "$step)" || "($1" && "$step>1+$is_multiaxes) continue=0 fi
 
     while $continue
-    rm
+    k[0]
     if $1==0 ($X0;$Y0;$Z0)
     elif $1==1 ($X0;$Y0;$Z0;$X1;$Y1;$Z1)
     else ({[min($X0,$X1),min($Y0,$Y1),min($Z0,$Z1),max($X0,$X1),max($Y0,$Y1),max($Z0,$Z1)]}:y)
     fi
-    => $nm
+    =>[^] $nm
   }
   cursor[0] 1
 
