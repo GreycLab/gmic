@@ -351,14 +351,15 @@ CImg<T> get_draw_point(const int x, const int y, const int z, const T *const col
 }
 
 template<typename t>
-CImg<T> get_draw_polygon(const CImg<t>& pts, const T *const col, const float opacity) const {
-  return (+*this).draw_polygon(pts,col,opacity);
+CImg<T> get_draw_polygon(const CImg<t>& points, const T *const color, const float opacity) const {
+  return (+*this).draw_polygon(points,color,opacity);
 }
 
 template<typename t>
-CImg<T> get_draw_polygon(const CImg<t>& pts, const T *const col, const float opacity,
-                         const unsigned int pattern) const {
-  return (+*this).draw_polygon(pts,col,opacity,pattern);
+CImg<T> get_draw_polygon(const CImg<t>& points,
+                         const T *const color, const float opacity, const unsigned int pattern,
+                         const bool is_closed) const {
+  return (+*this).draw_polygon(points,color,opacity,pattern,is_closed);
 }
 
 CImg<T>& gmic_autocrop(const CImg<T>& color=CImg<T>::empty()) {
@@ -8184,8 +8185,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     nvalue = vmin + (vmax - vmin)*value/100;
                   }
                   CImgList<unsigned int> prims;
-                  const CImg<float> pts = img.get_shared_channel(k).get_isoline3d(prims,(float)nvalue);
-                  vertices.append_object3d(primitives,pts,prims);
+                  const CImg<float> points = img.get_shared_channel(k).get_isoline3d(prims,(float)nvalue);
+                  vertices.append_object3d(primitives,points,prims);
                   g_list_uc.insert(prims.size(),CImg<unsigned char>::vector(g_img_uc(0,k),
                                                                             g_img_uc(1,k),
                                                                             g_img_uc(2,k)));
@@ -8278,8 +8279,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     nvalue = vmin + (vmax - vmin)*value/100;
                   }
                   CImgList<unsigned int> prims;
-                  const CImg<float> pts = channel.get_isosurface3d(prims,(float)nvalue);
-                  vertices.append_object3d(primitives,pts,prims);
+                  const CImg<float> points = channel.get_isosurface3d(prims,(float)nvalue);
+                  vertices.append_object3d(primitives,points,prims);
                   g_list_uc.insert(prims.size(),CImg<unsigned char>::vector(g_img_uc(0,k),
                                                                             g_img_uc(1,k),
                                                                             g_img_uc(2,k)));
@@ -10483,7 +10484,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           gmic_substitute_args(false);
           name.assign(256);
           double N = 0, x0 = 0, y0 = 0;
-          sep1 = sepx = sepy = *name = *color = 0;
+          sep0 = sep1 = sepx = sepy = *name = *color = 0;
           pattern = ~0U; opacity = 1;
           if (cimg_sscanf(argument,"%lf%c",
                           &N,&end)==2 && N>=1) {
@@ -10514,6 +10515,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               *color = 0;
             }
             if (nargument<eargument &&
+                ((sep0 = *nargument=='-' && nargument + 1<eargument?(++nargument, '-'):0) || true) &&
                 cimg_sscanf(nargument,"0%c%4095[0-9a-fA-F]",&sep1,gmic_use_color)==2 && sep1=='x' &&
                 cimg_sscanf(color,"%x%c",&pattern,&end)==1) {
               nargument+=std::strlen(color) + 3;
@@ -10546,7 +10548,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 else coords(p,1) = (int)cimg::round(vertices(p,1));
               }
               g_img.assign(img.spectrum(),1,1,1,(T)0).fill_from_values(p_color,true);
-              if (sep1=='x') { gmic_apply(draw_polygon(coords,g_img.data(),opacity,pattern),true); }
+              if (sep1=='x') { gmic_apply(draw_polygon(coords,g_img.data(),opacity,pattern,!sep0),true); }
               else gmic_apply(draw_polygon(coords,g_img.data(),opacity),true);
             }
           } else arg_error("polygon");
