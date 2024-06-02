@@ -10486,6 +10486,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           double N = 0, x0 = 0, y0 = 0;
           sep0 = sep1 = sepx = sepy = *name = *color = 0;
           pattern = ~0U; opacity = 1;
+
           if (cimg_sscanf(argument,"%lf%c",
                           &N,&end)==2 && N>=1) {
             N = cimg::round(N);
@@ -10495,7 +10496,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               *const eargument = argument + std::strlen(argument);
             vertices.assign((unsigned int)N,2,1,1,0);
             CImg<bool> percents((unsigned int)N,2,1,1,0);
-            for (unsigned int n = 0; n<(unsigned int)N; ++n) if (nargument<eargument) {
+            for (unsigned int n = 0; n<vertices._width; ++n) if (nargument<eargument) {
                 sepx = sepy = 0;
                 if (cimg_sscanf(nargument,"%255[0-9.eE%+-],%255[0-9.eE%+-]",
                                 gmic_use_argx,gmic_use_argy)==2 &&
@@ -10523,9 +10524,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             }
             const char *const p_color = nargument<eargument?nargument:&(end=0);
             if (sep1=='x')
-              print(0,"Draw %g-vertices outlined polygon on image%s, with opacity %g, "
+              print(0,"Draw %g-vertices %s on image%s, with opacity %g, "
                     "pattern 0x%x and color (%s).",
-                    N,
+                    N,sep0?"open polyline":"outlined polygon",
                     gmic_selection.data(),
                     opacity,pattern,
                     *p_color?p_color:"default");
