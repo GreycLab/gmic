@@ -1620,6 +1620,27 @@ CImg<T>& operator_muleq(const char *const expression, CImgList<T> &images) {
 }
 
 template<typename t>
+CImg<T> operator_muleq(const CImg<t>& img) {
+  // Manage special case of pointwise matrix multiplication of vector-valued images.
+  if (img._spectrum>1 && _width==img._spectrum && _depth==1 && _spectrum==1) {
+    if (img.size()<~0U) { // Do it all in one step
+      CImg<t> arg = CImg<t>(img,true).resize(img._width*img._height*img._depth,img._spectrum,1,1,-1);
+      return ((*this)*=arg).resize(img._width,img._height,img._depth,_height,-1);
+    } else { // Do it row by row
+      CImg<T> res(img._width,img._height,img._depth,_height);
+      cimg_forYZ(res,y,z) {
+        CImg<t> arg = img.get_crop(0,y,z,img.width() - 1,y,z);
+        arg.resize(arg._width,arg._spectrum,1,1,-1);
+        res.draw_image(0,y,z,0,((*this)*arg).resize(img._width,1,1,_height,-1));
+      }
+      return res.move_to(*this);
+    }
+  }
+  // Otherwise use default matrix product.
+  return (*this)*=img;
+}
+
+template<typename t>
 CImg<T>& operator_neq(const t value) {
   if (is_empty()) return *this;
   cimg_openmp_for(*this,*ptr != (T)value,131072);
@@ -8892,7 +8913,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                                 operator*=,
                                 "Multiply matrix/vector%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
-                                operator*=,
+                                operator_muleq,
                                 "Multiply matrix/vector%s by matrix/vector image [%d]",
                                 gmic_selection.data(),ind[0],
                                 operator_muleq,
