@@ -10481,19 +10481,56 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
         // Draw polygon.
         if (!std::strcmp("polygon",command)) {
-          gmic_substitute_args(false);
-          name.assign(256);
-          double x0 = 0, y0 = 0;
-          int nb_vertices = 0;
-          sep0 = sep1 = sepx = sepy = *name = *color = 0;
+          gmic_substitute_args(true);
+          sep0 = sep1 = *color = 0;
           pattern = ~0U; opacity = 1;
+          const char *p_color = 0;
+          int nb_vertices = 0;
+          CImg<bool> percents;
+          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
+                           indices,&opacity,&end)==2 ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,0%c%x%c",
+                            indices,&opacity,&sep1,&pattern,&end)==4 && sep1=='x') ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%4095[0-9.eEinfa,+-]%c",
+                            indices,&opacity,gmic_use_color,&end)==3 &&
+                (bool)(pattern=~0U)) ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
+                            indices,&opacity,&sep1,&pattern,&(*color=0),&end)==5 && sep1=='x')) &&
+              (ind=selection2cimg(indices,images.size(),images_names,"polygon")).height()==1) {
 
-          if (cimg_sscanf(argument,"%d%c",&nb_vertices,&end)==2 && nb_vertices>=1) {
+            vertices.assign(images[*ind],false);
+            const cimg_ulong vsiz = vertices.size();
+            if (vsiz%2)
+              error(true,0,"polygon",
+                    "Command 'polygon': Coordinates image [%u] has invalid dimensions (%u,%u,%u,%u).",
+                    *ind,vertices._width,vertices._height,vertices._depth,vertices._spectrum);
+            vertices.resize(2,vsiz/2,1,1,-1).transpose();
+            if (sep1=='x')
+              print(0,"Draw %u-vertices %s on image%s, with coords [%u], opacity %g, "
+                    "pattern 0x%x and color (%s).",
+                    vertices._width,sep0?"open polyline":"outlined polygon",
+                    gmic_selection.data(),ind[0],
+                    opacity,pattern,
+                    *color?color:"default");
+            else
+              print(0,"Draw %u-vertices filled polygon on image%s, with coords [%u], opacity %g "
+                    "and color (%s).",
+                    vertices._width,
+                    gmic_selection.data(),ind[0],
+                    opacity,
+                    *color?color:"default");
+            p_color = color;
+          } else if (cimg_sscanf(argument,"%d%c",&nb_vertices,&end)==2 && nb_vertices>=1) {
             const char
               *nargument = argument + cimg_snprintf(name,name.width(),"%d",nb_vertices) + 1,
               *const eargument = argument + std::strlen(argument);
+            name.assign(256);
+            sepx = sepy = *name = 0;
             vertices.assign(nb_vertices,2,1,1,0);
-            CImg<bool> percents(nb_vertices,2,1,1,0);
+            percents.assign(nb_vertices,2,1,1,0);
+            double x0 = 0, y0 = 0;
             for (unsigned int n = 0; n<vertices._width; ++n) if (nargument<eargument) {
                 sepx = sepy = 0;
                 if (cimg_sscanf(nargument,"%255[0-9.eE%+-],%255[0-9.eE%+-]",
@@ -10521,7 +10558,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               nargument+=std::strlen(color) + 3;
               *color = 0;
             }
-            const char *const p_color = nargument<eargument?nargument:&(end=0);
+            p_color = nargument<eargument?nargument:&(end=0);
             if (sep1=='x')
               print(0,"Draw %u-vertices %s on image%s, with opacity %g, "
                     "pattern 0x%x and color (%s).",
@@ -10536,22 +10573,24 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                     gmic_selection.data(),
                     opacity,
                     *p_color?p_color:"default");
-            cimg_forY(selection,l) {
-              CImg<T> &img = images[selection[l]];
-              CImg<int> coords(vertices.width(),2,1,1,0);
-              cimg_forX(coords,p) {
-                if (percents(p,0))
-                  coords(p,0) = (int)cimg::round(vertices(p,0)*(img.width() - 1)/100);
-                else coords(p,0) = (int)cimg::round(vertices(p,0));
-                if (percents(p,1))
-                  coords(p,1) = (int)cimg::round(vertices(p,1)*(img.height() - 1)/100);
-                else coords(p,1) = (int)cimg::round(vertices(p,1));
-              }
-              g_img.assign(img.spectrum(),1,1,1,(T)0).fill_from_values(p_color,true);
-              if (sep1=='x') { gmic_apply(draw_polygon(coords,g_img.data(),opacity,pattern,!sep0),true); }
-              else gmic_apply(draw_polygon(coords,g_img.data(),opacity),true);
-            }
+
           } else arg_error("polygon");
+
+          cimg_forY(selection,l) {
+            CImg<T> &img = images[selection[l]];
+            CImg<int> coords(vertices.width(),2,1,1,0);
+            cimg_forX(coords,p) {
+              if (percents && percents(p,0))
+                coords(p,0) = (int)cimg::round(vertices(p,0)*(img.width() - 1)/100);
+              else coords(p,0) = (int)cimg::round(vertices(p,0));
+              if (percents && percents(p,1))
+                coords(p,1) = (int)cimg::round(vertices(p,1)*(img.height() - 1)/100);
+              else coords(p,1) = (int)cimg::round(vertices(p,1));
+            }
+            g_img.assign(img.spectrum(),1,1,1,(T)0).fill_from_values(p_color,true);
+            if (sep1=='x') { gmic_apply(draw_polygon(coords,g_img.data(),opacity,pattern,!sep0),true); }
+            else gmic_apply(draw_polygon(coords,g_img.data(),opacity),true);
+          }
           vertices.assign();
           g_img.assign();
           is_change = true;
