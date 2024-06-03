@@ -22516,6 +22516,60 @@ gaussian : skip ${1=15%},${2=$1},${3=0}
 #@cli : and 'color1=0'.
 #@cli : $ image.jpg +rows 50% blur[-1] 3 split[-1] c div[0] 1.5 graph[0] [1],2,0,0,0,1,255,0,0 \
 # graph[0] [2],2,0,0,0,1,0,255,0 graph[0] [3],2,0,0,0,1,0,0,255 keep[0]
+ngraph : check ${"is_image_arg $1"}" && isint(${2=1},0,3) && isint(${3=1},0,7)" skip ${4=0},${5=0},${6=1},${7=0},${8=0}
+  p_type,v_type,ymin,ymax,opacity=${2-6}
+  if ${"is_pattern $7"} pattern=$7 color=${8--1}
+  else pattern=0xFFFFFFFF color=${7--1}
+  fi
+  pass$1 1
+  if !$ymin" && "!$ymax ymin,ymax:=im,iM fi
+
+  header="begin(const ymin = "$ymin"; const ymax = "$ymax"; const delta = ymax - ymin; "\
+         "const opacity = "$opacity"; const pattern = "$pattern"; color = resize([ "$color" ],s#0,0,2));"
+
+  foreach[^-1] {
+    pass. 1 r. {whd},1,1,100%,-1
+
+    # Plot graph.
+    if inrange($p_type,1,2)
+      if w>w#0 +r. {0,w},1,1,100%,2
+      elif $p_type==2 +r. {0,w},1,1,100%,5
+      fi
+      1,1,1,2
+      eval.. >$header"
+        !x?(X = 0; Y = round(lerp(h#0 - 1,0,(i - ymin)/delta)); da_push([X,Y]));
+        nX = round(lerp(0,w#0 - 1,(x + 1)/(w - 1)));
+        nY = round(lerp(h#0 - 1,0,(j[1] - ymin)/delta));
+        nX!=X?(da_push([X,Y]); X = nX; Y = nY);
+        end(da_freeze())"
+      permute. cyzx
+      polygon[0] .,$opacity,-$pattern,$color rm.
+    fi
+    rm[^0,1]
+
+    # Plot vertices.
+    if $v_type
+      eval. $header"
+        const v_type = $v_type;
+        const siz = max(3,min(w#0,h#0)/128);
+        nX = round(lerp(0,w#0 - 1,x/(w - 1)));
+        nY = round(lerp(h#0 - 1,0,(i - ymin)/delta));
+        v_type==1?polygon(#0,1,nX,nY,opcity,color):
+        v_type==2?(polygon(#0,2,nX,nY - siz,nX,nY + siz,opacity,color);
+                   polygon(#0,2,nX - siz,nY,nX + siz,nY,opacity,color)):
+        v_type==3?(polygon(#0,2,nX - siz,nY - siz,nX + siz,nY + siz,opacity,color);
+                   polygon(#0,2,nX + siz,nY - siz,nX - siz,nY + siz,opacity,color)):
+        v_type==4?ellipse(#0,nX,nY,siz,siz,0,opacity,color):
+                  ellipse(#0,nX,nY,-siz,-siz,0,opacity,0xFFFFFFFF,color)"
+    fi
+
+    k[0]
+  }
+  rm.
+
+test_ngraph :
+  10,1,1,1,"x = lerp(-3,3,x/(w-1)); x^2"
+  400,400,1,3,255 ngraph. ..,1,5,0,0,0.5,0xFFFFFF44,255,0,255
 
 #@cli grid : size_x[%]>=0,size_y[%]>=0,_offset_x[%],_offset_y[%],_opacity,_pattern,_color1,...
 #@cli : Draw xy-grid on selected images.
