@@ -22523,35 +22523,38 @@ ngraph : check ${"is_image_arg $1"}" && isint(${2=1},0,3) && isint(${3=1},0,7)" 
   fi
   pass$1 1
   if !$ymin" && "!$ymax ymin,ymax:=im,iM fi
-
-  header="begin(const ymin = "$ymin"; const ymax = "$ymax"; const delta = ymax - ymin; "\
-         "const opacity = "$opacity"; const pattern = "$pattern"; color = resize([ "$color" ],s#0,0,2));"
+  header="begin(const ymin = "$ymin"; const ymax = "$ymax"; const delta = ymax - ymin);"
 
   foreach[^-1] {
     pass. 1 r. {whd},1,1,100%,-1
 
     # Plot graph.
-    if inrange($p_type,1,2)
-      if w>w#0 +r. {0,w},1,1,100%,2
-      elif $p_type==2 +r. {0,w},1,1,100%,5
+    if $p_type
+      if w>w#0 +r. {0,w},1,1,100%,2 elif $p_type==2 +r. {0,w},1,1,100%,5 fi
+      100%,1,1,100%x2
+      eval... $header" # Convert input data as 2D graph coordinates
+        i(#-2) = round(lerp(0,w#0 - 1,x/(w - 1)));
+        i(#-1) = round(lerp(h#0 - 1,0,(i - ymin)/delta))"
+      a[-2,-1] c
+      if $p_type==3 # Bar plot
+
+         d
+
+      else permute. cxyz polygon[0] .,$opacity,-$pattern,$color # Curve plot
       fi
-      1,1,1,2
-      eval.. >$header"
-        !x?(X = 0; Y = round(lerp(h#0 - 1,0,(i - ymin)/delta)); da_push([X,Y]));
-        nX = round(lerp(0,w#0 - 1,(x + 1)/(w - 1)));
-        nY = round(lerp(h#0 - 1,0,(j[1] - ymin)/delta));
-        nX!=X?(da_push([X,Y]); X = nX; Y = nY);
-        end(da_freeze())"
-      permute. cyzx
-      polygon[0] .,$opacity,-$pattern,$color rm.
     fi
     rm[^0,1]
 
     # Plot vertices.
     if $v_type
       eval. $header"
-        const v_type = $v_type;
-        const siz = max(3,min(w#0,h#0)/128);
+        begin(
+          const v_type = $v_type;
+          const opacity = $opacity;
+          const pattern = $pattern;
+          color = resize([ "$color" ],s#0,0,2);
+          const siz = max(3,min(w#0,h#0)/128);
+        );
         nX = round(lerp(0,w#0 - 1,x/(w - 1)));
         nY = round(lerp(h#0 - 1,0,(i - ymin)/delta));
         v_type==1?polygon(#0,1,nX,nY,opcity,color):
