@@ -253,39 +253,6 @@ CImg<T> get_draw_fill(const int x, const int y, const int z,
   return (+*this).draw_fill(x,y,z,col,opacity,tolerance,is_high_connectivity);
 }
 
-template<typename t, typename tc>
-CImg<T> get_draw_graph(const CImg<t>& data,
-                       const tc *const color, const float opacity,
-                       const unsigned int plot_type, const int vertex_type,
-                       const double ymin, const double ymax,
-                       const unsigned int pattern) const {
-  return (+*this).draw_graph(data,color,opacity,plot_type,vertex_type,ymin,ymax,pattern);
-}
-
-template<typename t, typename tc>
-CImg<T> gmic_draw_graph(const CImg<t>& data,
-                        const tc *const color, const float opacity,
-                        const unsigned int plot_type, const int vertex_type,
-                        const double ymin, const double ymax,
-                        const unsigned int pattern) {
-  double m = ymin, M = ymax;
-  if (ymin==ymax) m = (double)data.max_min(M);
-  if (m==M) { --m; ++M; }
-  cimg_forC(data,c)
-    draw_graph(data.get_shared_channel(c),
-               color,opacity,plot_type,vertex_type,m,M,pattern);
-  return *this;
-}
-
-template<typename t, typename tc>
-CImg<T> get_gmic_draw_graph(const CImg<t>& data,
-                            const tc *const color, const float opacity,
-                            const unsigned int plot_type, const int vertex_type,
-                            const double ymin, const double ymax,
-                            const unsigned int pattern) const {
-  return (+*this).gmic_draw_graph(data,color,opacity,plot_type,vertex_type,ymin,ymax,pattern);
-}
-
 CImg<T>& gmic_draw_image(const float x, const float y, const float z, const float c,
                          const char sepx, const char sepy, const char sepz, const char sepc,
                          const CImg<T>& sprite, const CImg<T>& mask, const float opacity,
@@ -2487,7 +2454,7 @@ const char *gmic::builtin_commands_names[] = {
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
-  "graph","guided",
+  "guided",
   "histogram",
   "ifft","image","index","inpaint","input","invert","isoline3d","isosurface3d",
   "keep",
@@ -7805,134 +7772,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             if (sep1=='%') regularization = -regularization;
             cimg_forY(selection,l) gmic_apply(blur_guided(images[selection[l]],radius,regularization),false);
           } else arg_error("guided");
-          is_change = true;
-          ++position;
-          continue;
-        }
-
-        // Draw graph.
-        if (!std::strcmp("graph",command)) {
-          gmic_substitute_args(true);
-          double ymin = 0, ymax = 0, xmin = 0, xmax = 0, resolution = 65536;
-          unsigned int plot_type = 1, vertex_type = 1;
-          *formula = *color = sep = sep1 = 0;
-          pattern = ~0U; opacity = 1;
-          if (((cimg_sscanf(argument,"'%1023[^']%c%c",
-                            gmic_use_formula,&sep,&end)==2 && sep=='\'') ||
-               cimg_sscanf(argument,"'%1023[^']',%lf%c",
-                           formula,&resolution,&end)==2 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u%c",
-                           formula,&resolution,&plot_type,&end)==3 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u%c",
-                           formula,&resolution,&plot_type,&vertex_type,&end)==4 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf%c",
-                           formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,&end)==6 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf%c",
-                           formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,
-                           &ymin,&ymax,&end)==8 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf,%f%c",
-                           formula,&resolution,&plot_type,&vertex_type,
-                           &xmin,&xmax,&ymin,&ymax,&opacity,&end)==9 ||
-               (cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf,%f,0%c%x%c",
-                            formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,
-                            &ymin,&ymax,&opacity,&sep1,&pattern,&end)==11 && sep1=='x') ||
-               (cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf,%f,%4095[0-9.eEinfa,+-]%c",
-                            formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,&ymin,&ymax,
-                            &opacity,gmic_use_color,&end)==10 && (bool)(pattern=~0U)) ||
-               (cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf,%f,0%c%x,"
-                            "%4095[0-9.eEinfa,+-]%c",
-                            formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,
-                            &ymin,&ymax,&opacity,&sep1,&pattern,&(*color=0),&end)==12 &&
-                sep1=='x')) &&
-              resolution>0 && plot_type<=3 && vertex_type<=7) {
-            resolution = cimg::round(resolution);
-            strreplace_fw(formula);
-            print(0,
-                  "Draw graph of formula '%s' on image%s, with resolution %g, %s contours, "
-                  "%s vertices, x-range = (%g,%g), y-range = (%g,%g), opacity %g, "
-                  "pattern 0x%x and color (%s).",
-                  formula,
-                  gmic_selection.data(),
-                  resolution,
-                  plot_type==0?"no":plot_type==1?"linear":plot_type==2?"spline":"bar",
-                  vertex_type==0?"no":vertex_type==1?"dot":vertex_type==2?"straight cross":
-                  vertex_type==3?"diagonal cross":vertex_type==4?"filled circle":
-                  vertex_type==5?"outlined circle":vertex_type==6?"square":"diamond",
-                  xmin,xmax,
-                  ymin,ymax,
-                  opacity,pattern,
-                  *color?color:"default");
-            if (xmin==0 && xmax==0) { xmin = -4; xmax = 4; }
-            if (!plot_type && !vertex_type) plot_type = 1;
-            if (resolution<1) resolution = 65536;
-
-            gmic_use_argx;
-            cimg_snprintf(argx,_argx.width(),"x = lerp(%.17g,%.17g,x/%d);",
-                          xmin,xmax,(unsigned int)(resolution>1?resolution - 1:0));
-            const CImg<char> n_formula = (CImg<char>::string(argx,false,true),
-                                          CImg<char>::string(formula,true,true))>'x';
-            boundary = 1U;
-            try { // Determine vector dimension of specified formula
-              typename CImg<T>::_cimg_math_parser mp(n_formula.data() + (*n_formula=='>' || *n_formula=='<' ||
-                                                                         *n_formula=='*' || *n_formula==':'),
-                                                     "graph",CImg<T>::const_empty(),0,&images);
-              boundary = std::max(1U,mp.result_dim);
-            } catch (...) { is_cond = false; }
-            CImg<T> values((int)resolution,1,1,boundary,0);
-            values.fill(n_formula,false,true,&images);
-
-            cimg_forY(selection,l) {
-              CImg<T> &img = images[selection[l]];
-              g_img.assign(img.spectrum(),1,1,1,(T)0).fill_from_values(color,true);
-              gmic_apply(gmic_draw_graph(values,g_img.data(),opacity,
-                                         plot_type,vertex_type,ymin,ymax,pattern),true);
-            }
-          } else if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                                   gmic_use_indices,&sep,&end)==2 && sep==']') ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",
-                                  indices,&plot_type,&end)==2 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u%c",
-                                  indices,&plot_type,&vertex_type,&end)==3 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%lf,%lf%c",
-                                  indices,&plot_type,&vertex_type,&ymin,&ymax,&end)==5 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%lf,%lf,%f%c",
-                                  indices,&plot_type,&vertex_type,&ymin,&ymax,&opacity,&end)==6||
-                      (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%lf,%lf,%f,0%c%x%c",
-                                   indices,&plot_type,&vertex_type,&ymin,&ymax,&opacity,&sep1,
-                                   &pattern,&end)==8 &&
-                       sep1=='x') ||
-                      (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%lf,%lf,%f,"
-                                   "%4095[0-9.eEinfa,+-]%c",
-                                   indices,&plot_type,&vertex_type,&ymin,&ymax,&opacity,
-                                   gmic_use_color,&end)==7 &&
-                       (bool)(pattern=~0U)) ||
-                      (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%lf,%lf,"
-                                   "%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
-                                   indices,&plot_type,&vertex_type,&ymin,&ymax,
-                                   &opacity,&sep1,&pattern,&(*color=0),&end)==9 &&
-                       sep1=='x')) &&
-                     (ind=selection2cimg(indices,images.size(),images_names,"graph")).height()==1 &&
-                     plot_type<=3 && vertex_type<=7) {
-            if (!plot_type && !vertex_type) plot_type = 1;
-            print(0,"Draw graph of dataset [%u] on image%s, with %s contours, %s vertices, "
-                  "y-range = (%g,%g), opacity %g, pattern 0x%x and color (%s).",
-                  *ind,
-                  gmic_selection.data(),
-                  plot_type==0?"no":plot_type==1?"linear":plot_type==2?"spline":"bar",
-                  vertex_type==0?"no":vertex_type==1?"dot":vertex_type==2?"straight cross":
-                  vertex_type==3?"diagonal cross":vertex_type==4?"filled circle":
-                  vertex_type==5?"outlined circle":vertex_type==6?"square":"diamond",
-                  ymin,ymax,
-                  opacity,pattern,
-                  *color?color:"default");
-            const CImg<T> values = gmic_image_arg(*ind);
-            cimg_forY(selection,l) {
-              CImg<T> &img = images[selection[l]];
-              g_img.assign(img.spectrum(),1,1,1,(T)0).fill_from_values(color,true);
-              gmic_apply(draw_graph(values,g_img.data(),opacity,plot_type,vertex_type,ymin,ymax,pattern),true);
-            }
-          } else arg_error("graph");
-          g_img.assign();
           is_change = true;
           ++position;
           continue;
