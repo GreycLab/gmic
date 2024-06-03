@@ -10507,6 +10507,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   nargument+=std::strlen(argx) + std::strlen(argy) + 2;
                 } else arg_error("polygon");
               } else arg_error("polygon");
+
             if (nargument<eargument &&
                 cimg_sscanf(nargument,"%4095[0-9.eEinfa+-]",gmic_use_color)==1 &&
                 cimg_sscanf(color,"%f",&opacity)==1) {
