@@ -10491,13 +10491,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                             gmic_use_indices,&sep,&end)==2 && sep==']') ||
                cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
                            indices,&opacity,&end)==2 ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%4095[0-9.eEinfa,+-]%c",
+                            indices,&opacity,gmic_use_color,&end)==3) ||
                (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,0%c%x%c",
                             indices,&opacity,&sep1,&pattern,&end)==4 && sep1=='x') ||
-               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%4095[0-9.eEinfa,+-]%c",
-                            indices,&opacity,gmic_use_color,&end)==3 &&
-                (bool)(pattern=~0U)) ||
                (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
-                            indices,&opacity,&sep1,&pattern,&(*color=0),&end)==5 && sep1=='x')) &&
+                            indices,&opacity,&sep1,&pattern,&(*color=0),&end)==5 && sep1=='x') ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%c0%c%x%c",
+                            indices,&opacity,&sep0,&sep1,&pattern,&end)==5 && sep0=='-' && sep1=='x') ||
+               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%c0%c%x,%4095[0-9.eEinfa,+-]%c",
+                            indices,&opacity,&sep0,&sep1,&pattern,&(*color=0),&end)==6 && sep0=='-' && sep1=='x')) &&
               (ind=selection2cimg(indices,images.size(),images_names,"polygon")).height()==1) {
 
             vertices.assign(images[*ind],false);
