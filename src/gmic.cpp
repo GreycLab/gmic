@@ -10483,19 +10483,17 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         if (!std::strcmp("polygon",command)) {
           gmic_substitute_args(false);
           name.assign(256);
-          double N = 0, x0 = 0, y0 = 0;
+          double x0 = 0, y0 = 0;
+          int N = 0;
           sep0 = sep1 = sepx = sepy = *name = *color = 0;
           pattern = ~0U; opacity = 1;
 
-          if (cimg_sscanf(argument,"%lf%c",
-                          &N,&end)==2 && N>=1) {
-            N = cimg::round(N);
+          if (cimg_sscanf(argument,"%d%c",&N,&end)==2 && N>=1) {
             const char
-              *nargument = argument + cimg_snprintf(name,name.width(),"%u",
-                                                    (unsigned int)N) + 1,
+              *nargument = argument + cimg_snprintf(name,name.width(),"%d",N) + 1,
               *const eargument = argument + std::strlen(argument);
-            vertices.assign((unsigned int)N,2,1,1,0);
-            CImg<bool> percents((unsigned int)N,2,1,1,0);
+            vertices.assign(N,2,1,1,0);
+            CImg<bool> percents(N,2,1,1,0);
             for (unsigned int n = 0; n<vertices._width; ++n) if (nargument<eargument) {
                 sepx = sepy = 0;
                 if (cimg_sscanf(nargument,"%255[0-9.eE%+-],%255[0-9.eE%+-]",
@@ -10524,16 +10522,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             }
             const char *const p_color = nargument<eargument?nargument:&(end=0);
             if (sep1=='x')
-              print(0,"Draw %g-vertices %s on image%s, with opacity %g, "
+              print(0,"Draw %u-vertices %s on image%s, with opacity %g, "
                     "pattern 0x%x and color (%s).",
-                    N,sep0?"open polyline":"outlined polygon",
+                    vertices._width,sep0?"open polyline":"outlined polygon",
                     gmic_selection.data(),
                     opacity,pattern,
                     *p_color?p_color:"default");
             else
-              print(0,"Draw %g-vertices filled polygon on image%s, with opacity %g "
+              print(0,"Draw %u-vertices filled polygon on image%s, with opacity %g "
                     "and color (%s).",
-                    N,
+                    vertices._width,
                     gmic_selection.data(),
                     opacity,
                     *p_color?p_color:"default");
