@@ -10484,16 +10484,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           gmic_substitute_args(false);
           name.assign(256);
           double x0 = 0, y0 = 0;
-          int N = 0;
+          int nb_vertices = 0;
           sep0 = sep1 = sepx = sepy = *name = *color = 0;
           pattern = ~0U; opacity = 1;
 
-          if (cimg_sscanf(argument,"%d%c",&N,&end)==2 && N>=1) {
+          if (cimg_sscanf(argument,"%d%c",&nb_vertices,&end)==2 && nb_vertices>=1) {
             const char
-              *nargument = argument + cimg_snprintf(name,name.width(),"%d",N) + 1,
+              *nargument = argument + cimg_snprintf(name,name.width(),"%d",nb_vertices) + 1,
               *const eargument = argument + std::strlen(argument);
-            vertices.assign(N,2,1,1,0);
-            CImg<bool> percents(N,2,1,1,0);
+            vertices.assign(nb_vertices,2,1,1,0);
+            CImg<bool> percents(nb_vertices,2,1,1,0);
             for (unsigned int n = 0; n<vertices._width; ++n) if (nargument<eargument) {
                 sepx = sepy = 0;
                 if (cimg_sscanf(nargument,"%255[0-9.eE%+-],%255[0-9.eE%+-]",
