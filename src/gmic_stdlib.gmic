@@ -9286,6 +9286,103 @@ _parse_gui_strings :
 #@cli : 'vertex_type' can be { 0:none | 1:points | 2,3:crosses | 4,5:circles | 6,7:squares }.
 #@cli : 'xmin', 'xmax', 'ymin', 'ymax' set the coordinates of the displayed xy-axes.
 #@cli : Default values: 'plot_type=1', 'vertex_type=1', 'xmin=xmax=ymin=ymax=0 (auto)' and 'exit_on_anykey=0'.
+nplot : check "isint(${1=1},0,3) && isint(${2=1},0,7) && isbool(${7=0})" skip ${3=0},${4=0},${5=0},${6=0}
+  if $^<0 return fi
+  _gmic_s0="$?" v + _$0 ${1-7},"",1,$[]
+
++nplot : check "isint(${1=1},0,3) && isint(${2=1},0,7) && isbool(${7=0})" skip ${3=0},${4=0},${5=0},${6=0}
+  _gmic_s0="$?" v + _$0 ${1-7},+,{$^>=0},$[]
+
+# $8: '+' or '' to specify output on stdout or stderr.
+# $9: print_header={ 0 | 1 }
+# $10: list of selected images indices.
+_nplot : skip ${8=},${10=}
+  if ['"$8"']!='+'" && "$^<0 return fi
+  if !$!
+    if $9 e[0--5] "Plot image []." fi
+    is_change 0
+    return
+  fi
+  nb_images=$!
+
+  # Save original image names to prevent name conflicts with those used in this command.
+  foreach { image_name$>={n} => _plot$> }
+
+  # Print log message.
+  (${10--1}:y) => image_indices
+  if $9
+    if $nb_images<=6 $nb_images,1,1,1,x sel={^} rm. is_ellipsized=0
+    else sel=0,1,2,{$nb_images-[3,2,1]} is_ellipsized=1
+    fi
+    log_title,sep=
+    repeat narg($sel) {
+      l_ind:=arg0($>,$sel)
+      g_ind={image_indices,i[$l_ind]}
+      basename {``${image_name$l_ind}}
+      if ['${}']!=0 ({'{/${}}'}) else ('{``${image_name$l_ind}}') fi
+      basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
+      log_title.=$sep$basename
+      if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
+    }
+    e[0--4] "Plot image"$_gmic_s0" = '"$log_title"'."
+  fi
+
+  foreach[^-1] {
+
+    # Print image information.
+    pass[image_indices] 1
+    =>.. ${image_name$>}
+    v + _print.. $8,0,{i[$>]} v -
+    =>.. _plot$>
+    rm.
+
+    basename ${image_name$>} title="[G'MIC] "${} => img
+    w_width,w_height=${"fitscreen 800,600"}
+    if !{*} w[] $w_width,$w_height,0,$title fi
+
+    if !$3" && "!$4 xmin0,xmax0={$>,[0,w-1]} else xmin0,xmax0=${3,4} fi
+    if !$5" && "!$6 ymin0,ymax0={$>,[0,h-1]} else ymin0,ymax0=${5,6} fi
+    xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
+
+    do
+      if !{*,f} w_width,w_height={*,d,e} fi # Remember window geometry when not fullscreen
+
+      # Render base view.
+      if !0$view
+        +dg. {*,w,h},$1,$2,$xmin,$xmax,$ymin,$ymax => view
+      fi
+
+      w[view]
+      wait
+
+      # Manage user events.
+      is_CTRL,is_lmb,is_rmb:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,b}&1,{*,b}&2
+      if {*,r}
+        w[] {*,d,e} rmn view
+      fi
+      if $is_CTRL" && "{*,D}
+        nw,nh:=round(1.25*[{*,w,h}])
+        if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh rmn view fi
+        skip {*,-D}
+      fi
+      if $is_CTRL" && "{*,C}
+        nw,nh:=round(0.75*[{*,w,h}])
+        if $nw>32" && "$nh>32 w[] $nw,$nh rmn view fi
+        skip {*,-C}
+      fi
+      if $is_CTRL" && "{*,F}
+        if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
+        rmn view
+        skip {*,-F}
+      fi
+
+      continue:={*}" && "!{*,-ESC}
+      if $7" && "!$is_CTRL" && "{*,k} continue=0 fi
+
+    while $continue
+    k[0]
+  }
+  rm. is_change 0
 
 #@cli poincare_disk : _size>=0,_p>2,_q>2,_angle,_tiling={ 0:triangular | 1:polygonal },_nb_max_iter>=0,\
 # _xmin,_ymin,_xmax,_ymax
