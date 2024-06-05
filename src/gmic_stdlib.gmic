@@ -9354,7 +9354,7 @@ _nplot : skip ${8=},${10=}
     if $is_infnan rm. fi
 
     xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
-    X0,Y0,X1,Y1=-1
+    x0,y0,x1,y1=-1
     frame=32
     step=0
 
@@ -9385,6 +9385,11 @@ _nplot : skip ${8=},${10=}
         )"}
 
       if $X>=0
+        if !$step x0,y0=$x,$y elif $step==1 x1,y1=$x,$y fi
+      fi
+
+      # Render view.
+      if $X>=0
         [view]
         label="f["$X"] = f("{_$x}") = [ "
         if s#0<=6 label.={_I[#0,$X]}
@@ -9392,12 +9397,11 @@ _nplot : skip ${8=},${10=}
                     {_["i(#0,$X,0,0,s#0-3),i(#0,$X,0,0,s#0-2),i(#0,$X,0,0,s#0-1)"]}
         fi
         label.=" ]"
-
         fontsize:=cut(h/32,13,24)
         0 t. {``$label},0.5~,0,$fontsize,1,1 to_rgb.
         j.. .,0.5~,{($frame-h)/2},0,0,1,. rm.
-        line. $mx,$frame,$mx,{h-1-$frame},0.75,0x55555555,0
-        eval "
+
+        eval " # Highlight closest points
           const frame = $frame;
           const siz = 1.5*max(3,min(w,h)/128);
           colors = [ 220,100,100,100,220,100,100,100,220,0,0,0 ];
@@ -9407,6 +9411,22 @@ _nplot : skip ${8=},${10=}
             y = round(lerp($frame,h - 1 - $frame,(i(#0,$X,0,0,c) - $ymax)/($ymin - $ymax)));
             ellipse(#-1,x,y,siz,siz,0,0.5,colors[3*min(c,3),3]);
           )"
+
+        if $step" && "$X>=0
+           d
+          eval "
+            const frame = $frame;
+            sx0 = lerp(frame,frame - w - 1,($x0 - $xmin)/($xmax - $xmin));
+            sy0 = lerp(frame,frame - h - 1,($y0 - $ymin)/($ymax - $ymin));
+            sx1 = lerp(frame,frame - w - 1,($x1 - $xmin)/($xmax - $xmin));
+            sy1 = lerp(frame,frame - h - 1,($y1 - $ymin)/($ymax - $ymin));
+            polygon(#-1,4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.25,0);
+          "
+
+        fi
+
+        line. $mx,$frame,$mx,{h-1-$frame},0.75,0x55555555,0
+
         w. -1,-1,0 rm.
       else w[view] -1,-1,0
       fi
@@ -9431,6 +9451,14 @@ _nplot : skip ${8=},${10=}
         if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
         rmn view
         skip {*,-F}
+      fi
+
+      # Manage user selection.
+      if !$step" && "$is_rmb" && "$X>=0
+        x0,y0,step=$x,$y,1
+      elif $step==1" && "!$is_rmb" && "$X>=0
+        x1,y1,step=$x,$y,0
+        rmn view
       fi
 
       continue:={*}" && "!{*,-ESC}
