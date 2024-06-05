@@ -9279,8 +9279,7 @@ _parse_gui_strings :
 #@cli : Default value: 'shared_state=2'.
 #@cli : $ command "average : pass$""1 add[^-1] [-1] remove[-1] div 2" sample ? +mirror y +average[0] [1]
 
-#@cli plot : _plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_exit_on_anykey={ 0 | 1 } : \
-# 'formula',_resolution>=0,_plot_type,_vertex_type,_xmin,xmax,_ymin,_ymax,_exit_on_anykey={ 0 | 1 } : (+)
+#@cli plot : _plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_exit_on_anykey={ 0 | 1 }
 #@cli : Display selected images or formula in an interactive viewer (use the instant display window [0] if opened).
 #@cli : 'plot_type' can be { 0:none | 1:lines | 2:splines | 3:bar }.
 #@cli : 'vertex_type' can be { 0:none | 1:points | 2,3:crosses | 4,5:circles | 6,7:squares }.
@@ -9358,30 +9357,28 @@ _nplot : skip ${8=},${10=}
 
       # Retrieve graph coordinates from mouse pointer.
       mx,my={*,x,y}
-      x,y,X,Xi={view,"
+      x,y,X={view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
         const xmin = $xmin; const xmax = $xmax; const ymin = $ymin; const ymax = $ymax;
-        mx<0 || !inrange(mx,frame,w - 1 - frame) || !inrange(my,frame,h - 1 - frame)?vector4(-1):(
+        mx<0 || !inrange(mx,frame,w - 1 - frame) || !inrange(my,frame,h - 1 - frame)?vector3(-1):(
           const fy = (my - frame)/(h - 1 - frame2);
           y = lerp(ymax,ymin,fy);
           $1==3?(
             const fx = (mx - frame)/(w - frame2);
             x = lerp(xmin,xmax + 1,fx);
-            X = lerp(0,w#0,fx);
-            Xi = int(X);
+            X = int(lerp(0,w#0,fx));
           ):(
             const fx = (mx - frame)/(w - 1 - frame2);
             x = lerp(xmin,xmax,fx);
-            X = lerp(0,w#0 - 1,fx);
-            Xi = round(X);
+            X = round(lerp(0,w#0 - 1,fx));
           );
-          [ x,y,X,Xi ]
+          [ x,y,X ]
         )"}
 
       if $X>=0
         [view]
-        label="f["$Xi"] = f("{_$x}") = [ "
-        if s#0<=6 label.={_I[#0,round($X)]}
+        label="f["$X"] = f("{_$x}") = [ "
+        if s#0<=6 label.={_I[#0,$X]}
         else label.={_["i(#0,$X,0,0,0),i(#0,$X,0,0,1),i(#0,$X,0,0,2)"]}" ... "\
                     {_["i(#0,$X,0,0,s#0-3),i(#0,$X,0,0,s#0-2),i(#0,$X,0,0,s#0-1)"]}
         fi
@@ -9395,10 +9392,10 @@ _nplot : skip ${8=},${10=}
           const siz = 1.5*max(3,min(w,h)/128);
           colors = [ 220,10,10,10,220,10,10,10,220,0,0,0 ];
           s#0==1?copy(colors,[ 120,120,200 ]);
-          X = round($1==3?lerp($frame,w - $frame,($Xi + 0.5)/w#0):lerp($frame,w - 1 - $frame,$Xi/(w#0 - 1)));
+          x = round($1==3?lerp($frame,w - $frame,($X + 0.5)/w#0):lerp($frame,w - 1 - $frame,$X/(w#0 - 1)));
           repeat (s#0,c,
-            Y = round(lerp($frame,h - 1 - $frame,(i(#0,$Xi,0,0,c) - $ymax)/($ymin - $ymax)));
-            ellipse(#-1,X,Y,siz,siz,0,0.15,colors[3*min(c,3),3]);
+            y = round(lerp($frame,h - 1 - $frame,(i(#0,$X,0,0,c) - $ymax)/($ymin - $ymax)));
+            ellipse(#-1,x,y,siz,siz,0,0.15,colors[3*min(c,3),3]);
           )"
         w. rm.
       else w[view]
