@@ -9325,6 +9325,7 @@ _nplot : skip ${8=},${10=}
     }
     e[0--4] "Plot image"$_gmic_s0" = '"$log_title"'."
   fi
+  w_norm0:={*}?{*,n}:-1
 
   foreach[^-1] {
     w0,h0,d0,s0:=w,h,d,s r. {whd},1,1,100%,-1
@@ -9395,8 +9396,8 @@ _nplot : skip ${8=},${10=}
             y = round(lerp($frame,h - 1 - $frame,(i(#0,$X,0,0,c) - $ymax)/($ymin - $ymax)));
             ellipse(#-1,x,y,siz,siz,0,0.15,colors[3*min(c,3),3]);
           )"
-        w. rm.
-      else w[view]
+        w. -1,-1,0 rm.
+      else w[view] -1,-1,0
       fi
       wait
 
@@ -9427,7 +9428,9 @@ _nplot : skip ${8=},${10=}
     while $continue
     k[0] r $w0,$h0,$d0,$s0,-1
   }
-  rm. is_change 0
+  rm.
+  if $w_norm0<0 w 0 else w[] -1,-1,$w_norm0 fi
+  is_change 0
 
 #@cli poincare_disk : _size>=0,_p>2,_q>2,_angle,_tiling={ 0:triangular | 1:polygonal },_nb_max_iter>=0,\
 # _xmin,_ymin,_xmax,_ymax
@@ -9725,6 +9728,8 @@ select : check "isint(${1=2},0,2) && ${2=50%}>=0 && ${3=50%}>=0 && ${4=50%}>=0 &
 _select :
   s0,s1,s2=point,segment,rectangle
   e[0--3] "Select "${s$1}" in image"$_gmic_s" in interactive mode, from point (${2-4})."
+  w_norm0:={*}?{*,n}:-1
+
   foreach {
     nm={n} basename {n} title="[G'MIC] "${} => img
     w_width,w_height=${"fitscreen [img]"}
@@ -9921,8 +9926,8 @@ _select :
         fi
         label_y:=$my<1.5*h?1:$my>{*,h}-1.5*h?0:$label_y
         expand_xy. 4 to_rgb. j.. .,0,$label_y~,0,0,0.75 rm.
-        w. rm.
-      else w[view]
+        w. -1,-1,0 rm.
+      else w[view] -1,-1,0
       fi
       wait
 
@@ -9996,6 +10001,7 @@ _select :
     fi
     =>[^] $nm
   }
+  if $w_norm0<0 w 0 else w[] -1,-1,$w_norm0 fi
   cursor[0] 1
 
 #@cli serialize : _datatype,_is_compressed={ 0 | 1 },_store_names={ 0 | 1 } : (+)
