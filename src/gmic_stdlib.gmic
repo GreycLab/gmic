@@ -9353,7 +9353,7 @@ _nplot : skip ${8=},${10=}
 
       # Render view.
       if !0$view
-        +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin => view
+        +dg[0] {*,w,h},$1,$2,$xmin,{$xmax+($1==3?1-1e-9:0)},$ymax,$ymin => view
       fi
 
       # Retrieve graph coordinates from mouse pointer.
@@ -9362,31 +9362,36 @@ _nplot : skip ${8=},${10=}
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
         const xmin = $xmin; const xmax = $xmax; const ymin = $ymin; const ymax = $ymax;
         mx<0 || !inrange(mx,frame,w - 1 - frame) || !inrange(my,frame,h - 1 - frame)?vector4(-1):(
-          const fx = (mx - frame)/(w - 1 - frame2);
           const fy = (my - frame)/(h - 1 - frame2);
-          x = lerp(xmin,xmax,fx);
           y = lerp(ymax,ymin,fy);
-          X = lerp(0,w#0 - 1,fx);
-          [ x,y,X,round(X) ]
+          $1==3?(
+            const fx = (mx - frame)/(w - frame2);
+            x = lerp(xmin,xmax + 1,fx);
+            X = lerp(0,w#0,fx);
+            Xi = int(X);
+          ):(
+            const fx = (mx - frame)/(w - 1 - frame2);
+            x = lerp(xmin,xmax,fx);
+            X = lerp(0,w#0 - 1,fx);
+            Xi = round(X);
+          );
+          [ x,y,X,Xi ]
         )"}
 
       if $X>=0
         [view]
-
         label="f["$Xi"] = f("{_$x}") = [ "{_I[#0,round($X)]}" ]"
         t. {``$label},0.5~,8,16,1,0
         line. $mx,$frame,$mx,{h-1-$frame},0.75,0x55555555,0
         eval "
-          const siz = 2*max(3,min(w,h)/128);
+          const siz = 1.5*max(3,min(w,h)/128);
           colors = [ 220,10,10,10,220,10,10,10,220,0,0,0 ];
           s#0==1?copy(colors,[ 120,120,200 ]);
-          X = round(lerp($frame,w - 1 - $frame,$Xi/(w#0 - 1)));
+          X = round($1==3?lerp($frame,w - $frame,($Xi + 0.5)/w#0):lerp($frame,w - 1 - $frame,$Xi/(w#0 - 1)));
           repeat (s#0,c,
             Y = round(lerp($frame,h - 1 - $frame,(i(#0,$Xi,0,0,c) - $ymax)/($ymin - $ymax)));
             ellipse(#-1,X,Y,siz,siz,0,0.15,colors[3*min(c,3),3]);
           )"
-
-
         w. rm.
       else w[view]
       fi
