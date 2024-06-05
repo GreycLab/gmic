@@ -4258,8 +4258,12 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
 
     # Determine xmin,xmax/ymin,ymax.
     one:=$3!=3 siz:=w*h*d
+
+    is_infnan=0
+    if "max(isinf([im,iM])) || max(isnan([im,iM]))" +replace_infnan. 0 is_infnan=1 fi
     if $5==$6 xmin=0 xmax:=$siz-$one else xmin:=min($5,$6) xmax:=max($5,$6) fi
     if $7==$8 ymin:=im-(iM-im)/20 ymax:=iM+(iM-im)/20 else ymin:=min($7,$8) ymax:=max($7,$8) fi
+    if $is_infnan rm. fi
     if $3==3 xmax:=lerp($xmin,$xmax,$siz/($siz-1)) fi
     dx,dy:=$xmax-$xmin,$ymax-$ymin
 
@@ -4270,7 +4274,9 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
     # Create plot canvas.
     gw:=$w-64 gh:=$h-64 gg:=($gw-$one)/($siz-$one)
     $gw,$gh,1,3,255
-    grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
+    if $dx>0" && "$dy>0
+      grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
+    fi
 
     # Define color palette for curves.
     if s#-2==1 (120,120,200)
