@@ -4274,32 +4274,36 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
 
     # Create plot canvas.
     one:=$3!=3 gw:=$w-2*$11 gh:=$h-2*$11 gg:=($gw-$one)/($siz-$one)
-    $gw,$gh,1,3,255
-    if $dx>0" && "$dy>0
-      grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
+    if $gw>0" && "$gh>0
+      $gw,$gh,1,3,255
+      if $dx>0" && "$dy>0
+        grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
+      fi
+
+      # Define color palette for curves.
+      if s#-2==1 (100,100,200)
+      elif s#-2<=3 (220,100,100;100,220,100;100,100,220)
+      else
+        (0,255) r. 256,1,1,1,3 map. 2 z. 2,100% permute. cxyz r. 3,{-3,max(3,s)},1,1,0,2
+        sh. 0,2,0,0 f. 255,0,0,0,255,0,0,0,255 rm.
+      fi
+
+      # Draw plot for each channel.
+      repeat s#-3 { sh... $> graph... .,$3,$4,$ymax,$ymin,1,{-2,@0-2} rm. shift. 0,-1 }
+      rm[-3,-1]
+      line. 0,0,100%,0,1,110 line. 100%,0,100%,100%,1,110
+      line. 100%,100%,0,100%,1,255 line. 0,100%,0,0,1,255
+
+      100%,100%,1,1,255
+      axes. $xmin,$xmax,$ymax,$ymin,14,1,0
+      if $xmin>0 axes. 0,0,$ymax,$ymin,14,1,160 fi
+      if $xmax<0 axes. {w-1},{w-1},$ymax,$ymin,14,1,160 fi
+      if $ymin>0 axes. $xmin,$xmax,{h-1},{h-1},14,1,160 fi
+      if $ymax<0 axes. $xmin,$xmax,0,0,14,1,160 fi
+      +erode. 3 !=. 255 r.. 100%,100%,1,3 j... ..,0,0,0,0,1,.,1 rm[-2,-1]
+    else 0
     fi
 
-    # Define color palette for curves.
-    if s#-2==1 (100,100,200)
-    elif s#-2<=3 (220,100,100;100,220,100;100,100,220)
-    else
-      (0,255) r. 256,1,1,1,3 map. 2 z. 2,100% permute. cxyz r. 3,{-3,max(3,s)},1,1,0,2
-      sh. 0,2,0,0 f. 255,0,0,0,255,0,0,0,255 rm.
-    fi
-
-    # Draw plot for each channel.
-    repeat s#-3 { sh... $> graph... .,$3,$4,$ymax,$ymin,1,{-2,@0-2} rm. shift. 0,-1 }
-    rm[-3,-1]
-    line. 0,0,100%,0,1,110 line. 100%,0,100%,100%,1,110
-    line. 100%,100%,0,100%,1,255 line. 0,100%,0,0,1,255
-
-    100%,100%,1,1,255
-    axes. $xmin,$xmax,$ymax,$ymin,14,1,0
-    if $xmin>0 axes. 0,0,$ymax,$ymin,14,1,160 fi
-    if $xmax<0 axes. {w-1},{w-1},$ymax,$ymin,14,1,160 fi
-    if $ymin>0 axes. $xmin,$xmax,{h-1},{h-1},14,1,160 fi
-    if $ymax<0 axes. $xmin,$xmax,0,0,14,1,160 fi
-    +erode. 3 !=. 255 r.. 100%,100%,1,3 j... ..,0,0,0,0,1,.,1 rm[-2,-1]
     frame. xy,$11,220
     fontsize:=min(20,round(0.75*$11))
     if $fontsize
@@ -9359,14 +9363,14 @@ _nplot : skip ${8=},${10=}
 
     xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
     x0,y0,x1,y1=-1
-    frame=32
+    frame:=min(32,round(max({*,w,h}))/20)
     step=0
 
     do
       if !{*,f} w_width,w_height={*,d,e} fi # Remember window geometry when not fullscreen
 
       # Render base view.
-      if !0$view +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin => view fi
+      if !0$view +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame => view fi
 
       # Retrieve graph coordinates from mouse pointer.
       mx,my={*,x,y}
@@ -30047,9 +30051,16 @@ frame : check "${2=10%}>=0" skip "${1=xy},${3=255},${4=$3},${5=$3},${6=255}"
   e[^-1] "Insert outer frame in image$? along ax"{`size(['$1'])>1?_'e':'i'`}"s '$1', with size $2 and color (${3--1})."
   no_x,no_y,no_z:="arg = ['$1']; [ find(arg,_'x')<0, find(arg,_'y')<0, find(arg,_'z')<0 ]"
   foreach { nm={n}
-    {"const siz2 = 2*(ispercentage($2)?floor(max(w,h,d)*$2):$2);
-      [ w + ($no_x?0:siz2), h + ($no_y?0:siz2), d + ($no_z?0:siz2), s ]"} fc. ${3--1}
-    j. ..,0.5~,0.5~,0.5~ k. => $nm
+    siz2:=2*(ispercentage($2)?floor(max(w,h,d)*$2):$2)
+    if $siz2>0
+      if !w
+        rm {"[ $no_x?1:$siz2, $no_y?1:$siz2, $no_z?1:$siz2, narg(${3--1}) ]"} fc. ${3--1}
+      else
+        {"[ w + ($no_x?0:$siz2), h + ($no_y?0:$siz2), d + ($no_z?0:$siz2), s ]"} fc. ${3--1}
+        j. ..,0.5~,0.5~,0.5~ k.
+      fi
+    fi
+    => $nm
   }
 
 #@cli frame_blur : _sharpness>0,_size>=0,_smoothness,_shading,_blur
