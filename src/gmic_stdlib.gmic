@@ -9364,7 +9364,7 @@ _nplot : skip ${8=},${10=}
     if $is_infnan rm. fi
 
     Xmin,Xmax,xmin,xmax,ymin,ymax=0,{w-1},$xmin0,$xmax0,$ymin0,$ymax0
-    X0,X1,x0,y0,x1,y1=-1
+    X0,X1,x0,x1,y0,y1=-1
     step=0
 
     do
@@ -9374,33 +9374,36 @@ _nplot : skip ${8=},${10=}
       if !0$view
         +z[0] $Xmin,$Xmax
         frame:=min(32,round(max({*,w,h})/20))
-        +dg. {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame
-        rm..
+        dg. {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame
         => view
       fi
 
-      # Retrieve graph coordinates from mouse pointer.
+      # Retrieve graph coordinates correspoinding to position of mouse pointer.
       mx,my={*,x,y}
-      x,y,X={view,"
+      X,x,y={view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
-        const xmin = $xmin; const xmax = $xmax; const ymin = $ymin; const ymax = $ymax;
-        mx<0 || !inrange(mx,frame,w - 1 - frame) || !inrange(my,frame,h - 1 - frame)?vector3(-1):(
+        const Xmin = $Xmin; const Xmax = $Xmax;
+        const xmin = $xmin; const xmax = $xmax;
+        const ymin = $ymin; const ymax = $ymax;
+        mx<0 || !inrange(mx,frame,w - 1 - frame) || !inrange(my,frame,h - 1 - frame)?[ -1,-1,-1 ]:(
           const fy = (my - frame)/(h - 1 - frame2);
           y = lerp(ymax,ymin,fy);
           $1==3?(
             const fx = (mx - frame)/(w - frame2);
+            X = int(lerp(Xmin,Xmax + 1,fx));
             x = lerp(xmin,xmax + 1,fx);
-            X = int(lerp(0,w#0,fx));
           ):(
             const fx = (mx - frame)/(w - 1 - frame2);
+            X = round(lerp(Xmin,Xmax,fx));
             x = lerp(xmin,xmax,fx);
-            X = round(lerp(0,w#0 - 1,fx));
           );
-          [ x,y,X ]
+          [ X,x,y ]
         )"}
 
       if $X>=0
-        if !$step X0,x0,y0=$X,$x,$y elif $step==1 X1,x1,y1=$X,$x,$y fi
+        if !$step X0,x0,y0=$X,$x,$y
+        elif $step==1 X1,x1,y1=$X,$x,$y
+        fi
       fi
 
       # Render view.
@@ -9419,11 +9422,13 @@ _nplot : skip ${8=},${10=}
         eval " # Highlight closest points
           const frame = $frame;
           const siz = 1.5*max(3,min(w,h)/128);
+          const dX = $Xmax - $Xmin;
+          const dy = $ymax - $ymin;
           colors = [ 220,100,100,100,220,100,100,100,220,0,0,0 ];
           s#0==1?copy(colors,[ 100,100,200 ]);
-          x = round($1==3?lerp(frame,w - frame,($X + 0.5)/w#0):lerp(frame,w - 1 - frame,$X/(w#0 - 1)));
+          x = round($1==3?lerp(frame,w - frame,($X + 0.5 - $Xmin)/(dX + 1)):lerp(frame,w - 1 - frame,($X - $Xmin)/dX));
           repeat (s#0,c,
-            y = round(lerp($frame,h - 1 - $frame,(i(#0,$X,0,0,c) - $ymax)/($ymin - $ymax)));
+            y = round(lerp($frame,h - 1 - $frame,($ymax - i(#0,$X,0,0,c))/dy));
             ellipse(#-1,x,y,siz,siz,0,0.5,colors[3*min(c,3),3]);
           )"
 
