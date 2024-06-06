@@ -9365,8 +9365,7 @@ _plot : skip ${8=},${10=}
 
     Xmin,Xmax,xmin,xmax,ymin,ymax=0,{w-1},$xmin0,$xmax0,$ymin0,$ymax0
     X0,X1,x0,x1,y0,y1=-1
-    step=0
-    prev_mb=0
+    select_mode=0
 
     do
       if !{*,f} w_width,w_height={*,d,e} fi # Remember window geometry when not fullscreen
@@ -9380,7 +9379,7 @@ _plot : skip ${8=},${10=}
       fi
 
       # Retrieve graph coordinates correspoinding to position of mouse pointer.
-      mx,my,mb={*,x,y,b}
+      mx,my={*,x,y}
       X,x,y={view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
         const Xmin = $Xmin; const Xmax = $Xmax;
@@ -9403,8 +9402,10 @@ _plot : skip ${8=},${10=}
 
       if $X>=0
         cursor[0] 0
-        if !$step X0,x0=$X,$x y0:=$mb&1?$y:$ymin
-        elif $step==1 X1,x1=$X,$x y1:=$mb&1?$y:$ymax
+        if !$select_mode X0,x0,y0=$X,$x,$y
+        else
+          X1,x1=$X,$x
+          if $select_mode==1 y1=$y else y0,y1=$ymin,$ymax fi
         fi
       else cursor[0] 1
       fi
@@ -9428,7 +9429,6 @@ _plot : skip ${8=},${10=}
           const mx = $mx; const my = $my;
           const siz = 1.5*max(3,min(w,h)/128);
           const frame = $frame;
-          const step = $step;
           const hatch1 = 0x00FF00FF;
           const hatch2 = 0xF0F0F0F0;
 
@@ -9449,7 +9449,7 @@ _plot : skip ${8=},${10=}
           );
 
           # Draw user selection.
-          step && X0>=0?(
+          $select_mode && X0>=0?(
             sx0 = $1==3?lerp(frame,w - frame - 1,(X0 - $Xmin)/(dX + 1)):lerp(frame,w - frame - 1,(X0 - $Xmin)/dX);
             sy0 = lerp(h - frame - 1,frame,($y0 - $ymin)/dy);
             sx1 = $1==3?lerp(frame,w - frame - 1,(X1 + 1 - $Xmin)/(dX + 1)):lerp(frame,w - frame - 1,(X1 - $Xmin)/dX);
@@ -9486,11 +9486,13 @@ _plot : skip ${8=},${10=}
       fi
 
       # Manage user selection.
-      if !$step" && "$is_mb" && "$X>=0
-        X0,x0,step,prev_mb=$X,$x,1,$is_lmb+2*$is_rmb y0:=$is_lmb?$y:$ymin
-      elif $step" && "!$is_mb
+      if !$select_mode" && "$is_mb" && "$X>=0
+        X0,x0,select_mode=$X,$x,{$is_lmb?1:2}
+        y0:=$select_mode==1?$y:$ymin
+      elif $select_mode" && "!$is_mb
         if $X>=0
-          X1,x1,step=$X,$x,0 y1:=$prev_mb&1?$y:$ymax
+          y1:=$select_mode==1?$y:$ymax
+          X1,x1,select_mode=$X,$x,0
           if $X1!=$X0" && "$y1!=$y0
             Xmin,Xmax,xmin,xmax,ymin,ymax:=min($X0,$X1),max($X0,$X1),min($x0,$x1),max($x0,$x1),min($y0,$y1),max($y0,$y1)
           else
@@ -9498,7 +9500,7 @@ _plot : skip ${8=},${10=}
           fi
           rmn view
         else
-          X0,x0,y0,step=$X,$x,$y,0
+          X0,x0,y0,select_mode=$X,$x,$y,0
         fi
       fi
 
