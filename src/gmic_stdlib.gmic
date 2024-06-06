@@ -4233,7 +4233,8 @@ dg : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
   skip ${3=1},${4=0},${5=0},${6=0},${7=0},${8=0},"${9=x-axis}","${10=y-axis}"
   _display_graph ${1-8},"$9","$10",$11
 
-#@cli display_graph : _width>=0,_height>=0,_plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_xlabel,_ylabel,_frame_size>=0
+#@cli display_graph : _width>=0,_height>=0,_plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_xlabel,_ylabel,\
+# _frame_size>=0
 #@cli : Render graph plot from selected image data.
 #@cli : 'plot_type' can be { 0:none | 1:lines | 2:splines | 3:bar }.
 #@cli : 'vertex_type' can be { 0:none | 1:points | 2,3:crosses | 4,5:circles | 6,7:squares }.
@@ -9363,14 +9364,16 @@ _nplot : skip ${8=},${10=}
 
     xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
     x0,y0,x1,y1=-1
-    frame:=min(32,round(max({*,w,h}))/20)
     step=0
 
     do
       if !{*,f} w_width,w_height={*,d,e} fi # Remember window geometry when not fullscreen
 
       # Render base view.
-      if !0$view +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame => view fi
+      if !0$view
+        frame:=min(32,print(round(max({*,w,h})/20)))
+        +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame => view
+      fi
 
       # Retrieve graph coordinates from mouse pointer.
       mx,my={*,x,y}
@@ -9421,16 +9424,16 @@ _nplot : skip ${8=},${10=}
           )"
 
         if $step" && "$X>=0
-           d
           eval "
             const frame = $frame;
-            sx0 = lerp(frame,frame - w - 1,($x0 - $xmin)/($xmax - $xmin));
-            sy0 = lerp(frame,frame - h - 1,($y0 - $ymin)/($ymax - $ymin));
-            sx1 = lerp(frame,frame - w - 1,($x1 - $xmin)/($xmax - $xmin));
-            sy1 = lerp(frame,frame - h - 1,($y1 - $ymin)/($ymax - $ymin));
-            polygon(#-1,4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.25,0);
-          "
-
+            const dx = $xmax - $xmin; const dy = $ymax - $ymin;
+            sx0 = lerp(frame,w - frame - 1,($x0 - $xmin)/dx);
+            sy0 = lerp(h - frame - 1,frame,($y0 - $ymin)/dy);
+            sx1 = lerp(frame,w - frame - 1,($x1 - $xmin)/dx);
+            sy1 = lerp(h - frame - 1,frame,($y1 - $ymin)/dy);
+            polygon(#-1,4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.1,0);
+            polygon(#-1,-4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.75,0xF0F0F0F0,0);
+            "
         fi
 
         line. $mx,$frame,$mx,{h-1-$frame},0.75,0x55555555,0
