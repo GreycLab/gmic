@@ -9379,7 +9379,7 @@ _plot : skip ${8=},${10=}
       fi
 
       # Retrieve graph coordinates correspoinding to position of mouse pointer.
-      mx,my={*,x,y}
+      mx,my,mb={*,x,y,b}
       X,x,y={view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
         const Xmin = $Xmin; const Xmax = $Xmax;
@@ -9402,8 +9402,8 @@ _plot : skip ${8=},${10=}
 
       if $X>=0
         cursor[0] 0
-        if !$step X0,x0,y0=$X,$x,$y
-        elif $step==1 X1,x1,y1=$X,$x,$y
+        if !$step X0,x0=$X,$x y0:=$mb&1?$y:$ymin
+        elif $step==1 X1,x1=$X,$x y1:=$mb&1?$y:$ymax
         fi
       else cursor[0] 1
       fi
@@ -9464,7 +9464,7 @@ _plot : skip ${8=},${10=}
       wait
 
       # Manage user events.
-      is_CTRL,is_lmb,is_rmb:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,b}&1,{*,b}&2
+      is_CTRL,is_mb,is_lmb,is_rmb:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,b}&3,{*,b}&1,{*,b}&2
       if {*,r}
         w[] {*,d,e} rmn view
       fi
@@ -9485,11 +9485,11 @@ _plot : skip ${8=},${10=}
       fi
 
       # Manage user selection.
-      if !$step" && "$is_lmb" && "$X>=0
-        X0,x0,y0,step=$X,$x,$y,1
-      elif $step==1" && "!$is_lmb
+      if !$step" && "$is_mb" && "$X>=0
+        X0,x0,step=$X,$x,1 y0:=$is_lmb?$y:$ymin
+      elif $step" && "!$is_mb
         if $X>=0
-          X1,x1,y1,step=$X,$x,$y,0
+          X1,x1,step=$X,$x,0 y1:=$is_lmb?$y:$ymax
           if $X1!=$X0" && "$y1!=$y0
             Xmin,Xmax,xmin,xmax,ymin,ymax:=min($X0,$X1),max($X0,$X1),min($x0,$x1),max($x0,$x1),min($y0,$y1),max($y0,$y1)
           else
