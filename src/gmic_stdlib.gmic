@@ -9421,37 +9421,43 @@ _plot : skip ${8=},${10=}
         0 t. {``$label},0.5~,0,$fontsize,1,1 to_rgb.
         j.. .,0.5~,{($frame-h)/2},0,0,1,. rm.
 
-        eval " # Highlight closest points
-          const frame = $frame;
+        eval "
+          const dX = $Xmax - $Xmin; const dy = $ymax - $ymin;
+          const X0 = min($X0,$X1); const X1 = max($X0,$X1);
+          const mx = $mx; const my = $my;
           const siz = 1.5*max(3,min(w,h)/128);
-          const dX = $Xmax - $Xmin;
-          const dy = $ymax - $ymin;
+          const frame = $frame;
+          const step = $step;
+          const hatch1 = 0x00FF00FF;
+          const hatch2 = 0xF0F0F0F0;
+
+          draw_cursor(x,y0,y1,y,x0,x1) = (
+            polygon(#-1,-2,x,y0,x,y1,0.75,hatch1,0);
+            polygon(#-1,-2,x,y0,x,y1,0.75,~hatch1,255);
+            polygon(#-1,-2,x0,y,x1,y,0.75,hatch1,0);
+            polygon(#-1,-2,x0,y,x1,y,0.75,~hatch1,255);
+          );
+
+          # Highlight closest points.
           colors = [ 220,100,100,100,220,100,100,100,220,0,0,0 ];
           s#0==1?copy(colors,[ 100,100,200 ]);
           x = round($1==3?lerp(frame,w - frame,($X + 0.5 - $Xmin)/(dX + 1)):lerp(frame,w - 1 - frame,($X - $Xmin)/dX));
           repeat (s#0,c,
             y = round(lerp(frame,h - 1 - frame,($ymax - i(#0,$X,0,0,c))/dy));
             inrange(y,frame,h - 1 - frame)?ellipse(#-1,x,y,siz,siz,0,c<3?0.5:0.1,colors[3*min(c,3),3]);
-          )"
+          );
 
-        if $step" && "$X>=0 # Draw user selection
-          eval "
-            const dX = $Xmax - $Xmin; const dy = $ymax - $ymin;
-            const X0 = min($X0,$X1); const X1 = max($X0,$X1);
-            const frame = $frame;
+          step && X0>=0?( # Draw user selection
             sx0 = $1==3?lerp(frame,w - frame - 1,(X0 - $Xmin)/(dX + 1)):lerp(frame,w - frame - 1,(X0 - $Xmin)/dX);
             sy0 = lerp(h - frame - 1,frame,($y0 - $ymin)/dy);
             sx1 = $1==3?lerp(frame,w - frame - 1,(X1 + 1 - $Xmin)/(dX + 1)):lerp(frame,w - frame - 1,(X1 - $Xmin)/dX);
             sy1 = lerp(h - frame - 1,frame,($y1 - $ymin)/dy);
             polygon(#-1,4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.1,0);
-            polygon(#-1,-4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.75,0xF0F0F0F0,0);
-            "
-        fi
+            polygon(#-1,-4,sx0,sy0,sx1,sy0,sx1,sy1,sx0,sy1,0.75,hatch2,0);
+          );
 
-        line. $mx,$frame,$mx,{h-1-$frame},0.75,0x00FF00FF,0
-        line. $mx,$frame,$mx,{h-1-$frame},0.75,0xFF00FF00,255
-        line. $frame,$my,{w-1-$frame},$my,0.75,0x00FF00FF,0
-        line. $frame,$my,{w-1-$frame},$my,0.75,0xFF00FF00,255
+          mx>=0?draw_cursor(mx,frame,h - 1 - frame,my,frame,w - 1 - frame);
+        "
         w. -1,-1,0 rm.
       else w[view] -1,-1,0
       fi
