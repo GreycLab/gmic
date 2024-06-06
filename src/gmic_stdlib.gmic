@@ -9342,6 +9342,7 @@ _nplot : skip ${8=},${10=}
   fi
   w_norm0:={*}?{*,n}:-1
 
+  # Plot each image in an interactive window.
   foreach[^-1] {
     w0,h0,d0,s0:=w,h,d,s r. {whd},1,1,100%,-1
 
@@ -9363,7 +9364,7 @@ _nplot : skip ${8=},${10=}
     if $is_infnan rm. fi
 
     xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
-    x0,y0,x1,y1=-1
+    X0,X1,x0,y0,x1,y1=-1
     step=0
 
     do
@@ -9372,7 +9373,9 @@ _nplot : skip ${8=},${10=}
       # Render base view.
       if !0$view
         frame:=min(32,round(max({*,w,h})/20))
-        +dg[0] {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame => view
+        if $X0>=0" && "$X1>=0 +z[0] $X0,$X1 else sh[0] fi
+        +dg. {*,w,h},$1,$2,$xmin,$xmax,$ymax,$ymin,,,$frame rm..
+        => view
       fi
 
       # Retrieve graph coordinates from mouse pointer.
@@ -9396,7 +9399,7 @@ _nplot : skip ${8=},${10=}
         )"}
 
       if $X>=0
-        if !$step x0,y0=$x,$y elif $step==1 x1,y1=$x,$y fi
+        if !$step X0,x0,y0=$X,$x,$y elif $step==1 X1,x1,y1=$X,$x,$y fi
       fi
 
       # Render view.
@@ -9417,7 +9420,7 @@ _nplot : skip ${8=},${10=}
           const siz = 1.5*max(3,min(w,h)/128);
           colors = [ 220,100,100,100,220,100,100,100,220,0,0,0 ];
           s#0==1?copy(colors,[ 100,100,200 ]);
-          x = round($1==3?lerp(frame,w - frame,$X/w#0):lerp(frame,w - 1 - frame,$X/(w#0 - 1)));
+          x = round($1==3?lerp(frame,w - frame,($X + 0.5)/w#0):lerp(frame,w - 1 - frame,$X/(w#0 - 1)));
           repeat (s#0,c,
             y = round(lerp($frame,h - 1 - $frame,(i(#0,$X,0,0,c) - $ymax)/($ymin - $ymax)));
             ellipse(#-1,x,y,siz,siz,0,0.5,colors[3*min(c,3),3]);
@@ -9470,9 +9473,9 @@ _nplot : skip ${8=},${10=}
       elif $step==1" && "!$is_lmb" && "$X>=0
         x1,y1,step=$x,$y,0
         if $x1!=$x0" && "$y1!=$y0
-          xmin,xmax,ymin,ymax:=min($x0,$x1),max($x0,$x1),min($y0,$y1),max($y0,$y1)
+          X0,X1,xmin,xmax,ymin,ymax:=min($X0,$X1),max($X0,$X1),min($x0,$x1),max($x0,$x1),min($y0,$y1),max($y0,$y1)
         else
-          xmin,xmax,ymin,ymax=$xmin0,$xmax0,$ymin0,$ymax0
+          X0,X1,xmin,xmax,ymin,ymax=-1,-1,$xmin0,$xmax0,$ymin0,$ymax0
         fi
         rmn view
       fi
