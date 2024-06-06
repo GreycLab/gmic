@@ -4229,23 +4229,24 @@ _display_fft :
   foreach { fftpolar +.. 1 log.. n 0,255 a x } s x,2
 
 #@cli dg : eq. to 'display_graph'.
-dg : check "${1=0}>=0 && ${2=0}>=0" skip ${3=1},${4=0},${5=0},${6=0},${7=0},${8=0},"${9=x-axis}","${10=y-axis}"
-  _display_graph ${1-8},"$9","$10"
+dg : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
+  skip ${3=1},${4=0},${5=0},${6=0},${7=0},${8=0},"${9=x-axis}","${10=y-axis}"
+  _display_graph ${1-8},"$9","$10",$11
 
-#@cli display_graph : _width>=0,_height>=0,_plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_xlabel,_ylabel
+#@cli display_graph : _width>=0,_height>=0,_plot_type,_vertex_type,_xmin,_xmax,_ymin,_ymax,_xlabel,_ylabel,_frame_size>=0
 #@cli : Render graph plot from selected image data.
 #@cli : 'plot_type' can be { 0:none | 1:lines | 2:splines | 3:bar }.
 #@cli : 'vertex_type' can be { 0:none | 1:points | 2,3:crosses | 4,5:circles | 6,7:squares }.
 #@cli : 'xmin','xmax','ymin','ymax' set the coordinates of the displayed xy-axes.
 #@cli : if specified 'width' or 'height' is '0', then image size is set to half the screen size.
 #@cli : Default values: 'width=0', 'height=0', 'plot_type=1', 'vertex_type=1', 'xmin=xmax=ymin=ymax=0 (auto)', \
-# 'xlabel="x-axis"' and 'ylabel="y-axis"'.
+# 'xlabel="x-axis"', 'ylabel="y-axis"' and 'frame_size=32'.
 #@cli : $ 128,1,1,1,'cos(x/10+u)' +display_graph 400,300,3
-display_graph : check "${1=0}>=0 && ${2=0}>=0"
+display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
   skip ${3=1},${4=0},${5=0},${6=0},${7=0},${8=0},"${9=x-axis}","${10=y-axis}"
-  _display_graph ${1-8},"$9","$10"
+  _display_graph ${1-8},"$9","$10",$11
 
-_display_graph : check "${1=0}>=0 && ${2=0}>=0"
+_display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
   skip ${3=1},${4=0},${5=0},${6=0},${7=0},${8=0},"${9=x-axis}","${10=y-axis}"
   e[0--3] "Render $1x$2 graph plot from data of image$?."
 
@@ -4272,7 +4273,7 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
     u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg(1,$u) deltay:=arg(2,$u)
 
     # Create plot canvas.
-    one:=$3!=3 gw:=$w-64 gh:=$h-64 gg:=($gw-$one)/($siz-$one)
+    one:=$3!=3 gw:=$w-2*$11 gh:=$h-2*$11 gg:=($gw-$one)/($siz-$one)
     $gw,$gh,1,3,255
     if $dx>0" && "$dy>0
       grid. {$deltax*$gw/$dx},{$deltay*$gh/$dy},{($offx-$xmin)*$gw/$dx},{$gh-($offy-$ymin)*$gh/$dy},0.25,0xCCCCCCCC,0
@@ -4299,9 +4300,12 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0"
     if $ymin>0 axes. $xmin,$xmax,{h-1},{h-1},14,1,160 fi
     if $ymax<0 axes. $xmin,$xmax,0,0,14,1,160 fi
     +erode. 3 !=. 255 r.. 100%,100%,1,3 j... ..,0,0,0,0,1,.,1 rm[-2,-1]
-    frame. xy,32,220
-    0 t. "$9",0,0,20,1,-220,-220,-220 j.. .,0.5~,{-2,h-28},0,0,-1 rm.
-    0 t. "$10",0,0,20,1,-220,-220,-220 rotate. -90 j.. .,4,0.5~,0,0,-1 rm.
+    frame. xy,$11,220
+    fontsize:=min(20,round(0.75*$11))
+    if $fontsize
+      0 t. "$9",0,0,$fontsize,1,-220,-220,-220 j.. .,0.5~,{-2,h-1-($fontsize+$11)/2},0,0,-1 rm.
+      0 t. "$10",0,0,$fontsize,1,-220,-220,-220 rotate. -90 j.. .,{($11-$fontsize)/2},0.5~,0,0,-1 rm.
+    fi
     => $nm
   }
   c 0,255
