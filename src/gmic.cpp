@@ -2462,7 +2462,7 @@ const char *gmic::builtin_commands_names[] = {
   "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
-  "parallel","pass","permute","plot","point","polygon","progress",
+  "parallel","pass","permute","point","polygon","progress",
   "quit",
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
   "screen","serialize","shared","shift","sign","sinc","sinh","skip",
@@ -5032,7 +5032,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
   else if (!_is_get && ((*it=='}' && !it[1]) || !std::strcmp("done",it)))
 
   unsigned int next_debug_line = ~0U, next_debug_filename = ~0U, is_high_connectivity, uind = 0,
-    boundary = 0, pattern = 0, exit_on_anykey = 0, wind = 0, interpolation = 0, hash = 0;
+    boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0;
   char end, sep = 0, sep0 = 0, sep1 = 0, sepx = 0, sepy = 0, sepz = 0, sepc = 0, axis = 0;
   double vmin = 0, vmax = 0, value, value0, value1, nvalue, nvalue0, nvalue1;
   bool is_cond, _is_get = false, is_end_local = false, check_elif = false, run_main_ = false;
@@ -10437,82 +10437,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           g_img.assign();
           is_change = true;
           ++position;
-          continue;
-        }
-
-        // Display as a graph plot.
-        if (!is_get && !std::strcmp("plot",command)) {
-          gmic_substitute_args(false);
-          double ymin = 0, ymax = 0, xmin = 0, xmax = 0, resolution = 65536;
-          unsigned int plot_type = 1, vertex_type = 1;
-          *formula = sep = 0;
-          exit_on_anykey = 0;
-          if (((cimg_sscanf(argument,"'%1023[^']%c%c",
-                            gmic_use_formula,&sep,&end)==2 && sep=='\'') ||
-               cimg_sscanf(argument,"'%1023[^']',%lf%c",
-                           formula,&resolution,&end)==2 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u%c",
-                           formula,&resolution,&plot_type,&end)==3 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u%c",
-                           formula,&resolution,&plot_type,&vertex_type,&end)==4 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf%c",
-                           formula,&resolution,&plot_type,&vertex_type,&xmin,&xmax,&end)==6 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf%c",
-                           formula,&resolution,&plot_type,&vertex_type,
-                           &xmin,&xmax,&ymin,&ymax,&end)==8 ||
-               cimg_sscanf(argument,"'%1023[^']',%lf,%u,%u,%lf,%lf,%lf,%lf,%u%c",
-                           formula,&resolution,&plot_type,&vertex_type,
-                           &xmin,&xmax,&ymin,&ymax,&exit_on_anykey,&end)==9) &&
-              resolution>0 && plot_type<=3 && vertex_type<=7 && exit_on_anykey<=1) {
-            resolution = cimg::round(resolution);
-            strreplace_fw(formula);
-            if (xmin==0 && xmax==0) { xmin = -4; xmax = 4; }
-            if (!plot_type && !vertex_type) plot_type = 1;
-            if (resolution<1) resolution = 65536;
-
-            gmic_use_argx;
-            cimg_snprintf(argx,_argx.width(),"x = lerp(%.17g,%.17g,x/%d);",
-                          xmin,xmax,(unsigned int)(resolution>1?resolution - 1:0));
-            const CImg<char> n_formula = (CImg<char>::string(argx,false,true),
-                                          CImg<char>::string(formula,true,true))>'x';
-            boundary = 1U;
-            try { // Determine vector dimension of specified formula
-              typename CImg<T>::_cimg_math_parser mp(n_formula.data() + (*n_formula=='>' || *n_formula=='<' ||
-                                                                         *n_formula=='*' || *n_formula==':'),
-                                                     "plot",CImg<T>::const_empty(),0,&images);
-              boundary = std::max(1U,mp.result_dim);
-            } catch (...) { is_cond = false; }
-            CImg<T> values((int)resolution,1,1,boundary,0);
-            values.fill(n_formula,false,true,&images);
-
-            gmic_use_title;
-            cimg_snprintf(title,_title.width(),"[Plot of '%s']",formula);
-            CImg<char>::string(title).move_to(g_list_c);
-            g_list.assign(values,true);
-            display_plots(g_list,g_list_c,variables_sizes,CImg<unsigned int>::vector(0),
-                          plot_type,vertex_type,xmin,xmax,ymin,ymax,exit_on_anykey);
-            g_list.assign();
-            g_list_c.assign();
-            ++position;
-          } else {
-            plot_type = 1; vertex_type = 0; ymin = ymax = xmin = xmax = 0;
-            if ((cimg_sscanf(argument,"%u%c",
-                             &plot_type,&end)==1 ||
-                 cimg_sscanf(argument,"%u,%u%c",
-                             &plot_type,&vertex_type,&end)==2 ||
-                 cimg_sscanf(argument,"%u,%u,%lf,%lf%c",
-                             &plot_type,&vertex_type,&xmin,&xmax,&end)==4 ||
-                 cimg_sscanf(argument,"%u,%u,%lf,%lf,%lf,%lf%c",
-                             &plot_type,&vertex_type,&xmin,&xmax,&ymin,&ymax,&end)==6 ||
-                 cimg_sscanf(argument,"%u,%u,%lf,%lf,%lf,%lf,%u%c",
-                             &plot_type,&vertex_type,&xmin,&xmax,&ymin,&ymax,&exit_on_anykey,&end)==7) &&
-                plot_type<=3 && vertex_type<=7 && exit_on_anykey<=1) ++position;
-            else { plot_type = 1; vertex_type = 0; ymin = ymax = xmin = xmax = 0; }
-            if (!plot_type && !vertex_type) plot_type = 1;
-            display_plots(images,images_names,variables_sizes,selection,plot_type,vertex_type,
-                          xmin,xmax,ymin,ymax,exit_on_anykey);
-          }
-          is_change = false;
           continue;
         }
 
