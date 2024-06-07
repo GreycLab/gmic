@@ -9382,7 +9382,7 @@ _plot : skip ${8=},${10=}
         => view
       fi
 
-      # Retrieve graph coordinates correspoinding to position of mouse pointer.
+      # Retrieve graph coordinates corresponding to current position of mouse pointer.
       mx,my={*,x,y}
       X,x,y={view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
@@ -9507,8 +9507,7 @@ _plot : skip ${8=},${10=}
         if {*,ARROWLEFT} nXmin:=max(0,$Xmin-$step) Xmin,Xmax:=$nXmin,$Xmax+$nXmin-$Xmin
         else nXmax:=min(w#0-1,$Xmax+$step) Xmin,Xmax:=$Xmin+$nXmax-$Xmax,$nXmax
         fi
-        xmin:=lerp($xmin0,$xmax0,$Xmin/(w#0-1));
-        xmax:=lerp($xmin0,$xmax0,$Xmax/(w#0-1));
+        xmin,xmax:=lerp($xmin0,$xmax0,$Xmin/(w#0-1)),lerp($xmin0,$xmax0,$Xmax/(w#0-1))
         rmn view
       fi
       if {*,ARROWDOWN}" || "{*,ARROWUP} # Up/Down shift
@@ -9519,9 +9518,13 @@ _plot : skip ${8=},${10=}
         rmn view
       fi
       if {*,o} # Zoom in/out
-        step={*,-o}
-        e "zoom : "$step
-
+        fact:=0.9^{*,-o}
+        nXmin,nXmax:=cut(int($X+[$Xmin-$X,$Xmax-$X]*$fact),0,w#0-1)
+        fact:=($nXmax-$nXmin)/($Xmax-$Xmin) # Corresponding quantized zoom factor
+        Xmin,Xmax:=$nXmin,$nXmax
+        xmin,xmax:=lerp($xmin0,$xmax0,$Xmin/(w#0-1)),lerp($xmin0,$xmax0,$Xmax/(w#0-1))
+        ymin,ymax:=$y+[$ymin-$y,$ymax-$y]*$fact
+        rmn view
       fi
 
       # Manage user selection.
