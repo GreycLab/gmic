@@ -9502,22 +9502,20 @@ _plot : skip ${8=},${10=}
         skip {*,-F}
       fi
       if {*,ARROWLEFT}" || "{*,ARROWRIGHT} # Left/Right shift
-        if {*,ARROWLEFT} sign=- else sign=+ fi
-        nXmin,nXmax:="step = ceil(($Xmax-$Xmin)/8); [ $Xmin"${sign}"step, $Xmax"${sign}"step ]"
-        if min(inrange([$nXmin,$nXmax],0,w#0-1))
-          Xmin,Xmax=$nXmin,$nXmax
-          xmin:=lerp($xmin0,$xmax0,($Xmin-1)/(w#0-1));
-          xmax:=lerp($xmin0,$xmax0,($Xmax-1)/(w#0-1));
-          rmn view
+        step:=ceil(($Xmax-$Xmin)/8)
+        if {*,ARROWLEFT} nXmin:=max(0,$Xmin-$step) Xmin,Xmax:=$nXmin,$Xmax+$nXmin-$Xmin
+        else nXmax:=min(w#0-1,$Xmax+$step) Xmin,Xmax:=$Xmin+$nXmax-$Xmax,$nXmax
         fi
+        xmin:=lerp($xmin0,$xmax0,$Xmin/(w#0-1));
+        xmax:=lerp($xmin0,$xmax0,$Xmax/(w#0-1));
+        rmn view
       fi
       if {*,ARROWDOWN}" || "{*,ARROWUP} # Up/Down shift
-        if {*,ARROWDOWN} sign=- else sign=+ fi
-        nymin,nymax:="step = ($ymax-$ymin)/8; [ $ymin"${sign}"step, $ymax"${sign}"step ]"
-        if min(inrange([$nymin,$nymax],$ymin0,$ymax0))
-          ymin,ymax=$nymin,$nymax
-          rmn view
+        step,dy:=ceil(($ymax-$ymin)/8),($ymax0-$ymin0)/20
+        if {*,ARROWDOWN} nymin:=max($ymin0-$dy,$ymin-$step) ymin,ymax:=$nymin,$ymax+$nymin-$ymin
+        else nymax:=min($ymax+$dy,$ymax+$step) ymin,ymax:=$ymin+$nymax-$ymax,$nymax
         fi
+        rmn view
       fi
       if {*,o} # Zoom in/out
         step={*,-o}
