@@ -4263,7 +4263,9 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
     if $5==$6 xmin,xmax=0,{$siz-1} else xmin,xmax:=min(${5,6}),max(${5,6}) fi
     is_infnan=0
     if "max(isinf([im,iM])) || max(isnan([im,iM]))" +replace_infnan. 0 is_infnan=1 fi
-    if $7==$8 ymin,ymax:=dy=(iM-im)/20;[im-dy,iM+dy] else ymin,ymax:=min(${7,8}),max(${7,8}) fi
+    if $7==$8 ymin,ymax:="dy = (iM - im)/20; !dy?(dy = 0.5); [ im - dy,iM + dy ]"
+    else ymin,ymax:=min(${7,8}),max(${7,8})
+    fi
     if $is_infnan rm. fi
 
     if $3==3 xmax:=lerp($xmin,$xmax,$siz/($siz-1)) fi
@@ -9360,7 +9362,9 @@ _plot : skip ${8=},${10=}
     if $3==$4 xmin0,xmax0={0,[0,w-1]} else xmin0,xmax0:=min(${3,4}),max(${3,4}) fi
     is_infnan=0
     if "max(isinf([im,iM])) || max(isnan([im,iM]))" +replace_infnan. 0 is_infnan=1 fi
-    if $5==$6 ymin0,ymax0:=dy=(iM-im)/20;[im-dy,iM+dy] else ymin0,ymax0:=min(${5,6}),max(${5,6}) fi
+    if $5==$6 ymin0,ymax0:="dy = (iM - im)/20; !dy?(dy = 0.5); [ im - dy,iM + dy ]"
+    else ymin0,ymax0:=min(${5,6}),max(${5,6})
+    fi
     if $is_infnan rm. fi
 
     Xmin,Xmax,xmin,xmax,ymin,ymax=0,{w-1},$xmin0,$xmax0,$ymin0,$ymax0
@@ -9409,7 +9413,8 @@ _plot : skip ${8=},${10=}
             y1=$y
           else
             y0,y1:="v = crop(#0,min($X0,$X1),abs($X1-$X0) + 1); "\
-                   "m = min(v); M = max(v); dy = M - m; [ max($ymin,m - dy/20), min($ymax,M + dy/20) ]"
+                   "m = min(v); M = max(v); dy = (M - m)/20; !dy?(dy = 0.5); "\
+                   "[ max($ymin,m - dy), min($ymax,M + dy) ]"
           fi
         fi
       else cursor[0] 1
@@ -9499,7 +9504,8 @@ _plot : skip ${8=},${10=}
             y1=$y
           else
             y0,y1:="v = crop(#0,min($X0,$X1),abs($X1-$X0) + 1); "\
-                   "m = min(v); M = max(v); dy = M - m; [ max($ymin,m - dy/20), min($ymax,M + dy/20) ]"
+                   "m = min(v); M = max(v); dy = (M - m)/20; !dy?(dy = 0.5); "\
+                   "[ max($ymin,m - dy/20), min($ymax,M + dy/20) ]"
           fi
 
           X1,x1,select_mode=$X,$x,0
