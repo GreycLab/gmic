@@ -36537,120 +36537,6 @@ _demo_color_curves :
 ------------------------------------------------------------------------------------------------"
   fi
 
-#@cli tixy : "expression"
-#@cli : Animate specified mathematical expression with a 16x16 grid of circles, \
-# using the rules described at <https://tixy.land>.
-tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
-  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
-  if narg("$*") expr="$*" else expr="$1" fi
-  l[] {
-    ('$expr')
-    replace_str "%","%25"
-    replace_str "&","%26"
-    replace_str "(","%28"
-    replace_str ")","%29"
-    replace_str "+","%2B"
-    replace_str ",","%2C"
-    replace_str ";","%2C"
-    replace_str "/","%2F"
-    replace_str "[","%5B"
-    replace_str "]","%5D"
-    replace_str "|","%7C"
-    replace_str "^","**"
-    replace_str " ","+"
-    url=https://tixy.land?code={t}
-    rm
-  }
-
-  e "\n
------- "${g}"tixy"$n" ------------------------------------------------------------------------------------\n
-----\n
----- tixy - creative code golfing: "${g}"https://tixy.land"$n"\n
-----\n
----- "$r${b}"Expression:"$n" "$expr"\n
-----\n
----- "$r${b}"Corresponding URL:"$n" "$url"\n
-----\n
----- "$r${b}"Rules:"$n"\n
----- . Specified expression depends on 4 variables "${g}"(t,i,x,y)"$n" and is rendered as an animation.\n
----- . Variables "${g}"x"$n" and "${g}"y"$n", in range "${c}"[0,15]"$n", are the spatial position of each dot.\n
----- . Variable "${g}"i"$n", in range "${c}"[0,255]"$n", is the dot index, i.e. "${c}"i = x + 16*y"$n".\n
----- . Variable "${g}"t>=0"$n" is the (decimal) number of elapsed seconds.\n
----- . Specified expression "${g}"func(t,i,x,y)"$n" must return a complex value "${c}"c"$n".\n
----- . Variable "${g}"z"$n" can be used as a shortcut for "${g}"[ x,y ]"$n".\n
----- . Variable "${g}"j"$n" is the complex imaginary number "${g}"[ 0,1 ]"$n".\n
----- . "${c}"cabs(c)"$n" in "${g}"[0,1]"$n" determines the radius of each dot at "${c}"(x,y)"$n".\n
----- . "${c}"carg(c)"$n" in "${g}"[-pi,pi]"$n" determine the color of each dot at "${c}"(x,y)"$n".\n
-----\n
----- Key '"${c}"SPACE"$n"' starts/stops recording animation as video file '"${c}"out.mp4"$n"'.\n
----- Key '"${c}"ENTER"$n"' takes a screenshot of current image.\n
----- Key '"${c}"A"$n"' enables/disables anti-aliasing.\n
----- Key '"${c}"F"$n"' displays formula on the image.\n
----- Key '"${c}"R"$n"' resets time.\n
----- Keys '"${c}"CTRL+D"$n"' increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' decrease window size.\n
----- Keys '"${c}"CTRL+R"$n"' reset window size.\n
----- Keys '"${c}"ESC"$n"', '"${c}"Q"$n"' or '"${c}"ENTER"$n"' close the current window.\n
-------------------------------------------------------------------------------------------------"
-  w[] 400,400,0,"[G'MIC] tixy: "$expr
-  t0=$| is_recording=0 is_antialias=1 is_screenshot=0 is_formula=0 nb_frames=0
-  360,1,1,3,[x,abs(cos(x/w*pi))^0.5,1] hsv2rgb. shift. -180,0,0,0,2 => cmap
-  strvar $expr basename=${}
-
-  do
-
-    # Manage user-events.
-    is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
-    if $is_ctrl" && "{*,-D} w[] {1.25*[{*,w,h}]} rmn formula,mformula
-    elif $is_ctrl" && "{*,-C} w[] {0.8*[{*,w,h}]} rmn formula,mformula
-    elif $is_ctrl" && "{*,R} w[] 400,400 rmn formula,mformula
-    elif {*,-A} is_antialias:=!$is_antialias
-    elif {*,-F} is_formula:=!$is_formula
-    elif {*,R} t0=$|
-    elif {*,-SPACE}
-      if $is_recording o[] $basename.mp4,15,0,0 nb_frames=0
-      else t0=$| fi
-      is_recording:=!$is_recording
-    elif {*,-ENTER} is_screenshot=1
-    fi
-
-    # Render animation frame.
-    m:=min({*,w,h}) _is_antialias:=$is_antialias" && "$m<512
-    {m=$m*($_is_antialias?2:1);[m,m]},1,3
-
-    16,16,1,1,">begin(
-        const b = w#-1/16;
-        const t = "$|-$t0";
-        j = [ 0,1 ];
-      );
-      i = x + 16*y;
-      z = [ x,y ];
-      val = ("$expr");
-      n = cabs(val);
-      r = floor(0.48*b*cut(n,0,1));
-      a = (360+carg(val)*180/pi)%360;
-      c = I[#"$cmap",a];
-      r>1?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),r,r,0,1,c):
-      r>0?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),1,1,0,0.5,c)"
-    rm.
-
-    if $_is_antialias r. 50%,50%,1,3,2 fi
-    if {*,w}!={*,h} -. 128 r. {*,w,h},1,3,0,0,0.5,0.5 +. 128 fi
-    if $is_formula
-      if !narg($formula)
-        0 t. {``$expr},0,0,48,1,255 frame. 5,5,0 +dilate. 11 max. 128 to_rgb..
-        if w>0.75*{*,w} rs[-2,-1] {0.75*{*,w}} fi
-        mv[-2,-1] 0 =>[0,1] formula,mformula
-      fi
-      j. [formula],0.5~,1~,0,0,1,[mformula],255
-    fi
-    if $is_screenshot o. $basename.png is_screenshot=0 fi
-    if $is_recording o. $basename.mp4,15,0,1 nb_frames+=1 to. "Recording video\n[Frame \#"$nb_frames"]",0,0,5% fi
-    w. rm. wait 40
-  while {*}" && "!{*,ESC}" && "!{*,Q}
-  rmn cmap,formula,mformula
-  w[] 0
-
 #@cli x_2048
 #@cli : Launch the 2048 game.
 x_2048 : check_display $0
@@ -41193,6 +41079,120 @@ _x_tictactoe5 : # Generate a ++ diagonal stroke and his mask.
 
 _x_tictactoe6 : # Generate a +- diagonal stroke and his mask.
   421,421,1,1,1 line. 10%,90%,90%,10%,1,0 erode. 6 _x_tictactoe __x_tictactoe 180,10,10
+
+#@cli x_tixy : "expression"
+#@cli : Animate specified mathematical expression with a 16x16 grid of circles, \
+# using the rules described at <https://tixy.land>.
+x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
+  if narg("$*") expr="$*" else expr="$1" fi
+  l[] {
+    ('$expr')
+    replace_str "%","%25"
+    replace_str "&","%26"
+    replace_str "(","%28"
+    replace_str ")","%29"
+    replace_str "+","%2B"
+    replace_str ",","%2C"
+    replace_str ";","%2C"
+    replace_str "/","%2F"
+    replace_str "[","%5B"
+    replace_str "]","%5D"
+    replace_str "|","%7C"
+    replace_str "^","**"
+    replace_str " ","+"
+    url=https://tixy.land?code={t}
+    rm
+  }
+
+  e "\n
+------ "${g}"tixy"$n" ------------------------------------------------------------------------------------\n
+----\n
+---- tixy - creative code golfing: "${g}"https://tixy.land"$n"\n
+----\n
+---- "$r${b}"Expression:"$n" "$expr"\n
+----\n
+---- "$r${b}"Corresponding URL:"$n" "$url"\n
+----\n
+---- "$r${b}"Rules:"$n"\n
+---- . Specified expression depends on 4 variables "${g}"(t,i,x,y)"$n" and is rendered as an animation.\n
+---- . Variables "${g}"x"$n" and "${g}"y"$n", in range "${c}"[0,15]"$n", are the spatial position of each dot.\n
+---- . Variable "${g}"i"$n", in range "${c}"[0,255]"$n", is the dot index, i.e. "${c}"i = x + 16*y"$n".\n
+---- . Variable "${g}"t>=0"$n" is the (decimal) number of elapsed seconds.\n
+---- . Specified expression "${g}"func(t,i,x,y)"$n" must return a complex value "${c}"c"$n".\n
+---- . Variable "${g}"z"$n" can be used as a shortcut for "${g}"[ x,y ]"$n".\n
+---- . Variable "${g}"j"$n" is the complex imaginary number "${g}"[ 0,1 ]"$n".\n
+---- . "${c}"cabs(c)"$n" in "${g}"[0,1]"$n" determines the radius of each dot at "${c}"(x,y)"$n".\n
+---- . "${c}"carg(c)"$n" in "${g}"[-pi,pi]"$n" determine the color of each dot at "${c}"(x,y)"$n".\n
+----\n
+---- Key '"${c}"SPACE"$n"' starts/stops recording animation as video file '"${c}"out.mp4"$n"'.\n
+---- Key '"${c}"ENTER"$n"' takes a screenshot of current image.\n
+---- Key '"${c}"A"$n"' enables/disables anti-aliasing.\n
+---- Key '"${c}"F"$n"' displays formula on the image.\n
+---- Key '"${c}"R"$n"' resets time.\n
+---- Keys '"${c}"CTRL+D"$n"' increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' reset window size.\n
+---- Keys '"${c}"ESC"$n"', '"${c}"Q"$n"' or '"${c}"ENTER"$n"' close the current window.\n
+------------------------------------------------------------------------------------------------"
+  w[] 400,400,0,"[G'MIC] tixy: "$expr
+  t0=$| is_recording=0 is_antialias=1 is_screenshot=0 is_formula=0 nb_frames=0
+  360,1,1,3,[x,abs(cos(x/w*pi))^0.5,1] hsv2rgb. shift. -180,0,0,0,2 => cmap
+  strvar $expr basename=${}
+
+  do
+
+    # Manage user-events.
+    is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+    if $is_ctrl" && "{*,-D} w[] {1.25*[{*,w,h}]} rmn formula,mformula
+    elif $is_ctrl" && "{*,-C} w[] {0.8*[{*,w,h}]} rmn formula,mformula
+    elif $is_ctrl" && "{*,R} w[] 400,400 rmn formula,mformula
+    elif {*,-A} is_antialias:=!$is_antialias
+    elif {*,-F} is_formula:=!$is_formula
+    elif {*,R} t0=$|
+    elif {*,-SPACE}
+      if $is_recording o[] $basename.mp4,15,0,0 nb_frames=0
+      else t0=$| fi
+      is_recording:=!$is_recording
+    elif {*,-ENTER} is_screenshot=1
+    fi
+
+    # Render animation frame.
+    m:=min({*,w,h}) _is_antialias:=$is_antialias" && "$m<512
+    {m=$m*($_is_antialias?2:1);[m,m]},1,3
+
+    16,16,1,1,">begin(
+        const b = w#-1/16;
+        const t = "$|-$t0";
+        j = [ 0,1 ];
+      );
+      i = x + 16*y;
+      z = [ x,y ];
+      val = ("$expr");
+      n = cabs(val);
+      r = floor(0.48*b*cut(n,0,1));
+      a = (360+carg(val)*180/pi)%360;
+      c = I[#"$cmap",a];
+      r>1?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),r,r,0,1,c):
+      r>0?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),1,1,0,0.5,c)"
+    rm.
+
+    if $_is_antialias r. 50%,50%,1,3,2 fi
+    if {*,w}!={*,h} -. 128 r. {*,w,h},1,3,0,0,0.5,0.5 +. 128 fi
+    if $is_formula
+      if !narg($formula)
+        0 t. {``$expr},0,0,48,1,255 frame. 5,5,0 +dilate. 11 max. 128 to_rgb..
+        if w>0.75*{*,w} rs[-2,-1] {0.75*{*,w}} fi
+        mv[-2,-1] 0 =>[0,1] formula,mformula
+      fi
+      j. [formula],0.5~,1~,0,0,1,[mformula],255
+    fi
+    if $is_screenshot o. $basename.png is_screenshot=0 fi
+    if $is_recording o. $basename.mp4,15,0,1 nb_frames+=1 to. "Recording video\n[Frame \#"$nb_frames"]",0,0,5% fi
+    w. rm. wait 40
+  while {*}" && "!{*,ESC}" && "!{*,Q}
+  rmn cmap,formula,mformula
+  w[] 0
 
 #@cli x_warp : _nb_keypoints_xgrid>=2,_nb_keypoints_ygrid>=2,_nb_keypoints_contours>=0,\
 # _preview_fidelity={ 0:coarsest | 1:coarse | 2:normal | 3:fine | 4:finest },\
