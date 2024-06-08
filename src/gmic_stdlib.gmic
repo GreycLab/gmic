@@ -17147,76 +17147,6 @@ downsize_aliased : check "${1=50}>=0 && $1<=100"
     r $1%,$1%,$1%,100%,2
   }
 
-#@cli edgels : x0,y0,_n0,_is_high_connectivity={ 0 | 1 }
-#@cli : Extract one or several lists of edgels (and their normals) that defines a 2D binary silhouette.
-#@cli : When specified (i.e. '!=-1'), arguments 'x0,y0,n0' are the coordinates of the starting edgel, \
-# which must be located on an edge of the binary silhouette.
-#@cli : - If 'x0,y0' and 'n0' are specified, only a single list of edgels is returned.
-#@cli : - If only 'x0,y0' are specified (meaning 'n0=-1'), up to 4 lists of edgels can be returned, \
-# all starting from the same point (x0,y0).
-#@cli : - If no arguments are specified (meaning 'x0=y0=n0=-1'), all possible lists of edgels are returned.
-#@cli : A list of edgels is returned as an image with 3 channels '[x,y,n]' where 'x' and 'y' are the 2D coordinates \
-# of the edgel pixel, and 'n' is the orientation of its associated canonical normal \
-# (which can be { 0:[1,0] | 1:[0,1] | 2:[-1,0] | 3:[0,-1] }.
-#@cli : Default values: 'x0=y0=n0=-1' and 'is_high_connectivity=1'.
-edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>=0?0:-1) && "\
-               "isint(${3=-1}) && ($1>=0?inrange($3,-1,3):($3==-1)) && isbool(${4=1})"
-  is_xy0,is_xyn0:="a=min($1,$2)>=0;[a,a && $3>=0]"
-  if $is_xyn0 s= opt=", starting from edgels ($1,$2,$3)."
-  elif $is_xy0 s=s opt=", starting from pixel ($1,$2)."
-  else s=s opt="."
-  fi
-  e[^-1] "Extract list"$s" of edgels in image$?"$opt
-  pass[$[]] -1 sel=${}
-  code="
-    P0 = P = [ x,y,n ];
-    do (
-      da_push(P);
-      !$is_xyn0?(i(#1,P[0],P[1],0,0)|=(1<<P[2]));
-      P = next_edgel"{$4?8:4}"_fg(#0,P,1),
-    P!=P0)"
-
-  foreach {
-    if $is_xyn0 # Edgel coordinates specified
-      if "const x = $1; const y = $2;
-          !i(#0,x,y) || arg0($3,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))"
-        error[0--5] "Command 'edgels': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
-      fi
-      1,1,1,3
-      eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code
-
-    elif $is_xy0 # Pixel coordinates specified
-      if "!i($1,$2)"
-        error[0--5] "Command 'edgels': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
-      fi
-      100%,100% # Already visited edgels (bitwise storage)
-      1,1,1,3
-      eval ${-math_lib}"
-        const x = $1; const y = $2; sep = [ -1,-1,-1 ];
-        repeat (4,n,
-          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))?(
-            "$code"; da_push(sep))
-        )"
-
-    else # No coordinates specified
-      100%,100% # Already visited edgels (bitwise storage)
-      1,1,1,3
-      eval[0] >${-math_lib}"begin(sep = [ -1,-1,-1 ]);
-        i(x,y)?repeat (4,n,
-          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(x + 1,y,0,0),i(x,y + 1,0,0),i(x - 1,y,0,0),i(x,y - 1,0,0))?(
-            "$code"; da_push(sep))
-        )"
-    fi
-    k. da_freeze
-    if !$is_xyn0 # Split resulting list into multiple parts
-      permute cxyz s. -,-1
-      if $!>0 $!,1,1,1,"resize(#x,3,h#x/3,1,1,-1)" rm.
-      else 0
-      fi
-      permute zycx
-    fi
-  }
-
 #@cli elevate : _depth,_is_plain={ 0 | 1 },_is_colored={ 0 | 1 }
 #@cli : Elevate selected 2D images into 3D volumes.
 #@cli : Default values: 'depth=64', 'is_plain=1' and 'is_colored=1'.
@@ -20846,6 +20776,76 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
 #@cli : $ image.jpg threshold 20% distance 0 pow 0.3
 #@cli : $ 400,400 set 1,50%,50% +distance[0] 1,2 +distance[0] 1,1 distance[0] 1,0 mod 32 threshold 16 append c
 #@cli : $$ https://gmic.eu/oldtutorial/_distance
+
+#@cli edgels : x0,y0,_n0,_is_high_connectivity={ 0 | 1 }
+#@cli : Extract one or several lists of edgels (and their normals) that defines a 2D binary silhouette.
+#@cli : When specified (i.e. '!=-1'), arguments 'x0,y0,n0' are the coordinates of the starting edgel, \
+# which must be located on an edge of the binary silhouette.
+#@cli : - If 'x0,y0' and 'n0' are specified, only a single list of edgels is returned.
+#@cli : - If only 'x0,y0' are specified (meaning 'n0=-1'), up to 4 lists of edgels can be returned, \
+# all starting from the same point (x0,y0).
+#@cli : - If no arguments are specified (meaning 'x0=y0=n0=-1'), all possible lists of edgels are returned.
+#@cli : A list of edgels is returned as an image with 3 channels '[x,y,n]' where 'x' and 'y' are the 2D coordinates \
+# of the edgel pixel, and 'n' is the orientation of its associated canonical normal \
+# (which can be { 0:[1,0] | 1:[0,1] | 2:[-1,0] | 3:[0,-1] }.
+#@cli : Default values: 'x0=y0=n0=-1' and 'is_high_connectivity=1'.
+edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>=0?0:-1) && "\
+               "isint(${3=-1}) && ($1>=0?inrange($3,-1,3):($3==-1)) && isbool(${4=1})"
+  is_xy0,is_xyn0:="a=min($1,$2)>=0;[a,a && $3>=0]"
+  if $is_xyn0 s= opt=", starting from edgels ($1,$2,$3)."
+  elif $is_xy0 s=s opt=", starting from pixel ($1,$2)."
+  else s=s opt="."
+  fi
+  e[^-1] "Extract list"$s" of edgels in image$?"$opt
+  pass[$[]] -1 sel=${}
+  code="
+    P0 = P = [ x,y,n ];
+    do (
+      da_push(P);
+      !$is_xyn0?(i(#1,P[0],P[1],0,0)|=(1<<P[2]));
+      P = next_edgel"{$4?8:4}"_fg(#0,P,1),
+    P!=P0)"
+
+  foreach {
+    if $is_xyn0 # Edgel coordinates specified
+      if "const x = $1; const y = $2;
+          !i(#0,x,y) || arg0($3,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))"
+        error[0--5] "Command 'edgels': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
+      fi
+      1,1,1,3
+      eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code
+
+    elif $is_xy0 # Pixel coordinates specified
+      if "!i($1,$2)"
+        error[0--5] "Command 'edgels': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
+      fi
+      100%,100% # Already visited edgels (bitwise storage)
+      1,1,1,3
+      eval ${-math_lib}"
+        const x = $1; const y = $2; sep = [ -1,-1,-1 ];
+        repeat (4,n,
+          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))?(
+            "$code"; da_push(sep))
+        )"
+
+    else # No coordinates specified
+      100%,100% # Already visited edgels (bitwise storage)
+      1,1,1,3
+      eval[0] >${-math_lib}"begin(sep = [ -1,-1,-1 ]);
+        i(x,y)?repeat (4,n,
+          !(i(#1,x,y)&(1<<n)) && !arg0(n,i(x + 1,y,0,0),i(x,y + 1,0,0),i(x - 1,y,0,0),i(x,y - 1,0,0))?(
+            "$code"; da_push(sep))
+        )"
+    fi
+    k. da_freeze
+    if !$is_xyn0 # Split resulting list into multiple parts
+      permute cxyz s. -,-1
+      if $!>0 $!,1,1,1,"resize(#x,3,h#x/3,1,1,-1)" rm.
+      else 0
+      fi
+      permute zycx
+    fi
+  }
 
 #@cli fftpolar
 #@cli : Compute fourier transform of selected images, as centered magnitude/phase images.
