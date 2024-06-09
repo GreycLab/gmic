@@ -118,7 +118,7 @@ On top of the interpreter are the user interfaces. Several types of UI are imple
 
 - **`G'MIC` Online**, a website where users can upload color images and apply _G'MIC-Qt_ filters on them.
 
-- **`libgmic`** and **`libgmic`**, respectively _C`++`_ and _C_ libraries which basically provide simple _C/C`++`_ _APIs_ to run `G'MIC` pipelines on a set of input images.
+- **`libgmic`** and **`libcgmic`**, respectively _C`++`_ and _C_ libraries which basically provide simple _C/C`++`_ _APIs_ to run `G'MIC` pipelines on a set of input images.
 
 - **_ZArt_**, a _Qt_-based interface used mainly for demonstration purposes, which applies `G'MIC` filters on streamed webcam images in real-time.
 
