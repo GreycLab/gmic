@@ -13070,8 +13070,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             const char *curr_command = "";
             for (unsigned int k = initial_callstack_size - 1; k>0 && *(curr_command = callstack[k])=='*'; --k) {}
             curr_command+=*curr_command=='+';
-            const bool run_subcommand = *curr_command && *command=='_' &&
-              !std::strncmp(command + 1,curr_command,std::strlen(curr_command));
+            const bool run_subcommand = *curr_command && *command=='_' && command[1]=='_' &&
+              !std::strncmp(command + 2,curr_command,std::strlen(curr_command));
 
             if (is_debug) {
               CImg<char> command_code_text(264);
