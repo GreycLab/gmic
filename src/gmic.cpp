@@ -2260,7 +2260,7 @@ double gmic::mp_set(const double *const ptrs, const unsigned int siz, const char
     CImg<char> s_value;
     if (siz) { // Value is a string
       s_value.assign(siz + 1);
-      cimg_for_inX(s_value,0,s_value.width() - 1,i) s_value[i] = (char)ptrs[i];
+      cimg_for_inX(s_value,0,s_value.width() - 2,i) s_value[i] = (char)ptrs[i];
       s_value.back() = 0;
     } else { // Value is a scalar
       s_value.assign(24);
