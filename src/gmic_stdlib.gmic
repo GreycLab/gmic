@@ -5236,7 +5236,7 @@ _input_csv_val :
 #@cli : Insert new images from several filenames that match the specified glob pattern.
 #@cli : (eq. to 'ig').
 +input_glob :
-  _input_glob "$*"
+  v + _input_glob "$*"
 
 _input_glob :
   e[0--3] "Input all files that match glob pattern '"{/"$*"}"'."
@@ -5297,6 +5297,30 @@ _input_glob :
   if !$file_found
     error[0--3] "Command 'input_cached': Unknown filename '"{/"$1"}"'."
   fi
+
+#@cli in : eq. to 'input_normalized'.
++in :
+  v + _input_normalized "$*"
+
+#@cli input_normalized : filename
+#@cli : Input specified filename and constrain its value range to be in [0,255].
+#@cli : (eq. to 'in').
++input_normalized :
+  v + _input_normalized "$*"
+
+_input_normalized :
+  e[0--3] "Input file '"{/"$*"}"', with normalized range [0,255]."
+  l[] {
+    i "$1"
+    is_float=0 foreach { eval. "begin(isf = 0); isf|=(int(i)!=i); end(merge(isf,|); set('isf',isf))" is_float|=$isf }
+    if $is_float n 0,255
+    else
+      im,iM:=im,iM
+      if $im<0" || "$iM>65535 n 0,255
+      elif inrange($iM,256,65535) / 257
+      fi
+    fi
+  }
 
 #@cli input_obj : filename
 #@cli : Input specified 3D mesh from a .obj Wavefront file.
