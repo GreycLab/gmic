@@ -5311,19 +5311,23 @@ _input_glob :
 _input_normalized :
   e[0--3] "Input file '"{/"$*"}"', in normalized range [0,255]."
   l[] {
-    u 0 i "$1" bpp=${} need_autodetect=1
-    if isnum($bpp)
-      if $bpp==8 need_autodetect=0
-      elif $bpp==16 / 257 need_autodetect=0
+    u 0 i "$1" bpp=${} autodetect=1
+    if $!==1" && "isnum($bpp)
+      if $bpp==8 autodetect=0
+      elif $bpp==16 / 257 autodetect=0
       fi
     fi
-    if $need_autodetect
+    if $autodetect foreach {
       im,iM:=im,iM
-      if $im>=0" && "$iM<=1 * 255
-      elif inrange($iM,256,65535) / 257
-      elif $im<0" || "$iM>65535 n 0,255
+      if $im>=0
+        if $iM<=255 # Do nothing
+        elif $iM<=1 * 255
+        elif inrange($iM,255,65535,0,1) / 257
+        else n 0,255
+        fi
+      else n 0,255
       fi
-    fi
+    } fi
   }
 
 #@cli input_obj : filename
