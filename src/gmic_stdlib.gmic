@@ -5309,15 +5309,19 @@ _input_glob :
   v + _input_normalized "$*"
 
 _input_normalized :
-  e[0--3] "Input file '"{/"$*"}"', with normalized range [0,255]."
+  e[0--3] "Input file '"{/"$*"}"', in normalized range [0,255]."
   l[] {
-    i "$1"
-    is_float=0 foreach { eval. "begin(isf = 0); isf|=(int(i)!=i); end(merge(isf,|); set('isf',isf))" is_float|=$isf }
-    if $is_float n 0,255
-    else
+    u 0 i "$1" bpp=${} need_autodetect=1
+    if isnum($bpp)
+      if $bpp==8 need_autodetect=0
+      elif $bpp==16 / 257 need_autodetect=0
+      fi
+    fi
+    if $need_autodetect
       im,iM:=im,iM
-      if $im<0" || "$iM>65535 n 0,255
+      if $im>=0" && "$iM<=1 * 255
       elif inrange($iM,256,65535) / 257
+      elif $im<0" || "$iM>65535 n 0,255
       fi
     fi
   }
