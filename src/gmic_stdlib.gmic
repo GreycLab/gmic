@@ -54021,58 +54021,6 @@ fx_fourier_transform_preview :
   fx_fourier_transform $* k[0]
   if !$_preview_error gui_resize_preview fi
 
-#@gui Fourier Transform [Old] : fx_fourier_old,fx_fourier_old_preview(1)* : *
-#@gui :Magnitude / Phase=choice{0,"One Layer (Horizontal)","One Layer (Vertical)","Two Layers"}
-#@gui :Discard Transparency=bool(1)
-#@gui :_=separator()
-#@gui :_=note("<small><b>Note:</b> Apply this filter once to get the direct FFT, and once again to get the reverse \
-# transform.</small>")
-#@gui :_=link("Click here for a video tutorial","http://www.youtube.com/watch?v=3137dDa6P4s")
-#@gui :_=separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/06/16</i>.</small>")
-fx_fourier_old : skip ${2=0}
-  if $2 remove_opacity fi
-  magic="GMICFFT" i=0
-  for $i<$! {
-    ni:=$i+1 nm={$i,n} is_ifft=0
-    +columns[$i] 100%
-    l. {
-      mag,m0,M0,m1,M1=${u\ {t}}
-      if ['$mag']=='$magic' is_ifft=1 fi
-      onfail
-    }
-    rm.
-    if !$is_ifft +rows[$i] 100% l. { mag,m0,M0,m1,M1=${u\ {t}} if ['$mag']=='$magic' is_ifft=2 fi onfail } rm. fi
-    if !$is_ifft
-      +rows[$i] 100% l. { mag,m0,M0=${u\ {t}} if ['$mag']=='$magic' is_ifft=3 fi onfail } rm.
-      if $is_ifft==3
-        is_ifft=0 +rows[$ni] 100%
-        l. { mag,m1,M1=${u\ {t}} if ['$mag']=='$magic' is_ifft=3 fi onfail } rm.
-      fi
-    fi
-    if !$is_ifft
-      l[$i] {
-        fftpolar +.. 1 log.. m0,M0,m1,M1:=im#0,iM#0,im#1,iM#1 n[-2,-1] 0,255
-        if !$1 ({'$magic,$m0,$M0,$m1,$M1'},0) y. a x
-        elif $1==1 ({'$magic,$m0,$M0,$m1,$M1'},0) a y
-        else ({'$magic,$m0,$M0'},0) a[-3,-1] y ({'$magic,$m1,$M1'},0) a[-2,-1] y
-        fi
-        => $nm
-      }
-    else
-      if $is_ifft==1 columns[$i] 0,{$i,w-2} s[$i] x,2
-      elif $is_ifft==2 rows[$i] 0,{$i,h-2} s[$i] y,2
-      else rows[$i,$ni] 0,{$i,h-2}
-      fi
-      l[$i,{$i+1}] { n[0] $m0,$M0 n[1] $m1,$M1 exp[0] -[0] 1 ifftpolar c 0,255 }
-    fi
-    i+=$1<2" || "$is_ifft>2?1:2
-  }
-
-fx_fourier_old_preview :
-  if $2 remove_opacity fi
-  dfft
-
 #@gui Fourier Watermark : fx_watermark_fourier, _none_
 #@gui : Text = text{"(c) G'MIC"}
 #@gui : Size = int(53,13,128)
@@ -54680,10 +54628,10 @@ _fx_burn :
   foreach {
     w,h={w},{h}
     +norm
-    fx_fourier_old. 2
+    fx_fourier_transform. 2
     +rows. 0,{$h-1} r. $2%,$2%,1,100%,0,0,0.5,0.5 b. $3%
     j.. .,{($w-w)/2},{($h-h)/2} rm.
-    fx_fourier_old[-2,-1] 2
+    fx_fourier_transform[-2,-1] 2
     blend overlay,$1
   }
 
