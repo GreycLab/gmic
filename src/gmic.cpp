@@ -10339,7 +10339,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%c0%c%x%c",
                             indices,&opacity,&sep0,&sep1,&pattern,&end)==5 && sep0=='-' && sep1=='x') ||
                (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%c0%c%x,%4095[0-9.eEinfa,+-]%c",
-                            indices,&opacity,&sep0,&sep1,&pattern,&(*color=0),&end)==6 && sep0=='-' && sep1=='x')) &&
+                            indices,&opacity,&(sep0=0),&sep1,&pattern,
+                            &(*color=0),&end)==6 && sep0=='-' && sep1=='x')) &&
               (ind=selection2cimg(indices,images.size(),images_names,"polygon")).height()==1) {
 
             vertices.assign(images[*ind],false);
@@ -10394,7 +10395,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               *color = 0;
             }
             if (nargument<eargument &&
-                ((sep0 = *nargument=='-' && nargument + 1<eargument?(++nargument, '-'):0) || true) &&
+                ((sep0 = *nargument=='-' && nargument[1]=='0' && nargument[2]=='x' && nargument + 3<eargument?
+                  (++nargument, '-'):0) || true) &&
                 cimg_sscanf(nargument,"0%c%4095[0-9a-fA-F]",&sep1,gmic_use_color)==2 && sep1=='x' &&
                 cimg_sscanf(color,"%x%c",&pattern,&end)==1) {
               nargument+=std::strlen(color) + 3;
