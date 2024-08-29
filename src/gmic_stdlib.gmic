@@ -27562,6 +27562,11 @@ nn_lib :
       learning_mode?nn_optimizer_sgd_update_conv_or_fc(#P,learning_mode);
     );
 
+    nn_optimizer_sgd_update_mp(P,learning_mode) = (
+      nn_optimizer_sgd_update_weights(P#_weights);
+      draw(##P#_ind,P#_weights,0,0,w##P#_ind,h##P#_ind);
+    );
+
     nn_optimizer_sgd_update_normalize(P,learning_mode) = (
       nn_optimizer_generic_update_normalize(sgd,#P,#learning_mode);
     );
@@ -27603,6 +27608,14 @@ nn_lib :
 
     nn_optimizer_rmsprop_update_fc(P,learning_mode) = (
       learning_mode?nn_optimizer_rmsprop_update_conv_or_fc(#P,learning_mode);
+    );
+
+    nn_optimizer_rmsprop_update_mp(P,learning_mode) = (
+      const P#_ind_g2 = $P#_g2;
+      d#P#_weights_g2 = crop(##P#_ind_g2,0,0,w##P#_ind,h##P#_ind);
+      nn_optimizer_rmsprop_update_weights(P#_weights);
+      draw(##P#_ind,P#_weights,0,0,w##P#_ind,h##P#_ind);
+      draw(##P#_ind_g2,d#P#_weights_g2,0,0,w##P#_ind,h##P#_ind);
     );
 
     nn_optimizer_rmsprop_update_normalize(P,learning_mode) = (
@@ -27668,6 +27681,17 @@ nn_lib :
 
     nn_optimizer_adam_update_fc(P,learning_mode) = (
       learning_mode?nn_optimizer_adam_update_conv_or_fc(#P,learning_mode);
+    );
+
+    nn_optimizer_adam_update_mp(P,learning_mode) = (
+      const P#_ind_m = $P#_m;
+      const P#_ind_v = $P#_v;
+      d#P#_weights_m = crop(##P#_ind_m,0,0,w##P#_ind,h##P#_ind);
+      d#P#_weights_v = crop(##P#_ind_v,0,0,w##P#_ind,h##P#_ind);
+      nn_optimizer_adam_update_weights(P#_weights);
+      draw(##P#_ind,P#_weights,0,0,w##P#_ind,h##P#_ind);
+      draw(##P#_ind_m,d#P#_weights_m,0,0,w##P#_ind,h##P#_ind);
+      draw(##P#_ind_v,d#P#_weights_v,0,0,w##P#_ind,h##P#_ind);
     );
 
     nn_optimizer_adam_update_normalize(P,learning_mode) = (
@@ -27736,6 +27760,17 @@ nn_lib :
 
     nn_optimizer_adamax_update_fc(P,learning_mode) = (
       learning_mode?nn_optimizer_adamax_update_conv_or_fc(#P,learning_mode);
+    );
+
+    nn_optimizer_adamax_update_mp(P,learning_mode) = (
+      const P#_ind_m = $P#_m;
+      const P#_ind_v = $P#_v;
+      d#P#_weights_m = crop(##P#_ind_m,0,0,w##P#_ind,h##P#_ind);
+      d#P#_weights_v = crop(##P#_ind_v,0,0,w##P#_ind,h##P#_ind);
+      nn_optimizer_adamax_update_weights(P#_weights);
+      draw(##P#_ind,P#_weights,0,0,w##P#_ind,h##P#_ind);
+      draw(##P#_ind_m,d#P#_weights_m,0,0,w##P#_ind,h##P#_ind);
+      draw(##P#_ind_v,d#P#_weights_v,0,0,w##P#_ind,h##P#_ind);
     );
 
     nn_optimizer_adamax_update_normalize(P,learning_mode) = (
@@ -29300,7 +29335,6 @@ nn_maxpool3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 
 #@cli nn_mp : out,in,nb_atoms>0,_nb_iterations>=0
 #@cli : Add a 'mp' layer (matching pursuit layer) to the network.
-#@cli : Default value: 'learning_mode=1'.
 nn_mp : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
         check "isvarname('$1') && isint($3,1) && isint(${4=0},0)"
   e[^-1] "[nn_lib] Add 'mp' layer '$1', with input '"$in"', $3 atoms and $4 iterations."
@@ -29315,6 +29349,7 @@ _nn_mp :
   _nn_modules_names.=$1,
   _nn_modules_types.=mp,
   _nn_$1_size=1,1,1,$3
+  _nn_$1_learning_mode=1
   _nn_$1_input=$2
   _nn_$1_properties="nb_iterations=$4"
   if !isint($$1)
@@ -29878,7 +29913,7 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
     name=${arg0\ $>,$_nn_modules_names}
     learning_mode=${_nn_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','mp','normalize')
       _nn_$1_update.="nn_optimizer_$4_update_"$type"("$name,$learning_mode");"
 
       # Allocate data for storing optimizer extra data (moments,...).
@@ -29918,7 +29953,7 @@ nn_size :
   repeat narg($_nn_modules_names)-1 {
     type=${arg0\ $>,$_nn_modules_types}
     name=${arg0\ $>,$_nn_modules_names}
-    if isin('$type','conv2d','conv3d','fc','normalize') siz+={$name,whds} fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={$name,whds} fi
   }
   u $siz
 
@@ -29946,7 +29981,7 @@ nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
   repeat narg($_nn_modules_names)-1 {
     type=${arg0\ $>,$_nn_modules_types}
     name=${arg0\ $>,$_nn_modules_names}
-    if isin('$type','conv2d','conv3d','fc','normalize','trainer') sel.=$c$name c=, fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=$c$name c=, fi
   }
   ('$_nn_init') autocrop. {'" "'} => _nn_init
   o[$sel,-1] "$1"
@@ -29962,7 +29997,7 @@ nn_store : check "isbool(${2=1})"
   repeat narg($_nn_modules_names)-1 {
     type=${arg0\ $>,$_nn_modules_types}
     name=${arg0\ $>,$_nn_modules_names}
-    if isin('$type','conv2d','conv3d','fc','normalize','trainer') sel.=$c$name c=, fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=$c$name c=, fi
   }
   ('$_nn_init') autocrop. {'" "'} => _nn_init
   +store[$sel,-1] "$1"
