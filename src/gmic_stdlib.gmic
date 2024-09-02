@@ -12477,7 +12477,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  (340,341,342,$_version) sort. discard. store. compat
+  versions=340,341,342,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -12494,27 +12494,44 @@ upload_filters :
   } }
   i[1--2] ('"\n#@gui _________________\n"') y a y
 
-  # Create update file.
+  # Create update files.
   +l. {
-    e "** Generate filter update file."
+    e "** Generate filter update files."
     m "parse_gui_trigger_update : _upload_filters_move"
     v + parse_gui. update v -
     um parse_gui_trigger_update
 
+    url=http://bit.ly/2uaBRMB
+    replace_str "<i>David Tschumperlé</i>","<i><a href=\""$url"\">David Tschumperlé</a></i>"
+    is_nonnative_preview_removed=0
+    repeat narg($versions) {
+      ver:=arg0($>,$versions)
+      if !$is_nonnative_preview_removed" && "$ver>=341 # Remove non-native preview splitter for version 3.4.1+
+        l {
+          s +,{'\n'}
+          foreach {
+            if "S='#@gui :Preview Type=choice(\"Full\",';crop(0,0,1,size(S))==S"
+              rm ('"#@gui :_=value(0)"':y)
+            elif "S='#@gui :Preview Split=point(50,50';crop(0,0,1,size(S))==S"
+              rm ('"#@gui :_=point(50,50,-1)_0"':y)
+            fi
+          }
+          a y
+          replace_str "#@gui :_=separator()\n#@gui :_=value(0)\n#@gui :_=point(50,50,-1)_0",\
+                      "#@gui :_=value(0),_=point(50,50,-1)_0"
+        }
+        is_nonnative_preview_removed=1
+      fi
+      ot ${_path_rc}update$ver.gmic # Plain-text
+      o cimgz:/tmp/update$ver.gmic,uint8 # Binary-compressed
+    }
+
     # Upload filter files on G'MIC server.
     e "** Upload filter update."
-    ot ${_path_rc}update$_version.gmic
-    if "d = date(3); h = date(4); h>=7 && d>=1 && d<=5" url=http://bit.ly/2uaBRMB # url=http://bit.ly/2CmhX65
-    else url=http://bit.ly/2uaBRMB # https://bit.ly/33lRzX4 # https://bit.ly/2WeKVPv url=http://bit.ly/2uaBRMB #
-    fi
-    replace_str "<i>David Tschumperlé</i>","<i><a href=\""$url"\">David Tschumperlé</a></i>"
-    o cimgz:/tmp/update$_version.gmic,uint8
-
-    $compat
-    repeat h {
-      v:=i[$>]
-      _upload[] ${_path_rc}update$_version.gmic,plain_update$v.gmic,1
-      _upload[] /tmp/update$_version.gmic,update$v.gmic,1
+    repeat narg($versions) {
+      ver:=arg0($>,$versions)
+      _upload[] ${_path_rc}update$_version.gmic,plain_update$ver.gmic,1
+      _upload[] /tmp/update$_version.gmic,update$ver.gmic,1
     }
     rm
   }
