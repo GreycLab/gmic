@@ -1979,7 +1979,7 @@ d :
 #@cli :   - '_display_is_grid' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_is_info' can be { 0:off | 1:on } (default value: '1').
 #@cli :   - '_display_normalization' can be { -1:auto | 0:off | 1:cut | 2:stretch channelwise | 3:stretch global | \
-# 4: stretch (global once) } (default value: '-1').
+# 4: stretch (global-once) } (default value: '-1').
 #@cli :   - '_display_print_images' can be { 0:off | N>0 } (default value: '5'). It sets the max number 'N' of images \
 # whose information is initially printed on `stderr` or `stdout`.
 #@cli :   - '_display_3d_is_rendered' can be { 0:off | 1:on } (default value: '1').
@@ -2384,6 +2384,7 @@ _display : skip ${1=},${3=}
         is_alpha={$selected,$setting_alpha" && "(s==2||s==4)}
         view_base_channel={$selected,cut($view_base_channel,0,max(0,s-3))}
         cmin,cmax={$selected,$is_alpha?[0,s-1]:[$view_base_channel,min($view_base_channel+2,s-1)]}
+        e "CMIN = "$cmin", CMAX = "$cmax
 
         area_xy_x0,area_xy_y0,area_xy_x1,area_xy_y1,area_xy_dx,area_xy_dy,\
         area_xz_x0,area_xz_z0,area_xz_x1,area_xz_z1,area_xz_dx,area_xz_dz,\
@@ -2481,7 +2482,6 @@ _display : skip ${1=},${3=}
               permute. zyxc
             fi
           fi
-
           if !$setting_normalization # Normalize: none
             and. 255
           elif $setting_normalization==1 # Normalize: cut
@@ -2494,10 +2494,10 @@ _display : skip ${1=},${3=}
               fi
             elif $setting_normalization==3 # Normalize: stretch (global)
               if {is_infnan,i[$selected]} $0_normalize_infnan. else n. 0,255 fi
-            else # Normalize: stretch (global once)
+            else # Normalize: stretch (global-once)
               if !narg(${display_range_global$selected})
                 if {is_infnan,i[$selected]} display_range_global$selected=${-_display_minmax_infnan}
-                else sh[$selected] $cmin,$cmax display_range_global$selected:=[im,iM] rm.
+                else display_range_global$selected={$selected,[im,iM]}
                 fi
               fi
               im,iM:=${display_range_global$selected}
@@ -3533,7 +3533,7 @@ _display : skip ${1=},${3=}
         setting_normalization:=($setting_normalization+1)%5
         notification="Normalization: "${"arg0 "$setting_normalization,\
                                         "Off,Cut,\"Stretch (channelwise)\",\
-                                        \"Stretch (global)\",\"Stretch (global once)\""}
+                                        \"Stretch (global)\",\"Stretch (global-once)\""}
         $0_flush_thumb_cache
         $0_rmn canvas_base,canvas_label_notification
       elif {*,-R} # Rotate view
