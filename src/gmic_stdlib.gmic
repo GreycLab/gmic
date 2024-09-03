@@ -34680,7 +34680,17 @@ is_ext : skip "${1=},${2=}"
 is_image_arg : skip "${1=;}"
   u {"str = ['$1'];
       s1 = size(str) - 1;
-      (str[0]==_'[' && str[s1]==_']') || (str[0]==_'.' && str[s1]==_'.') && min(str)>=45 && max(str)<=122"}
+      str=='.' || str=='..' || str=='...' || (
+        str[0]==_'[' && str[s1]==_']' && (
+          ok_charset = 1;
+          repeat (size(str) - 2,k,
+            c = str[k + 1];
+            ok_charset&=(isin(c,_'%',_'+',_'-',_'.',_'^') || inrange(c,_'0',_'9') ||
+                         inrange(c,_'A',_'Z')) || inrange(c,_'a',_'z');
+          );
+          ok_charset
+        )
+      )"}
 
 #@cli is_pattern : string
 #@cli : Return 1 if specified string looks like a drawing pattern '0x......'.
