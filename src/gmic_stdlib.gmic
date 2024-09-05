@@ -28369,23 +28369,40 @@ nn_lib :
     );
 
     nn_mp_backward(OUT,IN) = (
-      OUT#_sum = sum(OUT#);
-      d#OUT#_masked = d#OUT*bool(OUT#);
-      d#OUT#_weights = vector(#size(OUT#_weights));
-      repeat (OUT#_spectrum,k,
-        OUT#_delta = crop(OUT#_weights,OUT#_spectrum,h##OUT#_ind,1,1,k,0,0,0,1,h##OUT#_ind,1,1) - IN#;
-        OUT#_delta*=OUT#[k]/OUT#_sum;
-        draw(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,OUT#_delta,k,0,0,0,1,size(OUT#_delta),1,1);
-      );
-      d#IN = mul(d#OUT#_weights,OUT#,1);
 
+    d#OUT#_masked = d#OUT*bool(OUT#);
+
+    # Version 4
+#     d#OUT#_sum = sum(abs(d#OUT#));
+#     d#OUT#_weights = vector(#size(OUT#_weights));
+#     repeat (OUT#_spectrum,k,
+#       OUT#_delta = crop(OUT#_weights,OUT#_spectrum,h##OUT#_ind,1,1,k,0,0,0,1,h##OUT#_ind,1,1) - IN#;
+#       OUT#_delta*=d#OUT#[k]/d#OUT#_sum;
+#       draw(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,OUT#_delta,k,0,0,0,1,size(OUT#_delta),1,1);
+#     );
+# #    d#IN = mul(d#OUT#_weights,OUT#,1);
+#     d#IN = mul(OUT#_weights,d#OUT,1) + mul(d#OUT#_weights,OUT#,1);
+
+    # Version 3
+    d#IN = mul(OUT#_weights,d#OUT)/max(1e-8,1 - norm(OUT#)^2);
+#    d#IN = mul(OUT#_weights,d#OUT);
+    d#OUT#_weights = mul(d#IN,OUT#,OUT#_spectrum);
+
+      # Version 2 : Somehow interesting.
+      # OUT#_sum = sum(OUT#);
+      # d#OUT#_masked = d#OUT*bool(OUT#);
+      # d#OUT#_weights = vector(#size(OUT#_weights));
+      # repeat (OUT#_spectrum,k,
+      #   OUT#_delta = crop(OUT#_weights,OUT#_spectrum,h##OUT#_ind,1,1,k,0,0,0,1,h##OUT#_ind,1,1) - IN#;
+      #   OUT#_delta*=OUT#[k]/OUT#_sum;
+      #   draw(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,OUT#_delta,k,0,0,0,1,size(OUT#_delta),1,1);
+      # );
+      # d#IN = mul(d#OUT#_weights,OUT#,1);
+
+# Version 1 : Does not work.
 #      OUT#_tweights = transpose(OUT#_weights,OUT#_spectrum);
 #       d#IN = mproj(d#OUT#_masked,1,OUT#_tweights,h##OUT#_ind,0);
 #      d#OUT#_weights = mul(d#IN,OUT#,size(OUT#));
-
-#      display(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind);
-#      col = crop(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,0,0,0,0,1,h##OUT#_ind,1,1);
-#      display(col,16,16);
 
       batch_d#OUT#_weights+=d#OUT#_weights;
     );
