@@ -28356,10 +28356,30 @@ nn_lib :
       const OUT#_spectrum = w##OUT#_ind;
       const OUT#_iterations = iterations;
       OUT#_weights = crop(##OUT#_ind);
-    );
+     );
 
     nn_mp_forward(OUT,IN) = (
-      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
+      OUT# = vector(##OUT#_spectrum);
+      OUT#_dots = vector(##OUT#_spectrum);
+      OUT#_residual = IN#;
+
+      repeat (OUT#_iterations,k,
+
+        # Find best-matching atom.
+        repeat (OUT#_spectrum,l,
+          OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
+          OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
+        );
+        OUT#_best = argmaxabs(OUT#_dots);
+        OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,OUT#_best,0,0,0,1,size(IN#),1,1);
+
+        OUT#[OUT#_best]+=OUT#_dots[OUT#_best];
+        OUT#_residual-=OUT#_dots[OUT#_best]*OUT#_atom;
+      );
+
+      print(OUT#);
+
+#      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
     );
 
     nn_mp_init_backward(OUT) = (
@@ -29407,9 +29427,9 @@ _nn_mp :
   if !isint($$1)
     $3,{prod($_nn_$2_size)}
     f. 4*g/(w-1)
-    100%,1,1,1,"draw(#-1,unitnorm(crop(#-1,x,1)),x,0,0,0,1,h#-1,1,1)" rm.
     => $1
   fi
+  [$1],1,1,1,"draw(#-1,unitnorm(crop(#-1,x,1)),x,0,0,0,1,h#-1,1,1)" rm. # Force atoms to have unit norm
   _nn_forward.="begin(nn_mp_init_forward($1,$2,$4));"\
                "nn_mp_forward($1,$2);"
   _nn_backward..="begin(nn_mp_init_backward($1));"\
