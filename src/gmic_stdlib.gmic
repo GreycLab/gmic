@@ -28362,11 +28362,12 @@ nn_lib :
 #      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
 
       OUT# = vector(##OUT#_spectrum);
-      OUT#_dots = vector(##OUT#_spectrum);
       OUT#_residual = IN#;
+      OUT#_dots = vector(##OUT#_spectrum);
       OUT#_history = vector(#2*OUT#_iterations);
 
       # Implement matching-pursuit algorithm.
+      h = 0;
       repeat (OUT#_iterations,k,
         repeat (OUT#_spectrum,l, # Find best-matching atom.
           OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
@@ -28375,10 +28376,8 @@ nn_lib :
         OUT#_ind_atom = argmaxabs(OUT#_dots);
         OUT#_dot = OUT#_dots[OUT#_ind_atom];
         OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,OUT#_ind_atom,0,0,0,1,size(IN#),1,1);
-
-        OUT#_history[2*k] = OUT#_ind_atom;
-        OUT#_history[2*k + 1] = OUT#_dot;
-
+        OUT#_history[h++] = OUT#_ind_atom;
+        OUT#_history[h++] = OUT#_dot;
         OUT#[OUT#_ind_atom]+=OUT#_dot;
         OUT#_residual-=OUT#_dot*OUT#_atom;
       );
@@ -28391,12 +28390,12 @@ nn_lib :
     nn_mp_backward(OUT,IN) = (
       d#IN = vector(#size(IN#));
       d#OUT#_weights = vector(#size(OUT#_weights));
+      h = size(OUT#_history);
       repeat (OUT#_iterations,k,
-        bk = OUT#_iterations - 1 - k;
-        OUT#_ind_atom = OUT#_history[2*bk];
-        OUT#_dot = OUT#_history[2*bk + 1];
+        OUT#_dot = OUT#_history[--h];
+        OUT#_ind_atom = OUT#_history[--h];
         OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,OUT#_ind_atom,0,0,0,1,size(IN#),1,1);
-        OUT#_residual+=OUT#_dot*OUT#_atom;
+        OUT#_residual+=OUT#_dot*OUT#_atom; # Reconstruct previous residual (input of mini-block)
         d#IN = d#OUT[OUT#_ind_atom]*OUT#_atom;
         d#OUT#_atom = d#OUT[OUT#_ind_atom]*OUT#_residual;
         draw(d#OUT#_weights,OUT#_spectrum,size(IN#),1,1,d#OUT#_atom,OUT#_ind_atom,0,0,0,1,size(IN#),1,1,-1);
