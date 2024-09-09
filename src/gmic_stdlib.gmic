@@ -28359,27 +28359,28 @@ nn_lib :
      );
 
     nn_mp_forward(OUT,IN) = (
+#      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
+
       OUT# = vector(##OUT#_spectrum);
       OUT#_dots = vector(##OUT#_spectrum);
       OUT#_residual = IN#;
+      OUT#_history = vector(#2*OUT#_iterations);
 
+      # Implement matching-pursuit algorithm.
       repeat (OUT#_iterations,k,
-
-        # Find best-matching atom.
-        repeat (OUT#_spectrum,l,
+        repeat (OUT#_spectrum,l, # Find best-matching atom.
           OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
           OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
         );
         OUT#_best = argmaxabs(OUT#_dots);
         OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,OUT#_best,0,0,0,1,size(IN#),1,1);
 
+        OUT#_history[2*k] = OUT#_best;
+        OUT#_history[2*k + 1] = OUT#_dots[OUT#_best];
+
         OUT#[OUT#_best]+=OUT#_dots[OUT#_best];
         OUT#_residual-=OUT#_dots[OUT#_best]*OUT#_atom;
       );
-
-      print(OUT#);
-
-#      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
     );
 
     nn_mp_init_backward(OUT) = (
@@ -28406,20 +28407,20 @@ nn_lib :
 #    d#IN = mul(OUT#_weights,d#OUT);
 #    d#OUT#_weights = mul(d#IN,OUT#,OUT#_spectrum);
 
-      # Version 2 : Somehow interesting.
-      OUT#_sum = sum(OUT#);
-      d#OUT#_weights = vector(#size(OUT#_weights));
-      repeat (OUT#_spectrum,k,
-        OUT#_delta = crop(OUT#_weights,OUT#_spectrum,h##OUT#_ind,1,1,k,0,0,0,1,h##OUT#_ind,1,1) - IN#;
-        OUT#_delta*=OUT#[k]/OUT#_sum;
-        draw(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,OUT#_delta,k,0,0,0,1,size(OUT#_delta),1,1);
-      );
-      d#IN = mul(d#OUT#_weights,OUT#,1);
+      # # Version 2 : Somehow interesting.
+      # OUT#_sum = sum(OUT#);
+      # d#OUT#_weights = vector(#size(OUT#_weights));
+      # repeat (OUT#_spectrum,k,
+      #   OUT#_delta = crop(OUT#_weights,OUT#_spectrum,h##OUT#_ind,1,1,k,0,0,0,1,h##OUT#_ind,1,1) - IN#;
+      #   OUT#_delta*=OUT#[k]/OUT#_sum;
+      #   draw(d#OUT#_weights,w##OUT#_ind,h##OUT#_ind,1,1,OUT#_delta,k,0,0,0,1,size(OUT#_delta),1,1);
+      # );
+      # d#IN = mul(d#OUT#_weights,OUT#,1);
 
 # Version 1 : Does not work.
-#      OUT#_tweights = transpose(OUT#_weights,OUT#_spectrum);
-#       d#IN = mproj(d#OUT#_masked,1,OUT#_tweights,h##OUT#_ind,0);
-#      d#OUT#_weights = mul(d#IN,OUT#,size(OUT#));
+      OUT#_tweights = transpose(OUT#_weights,OUT#_spectrum);
+      d#IN = mproj(d#OUT#_masked,1,OUT#_tweights,h##OUT#_ind,0);
+      d#OUT#_weights = mul(d#IN,OUT#,size(OUT#));
 
       batch_d#OUT#_weights+=d#OUT#_weights;
     );
