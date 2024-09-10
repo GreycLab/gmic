@@ -28361,7 +28361,7 @@ nn_lib :
     nn_mp_forward(OUT,IN) = (
 #      OUT# = mproj(IN#,1,OUT#_weights,w##OUT#_ind,1,OUT#_iterations);
 
-      OUT# = vector(##OUT#_spectrum);
+      OUT# = OUT#_abs = vector(##OUT#_spectrum);
       OUT#_residual = IN#;
       OUT#_dots = vector(##OUT#_spectrum);
       OUT#_history = vector(#2*OUT#_iterations);
@@ -28379,6 +28379,7 @@ nn_lib :
         OUT#_history[h++] = OUT#_ind_atom;
         OUT#_history[h++] = OUT#_dot;
         OUT#[OUT#_ind_atom]+=OUT#_dot;
+        OUT#_abs[OUT#_ind_atom]+=abs(OUT#_dot);
         OUT#_residual-=OUT#_dot*OUT#_atom;
       );
     );
@@ -28396,8 +28397,9 @@ nn_lib :
         OUT#_ind_atom = OUT#_history[--h];
         OUT#_atom = crop(OUT#_weights,OUT#_spectrum,size(IN#),1,1,OUT#_ind_atom,0,0,0,1,size(IN#),1,1);
         OUT#_residual+=OUT#_dot*OUT#_atom; # Reconstruct previous residual (input of mini-block)
-        d#IN = d#OUT[OUT#_ind_atom]*OUT#_atom;
-        d#OUT#_atom = d#OUT[OUT#_ind_atom]*OUT#_residual;
+        d#OUT#_weighted = d#OUT[OUT#_ind_atom]*abs(OUT#_dot)/OUT#_abs[OUT#_ind_atom];
+        d#IN = d#OUT#_weighted*OUT#_atom;
+        d#OUT#_atom = d#OUT#_weighted*OUT#_residual;
         draw(d#OUT#_weights,OUT#_spectrum,size(IN#),1,1,d#OUT#_atom,OUT#_ind_atom,0,0,0,1,size(IN#),1,1,-1);
       );
       batch_d#OUT#_weights+=d#OUT#_weights;
