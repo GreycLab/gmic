@@ -28419,13 +28419,15 @@ nn_lib :
     );
 
     nn_mp_backward(OUT,IN) = (
-      d#IN = vector(#size(IN#));
-      d#OUT#_params = vector(#size(OUT#_params));
 
       # Version 2.
-
+      d#OUT#_dots = mul(OUT#_jacobian,d#OUT,1);
+      d#IN = mul(OUT#_params,d#OUT#_dots);
+      d#OUT#_params = mul(IN#,d#OUT#_dots,OUT#_spectrum);
 
       # Version 1.
+      # d#IN = vector(#size(IN#));
+      # d#OUT#_params = vector(#size(OUT#_params));
       # h = size(OUT#_history);
       # repeat (OUT#_iterations,k,
       #   OUT#_dot = OUT#_history[--h];
