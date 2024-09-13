@@ -28371,18 +28371,16 @@ nn_lib :
     nn_mp_forward(OUT,IN) = (
 
       # Version 2:
-      OUT# = OUT#_dots = vector(##OUT#_spectrum);
+      OUT#_dots = vector(##OUT#_spectrum);
       OUT#_residual = IN#;
-      OUT#_dots_history = vector(##OUT#_spectrum*OUT#_iterations); # Keep track of all dot products during iterations
-      repeat (OUT#_iterations,k,
-        repeat (OUT#_spectrum,l, # Compute similarity with all atoms
-          OUT#_atom = crop(OUT#_params,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
-          OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
-        );
-        OUT#_weights = softmax(abs(OUT#_dots));
-        OUT#_residual-=mul(OUT#_params,OUT#_weights*OUT#_dots,1);
-        copy(OUT#_dots_history[k*OUT#_spectrum],OUT#_dots);
+
+      repeat (OUT#_spectrum,l, # Compute dot product of input signal with all atoms
+        OUT#_atom = crop(OUT#_params,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
+        OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
       );
+
+      OUT# = softmax(abs(OUT#_dots))*OUT#_dots;
+      OUT#_residual-=mul(OUT#_params,OUT#,1);
 
       # Version 1:
       # OUT# = OUT#_abs = vector(##OUT#_spectrum);
