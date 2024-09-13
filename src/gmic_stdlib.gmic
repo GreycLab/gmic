@@ -28371,21 +28371,20 @@ nn_lib :
     nn_mp_forward(OUT,IN) = (
 
       # Version 2:
-      OUT#_dots = vector(##OUT#_spectrum);
+      const OUT#_T = 1; # Temperature
       OUT#_residual = IN#;
-      repeat (OUT#_spectrum,l, # Compute dot product of input signal with all atoms
-        OUT#_atom = crop(OUT#_params,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
-        OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
-      );
-
-      OUT# = softmax(abs(OUT#_dots))*OUT#_dots;
+      OUT#_alpha = mul(IN#,OUT#_params,OUT#_spectrum); # dot product with atoms
+      OUT# = softmax(abs(OUT#_alpha))*OUT#_alpha;
       OUT#_residual-=mul(OUT#_params,OUT#,1);
 
       OUT#_jacobian = vector(##OUT#_spectrum^2);
       k = 0;
       repeat (OUT#_spectrum,i,
         repeat (OUT#_spectrum,j,
-          OUT#_jacobian[k++] = (i==j)*(1 + abs(OUT#_dots[i]))*OUT#[i] - OUT#_dots[i]*sign(OUT#_dots[j])*OUT#[i]*OUT#[j];
+          OUT#_jacobian[k++] = OUT#[i]*(
+            (i==j)*(1 + abs(OUT#_alpha[j])/OUT#_T) -
+            sign(OUT#_alpha[i])/OUT#_T*OUT#_alpha[j]*OUT#[j]
+          );
         );
       );
 
@@ -28421,9 +28420,9 @@ nn_lib :
     nn_mp_backward(OUT,IN) = (
 
       # Version 2.
-      d#OUT#_dots = mul(OUT#_jacobian,d#OUT,1);
-      d#IN = mul(OUT#_params,d#OUT#_dots);
-      d#OUT#_params = mul(IN#,d#OUT#_dots,OUT#_spectrum);
+      d#OUT#_alpha = mul(OUT#_jacobian,d#OUT,1);
+      d#IN = mul(OUT#_params,d#OUT#_alpha);
+      d#OUT#_params = mul(IN#,d#OUT#_alpha,OUT#_spectrum);
 
       # Version 1.
       # d#IN = vector(#size(IN#));
