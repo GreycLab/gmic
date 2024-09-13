@@ -28373,7 +28373,6 @@ nn_lib :
       # Version 2:
       OUT#_dots = vector(##OUT#_spectrum);
       OUT#_residual = IN#;
-
       repeat (OUT#_spectrum,l, # Compute dot product of input signal with all atoms
         OUT#_atom = crop(OUT#_params,OUT#_spectrum,size(IN#),1,1,l,0,0,0,1,size(IN#),1,1);
         OUT#_dots[l] = dot(OUT#_residual,OUT#_atom);
@@ -28381,6 +28380,14 @@ nn_lib :
 
       OUT# = softmax(abs(OUT#_dots))*OUT#_dots;
       OUT#_residual-=mul(OUT#_params,OUT#,1);
+
+      OUT#_jacobian = vector(##OUT#_spectrum^2);
+      k = 0;
+      repeat (OUT#_spectrum,i,
+        repeat (OUT#_spectrum,j,
+          OUT#_jacobian[k++] = (i==j)*(1 + abs(OUT#_dots[i]))*OUT#[i] - OUT#_dots[i]*sign(OUT#_dots[j])*OUT#[i]*OUT#[j];
+        );
+      );
 
       # Version 1:
       # OUT# = OUT#_abs = vector(##OUT#_spectrum);
