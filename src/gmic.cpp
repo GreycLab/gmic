@@ -9715,9 +9715,9 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                          gmic_selection.data(),uext.data(),_filename.data());
               g_list.save(filename); // Save distinct .gif files
             }
-          } else if (!std::strcmp(uext,"jpeg") || !std::strcmp(uext,"jpg")) {
+          } else if (!std::strcmp(uext,"jpeg") || !std::strcmp(uext,"jpg") || !std::strcmp(uext,"webp")) {
 
-            // JPEG file.
+            // JPEG and WebP files.
             float quality = 100;
             if (cimg_sscanf(options,"%f%c",&quality,&end)!=1) quality = 100;
             if (quality<0) quality = 0; else if (quality>100) quality = 100;
@@ -9747,12 +9747,15 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               error(true,0,0,
                     "Command 'output': File '%s', instance list (%u,%p) is empty.",
                     _filename.data(),g_list.size(),g_list.data());
-            if (g_list.size()==1)
-              g_list[0].save_jpeg(filename,(unsigned int)cimg::round(quality));
+            if (g_list.size()==1) {
+              if (*uext=='j') g_list[0].save_jpeg(filename,(unsigned int)cimg::round(quality));
+              else g_list[0].save_webp(filename,(unsigned int)cimg::round(quality));
+            }
             else {
               cimglist_for(g_list,l) {
                 cimg::number_filename(filename,l,6,gmic_use_formula);
-                g_list[l].save_jpeg(formula,(unsigned int)cimg::round(quality));
+                if (*uext=='j') g_list[l].save_jpeg(formula,(unsigned int)cimg::round(quality));
+                else g_list[l].save_webp(formula,(unsigned int)cimg::round(quality));
               }
             }
           } else if (!std::strcmp(uext,"mnc") && *options) {
