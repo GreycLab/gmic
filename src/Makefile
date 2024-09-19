@@ -346,11 +346,17 @@ FFTW_LIBS += -lfftw3_threads
 BOARD_CFLAGS = -Dcimg_use_board
 BOARD_LIBS = -lboard
 
+# Enable native support of WebP image files, using the WebP library.
+# (https://chromium.googlesource.com/webm/libwebp/)
+WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
+WEBP_LIBS = $(shell pkg-config --libs libwep || echo -lwebp)
+
+# Define predefined sets of default used flags, depending on the architecture.
 GMIC_STD_CFLAGS = -Dgmic_community $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(TIFF_CFLAGS)
 GMIC_STD_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(TIFF_LIBS)
 ifeq ($(OS),Unix) # Unix
-GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS)
-GMIC_STD_LIBS += $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS)
+GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) $(WEBP_CFLAGS)
+GMIC_STD_LIBS += $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS) $(WEBP_LIBS)
 else
 ifeq ($(OS),Darwin) # MacOSX
 GMIC_STD_CFLAGS += $(X11_CFLAGS) $(OPENEXR_CFLAGS)
