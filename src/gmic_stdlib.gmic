@@ -28381,18 +28381,19 @@ nn_lib :
 
     nn_mp_forward(OUT,IN) = (
       OUT# = vector(##OUT#_spectrum);
-      OUT#_alphas = OUT#_betas = vector(##OUT#_spectrum*OUT#_iterations);
+      OUT#_alphas = OUT#_softmaxs = vector(##OUT#_spectrum*OUT#_iterations);
       OUT#_inputs = vector(##OUT#_iterations*size(IN#));
       OUT#_input = IN#;
 
       repeat (OUT#_iterations,k,
-        OUT#_alpha = mul(IN#,OUT#_params,OUT#_spectrum); # dot product with atoms
-        OUT#_beta = softmax(abs(OUT#_alpha),OUT#_temperature)*OUT#_alpha;
-        draw(OUT#_alphas,OUT#_iterations,OUT#_spectrum,1,1,OUT#_alpha,k,0,0,0,1,OUT#_spectrum,1,1);
-        draw(OUT#_betas,OUT#_iterations,OUT#_spectrum,1,1,OUT#_beta,k,0,0,0,1,OUT#_spectrum,1,1);
         draw(OUT#_inputs,OUT#_iterations,size(IN#),1,1,OUT#_input,k,0,0,1,size(IN#),1,1);
-        OUT#+=OUT#_beta;
-        OUT#_input-=mul(OUT#_params,OUT#,1);
+        OUT#_alpha = mul(IN#,OUT#_params,OUT#_spectrum); # dot product of signal with all dictionary atoms
+        draw(OUT#_alphas,OUT#_iterations,OUT#_spectrum,1,1,OUT#_alpha,k,0,0,0,1,OUT#_spectrum,1,1);
+        OUT#_softmax = softmax(abs(OUT#_alpha),OUT#_temperature);
+        draw(OUT#_softmaxs,OUT#_iterations,OUT#_spectrum,1,1,OUT#_softmax,k,0,0,0,1,OUT#_spectrum,1,1);
+        OUT#_alpha*=OUT#_softmax;
+        OUT#+=OUT#_alpha;
+        OUT#_input-=mul(OUT#_params,OUT#_alpha,1);
       );
     );
 
@@ -28406,15 +28407,15 @@ nn_lib :
       repeat (OUT#_iterations,k,
         bk = OUT#_iterations - k - 1;
         OUT#_alpha = crop(OUT#_alphas,OUT#_iterations,OUT#_spectrum,1,1,bk,0,0,0,1,OUT#_spectrum,1,1);
-        OUT#_beta = crop(OUT#_betas,OUT#_iterations,OUT#_spectrum,1,1,bk,0,0,0,1,OUT#_spectrum,1,1);
+        OUT#_softmax = crop(OUT#_softmaxs,OUT#_iterations,OUT#_spectrum,1,1,bk,0,0,0,1,OUT#_spectrum,1,1);
 
         # Compute Jacobian matrix.
         p = 0;
         repeat (OUT#_spectrum,i,
           repeat (OUT#_spectrum,j,
-            OUT#_jacobian[p++] = OUT#_beta[i]*(
+            OUT#_jacobian[p++] = OUT#_softmax[i]*(
               (i==j)*(1 + abs(OUT#_alpha[j])/OUT#_temperature) -
-              sign(OUT#_alpha[i])/OUT#_temperature*OUT#_alpha[j]*OUT#_beta[j]
+              OUT#_alpha[j]*sign(OUT#_alpha[i])/OUT#_temperature*OUT#_softmax[j]
             );
           );
         );
