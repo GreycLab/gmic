@@ -28368,14 +28368,14 @@ nn_lib :
 
     # mp: Matching Pursuit layer.
     #----------------------------
-    nn_mp_init_forward(OUT,IN,iterations) = (
+    nn_mp_init_forward(OUT,IN,iterations,temperature) = (
       const OUT#_ind = $OUT#;
       const OUT#_width = 1;
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = w##OUT#_ind;
       const OUT#_iterations = iterations;
-      const OUT#_temperature = 0.25; # Softmax temperature
+      const OUT#_temperature = temperature; # Softmax temperature
       OUT#_params = crop(##OUT#_ind);
      );
 
@@ -29410,14 +29410,15 @@ nn_maxpool3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
   _nn_init.="$0 $* "
   _nn_latest=$1
 
-#@cli nn_mp : out,in,nb_atoms>0,_nb_iterations>=0
+#@cli nn_mp : out,in,nb_atoms>0,_nb_iterations>=0,_temperature
 #@cli : Add a 'mp' layer (matching pursuit layer) to the network.
+#@cli : Default values: 'nb_iterations=0' and 'temperature=0.15'.
 nn_mp : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-        check "isvarname('$1') && isint($3,1) && isint(${4=0},0)"
+        check "isvarname('$1') && isint($3,1) && isint(${4=0},0) && ${5=0.15}>0"
   nb_iterations:=$4?$4:$3
-  e[^-1] "[nn_lib] Add 'mp' layer '$1', with input '"$in"', $3 atoms and "$nb_iterations" iterations."
+  e[^-1] "[nn_lib] Add 'mp' layer '$1', with input '"$in"', $3 atoms, "$nb_iterations" iterations and temperature $5."
   init=$_nn_init
-  _nn_mp $1_mp,$in,$3,$nb_iterations
+  _nn_mp $1_mp,$in,$3,$nb_iterations,$5
   nn_rename $1,$1_mp
   _nn_init=${init}"$0 $* "
   _nn_latest=$1
@@ -29429,14 +29430,14 @@ _nn_mp :
   _nn_$1_size=1,1,1,$3
   _nn_$1_learning_mode=1
   _nn_$1_input=$2
-  _nn_$1_properties="nb_iterations=$4"
+  _nn_$1_properties="nb_iterations=$4, temperature=$5"
   if !isint($$1)
     $3,{prod($_nn_$2_size)}
     f. 4*g/(w-1)
     => $1
   fi
   [$1],1,1,1,"draw(#-1,unitnorm(crop(#-1,x,1)),x,0,0,0,1,h#-1,1,1)" rm. # Force atoms to have unit norm
-  _nn_forward.="begin(nn_mp_init_forward($1,$2,$4));"\
+  _nn_forward.="begin(nn_mp_init_forward($1,$2,$4,$5));"\
                "nn_mp_forward($1,$2);"
   _nn_backward..="begin(nn_mp_init_backward($1));"\
                  "nn_mp_backward($1,$2);"\
