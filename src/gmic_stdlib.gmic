@@ -28402,7 +28402,7 @@ nn_lib :
     );
 
     nn_mp_backward(OUT,IN) = (
-      d#IN = vector(#size(IN#));
+      d#OUT#_residual = vector(#size(IN#),0);
       d#OUT#_params = vector(#size(OUT#_params));
       OUT#_jacobian = vector(##OUT#_spectrum^2);
 
@@ -28426,9 +28426,12 @@ nn_lib :
         d#OUT#_alpha/=OUT#_iterations;
         OUT#_input = crop(OUT#_inputs,OUT#_iterations,size(IN#),1,1,bk,0,0,0,1,size(IN#),1,1);
         d#OUT#_params+=mul(OUT#_input,d#OUT#_alpha,OUT#_spectrum);
-        d#IN+=mul(OUT#_params,d#OUT#_alpha);
+
+        OUT#_Wt = transpose(OUT#_params,OUT#_spectrum);
+        OUT#_WJWt = mul(OUT#_params,mul(OUT#_jacobian,OUT#_Wt,size(IN#)),size(IN#));
+        d#OUT#_residual = mul(OUT#_params,d#OUT#_alpha) - mul(OUT#_WJWt,d#OUT#_residual);
       );
-#      d#IN = mul(OUT#_params,d#OUT#_alpha);
+      d#IN = d#OUT#_residual;
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -29414,9 +29417,9 @@ nn_maxpool3d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
 
 #@cli nn_mp : out,in,nb_atoms>0,_nb_iterations>=0,_temperature
 #@cli : Add a 'mp' layer (matching pursuit layer) to the network.
-#@cli : Default values: 'nb_iterations=0' and 'temperature=0.15'.
+#@cli : Default values: 'nb_iterations=0' and 'temperature=0.2'.
 nn_mp : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-        check "isvarname('$1') && isint($3,1) && isint(${4=0},0) && ${5=0.15}>0"
+        check "isvarname('$1') && isint($3,1) && isint(${4=0},0) && ${5=0.2}>0"
   nb_iterations:=$4?$4:$3
   e[^-1] "[nn_lib] Add 'mp' layer '$1', with input '"$in"', $3 atoms, "$nb_iterations" iterations and temperature $5."
   init=$_nn_init
