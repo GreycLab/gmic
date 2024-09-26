@@ -34158,21 +34158,51 @@ arg2img :
 arg2var :
   $=arg u {$#-1} repeat ${} { $1{1+$>}=${arg{2+$>}} }
 
-#@cli autocrop_coords : value1,value2,... | auto
-#@cli : Return coordinates (x0,y0,z0,x1,y1,z1) of the autocrop that could be performed on the latest
-#@cli : of the selected images.
-#@cli : Default value: 'auto'
-autocrop_coords : skip ${1=auto}
-  is_auto:=['"$1"']=='auto'
-  w,h,d,value={w},{h},{d},{i(w-1,h-1,d-1)}
-  +=. {1+$value},100%,100%,100% _autocrop$is_auto. ${1--1} =. $value,100%,100%,100%
-  x0,y0,z0:=$w-w,$h-h,$d-d
-  _autocrop$is_auto. ${1--1}
-  x1,y1,z1:=$x0+w-1,$y0+h-1,$z0+d-1 rm.
-  u $x0,$y0,$z0,$x1,$y1,$z1
-
-_autocrop0 : autocrop $*
-_autocrop1 : skip $* autocrop
+#@cli autocrop_coords : _axes,value,...
+#@cli : Return coordinates of the autocrop bounding box of selected images.
+#@cli : Default values: 'axes=xyz' and 'value=auto'.
+autocrop_coords : skip "${1=xyz},${2=}"
+  if isin(['$1'],'x','y','z','c','xy','xz','xc','yz','yc','zc','xyz','xyc','yzc','xyzc')
+    axes=$1
+    if isnum($2) value=${2--1} else value=auto fi
+  else
+    axes=xyz
+    if isnum($1) value=${1--1} else value=auto noarg fi
+  fi
+  s= if size(['$axes'])>1 s=s fi
+  e[^-1] "Return autocrop coordinates for image$?, for axe"$s" '"$axes"' and value '"$value"'."
+  is_x,is_y,is_z,is_c:=s='$axes';[find(s,_'x')>=0,find(s,_'y')>=0,find(s,_'z')>=0,find(s,_'c')>=0]
+  is_auto:=['$value']=='auto'
+  l_value=$value
+  res,sep=
+  foreach {
+    x0,y0,z0,c0,x1,y1,z1,c1=-1
+    if $is_auto
+      l_value:="const w1 = w - 1; const h1 = h - 1; const d1 = d - 1;
+                vmed(I[0],I[0],I(w1,0,0),I(w1,h1,0),I(0,h1,0), # I[0] must be doubled!
+                     I(0,0,d1),I(w1,0,0),I(w1,h1,d1),I(0,h1,d1))"
+    fi
+    eval. "
+      begin(
+        x0 = y0 = z0 = c0 = inf;
+        x1 = y1 = z1 = c1 = -inf;
+        value = $is_c?resize([ "$l_value" ],s,0,2):(["$l_value"][0]);
+      );
+      (!$is_c && I!=value) || ($is_c && i!=value)?(
+        $is_x?(x0 = min(x0,x); x1 = max(x1,x));
+        $is_y?(y0 = min(y0,y); y1 = max(y1,y));
+        $is_z?(z0 = min(z0,z); z1 = max(z1,z));
+        $is_c?(c0 = min(c0,c); c1 = max(c1,c));
+      );
+      end(
+        $is_x?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?w - 1:x1));
+        $is_y?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?h - 1:y1));
+        $is_z?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?d - 1:z1));
+        $is_c?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?s - 1:c1));
+      )"
+    ($x0,$y0,$z0,$c0;$x1,$y1,$z1,$c1) discard. -1 res.=$sep{^} sep=, rm.
+  }
+  u $res
 
 #@cli average_vectors
 #@cli : Return the vector-valued average of the latest of the selected images.
