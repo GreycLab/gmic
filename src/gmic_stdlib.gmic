@@ -17073,6 +17073,14 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
+#@cli autocrop : _axes,_value1,_value2,...
+#@cli : Autocrop selected images by specified vector-valued intensity.
+#@cli : Default values: 'axes=xyz' and 'value=auto'.
+autocrop : skip ${1=}
+  __$0_coords_ ${1--1} if ${} noarg fi
+  e[^-1] "Autocrop image$?, for axe"$s" '"$axes"' and value '"$value"'."
+  foreach { z ${"_autocrop_coords "$axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value} }
+
 #@cli autocrop : value1,value2,... : (no arg) : (+)
 #@cli : Autocrop selected images by specified vector-valued intensity.
 #@cli : If no arguments are provided, cropping value is guessed.
@@ -17109,6 +17117,60 @@ autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isin
     if !$! 0 fi
     if $4==2 a x fi
   }
+
+#@cli autocrop_coords : _axes,_value1,_value2,...
+#@cli : Return coordinates of the autocrop bounding box of selected images.
+#@cli : Default values: 'axes=xyz' and 'value=auto'.
+__autocrop_coords_ : skip "${1=xyz},${2=}"
+  is_noarg=0
+  if isin(['$1'],'x','y','z','c','xy','xz','xc','yz','yc','zc','xyz','xyc','yzc','xyzc')
+    axes=$1
+    if isnum($2) value=${2--1} else value=auto fi
+  else
+    axes=xyz
+    if isnum($1) value=${1--1} else value=auto is_noarg=1 fi
+  fi
+  s= if size(['$axes'])>1 s=s fi
+  is_x,is_y,is_z,is_c:=s='$axes';[find(s,_'x')>=0,find(s,_'y')>=0,find(s,_'z')>=0,find(s,_'c')>=0]
+  is_auto:=['$value']=='auto'
+  u $is_noarg
+
+autocrop_coords : skip "${1=xyz},${2=}"
+  __$0_ ${1--1} if ${} noarg fi
+  e[^-1] "Return autocrop coordinates for image$?, for axe"$s" '"$axes"' and value '"$value"'."
+  _autocrop_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
+
+_autocrop_coords :
+  l_value=${7--1}
+  res,sep=
+  foreach {
+    x0,y0,z0,c0,x1,y1,z1,c1=-1
+    if $6
+      l_value:="const w1 = w - 1; const h1 = h - 1; const d1 = d - 1;
+                vmed(I[0],I[0],I(w1,0,0),I(w1,h1,0),I(0,h1,0), # I[0] must be doubled!
+                     I(0,0,d1),I(w1,0,0),I(w1,h1,d1),I(0,h1,d1))"
+    fi
+    eval. "
+      begin(
+        x0 = y0 = z0 = c0 = inf;
+        x1 = y1 = z1 = c1 = -inf;
+        value = $5?resize([ "$l_value" ],s,0,2):(["$l_value"][0]);
+      );
+      (!$5 && I!=value) || ($5 && i!=value)?(
+        $2?(x0 = min(x0,x); x1 = max(x1,x));
+        $3?(y0 = min(y0,y); y1 = max(y1,y));
+        $4?(z0 = min(z0,z); z1 = max(z1,z));
+        $5?(c0 = min(c0,c); c1 = max(c1,c));
+      );
+      end(
+        $2?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?w - 1:x1));
+        $3?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?h - 1:y1));
+        $4?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?d - 1:z1));
+        $5?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?s - 1:c1));
+      )"
+    ($x0,$y0,$z0,$c0;$x1,$y1,$z1,$c1) discard. -1 res.=$sep{^} sep=, rm.
+  }
+  u $res
 
 #@cli autocrop_seq : value1,value2,... | auto
 #@cli : Autocrop selected images using the crop geometry of the last one by specified vector-valued intensity,
@@ -34157,52 +34219,6 @@ arg2img :
 #@cli : The variable name should be global to make this command useful (i.e. starts by an underscore).
 arg2var :
   $=arg u {$#-1} repeat ${} { $1{1+$>}=${arg{2+$>}} }
-
-#@cli autocrop_coords : _axes,value,...
-#@cli : Return coordinates of the autocrop bounding box of selected images.
-#@cli : Default values: 'axes=xyz' and 'value=auto'.
-autocrop_coords : skip "${1=xyz},${2=}"
-  if isin(['$1'],'x','y','z','c','xy','xz','xc','yz','yc','zc','xyz','xyc','yzc','xyzc')
-    axes=$1
-    if isnum($2) value=${2--1} else value=auto fi
-  else
-    axes=xyz
-    if isnum($1) value=${1--1} else value=auto noarg fi
-  fi
-  s= if size(['$axes'])>1 s=s fi
-  e[^-1] "Return autocrop coordinates for image$?, for axe"$s" '"$axes"' and value '"$value"'."
-  is_x,is_y,is_z,is_c:=s='$axes';[find(s,_'x')>=0,find(s,_'y')>=0,find(s,_'z')>=0,find(s,_'c')>=0]
-  is_auto:=['$value']=='auto'
-  l_value=$value
-  res,sep=
-  foreach {
-    x0,y0,z0,c0,x1,y1,z1,c1=-1
-    if $is_auto
-      l_value:="const w1 = w - 1; const h1 = h - 1; const d1 = d - 1;
-                vmed(I[0],I[0],I(w1,0,0),I(w1,h1,0),I(0,h1,0), # I[0] must be doubled!
-                     I(0,0,d1),I(w1,0,0),I(w1,h1,d1),I(0,h1,d1))"
-    fi
-    eval. "
-      begin(
-        x0 = y0 = z0 = c0 = inf;
-        x1 = y1 = z1 = c1 = -inf;
-        value = $is_c?resize([ "$l_value" ],s,0,2):(["$l_value"][0]);
-      );
-      (!$is_c && I!=value) || ($is_c && i!=value)?(
-        $is_x?(x0 = min(x0,x); x1 = max(x1,x));
-        $is_y?(y0 = min(y0,y); y1 = max(y1,y));
-        $is_z?(z0 = min(z0,z); z1 = max(z1,z));
-        $is_c?(c0 = min(c0,c); c1 = max(c1,c));
-      );
-      end(
-        $is_x?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?w - 1:x1));
-        $is_y?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?h - 1:y1));
-        $is_z?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?d - 1:z1));
-        $is_c?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?s - 1:c1));
-      )"
-    ($x0,$y0,$z0,$c0;$x1,$y1,$z1,$c1) discard. -1 res.=$sep{^} sep=, rm.
-  }
-  u $res
 
 #@cli average_vectors
 #@cli : Return the vector-valued average of the latest of the selected images.

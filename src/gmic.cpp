@@ -329,16 +329,6 @@ CImg<T> get_draw_polygon(const CImg<t>& points,
   return (+*this).draw_polygon(points,color,opacity,pattern,is_closed);
 }
 
-CImg<T>& gmic_autocrop(const CImg<T>& color=CImg<T>::empty()) {
-  if (color.width()==1) autocrop(*color);
-  else autocrop(color);
-  return *this;
-}
-
-CImg<T> get_gmic_autocrop(const CImg<T>& color=CImg<T>::empty()) {
-  return (+*this).gmic_autocrop(color);
-}
-
 CImg<T>& gmic_blur(const float sigma_x, const float sigma_y, const float sigma_z, const float sigma_c,
                    const unsigned int boundary_conditions, const bool is_gaussian) {
   if (is_empty()) return *this;
@@ -2448,7 +2438,7 @@ static void *gmic_parallel(void *arg) {
 const char *gmic::builtin_commands_names[] = {
 
   // Commands of length>3.
-  "acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh","autocrop",
+  "acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
   "bilateral","blur","boxfilter","break",
   "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
@@ -5569,31 +5559,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           } else arg_error("append");
           is_change = true;
           ++position;
-          continue;
-        }
-
-        // Autocrop.
-        if (!std::strcmp("autocrop",command)) {
-          gmic_substitute_args(false);
-          if (*argument && cimg_sscanf(argument,"%4095[0-9.,eEinfa+-]%c",gmic_use_formula,&end)==1)
-            try { CImg<T>(1).fill_from_values(argument,true).move_to(g_img); }
-            catch (CImgException&) { g_img.assign(); }
-          if (g_img) {
-            print(0,"Auto-crop image%s by vector '%s'.",
-                  gmic_selection.data(),
-                  gmic_argument_text_printed());
-            ++position;
-          } else print(0,"Auto-crop image%s.",
-                       gmic_selection.data());
-          cimg_forY(selection,l) {
-            if (g_img) {
-              CImg<T>& img = images[selection[l]];
-              g_img.assign(img.spectrum()).fill_from_values(argument,true);
-              gmic_apply(gmic_autocrop(g_img),false);
-            } else gmic_apply(gmic_autocrop(),false);
-          }
-          g_img.assign();
-          is_change = true;
           continue;
         }
 
