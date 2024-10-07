@@ -23,7 +23,7 @@ Here are the different links you can use, depending on the type of bug to be rep
 Using the right link will optimize the chance of resolution, but if you don't know which one to use, just use the first one:
 
 - [Issues about the G'MIC core functionnalities](https://github.com/dtschump/gmic/issues), i.e. concerning all about the G'MIC language interpreter and the image processing algorithms.
-- [Issues about the G'MIC-Qt interface](https://github.com/c-koi/gmic-qt/issues/), i.e. bugs related to the Qt-based interface of G'MIC.
+- [Issues about the G'MIC-Qt interface](https://github.com/GreycLab/gmic-qt/issues/), i.e. bugs related to the Qt-based interface of G'MIC.
 - [Issues specifically about the 8bf plug-in](https://github.com/0xC0000054/gmic-8bf/) (e.g. installation issues).
 
 If you don't have a github account, you may also consider reporting a bug on the [G'MIC official discussion forum](https://discuss.pixls.us/c/software/gmic/).
@@ -57,7 +57,7 @@ Please note that we will not consider including native (C++) contributions in th
 
 We're more interested in optimizing the interpreter than in new language features, unless they're essential for executing new G'MIC scripts of major importance (which wouldn't be able to do the same thing without these new features).
 
-- [Improve the G'MIC-Qt interface](https://github.com/c-koi/gmic-qt/pulls).
+- [Improve the G'MIC-Qt interface](https://github.com/GreycLab/gmic-qt/pulls).
 
 Please always open Pull Requests for the `develop` branch of these repositories, when it exists.
 
