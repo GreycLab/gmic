@@ -195,4 +195,12 @@ One of those made the cover of _Nature_ of October 2023 (Fig. 9).
 
 ![Left: image of protostar, processed with `G'MIC` (courtesy of Mark McCaughrean/ESA). Right: effect of the `G'MIC` **Banding Denoise** algorithm on a JWST image (courtesy of Judy Schmidt).](images/nature.png)
 
+# In Memoriam
+
+This article is dedicated to Sébastien Fourey, co-developer of the G'MIC project, who passed away in October 2024.
+He was the kindest, most caring person you’ll ever meet, as well as being extremely competent and passionate
+about computing, algorithms and software development as a whole. He has always believed in the magic of free software.
+The world has lost a talented developer, a great researcher and teacher, but above all a person of great humanity.
+Rest in peace, Sébastien.
+
 # References
