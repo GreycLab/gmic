@@ -27607,9 +27607,9 @@ nn_lib :
     # Optimizers.
     #------------
 
-    # Generic.
-    #---------
-    nn_optimizer_generic_update_normalize(O,P,learning_mode) = (
+    # Functions shared by optimizers.
+    #---------------------------------
+    nn_optimizer_shared_update_normalize(O,P,learning_mode) = (
       P#_is_channelwise?( # Channel-by-channel normalization
         draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
         draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
@@ -27635,7 +27635,7 @@ nn_lib :
       );
     );
 
-    nn_optimizer_generic_update_mp(P) = (
+    nn_optimizer_shared_update_mp(P) = (
       repeat(w##P#_ind,_nn_k,
         draw(##P#_ind,unitnorm(crop(##P#_ind,_nn_k,1)),_nn_k,0,0,0,1,h##P#_ind,1,1)
       );
@@ -27675,11 +27675,11 @@ nn_lib :
     nn_optimizer_sgd_update_mp(P,learning_mode) = (
       nn_optimizer_sgd_update_params(P#_params);
       draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_generic_update_mp(#P);
+      nn_optimizer_shared_update_mp(#P);
     );
 
     nn_optimizer_sgd_update_normalize(P,learning_mode) = (
-      nn_optimizer_generic_update_normalize(sgd,#P,#learning_mode);
+      nn_optimizer_shared_update_normalize(sgd,#P,#learning_mode);
     );
 
     # RMSprop optimizer.
@@ -27727,7 +27727,7 @@ nn_lib :
       nn_optimizer_rmsprop_update_params(P#_params);
       draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
       draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_generic_update_mp(#P);
+      nn_optimizer_shared_update_mp(#P);
     );
 
     nn_optimizer_rmsprop_update_normalize(P,learning_mode) = (
@@ -27736,13 +27736,13 @@ nn_lib :
         P#_is_channelwise?( # Channel-by-channel normalization
           d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
           d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
-          nn_optimizer_generic_update_normalize(rmsprop,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
           draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
           draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
         ):( # Global normalization
           d#P#_alpha_g2 = i[##P#_ind_g2,0];
           d#P#_beta_g2 = i[##P#_ind_g2,1];
-          nn_optimizer_generic_update_normalize(rmsprop,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
           i[##P#_ind_g2,0] = d#P#_alpha_g2;
           i[##P#_ind_g2,1] = d#P#_beta_g2;
         );
@@ -27809,7 +27809,7 @@ nn_lib :
       draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
       draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind,h##P#_ind);
       draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_generic_update_mp(#P);
+      nn_optimizer_shared_update_mp(#P);
     );
 
     nn_optimizer_adam_update_normalize(P,learning_mode) = (
@@ -27821,7 +27821,7 @@ nn_lib :
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_alpha_v = crop(##P#_ind_v,0,1);
           d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_generic_update_normalize(adam,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
           draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
@@ -27831,7 +27831,7 @@ nn_lib :
           d#P#_beta_m = i[##P#_ind_m,1];
           d#P#_alpha_v = i[##P#_ind_v,0];
           d#P#_beta_v = i[##P#_ind_v,1];
-          nn_optimizer_generic_update_normalize(adam,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
           i[##P#_ind_m,0] = d#P#_alpha_m;
           i[##P#_ind_m,1] = d#P#_beta_m;
           i[##P#_ind_v,0] = d#P#_alpha_v;
@@ -27899,7 +27899,7 @@ nn_lib :
       draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
       draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind,h##P#_ind);
       draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_generic_update_mp(#P);
+      nn_optimizer_shared_update_mp(#P);
     );
 
     nn_optimizer_adamax_update_normalize(P,learning_mode) = (
@@ -27911,7 +27911,7 @@ nn_lib :
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_alpha_v = crop(##P#_ind_v,0,1);
           d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_generic_update_normalize(adamax,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
           draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
@@ -27921,7 +27921,7 @@ nn_lib :
           d#P#_beta_m = i[##P#_ind_m,1];
           d#P#_alpha_v = i[##P#_ind_v,0];
           d#P#_beta_v = i[##P#_ind_v,1];
-          nn_optimizer_generic_update_normalize(adamax,#P,#learning_mode);
+          nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
           i[##P#_ind_m,0] = d#P#_alpha_m;
           i[##P#_ind_m,1] = d#P#_beta_m;
           i[##P#_ind_v,0] = d#P#_alpha_v;
