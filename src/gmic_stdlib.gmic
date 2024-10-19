@@ -28645,7 +28645,7 @@ nn_lib :
         d#IN = vector(#size(IN#));
         repeat (size(#OUT#_avg),_nn_k,
           OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/OUT#_std[_nn_k]);
+          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/(OUT#_is_first_iter?std(IN#):OUT#_std[_nn_k]));
           batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
           batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
           OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
@@ -28653,7 +28653,7 @@ nn_lib :
           batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
         );
       ):( # Global normalization
-        d#IN = d#OUT*OUT#_alpha/OUT#_std;
+        d#IN = d#OUT*OUT#_alpha/(OUT#_is_first_iter?std(IN#):OUT#_std);
         batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
         batch_d#OUT#_beta+=sum(d#OUT);
         batch_#OUT#_avg+=avg(IN#);
