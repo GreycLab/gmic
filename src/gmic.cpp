@@ -4618,7 +4618,7 @@ CImg<char> gmic::substitute_item(const char *const source,
               is_substituted = true;
               break;
             case '^' : { // Sequence of all pixel values
-              img.value_string(delimiter).move_to(vs);
+              img.value_string(delimiter,0,"%.17g").move_to(vs);
               if (vs && *vs) { --vs._width; vs.append_string_to(substituted_items,ptr_sub); }
               *substr = 0; is_substituted = true;
             } break;
@@ -4628,7 +4628,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           if (!is_substituted && *feature=='@') { // Subset of values
             if (l_feature>=2) {
               if (feature[1]=='^' && !feature[2]) { // All pixel values
-                img.value_string(delimiter).move_to(vs);
+                img.value_string(delimiter,0,"%.17g").move_to(vs);
                 if (vs && *vs) { --vs._width; vs.append_string_to(substituted_items,ptr_sub); }
                 *substr = 0; is_substituted = true;
               } else {
@@ -7013,7 +7013,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             CImg<double> output;
             img.eval(output,name,0,0,0,0,&images);
             if (output.height()>1) // Vector-valued result
-              output.value_string().move_to(status);
+              output.value_string(',',0,"%.17g").move_to(status);
             else { // Scalar result
               gmic_use_formula;
               cimg_snprintf(formula,_formula.width(),"%.17g",*output);

@@ -349,7 +349,7 @@ BOARD_LIBS = -lboard
 # Enable native support of WebP image files, using the WebP library.
 # (https://chromium.googlesource.com/webm/libwebp/)
 WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
-WEBP_LIBS = $(shell pkg-config --libs libwep || echo -lwebp)
+WEBP_LIBS = $(shell pkg-config --libs libwebp || echo -lwebp)
 
 # Define predefined sets of default used flags, depending on the architecture.
 GMIC_STD_CFLAGS = -Dgmic_community $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(TIFF_CFLAGS)
