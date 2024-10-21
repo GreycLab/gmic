@@ -28348,8 +28348,9 @@ nn_lib :
           draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
         );
       );
-      draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-      draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
+
+      learning_mode&1?draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
     );
 
     # input: Input image or vector data.
@@ -28586,6 +28587,7 @@ nn_lib :
           draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
         );
       );
+
       learning_mode?(
         draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
         repeat(w##P#_ind,_nn_k,
@@ -30192,7 +30194,8 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
     learning_mode=${_nn_${name}_learning_mode}
 
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
-      _nn_$1_update.="nn_optimizer_$4_update_"$type"("$name,$learning_mode");"
+#      _nn_$1_update.="nn_optimizer_$4_update_"$type"("$name,$learning_mode");"
+      _nn_$1_update.="nn_"${type}"_update("$name,$4,$learning_mode");"
 
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
