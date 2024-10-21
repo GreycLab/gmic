@@ -27359,6 +27359,10 @@ nn_lib :
     begin(
       const nn_nb_threads_max = n;
       const nn_is_training = $_nn_is_training!=0; # works also when $_nn_is_training is nan ('undefined').
+      const nn_optimizer_sgd = 0;
+      const nn_optimizer_rmsprop = 1;
+      const nn_optimizer_adam = 2;
+      const nn_optimizer_adamax = 3;
     );
 
     begin_t(
@@ -28346,6 +28350,47 @@ nn_lib :
       merge(batch_d#OUT#_biases,+);
       batch_d#OUT#_params/=nn_batch_size;
       batch_d#OUT#_biases/=nn_batch_size;
+    );
+
+    nn_fc_update(P,O,learning_mode) = (
+      nn_optimizer_#O#==nn_optimizer_sgd?( # sgd
+        learning_mode&1?nn_optimizer_sgd_update_params(P#_params);
+        learning_mode&2?nn_optimizer_sgd_update_params(P#_biases);
+
+      ):nn_optimizer_#O#==nn_optimizer_rmsprop?( # rmsprop
+        const P#_ind_g2 = $P#_g2;
+        learning_mode&1?(
+          d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind - 1,h##P#_ind);
+          nn_optimizer_rmsprop_update_params(P#_params);
+          draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind - 1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_biases_g2 = crop(##P#_ind_g2,w##P#_ind - 1,0,1,h##P#_ind);
+          nn_optimizer_rmsprop_update_params(P#_biases);
+          draw(##P#_ind_g2,d#P#_biases_g2,w##P#_ind - 1,0,1,h##P#_ind);
+        );
+
+      ):( # adam & adamax
+        const P#_ind_m = $P#_m;
+        const P#_ind_v = $P#_v;
+        learning_mode&1?(
+          d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
+          d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind - 1,h##P#_ind);
+          nn_optimizer_#O#_update_params(P#_params);
+          draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
+          draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind - 1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
+          d#P#_biases_v = crop(##P#_ind_v,w##P#_ind - 1,0,1,h##P#_ind);
+          nn_optimizer_#O#_update_params(P#_biases);
+          draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
+          draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
+        );
+      );
+
+      draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
+      draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
     );
 
     # input: Input image or vector data.
