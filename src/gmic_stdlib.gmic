@@ -28130,6 +28130,10 @@ nn_lib :
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
+    nn_conv2d_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    )
+
     # conv3d: 3D convolutional layer.
     #--------------------------------
     nn_conv3d_init_forward(OUT,IN,size,stride,dilation,shrink,boundary_conditions) = (
@@ -28227,6 +28231,10 @@ nn_lib :
       batch_d#OUT#_params/=nn_batch_size;
       batch_d#OUT#_biases/=nn_batch_size;
     );
+
+    nn_conv3d_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    )
 
     # crop : Crop layer.
     #--------------------
@@ -28353,23 +28361,21 @@ nn_lib :
     );
 
     nn_fc_update(P,O,learning_mode) = (
-      nn_optimizer_#O#==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_sgd_update_params(P#_params);
-        learning_mode&2?nn_optimizer_sgd_update_params(P#_biases);
-
-      ):nn_optimizer_#O#==nn_optimizer_rmsprop?( # rmsprop
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        learning_mode&1?nn_optimizer_#O#_update_params(P#_params);
+        learning_mode&2?nn_optimizer_#O#_update_params(P#_biases);
+      ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $P#_g2;
         learning_mode&1?(
           d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind - 1,h##P#_ind);
-          nn_optimizer_rmsprop_update_params(P#_params);
+          nn_optimizer_#O#_update_params(P#_params);
           draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_biases_g2 = crop(##P#_ind_g2,w##P#_ind - 1,0,1,h##P#_ind);
-          nn_optimizer_rmsprop_update_params(P#_biases);
+          nn_optimizer_#O#_update_params(P#_biases);
           draw(##P#_ind_g2,d#P#_biases_g2,w##P#_ind - 1,0,1,h##P#_ind);
         );
-
       ):( # adam & adamax
         const P#_ind_m = $P#_m;
         const P#_ind_v = $P#_v;
@@ -28388,7 +28394,6 @@ nn_lib :
           draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
         );
       );
-
       draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
       draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
     );
@@ -28606,6 +28611,29 @@ nn_lib :
       batch_d#OUT#_params/=nn_batch_size;
     );
 
+    nn_mp_update(P,O,learning_mode) = (
+      nn_optimizer_#O=nn_optimizer_sgd?( # sgd
+        nn_optimizer_#O#_update_params(P#_params);
+      ):nn_optimizer_#O=nn_optimizer_rmsprop?( # rmsprop
+        const P#_ind_g2 = $P#_g2;
+        d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind,h##P#_ind);
+        nn_optimizer_#O#_update_params(P#_params);
+        draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind,h##P#_ind);
+      ):( # adam & adamax
+        const P#_ind_m = $P#_m;
+        const P#_ind_v = $P#_v;
+        d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind,h##P#_ind);
+        d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind,h##P#_ind);
+        nn_optimizer_#O#_update_params(P#_params);
+        draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind,h##P#_ind);
+        draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
+      );
+      draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
+      repeat(w##P#_ind,_nn_k,
+        draw(##P#_ind,unitnorm(crop(##P#_ind,_nn_k,1)),_nn_k,0,0,0,1,h##P#_ind,1,1)
+      );
+    );
+
     # mul: Multiply two inputs.
     #---------------------------
     nn_mul_init_forward(OUT,IN) = (
@@ -28745,6 +28773,16 @@ nn_lib :
       batch_d#OUT#_beta/=nn_batch_size;
       batch_#OUT#_avg/=nn_batch_size;
       batch_#OUT#_var/=nn_batch_size;
+    );
+
+    nn_normalize_update(P,O,learning_mode) = (
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+
+      ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
+
+      ):( # adam & adamax
+
+      );
     );
 
     # patchdown2d: 2D downscale by patch.
