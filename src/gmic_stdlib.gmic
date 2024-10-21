@@ -27614,28 +27614,15 @@ nn_lib :
     # Functions shared by optimizers.
     #---------------------------------
     nn_optimizer_shared_update_normalize(O,P,learning_mode) = (
-      P#_is_channelwise?( # Channel-by-channel normalization
-        draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-        draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-        learning_mode&1?(
-          nn_optimizer_#O#_update_params(P#_alpha);
-          draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
-        );
-        learning_mode&2?(
-          nn_optimizer_#O#_update_params(P#_beta);
-          draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
-        );
-      ):( # Global normalization
-        i[##P#_ind,2] = lerp(P#_avg,batch_#P#_avg,P#_is_avg_var?0.01:1);
-        i[##P#_ind,3] = lerp(P#_var,batch_#P#_var,P#_is_avg_var?0.01:1);
-        learning_mode&1?(
-          nn_optimizer_#O#_update_params(P#_alpha);
-          i[##P#_ind,0] = P#_alpha;
-        );
-        learning_mode&2?(
-          nn_optimizer_#O#_update_params(P#_beta);
-          i[##P#_ind,1] = P#_beta;
-        );
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      learning_mode&1?(
+        nn_optimizer_#O#_update_params(P#_alpha);
+        draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
+      );
+      learning_mode&2?(
+        nn_optimizer_#O#_update_params(P#_beta);
+        draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
       );
     );
 
@@ -27737,19 +27724,11 @@ nn_lib :
     nn_optimizer_rmsprop_update_normalize(P,learning_mode) = (
       const P#_ind_g2 = $P#_g2;
       learning_mode?(
-        P#_is_channelwise?( # Channel-by-channel normalization
-          d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
-          d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
-          nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
-          draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
-          draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
-        ):( # Global normalization
-          d#P#_alpha_g2 = i[##P#_ind_g2,0];
-          d#P#_beta_g2 = i[##P#_ind_g2,1];
-          nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
-          i[##P#_ind_g2,0] = d#P#_alpha_g2;
-          i[##P#_ind_g2,1] = d#P#_beta_g2;
-        );
+        d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
+        d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
+        nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
+        draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
+        draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
       );
     );
 
@@ -27820,29 +27799,16 @@ nn_lib :
       const P#_ind_m = $P#_m;
       const P#_ind_v = $P#_v;
       learning_mode?(
-        P#_is_channelwise?( # Channel-by-channel normalization
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          d#P#_alpha_v = crop(##P#_ind_v,0,1);
-          d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-          draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
-          draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
-        ):( # Global normalization
-          d#P#_alpha_m = i[##P#_ind_m,0];
-          d#P#_beta_m = i[##P#_ind_m,1];
-          d#P#_alpha_v = i[##P#_ind_v,0];
-          d#P#_beta_v = i[##P#_ind_v,1];
-          nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
-          i[##P#_ind_m,0] = d#P#_alpha_m;
-          i[##P#_ind_m,1] = d#P#_beta_m;
-          i[##P#_ind_v,0] = d#P#_alpha_v;
-          i[##P#_ind_v,1] = d#P#_beta_v;
-        );
+        d#P#_alpha_m = crop(##P#_ind_m,0,1);
+        d#P#_beta_m = crop(##P#_ind_m,1,1);
+        d#P#_alpha_v = crop(##P#_ind_v,0,1);
+        d#P#_beta_v = crop(##P#_ind_v,1,1);
+        nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
+        draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
+        draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+        draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
+        draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
       );
-
     );
 
     # Adamax optimizer.
@@ -27910,27 +27876,15 @@ nn_lib :
       const P#_ind_m = $P#_m;
       const P#_ind_v = $P#_v;
       learning_mode?(
-        P#_is_channelwise?( # Channel-by-channel normalization
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          d#P#_alpha_v = crop(##P#_ind_v,0,1);
-          d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-          draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
-          draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
-        ):( # Global normalization
-          d#P#_alpha_m = i[##P#_ind_m,0];
-          d#P#_beta_m = i[##P#_ind_m,1];
-          d#P#_alpha_v = i[##P#_ind_v,0];
-          d#P#_beta_v = i[##P#_ind_v,1];
-          nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
-          i[##P#_ind_m,0] = d#P#_alpha_m;
-          i[##P#_ind_m,1] = d#P#_beta_m;
-          i[##P#_ind_v,0] = d#P#_alpha_v;
-          i[##P#_ind_v,1] = d#P#_beta_v;
-        );
+        d#P#_alpha_m = crop(##P#_ind_m,0,1);
+        d#P#_beta_m = crop(##P#_ind_m,1,1);
+        d#P#_alpha_v = crop(##P#_ind_v,0,1);
+        d#P#_beta_v = crop(##P#_ind_v,1,1);
+        nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
+        draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
+        draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+        draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
+        draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
       );
     );
 
@@ -28691,18 +28645,10 @@ nn_lib :
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_is_channelwise = is_channelwise;
       OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
-
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        OUT#_alpha = crop(##OUT#_ind,0,1);
-        OUT#_beta = crop(##OUT#_ind,1,1);
-        OUT#_avg = crop(##OUT#_ind,2,1);
-        OUT#_var = crop(##OUT#_ind,3,1);
-      ):( # Global normalization
-        OUT#_alpha = i[##OUT#_ind,0];
-        OUT#_beta = i[##OUT#_ind,1];
-        OUT#_avg = i[##OUT#_ind,2];
-        OUT#_var = i[##OUT#_ind,3];
-      );
+      OUT#_alpha = crop(##OUT#_ind,0,1);
+      OUT#_beta = crop(##OUT#_ind,1,1);
+      OUT#_avg = crop(##OUT#_ind,2,1);
+      OUT#_var = crop(##OUT#_ind,3,1);
       OUT#_std = sqrt(OUT#_var);
       OUT#_std+=1e-8;
     );
@@ -28725,22 +28671,18 @@ nn_lib :
           copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
         );
       ):( # Global normalization
-        OUT#_hat = IN# - OUT#_avg;
-        OUT#_hat/=OUT#_std;
-        OUT# = OUT#_hat*OUT#_alpha;
-        OUT#+=OUT#_beta;
+        OUT#_hat = IN# - OUT#_avg[0];
+        OUT#_hat/=OUT#_std[0];
+        OUT# = OUT#_hat*OUT#_alpha[0];
+        OUT#+=OUT#_beta[0];
       );
     );
 
     nn_normalize_init_backward(OUT) = (
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        batch_d#OUT#_alpha = vector(#size(OUT#_avg));
-        batch_d#OUT#_beta = vector(#size(OUT#_avg));
-        batch_#OUT#_avg = vector(#size(OUT#_avg));
-        batch_#OUT#_var = vector(#size(OUT#_avg));
-      ):( # Global normalization
-        batch_d#OUT#_alpha = batch_d#OUT#_beta = batch_#OUT#_avg = batch_#OUT#_var = 0;
-      );
+      batch_d#OUT#_alpha = vector(#size(OUT#_avg));
+      batch_d#OUT#_beta = vector(#size(OUT#_avg));
+      batch_#OUT#_avg = vector(#size(OUT#_avg));
+      batch_#OUT#_var = vector(#size(OUT#_avg));
     );
 
     nn_normalize_backward(OUT,IN) = (
@@ -28756,7 +28698,7 @@ nn_lib :
           batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
         );
       ):( # Global normalization
-        d#IN = d#OUT*OUT#_alpha/OUT#_std;
+        d#IN = d#OUT*OUT#_alpha[0]/OUT#_std[0];
         batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
         batch_d#OUT#_beta+=sum(d#OUT);
         batch_#OUT#_avg+=avg(IN#);
