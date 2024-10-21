@@ -28718,6 +28718,45 @@ nn_lib :
     );
 
     nn_normalize_update(P,O,learning_mode) = (
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        learning_mode&1?nn_optimizer_#O#_update_params(P#_alpha);
+        learning_mode&2?nn_optimizer_#O#_update_params(P#_beta);
+      ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
+        const P#_ind_g2 = $P#_g2;
+        learning_mode&1?(
+          d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
+          nn_optimizer_#O#_update_params(P#_alpha);
+          draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
+          nn_optimizer_#O#_update_params(P#_beta);
+          draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
+        );
+      ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?(
+        const P#_ind_m = $P#_m;
+        const P#_ind_v = $P#_v;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          d#P#_alpha_v = crop(##P#_ind_v,0,1);
+          nn_optimizer_#O#_update_params(P#_alpha);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
+          draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          d#P#_beta_v = crop(##P#_ind_v,1,1);
+          nn_optimizer_#O#_update_params(P#_beta);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+          draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
+        );
+      );
+
+      learning_mode&1?draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
     # patchdown2d: 2D downscale by patch.
