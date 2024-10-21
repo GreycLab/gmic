@@ -27611,66 +27611,12 @@ nn_lib :
     # Optimizers.
     #------------
 
-    # Functions shared by optimizers.
-    #---------------------------------
-    nn_optimizer_shared_update_normalize(O,P,learning_mode) = (
-      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-      learning_mode&1?(
-        nn_optimizer_#O#_update_params(P#_alpha);
-        draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
-      );
-      learning_mode&2?(
-        nn_optimizer_#O#_update_params(P#_beta);
-        draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
-      );
-    );
-
-    nn_optimizer_shared_update_mp(P) = ( # Normalize dictionary atoms
-      repeat(w##P#_ind,_nn_k,
-        draw(##P#_ind,unitnorm(crop(##P#_ind,_nn_k,1)),_nn_k,0,0,0,1,h##P#_ind,1,1)
-      );
-    );
-
     # Stochastic gradient descent.
     #-----------------------------
     nn_optimizer_sgd_init() = 0;
 
     nn_optimizer_sgd_update_params(W) = (
       W#-=nn_learning_rate*batch_d#W;
-    );
-
-    nn_optimizer_sgd_update_conv_or_fc(P,learning_mode) = (
-      learning_mode&1?(
-        nn_optimizer_sgd_update_params(P#_params);
-        draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-      );
-      learning_mode&2?(
-        nn_optimizer_sgd_update_params(P#_biases);
-        draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
-      );
-    );
-
-    nn_optimizer_sgd_update_conv2d(P,learning_mode) = (
-      learning_mode?nn_optimizer_sgd_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_sgd_update_conv3d(P,learning_mode) = (
-      learning_mode?nn_optimizer_sgd_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_sgd_update_fc(P,learning_mode) = (
-      learning_mode?nn_optimizer_sgd_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_sgd_update_mp(P,learning_mode) = (
-      nn_optimizer_sgd_update_params(P#_params);
-      draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_shared_update_mp(#P);
-    );
-
-    nn_optimizer_sgd_update_normalize(P,learning_mode) = (
-      nn_optimizer_shared_update_normalize(sgd,#P,#learning_mode);
     );
 
     # RMSprop optimizer.
@@ -27682,54 +27628,6 @@ nn_lib :
     nn_optimizer_rmsprop_update_params(W) = (
       d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
       W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
-    );
-
-    nn_optimizer_rmsprop_update_conv_or_fc(P,learning_mode) = (
-      const P#_ind_g2 = $P#_g2;
-      learning_mode&1?(
-        d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind - 1,h##P#_ind);
-        nn_optimizer_rmsprop_update_params(P#_params);
-        draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-        draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind - 1,h##P#_ind);
-      );
-      learning_mode&2?(
-        d#P#_biases_g2 = crop(##P#_ind_g2,w##P#_ind - 1,0,1,h##P#_ind);
-        nn_optimizer_rmsprop_update_params(P#_biases);
-        draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
-        draw(##P#_ind_g2,d#P#_biases_g2,w##P#_ind - 1,0,1,h##P#_ind);
-      );
-    );
-
-    nn_optimizer_rmsprop_update_conv2d(P,learning_mode) = (
-      learning_mode?nn_optimizer_rmsprop_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_rmsprop_update_conv3d(P,learning_mode) = (
-      learning_mode?nn_optimizer_rmsprop_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_rmsprop_update_fc(P,learning_mode) = (
-      learning_mode?nn_optimizer_rmsprop_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_rmsprop_update_mp(P,learning_mode) = (
-      const P#_ind_g2 = $P#_g2;
-      d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_rmsprop_update_params(P#_params);
-      draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
-      draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_shared_update_mp(#P);
-    );
-
-    nn_optimizer_rmsprop_update_normalize(P,learning_mode) = (
-      const P#_ind_g2 = $P#_g2;
-      learning_mode?(
-        d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
-        d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
-        nn_optimizer_shared_update_normalize(rmsprop,#P,#learning_mode);
-        draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
-        draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
-      );
     );
 
     # Adam optimizer.
@@ -27750,67 +27648,6 @@ nn_lib :
       W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
     );
 
-    nn_optimizer_adam_update_conv_or_fc(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      learning_mode&1?(
-        d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
-        d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind - 1,h##P#_ind);
-        nn_optimizer_adam_update_params(P#_params);
-        draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-        draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
-        draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind - 1,h##P#_ind);
-      );
-      learning_mode&2?(
-        d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
-        d#P#_biases_v = crop(##P#_ind_v,w##P#_ind - 1,0,1,h##P#_ind);
-        nn_optimizer_adam_update_params(P#_biases);
-        draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
-        draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
-        draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
-      );
-    );
-
-    nn_optimizer_adam_update_conv2d(P,learning_mode) = (
-      learning_mode?nn_optimizer_adam_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adam_update_conv3d(P,learning_mode) = (
-      learning_mode?nn_optimizer_adam_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adam_update_fc(P,learning_mode) = (
-      learning_mode?nn_optimizer_adam_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adam_update_mp(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind,h##P#_ind);
-      d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_adam_update_params(P#_params);
-      draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
-      draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind,h##P#_ind);
-      draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_shared_update_mp(#P);
-    );
-
-    nn_optimizer_adam_update_normalize(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      learning_mode?(
-        d#P#_alpha_m = crop(##P#_ind_m,0,1);
-        d#P#_beta_m = crop(##P#_ind_m,1,1);
-        d#P#_alpha_v = crop(##P#_ind_v,0,1);
-        d#P#_beta_v = crop(##P#_ind_v,1,1);
-        nn_optimizer_shared_update_normalize(adam,#P,#learning_mode);
-        draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-        draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-        draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
-        draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
-      );
-    );
-
     # Adamax optimizer.
     #------------------
     nn_optimizer_adamax_init() = (
@@ -27825,67 +27662,6 @@ nn_lib :
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
       d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
       W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
-    );
-
-    nn_optimizer_adamax_update_conv_or_fc(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      learning_mode&1?(
-        d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
-        d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind - 1,h##P#_ind);
-        nn_optimizer_adamax_update_params(P#_params);
-        draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-        draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
-        draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind - 1,h##P#_ind);
-      );
-      learning_mode&2?(
-        d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
-        d#P#_biases_v = crop(##P#_ind_v,w##P#_ind - 1,0,1,h##P#_ind);
-        nn_optimizer_adamax_update_params(P#_biases);
-        draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
-        draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
-        draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
-      );
-    );
-
-    nn_optimizer_adamax_update_conv2d(P,learning_mode) = (
-      learning_mode?nn_optimizer_adamax_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adamax_update_conv3d(P,learning_mode) = (
-      learning_mode?nn_optimizer_adamax_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adamax_update_fc(P,learning_mode) = (
-      learning_mode?nn_optimizer_adamax_update_conv_or_fc(#P,learning_mode);
-    );
-
-    nn_optimizer_adamax_update_mp(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind,h##P#_ind);
-      d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_adamax_update_params(P#_params);
-      draw(##P#_ind,P#_params,0,0,w##P#_ind,h##P#_ind);
-      draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind,h##P#_ind);
-      draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind,h##P#_ind);
-      nn_optimizer_shared_update_mp(#P);
-    );
-
-    nn_optimizer_adamax_update_normalize(P,learning_mode) = (
-      const P#_ind_m = $P#_m;
-      const P#_ind_v = $P#_v;
-      learning_mode?(
-        d#P#_alpha_m = crop(##P#_ind_m,0,1);
-        d#P#_beta_m = crop(##P#_ind_m,1,1);
-        d#P#_alpha_v = crop(##P#_ind_v,0,1);
-        d#P#_beta_v = crop(##P#_ind_v,1,1);
-        nn_optimizer_shared_update_normalize(adamax,#P,#learning_mode);
-        draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-        draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-        draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
-        draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
-      );
     );
 
     #----------------
@@ -28567,9 +28343,9 @@ nn_lib :
     );
 
     nn_mp_update(P,O,learning_mode) = (
-      nn_optimizer_#O=nn_optimizer_sgd?( # sgd
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         learning_mode?nn_optimizer_#O#_update_params(P#_params);
-      ):nn_optimizer_#O=nn_optimizer_rmsprop?( # rmsprop
+      ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $P#_g2;
         learning_mode?(
           d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind,h##P#_ind);
@@ -30194,7 +29970,6 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
     learning_mode=${_nn_${name}_learning_mode}
 
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
-#      _nn_$1_update.="nn_optimizer_$4_update_"$type"("$name,$learning_mode");"
       _nn_$1_update.="nn_"${type}"_update("$name,$4,$learning_mode");"
 
       # Allocate data for storing optimizer extra data (moments,...).
