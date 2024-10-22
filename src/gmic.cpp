@@ -2449,7 +2449,7 @@ const char *gmic::builtin_commands_names[] = {
   "ifft","image","index","inpaint","input","invert","isoline3d","isosurface3d",
   "keep",
   "label","light3d","line","local","log10","log2",
-  "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d","mutex",
+  "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
   "parallel","pass","permute","point","polygon","progress",
@@ -8913,24 +8913,6 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                                 "Divide matrix/vector%s by expression %s",
                                 gmic_selection.data(),gmic_argument_text_printed(),
                                 "Divide matrix/vector%s");
-
-        // Manage mutexes.
-        if (!is_get && !std::strcmp("mutex",item)) {
-          gmic_substitute_args(false);
-          unsigned int number, is_lock = 1;
-          if ((cimg_sscanf(argument,"%u%c",
-                           &number,&end)==1 ||
-               cimg_sscanf(argument,"%u,%u%c",
-                           &number,&is_lock,&end)==2) &&
-              number<256 && is_lock<=1) {
-            print(0,"%s mutex #%u.",
-                  is_lock?"Lock":"Unlock",number);
-            if (is_lock) gmic_mutex().lock(number);
-            else gmic_mutex().unlock(number);
-          } else arg_error("mutex");
-          ++position;
-          continue;
-        }
 
         goto gmic_commands_others;
 
