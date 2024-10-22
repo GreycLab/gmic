@@ -27607,6 +27607,21 @@ nn_lib :
       copy(i(##T#_ind,0,2,0,0),[ nn_adaptive_trend_moment,nn_adaptive_nb_decreases,nn_adaptive_nb_increases ]);
     );
 
+    # Cosine Decrease.
+    #-----------------
+    nn_scheduler_cosine_init() = (
+      nn_scheduler_cosine_lr_avg = nn_learning_rate0;
+      nn_scheduler_cosine_lr_min = 10*nn_scheduler_cosine_lr_avg;
+      nn_scheduler_cosine_lr_max = 0.01*nn_scheduler_cosine_lr_avg;
+      const nn_scheduler_cosine_period = 1000;
+    );
+
+    nn_scheduler_cosine_update(T,L) = (
+      nn_learning_rate = lerp(nn_scheduler_cosine_lr_min,
+                              nn_scheduler_cosine_lr_max,
+                              0.5*(1 + cos(nn_iteration*2*pi/nn_scheduler_cosine_period)));
+    );
+
     #------------
     # Optimizers.
     #------------
@@ -30000,6 +30015,7 @@ _nn_scheduler_constant : 1
 _nn_scheduler_linear : 1
 _nn_scheduler_exponential : 1
 _nn_scheduler_adaptive : (0,0,0)
+_nn_scheduler_cosine : 1
 
 #@cli nn_size
 #@cli: Return size of the current network (i.e. number of stored parameters).
