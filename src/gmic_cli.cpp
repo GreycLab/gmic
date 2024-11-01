@@ -264,9 +264,10 @@ int main(int argc, char **argv) {
         CImg<char>::string("stdlib").move_to(images_names);
         CImg<char> tmp_line(1024);
         cimg_snprintf(tmp_line,tmp_line.width(),
+                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
+                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
                       "cli_start , "
-                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
-                      "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
+                      "l[] { $_path_commands foreach { i raw:{n},uint8 rm[0] } onfail rm } "
                       "rv help \"%s\"",
                       filename_update.data(),filename_update.data(),
                       filename_user,filename_user,
