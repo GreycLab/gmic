@@ -27351,12 +27351,12 @@ nn_lib :
     # Definition of the library environment variables and convenience functions.
     #---------------------------------------------------------------------------
     begin(
-      const nn_is_training = $_nn_is_training!=0; # works also when $_nn_is_training is nan ('undefined')
       const nn_nb_threads_max = n;
       const nn_optimizer_sgd = 0;
       const nn_optimizer_rmsprop = 1;
       const nn_optimizer_adam = 2;
       const nn_optimizer_adamax = 3;
+      nn_is_training = 0;
     );
 
     begin_t(
@@ -27525,6 +27525,7 @@ nn_lib :
     #---------
     nn_trainer_init_update(T,L,O,S) = (
       const T#_ind = $T#;
+      nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
       nn_learning_rate = i[##T#_ind,1];
       nn_learning_rate0 = i[##T#_ind,2];
@@ -28036,30 +28037,28 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
-      const OUT#_dropout_rate = nn_is_training?cut(dropout_rate,0,1):0;
-      OUT#_dropout_rate?(
+      const OUT#_dropout_rate = cut(dropout_rate,0,1);
+    );
+
+    nn_dropout_forward(OUT,IN) = (
+      OUT#_dropout_rate && nn_is_training?(
         OUT#_dropout_channels = vector(##OUT#_spectrum);
         fill(OUT#_dropout_channels,u>=OUT#_dropout_rate);
         OUT#_dropout_sum = sum(OUT#_dropout_channels);
         !OUT#_dropout_sum?(OUT#_dropout_channels = 1; OUT#_dropout_sum = size(OUT#_dropout_channels));
         OUT#_dropout_mask = resize(OUT#_dropout_channels,size(IN#),1);
         OUT#_dropout_mask*=size(OUT#_dropout_channels)/OUT#_dropout_sum;
-      );
-    );
-
-    nn_dropout_forward(OUT,IN) = (
-      OUT#_dropout_rate?(
         OUT# = IN#*OUT#_dropout_mask;
       ):(
-        ref(IN#,OUT#);
+        OUT# = IN#; # Can't use 'ref()' here as condition unknown at compile time
       );
     );
 
     nn_dropout_backward(OUT,IN) = (
-      OUT#_dropout_rate?(
+      OUT#_dropout_rate && nn_is_training?(
         d#IN = d#OUT*OUT#_dropout_mask;
       ):(
-        ref(d#OUT,d#IN);
+        d#IN = d#OUT; # Can't use 'ref()' here as condition unknown at compile time
       );
     );
 
