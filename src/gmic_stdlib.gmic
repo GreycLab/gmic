@@ -28855,7 +28855,7 @@ nn_lib :
     nn_loss_binary_crossentropy_forward(L,IN,TRUTH) = (
       L#_epsiloned = vmax(IN#,1e-8);
       L#_epsiloned1 = vmax(1 - IN#,1e-8);
-      L# = -sum(TRUTH*log(L#_epsiloned) + (1 - TRUTH)*log(L#_epsiloned1));
+      L# = -sum(TRUTH*log(L#_epsiloned) + (1 - TRUTH)*log(L#_epsiloned1))/size(IN#);
       batch_#L+=L#;
     );
 
@@ -28876,8 +28876,8 @@ nn_lib :
     );
 
     nn_loss_crossentropy_forward(L,IN,TRUTH) = (
-      L#_epsiloned = IN# + 1e-8;
-      L# = -sum(TRUTH*log(L#_epsiloned));
+      L#_epsiloned = vmax(IN#,1e-8);
+      L# = -sum(TRUTH*log(L#_epsiloned))/size(IN#);
       batch_#L+=L#;
     );
 
@@ -28899,7 +28899,7 @@ nn_lib :
 
     nn_loss_mse_forward(L,IN,TRUTH) = (
       d#IN = IN# - TRUTH;
-      L# = norm(d#IN)^2/size(d#IN);
+      L# = norm(d#IN)^2/size(IN#);
       batch_#L+=L#;
     );
 
@@ -28922,7 +28922,7 @@ nn_lib :
 
     nn_loss_normp_forward(L,IN,TRUTH) = (
       d#IN = IN# - TRUTH;
-      L# = (!L#_metric?norm(d#IN)^2:norm#L#_metric(d#IN))/size(d#IN);
+      L# = (!L#_metric?norm(d#IN)^2:norm#L#_metric(d#IN))/size(IN#);
       batch_#L+=L#;
     );
 
@@ -28949,11 +28949,8 @@ nn_lib :
     );
 
     nn_loss_softmax_crossentropy_forward(L,IN,TRUTH) = (
-      L#_softmax = exp(IN# - max(IN#));
-      L#_softmax/=sum(L#_softmax);
-      L#_softmax+=1e-8;
-      L# = -sum(TRUTH*log(L#_softmax));
-      d#IN = L#_softmax - TRUTH;
+      L#_softmax = vmax(softmax(IN#),1e-8);
+      L# = -sum(TRUTH*log(L#_softmax))/size(IN#);
       batch_#L+=L#;
     );
 
@@ -28964,12 +28961,7 @@ nn_lib :
     );
 
     nn_loss_softmax_crossentropy_backward(L,IN,TRUTH) = (
-      L#_softmax = exp(IN# - max(IN#));
-      L#_softmax/=sum(L#_softmax);
-      L#_softmax+=1e-8;
-      L# = -sum(TRUTH*log(L#_softmax));
       d#IN = L#_softmax - TRUTH;
-      batch_#L+=L#;
     );"
 
 #@cli nn_init
