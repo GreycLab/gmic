@@ -27805,6 +27805,7 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_regularization = 1e-4;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
     );
@@ -27854,6 +27855,7 @@ nn_lib :
       # Compute dLOSS/dbiases.
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT[_nn_k*OUT#_whd,OUT#_whd]));
+      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -27877,6 +27879,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
+      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -27907,6 +27910,7 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_regularization = 1e-4;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
     );
@@ -27956,6 +27960,7 @@ nn_lib :
       # Compute dLOSS/dbiases.
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT[_nn_k*OUT#_whd,OUT#_whd]));
+      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -27979,6 +27984,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
       );
+      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -28087,6 +28093,7 @@ nn_lib :
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = h##OUT#_ind;
+      const OUT#_regularization = 1e-4;
       OUT#_params = crop(##OUT#_ind,0,0,size(IN#),h##OUT#_ind);
       OUT#_biases = crop(##OUT#_ind,size(IN#),0,1,h##OUT#_ind);
     );
@@ -28104,6 +28111,7 @@ nn_lib :
     nn_fc_backward(OUT,IN) = (
       d#IN = mul(transpose(OUT#_params,size(IN#)),d#OUT);
       d#OUT#_params = mul(d#OUT,IN#,size(IN#));
+      OUT#_regularization>0?(d#OUT_params+=OUT#_regularization*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT;
     );
@@ -28853,8 +28861,8 @@ nn_lib :
     );
 
     nn_loss_binary_crossentropy_forward(L,IN,TRUTH) = (
-      L#_epsiloned = vmax(IN#,1e-8);
-      L#_epsiloned1 = vmax(1 - IN#,1e-8);
+      L#_epsiloned = vmax(IN#,1e-32);
+      L#_epsiloned1 = vmax(1 - IN#,1e-32);
       L# = -sum(TRUTH*log(L#_epsiloned) + (1 - TRUTH)*log(L#_epsiloned1))/size(IN#);
       batch_#L+=L#;
     );
