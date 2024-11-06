@@ -42,6 +42,7 @@ Source: build64-gimp\styles\qwindowsvistastyle.dll; DestDir: {app}\styles
 Source: build64-gimp\gmic_cluts.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 Source: build64-gimp\gmic_fonts.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 Source: build64-gimp\gmic_denoise_cnn.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
+Source: build64-gimp\gmic_scale2x_cnn.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 Source: build64-gimp\Qt5Core.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Gui.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Network.dll; DestDir: {app}; Flags: ignoreversion

@@ -774,6 +774,7 @@ install:
 	@if [ -f gmic_libc.h ]; then cp -f gmic_libc.h $(DESTDIR)$(PREFIX)/$(INCLUDE)/; fi
 	@if [ -f ../resources/gmic_cluts.gmz ]; then cp -f ../resources/gmic_cluts.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../resources/gmic_denoise_cnn.gmz ]; then cp -f ../resources/gmic_denoise_cnn.gmz $(DESTDIR)$(SHARE)/gmic; fi
+	@if [ -f ../resources/gmic_scale2x_cnn.gmz ]; then cp -f ../resources/gmic_scale2x_cnn.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../resources/gmic_fonts.gmz ]; then cp -f ../resources/gmic_fonts.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../resources/gmic_lightleaks.gmz ]; then cp -f ../resources/gmic_lightleaks.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../zart/zart ]; then cp -f ../zart/zart $(DESTDIR)$(PREFIX)/$(BIN); fi
