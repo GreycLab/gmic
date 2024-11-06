@@ -17724,10 +17724,10 @@ rows : check "isint(${3=0},0,3)" skip ${2=$1}
   z 0,$1,100%,$2,$3
 
 #@cli scale2x
-#@cli : Resize selected images using the Scale2x algorithm.
+#@cli : Double XY-size of selected images, using the Scale2x algorithm.
 #@cli : $ image.jpg threshold 50% resize 50%,50% +scale2x
 scale2x :
-  e[^-1] "Double xy-dimensions of image$?, using Scale2x algorithm."
+  e[^-1] "Double XY-size of image$?, using the Scale2x algorithm."
   foreach {
     r 200%,200%
     f "dx=x&1;dy=y&1;A=j(0,-2,0,0,0,1);B=j(2,0,0,0,0,1);C=j(-2,0,0,0,0,1);D=j(0,2,0,0,0,1);
@@ -17735,11 +17735,40 @@ scale2x :
        dy*(dx*(B==D&&B!=A&&D!=C?D:i) + !dx*(D==C&&D!=B&&C!=A?C:i))"
   }
 
+#@cli scale2x_cnn : _sharpness>=0
+#@cli : Double XY-size of selected images, using a convolutional neural network.
+#@cli : Defaut value: 'sharpness=1'.
+scale2x_cnn : check "${1=1}>=0"
+  e[^-1] "Double XY-size of image$?, using a convolutional neural network, with sharpness $1."
+  N=$!
+  if !$1 r 200%,200%,1,100%,3 return fi # If 'sharpness=0', return bilinear upscale
+  if 0${_is_scale2x_cnn} ${_scale2x_cnn}
+  else l[] {
+    l[] {
+      input_cached gmic_scale2x_cnn.gmz
+      onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
+    }
+    +store _scale2x_cnn _is_scale2x_cnn=1
+  } fi
+  run {t} rm.
+
+  # Process images.
+  repeat $N {
+    mv[0] $! rgb2ycbcr. +r. 200%,200%,1,100%,3 channels.. 0
+    img2patches.. 32,0,3 i.. 64,64,{-2,d}
+    1,1,{-2,d},1,:${-nn_lib}"
+      IN = crop(#-3,0,0,z,0,32,32,1,1);"${_nn_forward}"
+      draw(#-2,RESIDUAL,0,0,z,0,64,64,1,1)"
+    rm[-4,-1] patches2img.. {[w,h]} *.. $1
+    j. ..,0,0,0,0,-1 rm.. ycbcr2rgb.
+  }
+  k[-$N--1]
+
 #@cli scale3x
-#@cli : Resize selected images using the Scale3x algorithm.
+#@cli : Tripe XY-size of selected images, using the Scale3x algorithm.
 #@cli : $ image.jpg threshold 50% resize 33%,33% +scale3x
 scale3x :
-  e[^-1] "Triple xy-dimensions of image$?, using Scale3x algorithm."
+  e[^-1] "Triple XY-size of image$?, using the Scale3x algorithm."
   foreach {
     r 300%,300%
     f "dx=x%3;dy=y%3;c0=!dx;c1=(dx==1);c2=(dx==2);
@@ -17755,12 +17784,12 @@ scale3x :
   }
 
 #@cli scale_dcci2x : _edge_threshold>=0,_exponent>0,_extend_1px={ 0:false | 1:true }
-#@cli : Double image size using directional cubic convolution interpolation,
+#@cli : Double XY-size of selected images, using a directional cubic convolution interpolation,
 #@cli : as described in <https://en.wikipedia.org/wiki/Directional_Cubic_Convolution_Interpolation>.
 #@cli : Default values: 'edge_threshold=1.15', 'exponent=5' and 'extend_1px=0'.
 #@cli : $ image.jpg +scale_dcci2x ,
 scale_dcci2x : check "${1=1.15}>=0 && ${2=5}>=0" skip ${3=0}
-  e[^-1] "Double xy-dimensions of image$?, using DCCI2x algorithm."
+  e[^-1] "Double XY-size of image$?, using DCCI2x algorithm."
   foreach {
     r {2*w-(!$3)},{2*h-(!$3)},1,100%,4
 
