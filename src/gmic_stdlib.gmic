@@ -17758,6 +17758,7 @@ scale2x_cnn : check "${1=1}>=0"
     img2patches.. 32,0,3 i.. 64,64,{-2,d}
     1,1,{-2,d},1,:${-nn_lib}"
       IN = crop(#-3,0,0,z,0,32,32,1,1);"${_nn_forward}"
+      !t?critical(run('progress ',100*z*n/d));
       draw(#-2,RESIDUAL,0,0,z,0,64,64,1,1)"
     rm[-4,-1] patches2img.. {[w,h]} *.. $1
     j. ..,0,0,0,0,-1 rm.. ycbcr2rgb.
@@ -42188,6 +42189,9 @@ gui_download_all_data :
   # Denoising CNN.
   l[] { input_cached gmic_denoise_cnn.gmz rm onfail rm }
 
+  # Scale2x CNN.
+  l[] { input_cached gmic_scale2x_cnn.gmz rm onfail rm }
+
   # Grain.
   _filenames_grain=${-_fx_simulate_grain}
   _url_grain=https://gmic.eu/data_film_presets
@@ -57798,6 +57802,25 @@ fx_smooth_haar :
 
 fx_smooth_haar_preview :
   gui_split_preview "fx_smooth_haar $*",${-3--1}
+
+#@gui Upscale [CNN2x] : fx_scale2x_cnn, fx_scale2x_cnn_preview(0)
+#@gui : Sharpness = float(1.25,0,5)
+#@gui : sep = separator()
+#@gui : note = note{"<small>
+#@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
+#@gui : to upscale images. This filter does not take advantage of GPU computing, so expect it to be quite slow
+#@gui : if you don't have many CPU cores available.
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/11/07</i>.</small>")
+fx_scale2x_cnn :
+  scale2x_cnn $1
+
+fx_scale2x_cnn_preview :
+  rs 128,128,0
+  foreach {
+    gui_split_preview "scale2x_cnn $1",9,50,50
+  }
 
 #@gui Upscale [Diffusion] : fx_upscale_smart, fx_upscale_smart_preview(0)
 #@gui : Width = text("200%")
