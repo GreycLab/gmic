@@ -28700,38 +28700,24 @@ nn_lib :
       const OUT#_height = IN#_height*patch_size;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum/patch_size^2;
-      const OUT#_patchsize = patch_size;
+      const OUT#_patch_size = patch_size;
+      OUT#_map_forward = expr('const N = patch_size;
+        fx = x%N; fy = y%N; xi = int(x/N); yi = int(y/N); ci = c*N^2 + N*fy + fx; xi + yi*w/N + z*wh/N^2 + ci*whd/N^2',
+        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
     );
 
     nn_patchup2d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
-      repeat (IN#_depth,_nn_z,
-        repeat (IN#_height,_nn_y,
-          _nn_yp = _nn_y*OUT#_patch_size;
-          repeat (IN#_width,_nn_x,
-            draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                 crop(#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,_nn_x,_nn_y,_nn_z,1,1,1),
-                 _nn_x*OUT#_patch_size,_nn_yp,_nn_z,
-                 OUT#_patch_size,OUT#_patch_size,1);
-          );
-        );
-      );
+      OUT# = map(OUT#_map_forward,IN#);
+    );
+
+    nn_patchup2d_init_backward(OUT,IN,patch_size) = (
+      OUT#_map_backward = expr('const N = patch_size;
+        fx = N*x + (c%N); fy = N*y + int(c/N); fx + fy*w*N + z*wh*N^2 + int(c/N^2)*whd*N^2',
+      IN#_width,IN#_height,IN#_depth,IN#_spectrum);
     );
 
     nn_patchup2d_backward(OUT,IN) = (
-      d#IN = vector(#size(IN#));
-      repeat (IN#_depth,_nn_z,
-        repeat (IN#_height,_nn_y,
-          _nn_yp = _nn_y*OUT#_patch_size;
-          repeat (IN#_width,_nn_x,
-            draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                 crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                 _nn_x*OUT#_patch_size,_nn_yp,_nn_z,
-                 OUT#_patch_size,OUT#_patch_size,1),
-                 _nn_x,_nn_y,_nn_z,1,1,1);
-          );
-        );
-      );
+      d#IN = map(OUT#_map_backward,OUT#);
     );
 
     # patchup3d: 3D upscale by patch.
@@ -29609,7 +29595,8 @@ nn_patchup2d : if ['${2=.}']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $i
   _nn_$1_properties="patch_size=$3x$3"
   _nn_forward.="begin(nn_patchup2d_init_forward($1,"$in",$3));"\
                "nn_patchup2d_forward($1,"$in");"
-  _nn_backward..="nn_patchup2d_backward($1,"$in");"
+  _nn_backward..="begin(nn_patchup2d_init_backward($1,"$in",$3));"\
+                 "nn_patchup2d_backward($1,"$in");"
   _nn_init.="$0 $* "
   _nn_latest=$1
 
