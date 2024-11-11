@@ -28619,7 +28619,7 @@ nn_lib :
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const N = patch_size; const N2 = N^2;
         fx = N*x + c%N; fy = N*y + int(c/N)%N;
-        fx + fy*w*N + z*wh*N2 + int(c/N2)*whd*N2',
+        fx + N*w*fy + N2*wh*z + N2*whd*int(c/N2)',
         OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
     );
 
@@ -28630,8 +28630,8 @@ nn_lib :
     nn_patchdown2d_init_backward(OUT,IN,patch_size) = (
       OUT#_map_backward = expr('const N = patch_size; const N2 = N^2;
         fx = x%N; fy = y%N;
-        xi = int(x/N); yi = int(y/N); ci = c*N2 + N*fy + fx;
-        xi + yi*w/N + z*wh/N2 + ci*whd/N2',
+        xi = int(x/N); yi = int(y/N); ci = fx + N*fy + N2*c;
+        xi + w/N*yi + wh/N2*z + whd/N2*ci',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
     );
 
@@ -28692,8 +28692,8 @@ nn_lib :
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const N = patch_size; const N2 = N^2;
         fx = x%N; fy = y%N;
-        xi = int(x/N); yi = int(y/N); ci = c*N2 + N*fy + fx;
-        xi + yi*w/N + z*wh/N2 + ci*whd/N2',
+        xi = int(x/N); yi = int(y/N); ci = fx + N*fy + N2*c;
+        xi + w/N*yi + wh/N2*z + whd/N2*ci',
         OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
     );
 
@@ -28704,7 +28704,7 @@ nn_lib :
     nn_patchup2d_init_backward(OUT,IN,patch_size) = (
       OUT#_map_backward = expr('const N = patch_size; const N2 = N^2;
         fx = N*x + c%N; fy = N*y + int(c/N)%N;
-        fx + fy*w*N + z*wh*N2 + int(c/N2)*whd*N2',
+        fx + N*w*fy + N2*wh*z + N2*whd*int(c/N2)',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
     );
 
