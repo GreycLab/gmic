@@ -28777,6 +28777,8 @@ nn_lib :
       const OUT#_depth = d;
       const OUT#_spectrum = s;
       const OUT#_interpolation = interpolation;
+      const OUT#_is_downscale = OUT#_width<=IN#_width && OUT#_height<=IN#_height &&
+                                OUT#_depth<=IN#_depth && OUT#_spectrum<=IN#_spectrum;
     );
 
     nn_resize_forward(OUT,IN) = (
@@ -28790,7 +28792,15 @@ nn_lib :
       d#IN = resize(d#OUT,
                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                    2);
+                    arg0(OUT#_interpolation,
+                      0,                      # Zero padding
+                      OUT#_is_downscale?4:2,  # Nearest neighbor
+                      OUT#_is_downscale?1:2,  # Moving average (downscale) / nearest-neighbor (upscale)
+                      OUT#_is_downscale?1:2,  # Moving average (downscale) / linear (upscale)
+                      4,                      # Grid
+                      OUT#_is_downscale?1:2,  # Moving average / cubic
+                      OUT#_is_downscale?1:2); # Moving average / lanczos
+                    );
     );
 
     # run: Transform input with G'MIC command.
