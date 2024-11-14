@@ -6365,7 +6365,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
             print(0,
                   "%s image%s with kernel [%u], %s boundary conditions, "
-                  "with%s normalization, channel mode '%s'%s%s%s%s and %s interpolation.",
+                  "with%s normalization, channel mode '%s'%s%s%s%s.",
                   is_cond?"Convolve":"Correlate",
                   gmic_selection.data(),
                   *ind,
