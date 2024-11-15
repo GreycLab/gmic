@@ -27859,15 +27859,26 @@ nn_lib :
 
     nn_conv2d_backward(OUT,IN) = (
 
+      # Handle strided convolution case.
+      const OUT#_prestrided_width = OUT#_width*OUT#_stride;
+      const OUT#_prestrided_height = OUT#_height*OUT#_stride;
+      const OUT#_prestrided_depth = OUT#_depth;
+      const OUT#_prestrided_spectrum = OUT#_spectrum;
+      const OUT#_prestrided_whd = OUT#_prestrided_width*OUT#_prestrided_height*OUT#_prestrided_depth;
+      OUT#_stride==1?(
+        ref(d#OUT,d#OUT#_prestrided);
+      ):(
+        d#OUT#_prestrided = resize(d#OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,4);
+      );
+
       # Compute dLOSS/dIN.
       const OUT#_offset = -int(OUT#_shrink/OUT#_stride);
-      const OUT#_invstride = 1/OUT#_stride;
-      const OUT#_dons = OUT#_dilation/OUT#_stride;
       d#IN = vector(#size(IN#));
       repeat (IN#_spectrum,_nn_k,
         draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-             correlate(d#OUT,
-                       OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+             correlate(d#OUT#_prestrided,
+                       OUT#_prestrided_width,OUT#_prestrided_height,OUT#_prestrided_depth,OUT#_prestrided_spectrum,
                        crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
                             _nn_k*OUT#_kernel_size2,0,OUT#_kernel_size2,OUT#_spectrum),
                        OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum,
@@ -27875,14 +27886,14 @@ nn_lib :
                        OUT#_kernel_center,OUT#_kernel_center,0,
                        OUT#_offset,OUT#_offset,0,
                        IN#_width - 1 + OUT#_offset,IN#_height - 1 + OUT#_offset,IN#_depth - 1,
-                       OUT#_invstride,OUT#_invstride,1,
-                       OUT#_dons,OUT#_dons,1),
+                       1,1,1,
+                       OUT#_dilation,OUT#_dilation,1),
              0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
       );
 
       # Compute dLOSS/dbiases.
       d#OUT#_biases = vector(#size(OUT#_biases));
-      fill(d#OUT#_biases,_nn_k,sum(d#OUT[_nn_k*OUT#_whd,OUT#_whd]));
+      fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
       OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
@@ -27893,7 +27904,8 @@ nn_lib :
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
              OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*IN#_spectrum,
-             correlate(crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+             correlate(crop(d#OUT#_prestrided,
+                            OUT#_prestrided_width,OUT#_prestrided_height,OUT#_prestrided_depth,OUT#_prestrided_spectrum,
                             0,0,0,_nn_k,OUT#_width,OUT#_height,OUT#_depth,1),
                        OUT#_width,OUT#_height,OUT#_depth,1,
                        IN#,
@@ -27902,8 +27914,8 @@ nn_lib :
                        OUT#_dcenter,OUT#_dcenter,0,
                        OUT#_offset,OUT#_offset,0,
                        OUT#_kend,OUT#_kend,0,
-                       OUT#_dons,OUT#_dons,1,
-                       OUT#_invstride,OUT#_invstride,1),
+                       OUT#_dilation,OUT#_dilation,1,
+                       1,1,1),
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
