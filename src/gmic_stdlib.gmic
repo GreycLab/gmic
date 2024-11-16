@@ -27873,7 +27873,6 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN.
-      const OUT#_offset = -int(OUT#_shrink/OUT#_stride);
       d#IN = vector(#size(IN#));
       repeat (IN#_spectrum,_nn_k,
         draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
@@ -27884,8 +27883,8 @@ nn_lib :
                        OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum,
                        0,0,2,
                        OUT#_kernel_center,OUT#_kernel_center,0,
-                       OUT#_offset,OUT#_offset,0,
-                       IN#_width - 1 + OUT#_offset,IN#_height - 1 + OUT#_offset,IN#_depth - 1,
+                       -OUT#_shrink,-OUT#_shrink,0,
+                       IN#_width - 1 - OUT#_shrink,IN#_height - 1 - OUT#_shrink,IN#_depth - 1,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1),
              0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
@@ -27899,7 +27898,7 @@ nn_lib :
 
       # Compute dLOSS/dweights.
       const OUT#_dcenter = OUT#_dilation*OUT#_kernel_center;
-      const OUT#_kend = OUT#_kernel_size - 1 + OUT#_offset;
+      const OUT#_kend = OUT#_kernel_size - 1 - OUT#_shrink;
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
@@ -27912,7 +27911,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dcenter,OUT#_dcenter,0,
-                       OUT#_offset,OUT#_offset,0,
+                       -OUT#_shrink,-OUT#_shrink,0,
                        OUT#_kend,OUT#_kend,0,
                        OUT#_dilation,OUT#_dilation,1,
                        1,1,1),
