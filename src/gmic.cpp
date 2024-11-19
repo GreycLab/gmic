@@ -6307,8 +6307,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           int
             xstart = 0, ystart = 0, zstart = 0,
             xend = (int)(~0U>>1), yend = (int)(~0U>>1), zend = (int)(~0U>>1),
-            xcenter = (int)(~0U>>1), ycenter = (int)(~0U>>1), zcenter = (int)(~0U>>1);
-          float
+            xcenter = (int)(~0U>>1), ycenter = (int)(~0U>>1), zcenter = (int)(~0U>>1),
             xstride = 1, ystride = 1, zstride = 1,
             xdilation = 1, ydilation = 1 , zdilation = 1;
           is_cond = command[2]=='n'; // is_convolve?
@@ -6328,10 +6327,10 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstart,&ystart,&zstart,&xend,&yend,&zend,&end)==13 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%f,%f%c",
+               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstart,&ystart,&zstart,&xend,&yend,&zend,&xstride,&ystride,&zstride,&end)==16 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%f,%f,%f,%f,%f%c",
+               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstart,&ystart,&zstart,&xend,&yend,&zend,&xstride,&ystride,&zstride,
                            &xdilation,&ydilation,&zdilation,&end)==19) &&
@@ -6358,7 +6357,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               }
               if (xdilation!=1 || ydilation!=1 || zdilation!=1) {
                 gmic_use_argc;
-                cimg_snprintf(argc,_argc.width(),", dilations (%g,%g,%g)",
+                cimg_snprintf(argc,_argc.width(),", dilations (%d,%d,%d)",
                               xdilation,ydilation,zdilation);
               }
             }
