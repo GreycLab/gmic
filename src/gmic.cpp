@@ -6352,7 +6352,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               }
               if (xstride!=1 || ystride!=1 || zstride!=1) {
                 gmic_use_argz;
-                cimg_snprintf(argz,_argz.width(),", strides (%g,%g,%g)",
+                cimg_snprintf(argz,_argz.width(),", strides (%d,%d,%d)",
                               xstride,ystride,zstride);
               }
               if (xdilation!=1 || ydilation!=1 || zdilation!=1) {
