@@ -27833,6 +27833,7 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
     );
@@ -27844,8 +27845,8 @@ nn_lib :
                       OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum*OUT#_spectrum,
                       OUT#_boundary_conditions,0,2,
                       OUT#_kernel_center,OUT#_kernel_center,0,
-                      OUT#_shrink,OUT#_shrink,0,
-                      OUT#_width - 1 + OUT#_shrink,OUT#_height - 1 + OUT#_shrink,OUT#_depth - 1,
+                      OUT#_shrink_stride,OUT#_shrink_stride,0,
+                      IN#_width - 1 - OUT#_shrink_stride,IN#_height - 1 - OUT#_shrink_stride,IN#_depth - 1,
                       OUT#_stride,OUT#_stride,1,
                       OUT#_dilation,OUT#_dilation,1);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
@@ -27881,8 +27882,8 @@ nn_lib :
                        OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum,
                        0,0,2,
                        OUT#_kernel_center,OUT#_kernel_center,0,
-                       -OUT#_shrink,-OUT#_shrink,0,
-                       IN#_width - 1 - OUT#_shrink,IN#_height - 1 - OUT#_shrink,IN#_depth - 1,
+                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
+                       IN#_width - 1 - OUT#_shrink_stride,IN#_height - 1 - OUT#_shrink_stride,IN#_depth - 1,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1),
              0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
@@ -27909,7 +27910,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dcenter,OUT#_dcenter,0,
-                       -OUT#_shrink,-OUT#_shrink,0,
+                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
                        OUT#_kend,OUT#_kend,0,
                        OUT#_dilation,OUT#_dilation,1,
                        1,1,1),
@@ -27947,6 +27948,7 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
     );
@@ -27959,7 +27961,9 @@ nn_lib :
                       OUT#_boundary_conditions,0,2,
                       OUT#_kernel_center,OUT#_kernel_center,OUT#_kernel_center,
                       OUT#_shrink,OUT#_shrink,OUT#_shrink,
-                      OUT#_width - 1 + OUT#_shrink,OUT#_height - 1 + OUT#_shrink,OUT#_depth - 1 + OUT#_shrink,
+                      IN#_width - 1 - OUT#_shrink_stride,
+                      IN#_height - 1 - OUT#_shrink_stride,
+                      IN#_depth - 1 - OUT#_shrink_stride,
                       OUT#_stride,OUT#_stride,OUT#_stride,
                       OUT#_dilation,OUT#_dilation,OUT#_dilation);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
