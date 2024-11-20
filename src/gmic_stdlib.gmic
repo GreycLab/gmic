@@ -27883,8 +27883,8 @@ nn_lib :
                        0,0,2,
                        OUT#_kernel_center,OUT#_kernel_center,0,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,0,
-                       OUT#_width_stride - 1 + OUT#_shrink_stride,
-                       OUT#_height_stride - 1 + OUT#_shrink_stride,
+                       IN#_width - 1 - OUT#_shrink_stride,
+                       IN#_height - 1 - OUT#_shrink_stride,
                        IN#_depth - 1,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1),
@@ -27898,6 +27898,33 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
+      d#OUT#_params = vector(#size(OUT#_params));
+
+      # repeat (OUT#_spectrum,_nn_n,
+      #   repeat (IN#_spectrum,_nn_s,
+      #     draw(d#OUT#_params,
+      #          OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*IN#_spectrum,
+      #          correlate(crop(d#OUT#_prestrided,
+      #                         OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
+      #                         0,0,0,_nn_n,OUT#_width,OUT#_height,OUT#_depth,1),
+      #                    OUT#_width,OUT#_height,OUT#_depth,1,
+      #                    crop(IN#,
+      #                         IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      #                         0,0,0,_nn_s,IN#_width,IN#_height,IN#_depth,1),
+      #                    IN#_width,IN#_height,IN#_depth,1,
+      #                    0,0,1,
+      #                    OUT#_kernel_center,OUT#_kernel_center,0,
+      #                    -OUT#_shrink_stride,-OUT#_shrink_stride,0,
+      #                    OUT#_kernel_size - 1 - OUT#_shrink_stride,
+      #                    OUT#_kernel_size - 1 - OUT#_shrink_stride,
+      #                    0,
+      #                    1,1,1,
+      #                    OUT#_dilation,OUT#_dilation,1),
+      #          0,0,0,_nn_n*IN#_spectrum + _nn_s,
+      #          OUT#_kernel_size,OUT#_kernel_size,1,1);
+      #   );
+      # );
+
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
@@ -27919,7 +27946,6 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
-
 
       OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
