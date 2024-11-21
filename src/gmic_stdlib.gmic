@@ -28957,29 +28957,6 @@ nn_lib :
       d#IN*=2;
     );
 
-    # mse_softmax : Mean-squared error with softmax.
-    #------------------------------------------------
-    nn_loss_mse_softmax_init_forward(L) = (
-      batch_#L = 0;
-    );
-
-    nn_loss_mse_softmax_forward(L,IN,TRUTH) = (
-      d#IN = IN# - TRUTH;
-      L# = norm(d#IN)^2/size(IN#);
-      batch_#L+=L#;
-    );
-
-    nn_loss_mse_softmax_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
-    );
-
-    nn_loss_mse_softmax_backward(L,IN,TRUTH) = (
-#      d#IN*=2;
-      d#IN*=L#/30;
-    );
-
     # normp : p-norm.
     #-----------------
     nn_loss_normp_init_forward(L,metric) = (
@@ -29971,22 +29948,6 @@ nn_loss_mse : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
             "nn_loss_mse_forward($1,"$in",$3);"\
             "end(nn_loss_mse_end_forward($1));"
   _nn_backward..="nn_loss_mse_backward($1,"$in",$3);"
-  _nn_latest=$1
-
-#@cli nn_loss_mse_softmax : out,in,ground_truth
-#@cli : Add a 'mse' loss + softmax to the network (mean-squared error).
-nn_loss_mse_softmax : if ['$2']=='.' in=$_nn_latest else in=$2 fi nn_check_layer $in
-              check "isvarname('$1') && isvarname('$3')"
-  e[^-1] "[nn_lib] Add MSE loss '$1', with input '"$in"' and ground truth '$3'."
-  _nn_modules_names.=$1,
-  _nn_modules_types.=loss_mse,
-  _nn_$1_size=1,1,1,1
-  _nn_$1_input=$in
-  _nn_$1_properties="ground_truth=$3"
-  _nn_loss.="begin(nn_loss_mse_softmax_init_forward($1));"\
-            "nn_loss_mse_softmax_forward($1,"$in",$3);"\
-            "end(nn_loss_mse_softmax_end_forward($1));"
-  _nn_backward..="nn_loss_mse_softmax_backward($1,"$in",$3);"
   _nn_latest=$1
 
 #@cli nn_loss_normp : out,in,ground_truth,_metric={ 0:squared-L2 | p>0:Lp-norm }
