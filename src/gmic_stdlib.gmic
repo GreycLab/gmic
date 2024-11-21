@@ -27898,6 +27898,9 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
+      const OUT#_xy0 = -OUT#_shrink;
+      const OUT#_xy1 = OUT#_xy0 + OUT#_dilation*OUT#_kernel_size - 1;
+      const OUT#_dkc = OUT#_dilation*OUT#_kernel_center;
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
@@ -27909,13 +27912,11 @@ nn_lib :
                        IN#,
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
-                       OUT#_kernel_center,OUT#_kernel_center,0,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
-                       OUT#_kernel_size - 1 - OUT#_shrink_stride,
-                       OUT#_kernel_size - 1 - OUT#_shrink_stride,
-                       0,
-                       1,1,1,
-                       1,1,1), # Expected 'OUT#_dilation,OUT#_dilation,1', but it doesn't work
+                       OUT#_dkc,OUT#_dkc,0,
+                       OUT#_xy0,OUT#_xy0,0,
+                       OUT#_xy1,OUT#_xy1,0,
+                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually equal to dilation
+                       1,1,1),
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
@@ -28018,6 +28019,9 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
+      const OUT#_xyz0 = -OUT#_shrink;
+      const OUT#_xyz1 = OUT#_xy0 + OUT#_dilation*OUT#_kernel_size - 1;
+      const OUT#_dkc = OUT#_dilation*OUT#_kernel_center;
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
@@ -28029,13 +28033,11 @@ nn_lib :
                        IN#,
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
-                       OUT#_kernel_center,OUT#_kernel_center,OUT#_kernel_center,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
-                       OUT#_kernel_size - 1 - OUT#_shrink_stride,
-                       OUT#_kernel_size - 1 - OUT#_shrink_stride,
-                       OUT#_kernel_size - 1 - OUT#_shrink_stride,
-                       1,1,1,
-                       1,1,1), # Expected 'OUT#_dilation,OUT#_dilation,OUT#_dilation', but it doesn't work
+                       OUT#_dkc,OUT#_dkc,OUT#_dkc,
+                       OUT#_xyz0,OUT#_xyz0,OUT#_xyz0,
+                       OUT#_xyz1,OUT#_xyz1,OUT#_xyz1,
+                       OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually equal to dilation
+                       1,1,1),
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
       );
