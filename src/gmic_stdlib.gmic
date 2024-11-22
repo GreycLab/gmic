@@ -21863,10 +21863,10 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
     # Compute SSIM map.
     $gaussian_weights => W
     p0,p1:="p0 = round(w/2,1,-1); [ p0,w-1-p0 ]"
-    +correlate[A,B] [W],0,0,1,$p0,$p0,0,1,1,1,1,1,1,$p0,$p0,0,{A,[w,h]-1-$p1},0
+    +correlate[A,B] [W],0,0,1,$p0,$p0,0,1,1,1,1,1,1,$p0,$p0,0,{A,[w,h]-$p0-$p1},0
     +mul[-2,-1] sqr[-3,-2] => muA2,muB2,muAB
     +mul[A,B] sqr[A,B] =>[A,B,-1] A2,B2,AB
-    correlate[A2,B2,AB] [W],0,0,1,$p0,$p0,0,1,1,1,1,1,1,$p0,$p0,0,{A2,[w,h]-1-$p1},0
+    correlate[A2,B2,AB] [W],0,0,1,$p0,$p0,0,1,1,1,1,1,1,$p0,$p0,0,{A2,[w,h]-$p0-$p1},0
     -[A2] [muA2] -[B2] [muB2] -[AB] [muAB]
     =>[A2,B2,AB] sigA2,sigB2,sigAB
     *[muAB] 2 +[muAB] $C1 *[sigAB] 2 +[sigAB] $C2 *[muAB,sigAB] =>[muAB] num
@@ -27849,8 +27849,8 @@ nn_lib :
                       OUT#_stride,OUT#_stride,1,
                       OUT#_dilation,OUT#_dilation,1,
                       OUT#_shrink_stride,OUT#_shrink_stride,0,
-                      IN#_width - 1 - OUT#_shrink_stride,
-                      IN#_height - 1 - OUT#_shrink_stride,
+                      IN#_width - 1 - 2*OUT#_shrink_stride,
+                      IN#_height - 1 - 2*OUT#_shrink_stride,
                       IN#_depth - 1);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
@@ -27888,9 +27888,7 @@ nn_lib :
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,0,
-                       IN#_width - 1 - OUT#_shrink_stride,
-                       IN#_height - 1 - OUT#_shrink_stride,
-                       IN#_depth - 1),
+                       IN#_width,IN#_height,IN#_depth),
              0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
       );
 
@@ -27901,8 +27899,6 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
-      const OUT#_xy0 = -OUT#_shrink;
-      const OUT#_xy1 = OUT#_xy0 + OUT#_dilation*OUT#_kernel_size - 1;
       const OUT#_dkc = OUT#_dilation*OUT#_kernel_center;
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
@@ -27918,8 +27914,8 @@ nn_lib :
                        OUT#_dkc,OUT#_dkc,0,
                        OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually equal to dilation
                        1,1,1,
-                       OUT#_xy0,OUT#_xy0,0,
-                       OUT#_xy1,OUT#_xy1,0),
+                       -OUT#_shrink,-OUT#_shrink,0,
+                       OUT#_kernel_size,OUT#_kernel_size,1),
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
@@ -27968,9 +27964,9 @@ nn_lib :
                       OUT#_stride,OUT#_stride,OUT#_stride,
                       OUT#_dilation,OUT#_dilation,OUT#_dilation,
                       OUT#_shrink_stride,OUT#_shrink_stride,OUT#_shrink_stride,
-                      IN#_width - 1 - OUT#_shrink_stride,
-                      IN#_height - 1 - OUT#_shrink_stride,
-                      IN#_depth - 1 - OUT#_shrink_stride);
+                      IN#_width - 1 - 2*OUT#_shrink_stride,
+                      IN#_height - 1 - 2*OUT#_shrink_stride,
+                      IN#_depth - 1 - 2*OUT#_shrink_stride);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
@@ -28008,9 +28004,7 @@ nn_lib :
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,OUT#_dilation,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
-                       IN#_width - 1 - OUT#_shrink_stride,
-                       IN#_height - 1 - OUT#_shrink_stride,
-                       IN#_depth - 1 - OUT#_shrink_stride),
+                       IN#_width,IN#_height,IN#_depth),
              0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
       );
 
@@ -28021,8 +28015,6 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
-      const OUT#_xyz0 = -OUT#_shrink;
-      const OUT#_xyz1 = OUT#_xyz0 + OUT#_dilation*OUT#_kernel_size - 1;
       const OUT#_dkc = OUT#_dilation*OUT#_kernel_center;
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
@@ -28038,8 +28030,8 @@ nn_lib :
                        OUT#_dkc,OUT#_dkc,OUT#_dkc,
                        OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually equal to dilation
                        1,1,1,
-                       OUT#_xyz0,OUT#_xyz0,OUT#_xyz0,
-                       OUT#_xyz1,OUT#_xyz1,OUT#_xyz1),
+                       -OUT#_shrink,-OUT#_shrink,-OUT#_shrink,
+                       OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size),
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
       );
