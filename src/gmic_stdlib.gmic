@@ -1024,8 +1024,8 @@ reference : skip "${2=}"
 "* 'name(_#ind,size)' returns a vector of size 'size', whose values are the characters codes of the name of image "\
 "'[ind]' (or default image selected if 'ind' is not specified)."\n\
 "* 'correlate(I,wI,hI,dI,sI,K,wK,hK,dK,sK,_boundary_conditions,_is_normalized,_channel_mode,_xcenter,_ycenter,"\
-"_zcenter,_xstride,_ystride,_zstride,_xdilation,_ydilation,_zdilation,_xoffset,_yoffset,_zoffset,_xend,_yend,_zend)'"\
-" returns the correlation, unrolled as a vector, of the `(wI,hI,dI,sI)`-sized image 'I' "\
+"_zcenter,_xstride,_ystride,_zstride,_xdilation,_ydilation,_zdilation,_xoffset,_yoffset,_zoffset,"\
+"_xsize,_ysize,_zsize)' returns the correlation, unrolled as a vector, of the `(wI,hI,dI,sI)`-sized image 'I' "\
 "with the `(wK,hK,dK,sK)`-sized kernel 'K' (the meaning of the other arguments are the same as in command "\
 "'correlate'). Similar function 'convolve(...)' is also defined for computing the convolution between 'I' and 'K'."\n\
 \
@@ -18298,14 +18298,14 @@ compose_freq :
   repeat int($!/2) { +[$>,{$>+1}] }
 
 #@cli convolve : [mask],_boundary_conditions,_is_normalized={ 0 | 1 },_channel_mode,\
-# _xcenter,_ycenter,_zcenter,_xstride,_ystride,_zstride,_xdilation,_ydilation,_zdilation,\
-# _xoffset,_yoffset,_zoffset,_xend,_yend,_zend : (+)
+# _xcenter,_ycenter,_zcenter,_xstride>0,_ystride>0,_zstride>0,_xdilation,_ydilation,_zdilation,\
+# _xoffset,_yoffset,_zoffset,_xsize>=0,_ysize>=0,_zsize>=0 : (+)
 #@cli : Convolve selected images by specified mask.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : 'channel_mode' can be { 0:all | 1:one-for-one | 2:partial sum | 3:full sum }.
 #@cli : Default values: 'boundary_conditions=1', 'is_normalized=0', 'channel_mode=1', \
 # 'xcenter=ycenter=zcenter=(undefined)', 'xstride=ystride=zstride=1', 'xdilation=ydilation=zdilation=1',\
-# 'xoffset=yoffset=zoffset=0' and 'xend=yend=zend=(max-coordinates)'.
+# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=(input_size/stride)'.
 #@cli : $ image.jpg (0,1,0;1,-4,1;0,1,0) convolve[-2] [-1] keep[-2]
 #@cli : $ image.jpg (0,1,0) resize[-1] 130,1,1,1,3 +convolve[0] [1]
 #@cli : $$ https://gmic.eu/oldtutorial/_convolve
@@ -18332,14 +18332,14 @@ convolve_fft : check ${is_image_arg\ $1}" && isin(${2=2},0,1,2,3)"
   }
 
 #@cli correlate : [mask],_boundary_conditions,_is_normalized={ 0 | 1 },_channel_mode,\
-# _xcenter,_ycenter,_zcenter,_xstride,_ystride,_zstride,_xdilation,_ydilation,_zdilation,\
-# _xoffset,_yoffset,_zoffset,_xend,_yend,_zend : (+)
+# _xcenter,_ycenter,_zcenter,_xstride>0,_ystride>0,_zstride>0,_xdilation,_ydilation,_zdilation,\
+# _xoffset,_yoffset,_zoffset,_xsize>=0,_ysize>=0,_zsize>=0 : (+)
 #@cli : Correlate selected images by specified mask.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : 'channel_mode' can be { 0:all | 1:one-for-one | 2:partial sum | 3:full sum }.
 #@cli : Default values: 'boundary_conditions=1', 'is_normalized=0', 'channel_mode=1', \
 # 'xcenter=ycenter=zcenter=-1', 'xstride=ystride=zstride=1', 'xdilation=ydilation=zdilation=1',\
-# 'xoffset=yoffset=zoffset=0' and 'xend=yend=zend=(max-coordinates)'.
+# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=(input_size/stride)'.
 #@cli : $ image.jpg (0,1,0;1,-4,1;0,1,0) correlate[-2] [-1] keep[-2]
 #@cli : $ image.jpg +crop 40%,40%,60%,60% +correlate[0] [-1],0,1
 

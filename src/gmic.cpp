@@ -6304,12 +6304,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
         if (!std::strcmp("convolve",command) || !std::strcmp("correlate",command)) {
           gmic_substitute_args(true);
           unsigned int
-            is_normalized = 0, channel_mode = 1,
-            xsize = ~0U, ysize = ~0U, zsize = ~0U;
+            is_normalized = 0, channel_mode = 1;
           int
             xcenter = (int)(~0U>>1), ycenter = (int)(~0U>>1), zcenter = (int)(~0U>>1),
             xstride = 1, ystride = 1, zstride = 1, xdilation = 1, ydilation = 1 , zdilation = 1,
-            xoffset = 0, yoffset = 0, zoffset = 0;
+            xoffset = 0, yoffset = 0, zoffset = 0, xsize = (int)(~0U>>1), ysize = (int)(~0U>>1), zsize = (int)(~0U>>1);
 
           is_cond = command[2]=='n'; // is_convolve?
           boundary = 1;
@@ -6335,12 +6334,16 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,
                            &xoffset,&yoffset,&zoffset,&end)==16 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u,%u,%u%c",
+               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,
                            &xoffset,&yoffset,&zoffset,&xsize,&ysize,&zsize,&end)==19) &&
               (ind=selection2cimg(indices,images.size(),images_names,"correlate")).height()==1 &&
-              boundary<=3 && channel_mode<=3) {
+              boundary<=3 && channel_mode<=3 &&
+              xstride>0 && ystride>0 && zstride>0 &&
+              (xsize==(int)(~0U>>1) || xsize>=0) &&
+              (ysize==(int)(~0U>>1) || ysize>=0) &&
+              (zsize==(int)(~0U>>1) || zsize>=0)) {
 
             *argx = *argy = *argz = *argc = 0;
             if (is_verbose) {
@@ -6364,7 +6367,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 cimg_snprintf(argc,_argc.width(),", offsets (%d,%d,%d)",
                               xoffset,yoffset,zoffset);
               }
-              if (xsize!=~0U || ysize!=~0U || zsize!=~0U) {
+              if (xsize!=(int)(~0U>>1) || ysize!=(int)(~0U>>1) || zsize!=(int)(~0U>>1)) {
                 gmic_use_title;
                 cimg_snprintf(title,_title.width(),", size (%u,%u,%u)",
                               xsize,ysize,zsize);
@@ -6383,17 +6386,22 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   channel_mode==1?"one for one":
                   channel_mode==2?"partial sum":"full sum",
                   *argx?argx:"",*argy?argy:"",*argz?argz:"",*argc?argc:"",*title?title:"");
+
             const CImg<T> kernel = gmic_image_arg(*ind);
             if (is_cond) {
               cimg_forY(selection,l) gmic_apply(convolve(kernel,boundary,(bool)is_normalized,channel_mode,
                                                          xcenter,ycenter,zcenter,xstride,ystride,zstride,
-                                                         xdilation,ydilation,zdilation,
-                                                         xoffset,yoffset,zoffset,xsize,ysize,zsize),false);
+                                                         xdilation,ydilation,zdilation,xoffset,yoffset,zoffset,
+                                                         xsize==(int)(~0U>>1)?~0U:(unsigned int)xsize,
+                                                         ysize==(int)(~0U>>1)?~0U:(unsigned int)ysize,
+                                                         zsize==(int)(~0U>>1)?~0U:(unsigned int)zsize),false);
             } else {
               cimg_forY(selection,l) gmic_apply(correlate(kernel,boundary,(bool)is_normalized,channel_mode,
                                                           xcenter,ycenter,zcenter,xstride,ystride,zstride,
-                                                          xdilation,ydilation,zdilation,
-                                                          xoffset,yoffset,zoffset,xsize,ysize,zsize),false);
+                                                          xdilation,ydilation,zdilation,xoffset,yoffset,zoffset,
+                                                          xsize==(int)(~0U>>1)?~0U:(unsigned int)xsize,
+                                                          ysize==(int)(~0U>>1)?~0U:(unsigned int)ysize,
+                                                          zsize==(int)(~0U>>1)?~0U:(unsigned int)zsize),false);
             }
           } else arg_error(is_cond?"convolve":"correlate");
           is_change = true;
