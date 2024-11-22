@@ -6373,7 +6373,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
 
             print(0,
                   "%s image%s with kernel [%u], %s boundary conditions, "
-                  "with%s normalization, channel mode '%s'%s%s%s%s.",
+                  "with%s normalization, channel mode '%s'%s%s%s%s%s.",
                   is_cond?"Convolve":"Correlate",
                   gmic_selection.data(),
                   *ind,
@@ -6382,7 +6382,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                   channel_mode==0?"all":
                   channel_mode==1?"one for one":
                   channel_mode==2?"partial sum":"full sum",
-                  *argx?argx:"",*argy?argy:"",*argz?argz:"",*argc?argc:"");
+                  *argx?argx:"",*argy?argy:"",*argz?argz:"",*argc?argc:"",*title?title:"");
             const CImg<T> kernel = gmic_image_arg(*ind);
             if (is_cond) {
               cimg_forY(selection,l) gmic_apply(convolve(kernel,boundary,(bool)is_normalized,channel_mode,
