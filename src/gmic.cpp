@@ -6307,7 +6307,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
           int
             xcenter = (int)(~0U>>1), ycenter = (int)(~0U>>1), zcenter = (int)(~0U>>1),
             xstride = 1, ystride = 1, zstride = 1, xdilation = 1, ydilation = 1 , zdilation = 1,
-            xstart = 0, ystart = 0, zstart = 0, xend = (int)(~0U>>1), yend = (int)(~0U>>1), zend = (int)(~0U>>1);
+            xoffset = 0, yoffset = 0, zoffset = 0, xend = (int)(~0U>>1), yend = (int)(~0U>>1), zend = (int)(~0U>>1);
           is_cond = command[2]=='n'; // is_convolve?
           boundary = 1;
           sep = 0;
@@ -6331,7 +6331,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
                            indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
                            &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,
-                           &xstart,&ystart,&zstart,&xend,&yend,&zend,&end)==19) &&
+                           &xoffset,&yoffset,&zoffset,&xend,&yend,&zend,&end)==19) &&
               (ind=selection2cimg(indices,images.size(),images_names,"correlate")).height()==1 &&
               boundary<=3 && channel_mode<=3) {
 
@@ -6342,11 +6342,11 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 cimg_snprintf(argx,_argx.width(),", kernel center (%d,%d,%d)",
                               (int)xcenter,(int)ycenter,(int)zcenter);
               }
-              if (xstart!=0 || ystart!=0 || zstart!=0 ||
+              if (xoffset!=0 || yoffset!=0 || zoffset!=0 ||
                   xend!=(int)(~0U>>1) || yend!=(int)(~0U>>1) || zend!=(int)(~0U>>1)) {
                 gmic_use_argy;
                 cimg_snprintf(argy,_argy.width(),", crop coordinates (%d,%d,%d) - (%d,%d,%d)",
-                              xstart,ystart,zstart,xend,yend,zend);
+                              xoffset,yoffset,zoffset,xend,yend,zend);
               }
               if (xstride!=1 || ystride!=1 || zstride!=1) {
                 gmic_use_argz;
@@ -6377,12 +6377,12 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
               cimg_forY(selection,l) gmic_apply(convolve(kernel,boundary,(bool)is_normalized,channel_mode,
                                                          xcenter,ycenter,zcenter,xstride,ystride,zstride,
                                                          xdilation,ydilation,zdilation,
-                                                         xstart,ystart,zstart,xend,yend,zend),false);
+                                                         xoffset,yoffset,zoffset,xend,yend,zend),false);
             } else {
               cimg_forY(selection,l) gmic_apply(correlate(kernel,boundary,(bool)is_normalized,channel_mode,
                                                           xcenter,ycenter,zcenter,xstride,ystride,zstride,
                                                           xdilation,ydilation,zdilation,
-                                                          xstart,ystart,zstart,xend,yend,zend),false);
+                                                          xoffset,yoffset,zoffset,xend,yend,zend),false);
             }
           } else arg_error(is_cond?"convolve":"correlate");
           is_change = true;
