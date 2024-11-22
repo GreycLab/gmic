@@ -45884,15 +45884,10 @@ fx_stamp :
 #@gui ____<b>Colors</b>
 #----------------------
 
-#@gui Abstraction : fx_color_abstraction, fx_color_abstraction_preview(0)
+#@gui Abstraction : fx_color_abstraction, fx_color_abstraction(0)
 #@gui : Smoothness = float(1,0,10)
 #@gui : Levels = int(10,2,100)
 #@gui : Contrast = float(0.2,0.01,1)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/10/19</i>.</small>")
 fx_color_abstraction :
@@ -45900,9 +45895,6 @@ fx_color_abstraction :
     split_opacity l[0] { to_rgb b $1 s c quantize $2,1,0 area 0 ^ $3 n 0,255 }
     a c
   }
-
-fx_color_abstraction_preview :
-  gui_split_preview "fx_color_abstraction $*",${-3--1}
 
 #@gui Apply External CLUT : fx_apply_haldclut, fx_apply_haldclut_preview(1)+
 #@gui : Specify HaldCLUT As = choice(2,"Top Layer","Bottom Layer","Filename")
@@ -45917,11 +45909,6 @@ fx_color_abstraction_preview :
 #@gui : Hue (%) = float(0,-100,100)
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Normalize Colors = choice("None","Pre-Normalize","Post-Normalize","Both")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/02/08</i>.</small>")
 fx_apply_haldclut : skip "${2=}"
@@ -45955,7 +45942,7 @@ fx_apply_haldclut : skip "${2=}"
 
 fx_apply_haldclut_preview : skip "${2=}"
   if $1<2 gui_warning_preview "No preview available in this mode" return fi
-  gui_split_preview "fx_apply_haldclut $1,\"$2\",${3--2}",${-3--1}
+  fx_apply_haldclut $1,"$2",${3--2}
 
 #@gui Apply From CLUT Set : apply_from_clut_set, apply_from_clut_set_preview(1)+
 #@gui : CLUT Set (.gmz File) = file("")
@@ -45968,11 +45955,6 @@ fx_apply_haldclut_preview : skip "${2=}"
 #@gui : Hue (%) = float(0,-100,100)
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Normalize Colors = choice("None","Pre-Normalize","Post-Normalize","Both")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2022/05/08</i>.</small>")
 apply_from_clut_set : skip "${1=}"
@@ -45989,7 +45971,7 @@ apply_from_clut_set : skip "${1=}"
     _title {n} clut_name=${}
     decompress_clut. {0$_is_preview?17:33} store. _clut
     if 0$_is_preview
-      foreach { gui_split_preview "_apply_from_clut_set \"$1\",${2--1}",${-3--1} }
+      foreach { _apply_from_clut_set "$1",${2--1} }
       to "#"{$ind+1}"/"$nb_cluts":\n"$clut_name,0.01~,1~,5%
     else
       foreach { _apply_from_clut_set $"*" }
@@ -46006,33 +45988,20 @@ _apply_from_clut_set : skip "${1=}"
   adjust_colors ${4-8},0,255
   if isin($9,2,3) split_opacity n[0] 0,255 a c fi
 
-#@gui Basic Adjustments : fx_adjust_colors, fx_adjust_colors_preview
+#@gui Basic Adjustments : fx_adjust_colors
 #@gui : Brightness (%) = ~float(0,-100,100)
 #@gui : Contrast (%) = ~float(0,-100,100)
 #@gui : Gamma (%) = ~float(0,-100,100)
 #@gui : Hue (%) = ~float(0,-100,100)
 #@gui : Saturation (%) = ~float(0,-100,100)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/16/06</i>.</small>")
 fx_adjust_colors :
   adjust_colors ${1-5},0,255
 
-fx_adjust_colors_preview :
-  gui_split_preview "fx_adjust_colors $*",${-3--1}
-
-#@gui Boost Chromaticity : fx_boost_chroma, fx_boost_chroma_preview(1)
+#@gui Boost Chromaticity : fx_boost_chroma, fx_boost_chroma(1)
 #@gui : Amplitude (%) = ~float(50,0,100)
 #@gui : Color Space = ~choice{"YCbCr (Distinct)","YCbCr (Mixed)","Lab (Distinct)","Lab (Mixed)"}
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/19/07</i>.</small>")
 fx_boost_chroma :
@@ -46057,17 +46026,9 @@ fx_boost_chroma :
     a c
   }
 
-fx_boost_chroma_preview :
-  gui_split_preview "fx_boost_chroma $*",${-3--1}
-
-#@gui Boost-Fade : fx_boost_fade, fx_boost_fade_preview
+#@gui Boost-Fade : fx_boost_fade
 #@gui : Amplitude = ~float(5,0,10)
 #@gui : Chromaticity From = ~choice("YCbCr","Lab")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2018/11/26</i>.</small>")
 fx_boost_fade :
@@ -46077,10 +46038,7 @@ fx_boost_fade :
     ac "s z match_histogram.. . rm.",${"arg0 $2,ycbcr_cbcr,lab_ab"}
   }
 
-fx_boost_fade_preview :
-  gui_split_preview "fx_boost_fade $1,$2",${-3--1}
-
-#@gui Channel Processing : fx_channel_processing, fx_channel_processing_preview(1)
+#@gui Channel Processing : fx_channel_processing, fx_channel_processing(1)
 #@gui : Brightness (%) = float(0,-100,100)
 #@gui : Contrast (%) = float(0,-100,100)
 #@gui : Gamma (%) = float(0,-100,100)
@@ -46102,11 +46060,6 @@ fx_boost_fade_preview :
 #@gui : "Lab [b-Chrominance]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [Hue]",
 #@gui : "HSV [Saturation]","HSV [Value]","HSI [Intensity]","HSL [Lightness]","CMYK [Cyan]","CMYK [Magenta]",
 #@gui : "CMYK [Yellow]","CMYK [Key]","YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 _fx_channel_processing :
@@ -46131,9 +46084,6 @@ fx_channel_processing :
     }
     mv. 0
   }
-
-fx_channel_processing_preview :
-  gui_split_preview "fx_channel_processing $*",${-3--1}
 
 #@gui Channels to Layers : fx_channels2layers, fx_channels2layers_preview
 #@gui : Colorspace = choice("RGB","CMY","HSV")
@@ -46169,14 +46119,9 @@ fx_channels2layers_preview :
     frame xy,1,0 frame xy,3,255 append_tiles ,
   }
 
-#@gui Color Balance : fx_balance_gamma, fx_balance_gamma_preview
+#@gui Color Balance : fx_balance_gamma
 #@gui : Neutral Color = color(128,128,128)
 #@gui : Stretch Colors = bool(1)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/01/07</i>.</small>")
 fx_balance_gamma :
@@ -46187,25 +46132,15 @@ fx_balance_gamma :
     a c
   }
 
-fx_balance_gamma_preview :
-  gui_split_preview "fx_balance_gamma $*",${-3--1}
-
-#@gui Color Blindness : colorblind, fx_colorblind_preview
+#@gui Color Blindness : colorblind
 #@gui : Blindness Type = ~choice("Protanopia","Protanomaly","Deuteranopia","Deuteranomaly","Tritanopia",
 #@gui : "Tritanomaly","Achromatopsia","Achromatomaly")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b>
 #@gui : This filter simulates different types of colorblindness vision.
 #@gui : </small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/04</i>.</small>")
-fx_colorblind_preview :
-  gui_split_preview "colorblind $*",${-3--1}
 
 #@gui Color Presets : fx_color_presets, fx_color_presets_preview(1)+
 #@gui : LUTs Pack = ~choice{21,"Abigail Gonzalez (21)","Alex Jordan (81)","Berat (10)","Cinematic (8)",
@@ -48112,7 +48047,7 @@ fx_equalize_hsv_preview :
   gui_split_preview "fx_equalize_hsv $*",${-3--1}
   if $5 r. ${-gui_preview_wh},1,3,0,0,0.5,0.5 fi
 
-#@gui Mixer [CMYK] : fx_mix_cmyk, fx_mix_cmyk_preview(1)+
+#@gui Mixer [CMYK] : fx_mix_cmyk, fx_mix_cmyk(1)+
 #@gui : Cyan Factor = ~float(1,0,4)
 #@gui : Cyan Shift = ~float(0,-255,255)
 #@gui : Cyan Smoothness = ~float(0,0,10)
@@ -48132,11 +48067,6 @@ fx_equalize_hsv_preview :
 #@gui : Tones Range = ~choice("All tones","Shadows","Mid-Tones","Highlights")
 #@gui : Tones Smoothness = ~float(2,0,10)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_mix_cmyk :
   foreach {
@@ -48151,9 +48081,6 @@ fx_mix_cmyk :
     fx_end_mix $13
     if $!!=3 rv a c fi
   }
-
-fx_mix_cmyk_preview :
-  gui_split_preview "fx_mix_cmyk $*",${-3--1}
 
 #@gui Mixer [Generic] : fx_mixer_generic, fx_mixer_generic_preview(1)+
 #@gui : Colorspace = choice(7,"CMY","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKlab","RGB","RYB",\
@@ -48227,7 +48154,7 @@ fx_mixer_generic_preview :
     "{$14}_"$is_cmyk"{$15}_"$is_cmyk"{$16}_"$is_cmyk"{$17}_"$is_cmyk\
     "{$-3}{$-2,$-1}"
 
-#@gui Mixer [HSV] : fx_mix_hsv, fx_mix_hsv_preview(1)+
+#@gui Mixer [HSV] : fx_mix_hsv, fx_mix_hsv(1)+
 #@gui : Hue Factor = ~float(1,0,4)
 #@gui : Hue Shift = ~float(0,-180,180)
 #@gui : Hue Smoothness = ~float(0,0,10)
@@ -48243,11 +48170,6 @@ fx_mixer_generic_preview :
 #@gui : Tones Range = ~choice("All Tones","Shadows","Mid-Tones","Highlights")
 #@gui : Tones Smoothness = ~float(2,0,10)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_mix_hsv :
   foreach {
@@ -48262,10 +48184,7 @@ fx_mix_hsv :
     if $!!=3 rv a c fi
   }
 
-fx_mix_hsv_preview :
-  gui_split_preview "fx_mix_hsv $*",${-3--1}
-
-#@gui Mixer [Lab] : fx_mix_lab, fx_mix_lab_preview(1)+
+#@gui Mixer [Lab] : fx_mix_lab, fx_mix_lab(1)+
 #@gui : Lightness Factor = ~float(1,0.5,1.5)
 #@gui : Lightness Shift = ~float(0,-50,50)
 #@gui : Lightness Smoothness = ~float(0,0,10)
@@ -48280,11 +48199,6 @@ fx_mix_hsv_preview :
 #@gui : sep = separator()
 #@gui : Tones Range = ~choice("All Tones","Shadows","Mid-Tones","Highlights")
 #@gui : Tones Smoothness = ~float(2,0,10)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_mix_lab :
@@ -48302,9 +48216,6 @@ _fx_mix_lab :
   *. $7 +. $8 b. $9%
   a[-3--1] c lab2rgb.
   fx_end_mix $10
-
-fx_mix_lab_preview :
-  gui_split_preview "fx_mix_lab $*",${-3--1}
 
 #@gui Mixer [PCA] : fx_mix_pca, fx_mix_pca_preview(1)+
 #@gui : Primary Factor = float(0,-1.5,1.5)
@@ -48419,7 +48330,7 @@ fx_mix_pca_preview :
   }
   u $__status
 
-#@gui Mixer [RGB] : fx_mix_rgb, fx_mix_rgb_preview(1)+
+#@gui Mixer [RGB] : fx_mix_rgb, fx_mix_rgb(1)+
 #@gui : Red Factor = ~float(1,0,4)
 #@gui : Red Shift = ~float(0,-255,255)
 #@gui : Red Smoothness = ~float(0,0,10)
@@ -48434,11 +48345,6 @@ fx_mix_pca_preview :
 #@gui : sep = separator()
 #@gui : Tones Range = ~choice("All Tones","Shadows","Mid-Tones","Highlights")
 #@gui : Tones Smoothness = ~float(2,0,10)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_start_mix :
@@ -48467,10 +48373,7 @@ fx_mix_rgb :
     if $!!=3 rv a c fi
   }
 
-fx_mix_rgb_preview :
-  gui_split_preview "fx_mix_rgb $*",${-3--1}
-
-#@gui Mixer [YCbCr] : fx_mix_ycbcr, fx_mix_ycbcr_preview(1)+
+#@gui Mixer [YCbCr] : fx_mix_ycbcr, fx_mix_ycbcr(1)+
 #@gui : Luminance Factor = ~float(1,0,4)
 #@gui : Luminance Shift = ~float(0,-255,255)
 #@gui : Luminance Smoothness = ~float(0,0,10)
@@ -48486,11 +48389,6 @@ fx_mix_rgb_preview :
 #@gui : Tones Range = ~choice("All Tones","Shadows","Mid-Tones","Highlights")
 #@gui : Tones Smoothness = ~float(2,0,10)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/20/06</i>.</small>")
 fx_mix_ycbcr :
   foreach {
@@ -48504,9 +48402,6 @@ fx_mix_ycbcr :
     fx_end_mix $10
     if $!!=3 rv a c fi
   }
-
-fx_mix_ycbcr_preview :
-  gui_split_preview "fx_mix_ycbcr $*",${-3--1}
 
 #@gui Random Color Transformation : fx_random_color_transformation, fx_random_color_transformation_preview(1)+
 #@gui : Seed = float(0,0,100000)
@@ -48542,7 +48437,7 @@ fx_random_color_transformation_preview :
   to "Seed: \#"$__seed,5,5,5%,2
   u "{"$__seed"}{0}{0}{$4}{$5}{$6}{$7}{$8}{$9}{$10}{$11,$12}"
 
-#@gui Retinex : fx_retinex, fx_retinex_preview(0)+
+#@gui Retinex : fx_retinex, fx_retinex(0)+
 #@gui : Strength (%) = float(75,0,100)
 #@gui : Value Offset = float(16,1,256)
 #@gui : Colorspace = choice(1,"HSI","HSV","Lab","Linear RGB","RGB","YCbCr")
@@ -48553,11 +48448,6 @@ fx_random_color_transformation_preview :
 #@gui : Low Scale = float(15,1,512)
 #@gui : Middle Scale = float(80,1,512)
 #@gui : High Scale = float(250,1,512)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small><b>Note:</b> This filter implements the <i>Multiscale Color Retinex</i> algorithm,
 #@gui : as described in:</small>")
@@ -48572,18 +48462,10 @@ fx_retinex :
     c 0,255
   }
 
-fx_retinex_preview :
-  gui_split_preview "fx_retinex $*",${-3--1}
-
-#@gui Retro Fade : fx_retrofade, fx_retrofade_preview
+#@gui Retro Fade : fx_retrofade
 #@gui : Iterations = ~int(20,1,64)
 #@gui : Colors = ~int(6,2,32)
 #@gui : Grain = ~float(40,1,100)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/25/10</i>.</small>")
 fx_retrofade :
@@ -48601,10 +48483,7 @@ fx_retrofade :
     a c
   }
 
-fx_retrofade_preview :
-  gui_split_preview "fx_retrofade $*",${-3--1}
-
-#@gui Select-Replace Color : fx_select_color, fx_select_color_preview(0)
+#@gui Select-Replace Color : fx_select_color, fx_select_color(0)
 #@gui : Similarity Space = choice(0,"RGB[A]","RGB","YCbCr","Red","Green","Blue","Opacity","Luminance",
 #@gui : "Blue & Red Chrominances","Hue","Saturation")
 #@gui : Tolerance = float(20,0,100)
@@ -48613,11 +48492,6 @@ fx_retrofade_preview :
 #@gui : Selected Color = color(255,255,255,255)
 #@gui : Output As = choice(0,"Selected Colors","Selected Mask","Rejected Colors","Rejected Mask","Replaced Color")
 #@gui : Replacement Color = color(255,0,0,255)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 _fx_select_color :
@@ -48651,20 +48525,12 @@ fx_select_color :
     k[0]
   }
 
-fx_select_color_preview :
-  gui_split_preview "fx_select_color $*",${-3--1}
-
-#@gui Selective Desaturation : fx_selective_desaturation, fx_selective_desaturation_preview(1)
+#@gui Selective Desaturation : fx_selective_desaturation, fx_selective_desaturation(1)
 #@gui : Reference Color = color(255,255,255)
 #@gui : Desaturate = choice("Reference Color","All but Reference Color")
 #@gui : Strength = float(3,0,10)
 #@gui : Regularization = int(0,0,20)
 #@gui : Maximum Saturation = choice("From Input","From Reference Color","Maximum Value")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/15/07</i>.</small>")
 fx_selective_desaturation :
@@ -48687,25 +48553,14 @@ fx_selective_desaturation :
     a c
   }
 
-fx_selective_desaturation_preview :
-  gui_split_preview "fx_selective_desaturation $*",${-3--1}
-
-#@gui Sepia : fx_sepia, fx_sepia_preview(1)+
+#@gui Sepia : fx_sepia
 #@gui : Brightness (%) = ~float(0,-100,100)
 #@gui : Contrast (%) = ~float(0,-100,100)
 #@gui : Gamma (%) = ~float(0,-100,100)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_sepia :
   sepia adjust_colors ${1-3},0,0,0,255
-
-fx_sepia_preview :
-  gui_split_preview "fx_sepia $*",${-3--1}
 
 #@gui Simulate Film : fx_simulate_film, fx_simulate_film_preview(1)+
 #@gui : Category = ~choice{"Black & White (25)","Instant [Consumer] (54)","Instant [Pro] (68)","Fuji XTrans III (15)",
@@ -49347,13 +49202,8 @@ fx_custom_transform :
     fi
   mv. 0 }
 
-#@gui Vibrance : fx_vibrance, fx_vibrance_preview(1)+
+#@gui Vibrance : fx_vibrance
 #@gui : Strength = float(0.5,-1,3)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>Age / Pixls.us</i>.      Latest Update: <i>2022/06/28</i>.</small>")
 fx_vibrance :
@@ -49374,9 +49224,6 @@ fx_vibrance :
     }
     a c
   }
-
-fx_vibrance_preview :
-  gui_split_preview "fx_vibrance $*",${-3--1}
 
 #@gui ____<b>Contours</b>
 #------------------------
