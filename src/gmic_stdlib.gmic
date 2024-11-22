@@ -9182,19 +9182,14 @@ parse_gui_gmicol :
         ('"    <button name=\""$name"\" alignment=\""$arg0"\""$randomizable$responsivity$visibility"/>\n"')
 
       elif ['$type']=='choice'
-
-        if ['$name']=='Preview\ Type' # Replace 'Preview Type' by a value
-          ('"    <value name=\""$name"\" value=\"0\"/>\n"')
-        else
-          default=0 n=0 choices=
-          l[] { if isnum($arg0)&&isint($arg0) default=$arg0 n+=1 fi onfail }
-          ('"    <choice name=\""$name"\" value=\""$default"\""$randomizable$responsivity$visibility">\n"')
-          repeat $nbargs-$n { a=$>
-            choice=${arg{$n+$a}}
-            ('"      <item name=\""$choice"\"/>\n"')
-          }
-          ('"    </choice>\n"')
-        fi
+        default=0 n=0 choices=
+        l[] { if isnum($arg0)&&isint($arg0) default=$arg0 n+=1 fi onfail }
+        ('"    <choice name=\""$name"\" value=\""$default"\""$randomizable$responsivity$visibility">\n"')
+        repeat $nbargs-$n { a=$>
+          choice=${arg{$n+$a}}
+          ('"      <item name=\""$choice"\"/>\n"')
+        }
+        ('"    </choice>\n"')
 
       elif ['$type']=='color'
         if $nbargs==1" && "['$arg0'][0]==_'#' # Convert colors specified as '#RRGGBB[AA]'
@@ -12502,22 +12497,6 @@ upload_filters :
     is_nonnative_preview_removed=0
     repeat narg($versions) {
       ver:=arg0($>,$versions)
-      if !$is_nonnative_preview_removed" && "$ver>=342 # Remove non-native preview splitter for version 3.4.2+
-        l {
-          s +,{'\n'}
-          foreach {
-            if "S='#@gui :Preview Type=choice(\"Full\",';crop(0,0,1,size(S))==S"
-              rm ('"#@gui :_=value(0)"':y)
-            elif "S='#@gui :Preview Split=point(50,50';crop(0,0,1,size(S))==S"
-              rm ('"#@gui :_=point(50,50,-1)_0"':y)
-            fi
-          }
-          a y
-          replace_str "#@gui :_=separator()\n#@gui :_=value(0)\n#@gui :_=point(50,50,-1)_0",\
-                      "#@gui :_=value(0),_=point(50,50,-1)_0"
-        }
-        is_nonnative_preview_removed=1
-      fi
       ot ${_path_rc}update$ver.gmic # Plain-text
       o cimgz:/tmp/update$ver.gmic,uint8 # Binary-compressed
     }
@@ -42759,7 +42738,7 @@ fx_asciiart_preview :
     r $w,$h,1,100%,0,0,0.5,0.5
   }
 
-#@gui Chessboard : fx_chessboard, fx_chessboard_preview(0)
+#@gui Chessboard : fx_chessboard, fx_chessboard(0)
 #@gui : First Size = ~int(64,1,512)
 #@gui : Second Size = ~int(64,1,512)
 #@gui : First Offset = ~int(0,0,512)
@@ -42769,17 +42748,9 @@ fx_asciiart_preview :
 #@gui : First Color = ~color(0,0,0,255)
 #@gui : Second Color = ~color(255,255,255,255)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 fx_chessboard :
   to_rgba chessboard ${1-14}
-
-fx_chessboard_preview :
-  gui_split_preview "fx_chessboard $*",${-3--1}
 
 #@gui Dices : fx_dices, fx_dices(0)
 #@gui : Resolution = ~float(2,1,10)
@@ -43188,16 +43159,11 @@ fx_loose_photos_preview :
   _is_preview=1
   fx_loose_photos $*
 
-#@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless_preview(1)
+#@gui Make Seamless [Diffusion] : fx_make_seamless, fx_make_seamless(1)
 #@gui : Equalize Light = float(0,0,100)
 #@gui : sep = separator()
 #@gui : Preview Original = bool()
 #@gui : Tiled Preview = choice(3,"None","2x1","1x2","2x2","3x3","4x4")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter helps in converting your input pattern as a <b>seamless</b>
 #@gui : (a.k.a periodic) texture.</small>"}
@@ -43209,11 +43175,7 @@ fx_make_seamless :
   }
   periodize_poisson c 0,255
 
-fx_make_seamless_preview :
-  u,v:=arg($3,2,1,2,3,4),arg($3,1,2,2,3,4)
-  gui_split_preview "if !$2 fx_make_seamless $* fi if $3 array "$u","$v" fi",${-3--1}
-
-#@gui Make Seamless [Patch-Based] : fx_frame_seamless, fx_frame_seamless_preview(0)
+#@gui Make Seamless [Patch-Based] : fx_frame_seamless, fx_frame_seamless(0)
 #@gui : Frame Size = int(32,0,256)
 #@gui : Patch Size = int(9,3,64)
 #@gui : Blend Size = int(0,0,64)
@@ -43222,11 +43184,6 @@ fx_make_seamless_preview :
 #@gui : sep = separator()
 #@gui : Preview Original = bool()
 #@gui : Tiled Preview = choice(3,"None","2x1","1x2","2x2","3x3","4x4")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter helps in converting your input pattern as a <b>seamless</b>
 #@gui : (a.k.a periodic) texture.</small>"}
@@ -43237,10 +43194,6 @@ fx_frame_seamless :
     if $5 +b {20.5-$5/50}% -[0] [1] fc. ${average_vectors.} + fi
   }
   frame_seamless ${1-4} c 0,255
-
-fx_frame_seamless_preview :
-  u,v:=arg($7,2,1,2,3,4),arg($7,1,2,2,3,4)
-  gui_split_preview "if !$6 fx_frame_seamless $* fi if $7 array "$u","$v" fi",${-3--1}
 
 #@gui Ministeck : fx_ministeck, fx_ministeck_preview(1)
 #@gui : Number of Colors = ~int(8,2,24)
@@ -43590,7 +43543,7 @@ fx_rotate_tiles :
 #@gui ____<b>Artistic</b>
 #-------------------------
 
-#@gui Bokeh : fx_bokeh, fx_bokeh_preview(1)
+#@gui Bokeh : fx_bokeh, fx_bokeh(1)
 #@gui : Number of Scales = int(3,1,10)
 #@gui : Shape = choice(8,"Triangle","Square","Diamond","Pentagon","Hexagon","Octogon","Decagon","Star","Circular")
 #@gui : Random Seed = int(0,0,65535)
@@ -43612,11 +43565,6 @@ fx_rotate_tiles :
 #@gui : Smoothness = float(2,0,8)
 #@gui : Color = color(170,130,20,110)
 #@gui : Color Dispersion = float(0.15,0,1)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/02/07</i>.</small>")
 fx_bokeh :
@@ -43643,9 +43591,6 @@ _fx_bokeh5 : shape_polygon $1,8,45  # Octogon.
 _fx_bokeh6 : shape_polygon $1,10,45 # Decagon.
 _fx_bokeh7 : shape_star $1,5        # Star.
 _fx_bokeh8 : shape_circle $1        # Circle.
-
-fx_bokeh_preview :
-  gui_split_preview "_output_mode=0 fx_bokeh $*",${-3--1}
 
 # [Internal] Draw one step of bokeh with specified geometry on last image.
 # $1=density, $2=size(in %), $3=outline(in %), $4=shade (in [0,1]), $5=smoothness (in %),
