@@ -12389,6 +12389,7 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
             sep0 = sep1 = 0;
           }
           if (dimw==0 || dimh==0) dimw = dimh = 0;
+          if (dimw>0 && sep0=='%' && dimh<0 && !sep1) { dimh = dimw; sep1 = '%'; }
           if (*title) { strreplace_fw(title); cimg::strunescape(title); }
 
           if (!is_display_available) {
@@ -12405,7 +12406,8 @@ gmic& gmic::_run(const CImgList<char>& commands_line, unsigned int& position,
                 if (img) {
                   g_list.insert(img,~0U,true);
                   optw+=img._width + (img.depth()>1?img._depth:0U);
-                  if (img.height()>(int)opth) opth = img._height + (img._depth>1?img._depth:0U);
+                  const unsigned int img_height = img._height + (img._depth>1?img._depth:0U);
+                  if (img_height>opth) opth = img_height;
                 }
               }
             optw = optw?optw:sep0=='%'?CImgDisplay::screen_width():256;
