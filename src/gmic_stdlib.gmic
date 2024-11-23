@@ -30024,14 +30024,14 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
   fi
 
   # Generate code for updating network weights.
-  _${_nn_name}_$1_update="begin(nn_trainer_init_update($1,"$loss",$4,$5));end("
+  _${_nn_name}_update="begin(nn_trainer_init_update($1,"$loss",$4,$5));end("
   repeat narg(${_${_nn_name}_modules_names})-1 {
     type=${arg0\ $>,${_${_nn_name}_modules_types}}
     name=${arg0\ $>,${_${_nn_name}_modules_names}}
     learning_mode=${_${_nn_name}_${name}_learning_mode}
 
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
-      _${_nn_name}_$1_update.="nn_"${type}"_update("$name,$4,$learning_mode");"
+      _${_nn_name}_update.="nn_"${type}"_update("$name,$4,$learning_mode");"
 
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
@@ -30049,8 +30049,7 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_latest else loss=$2 fi nn_check_layer 
       fi
     fi
   }
-  _${_nn_name}_$1_update.="nn_trainer_update($1,"$loss",$5));" # <- Keep this as last thing done in an 'end()' block!
-  _${_nn_name}_update=${_${_nn_name}_$1_update}
+  _${_nn_name}_update.="nn_trainer_update($1,"$loss",$5));" # <- Keep this as last thing done in an 'end()' block!
 
 _nn_optimizer_sgd : 1
 _nn_optimizer_rmsprop : 1
