@@ -281,7 +281,7 @@ inline double gmic_mp_store(const double *const ptrs, const unsigned int siz,
 //--------------------------------------------------------
 #include <cstdio>
 #include <cstring>
-#define gmic_new_attr commands(0), commands_names(0), commands_has_arguments(0), \
+#define gmic_new_attr commands(0), command_names(0), command_has_arguments(0), \
     _variables(0), _variables_names(0), variables(0), variables_names(0), _variables_lengths(0), variables_lengths(0)
 
 using namespace gmic_library;
@@ -378,7 +378,7 @@ struct gmic {
   static int _levenshtein(const char *const s, const char *const t, gmic_image<int>& d, const int i, const int j);
   static int levenshtein(const char *const s, const char *const t);
   static unsigned int hashcode(const char *const str, const bool is_variable);
-  static bool command_has_arguments(const char *const command);
+  static bool has_arguments(const char *const command);
   static const char* basename(const char *const str);
   static char *strreplace_fw(char *const str);
   static char *strreplace_bw(char *const str);
@@ -473,12 +473,12 @@ struct gmic {
              const gmic_image<unsigned int> *const command_selection, const bool push_new_run);
 
   // Class attributes.
-  static const char *builtin_commands_names[];
+  static const char *builtin_command_names[];
   static gmic_image<int> builtin_commands_inds;
   static gmic_image<char> stdlib;
   static bool is_display_available;
 
-  gmic_list<char> *commands, *commands_names, *commands_has_arguments, commands_files, callstack,
+  gmic_list<char> *commands, *command_names, *command_has_arguments, command_files, callstack,
     *_variables, *_variables_names, **variables, **variables_names;
   gmic_image<unsigned int> dowhiles, fordones, foreachdones, repeatdones, *_variables_lengths, **variables_lengths;
   gmic_image<unsigned char> light3d;

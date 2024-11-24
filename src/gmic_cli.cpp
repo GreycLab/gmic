@@ -186,9 +186,9 @@ int main(int argc, char **argv) {
             if (allow_main_ && argc==3) { // Check if command '_main_' has arguments
               const unsigned int hash = (int)gmic::hashcode("_main_",false);
               unsigned int ind = 0;
-              if (gmic::search_sorted("_main_",gi.commands_names[hash],
-                                      gi.commands_names[hash].size(),ind)) // Command found
-                allow_main_ = (bool)gi.commands_has_arguments[hash](ind,0);
+              if (gmic::search_sorted("_main_",gi.command_names[hash],
+                                      gi.command_names[hash].size(),ind)) // Command found
+                allow_main_ = (bool)gi.command_has_arguments[hash](ind,0);
             }
             gmic_instance.allow_main_ = allow_main_;
           }
