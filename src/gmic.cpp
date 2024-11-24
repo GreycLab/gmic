@@ -2478,7 +2478,7 @@ const char *gmic::builtin_command_names[] = {
   "y","z","^","{","|","}"
 };
 
-CImg<int> gmic::builtin_commands_inds = CImg<int>::empty();
+CImg<int> gmic::builtin_command_inds = CImg<int>::empty();
 
 // Perform a dichotomic search in a lexicographic ordered 'CImgList<char>' or 'char**'.
 // Return false or true if search succeeded.
@@ -3539,7 +3539,7 @@ const char *gmic::set_variable(const char *const name, const CImg<unsigned char>
 
 // Add custom commands from a char* buffer.
 //------------------------------------------
-gmic& gmic::add_commands(const char *const data_commands, const char *const commands_file, const bool add_debug_info,
+gmic& gmic::add_commands(const char *const data_commands, const char *const command_file, const bool add_debug_info,
                          unsigned int *count_new, unsigned int *count_replaced, bool *const is_main_) {
   if (!data_commands || !*data_commands) return *this;
   cimg::mutex(23);
@@ -3548,8 +3548,8 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
   bool is_last_slash = false, _is_last_slash = false, is_newline = false;
   int hash = -1, l_debug_info = 0;
   char sep = 0;
-  if (commands_file) {
-    CImg<char>::string(commands_file).move_to(command_files);
+  if (command_file) {
+    CImg<char>::string(command_file).move_to(command_files);
     CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'.
     CImg<unsigned char> tmp;
     (command_files>'x').move_to(tmp);
@@ -3656,7 +3656,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
 // Add commands from a file.
 //---------------------------
-gmic& gmic::add_commands(std::FILE *const file, const char *const commands_file, const bool add_debug_info,
+gmic& gmic::add_commands(std::FILE *const file, const char *const command_file, const bool add_debug_info,
                          unsigned int *count_new, unsigned int *count_replaced, bool *const is_main_) {
   if (!file) return *this;
 
@@ -3665,7 +3665,7 @@ gmic& gmic::add_commands(std::FILE *const file, const char *const commands_file,
     CImg<char> buffer;
     buffer.load_cimg(file).unroll('x');
     buffer.resize(buffer.width() + 1,1,1,1,0);
-    add_commands(buffer.data(),commands_file,add_debug_info,count_new,count_replaced,is_main_);
+    add_commands(buffer.data(),command_file,add_debug_info,count_new,count_replaced,is_main_);
   } catch (...) { // If failed, read as a text file
     std::rewind(file);
     std::fseek(file,0,SEEK_END);
@@ -3675,7 +3675,7 @@ gmic& gmic::add_commands(std::FILE *const file, const char *const commands_file,
       CImg<char> buffer((unsigned int)siz + 1);
       if (std::fread(buffer.data(),sizeof(char),siz,file)) {
         buffer[siz] = 0;
-        add_commands(buffer.data(),commands_file,add_debug_info,count_new,count_replaced,is_main_);
+        add_commands(buffer.data(),command_file,add_debug_info,count_new,count_replaced,is_main_);
       }
     }
   }
@@ -3989,12 +3989,12 @@ gmic& gmic::_gmic(const char *const command_line,
 
   // Initialize class attributes.
   cimg::mutex(22);
-  if (!builtin_commands_inds) { // First call
-    builtin_commands_inds.assign(128,2,1,1,-1);
+  if (!builtin_command_inds) { // First call
+    builtin_command_inds.assign(128,2,1,1,-1);
     for (unsigned int i = 0; builtin_command_names[i]; ++i) {
       const int c = *builtin_command_names[i];
-      if (builtin_commands_inds[c]<0) builtin_commands_inds[c] = (int)i;
-      builtin_commands_inds(c,1) = (int)i;
+      if (builtin_command_inds[c]<0) builtin_command_inds[c] = (int)i;
+      builtin_command_inds(c,1) = (int)i;
     }
     try { is_display_available = (bool)CImgDisplay::screen_width(); } catch (CImgDisplayException&) { }
     cimg::srand();
@@ -5216,8 +5216,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (is_command) {
           if (!is_builtin_command) { // Search for known built-in command name
             const int
-              _ind0 = builtin_commands_inds[(unsigned int)*command],
-              _ind1 = builtin_commands_inds((unsigned int)*command,1U);
+              _ind0 = builtin_command_inds[(unsigned int)*command],
+              _ind1 = builtin_command_inds((unsigned int)*command,1U);
             if (_ind0>=0)
               is_builtin_command = search_sorted(command,builtin_command_names + _ind0,
                                                  _ind1 - _ind0 + 1U,uind);
