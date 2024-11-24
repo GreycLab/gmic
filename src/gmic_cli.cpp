@@ -230,11 +230,11 @@ int main(int argc, char **argv) {
   // Launch G'MIC interpreter.
   try {
     CImgList<gmic_pixel_type> images;
-    CImgList<char> images_names;
+    CImgList<char> image_names;
     if (is_help && !cimg::is_file(filename_update.data())) {
-      images.insert(gmic::stdlib); CImg<char>::string("stdlib").move_to(images_names);
+      images.insert(gmic::stdlib); CImg<char>::string("stdlib").move_to(image_names);
     }
-    gmic_instance.run(commands_line.data(),images,images_names);
+    gmic_instance.run(commands_line.data(),images,image_names);
   } catch (gmic_exception &e) {
     int error_code = 0;
     bool is_error_code = false;
@@ -259,9 +259,9 @@ int main(int argc, char **argv) {
                      cimg::t_red,e.command(),cimg::t_normal);
         std::fflush(cimg::output());
         CImgList<gmic_pixel_type> images;
-        CImgList<char> images_names;
+        CImgList<char> image_names;
         images.insert(gmic::stdlib);
-        CImg<char>::string("stdlib").move_to(images_names);
+        CImg<char>::string("stdlib").move_to(image_names);
         CImg<char> tmp_line(1024);
         cimg_snprintf(tmp_line,tmp_line.width(),
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
@@ -273,12 +273,12 @@ int main(int argc, char **argv) {
                       filename_user,filename_user,
                       e.command());
         try {
-          gmic(tmp_line,images,images_names);
+          gmic(tmp_line,images,image_names);
         } catch (...) { // Fallback in case overloaded version of 'help' crashed
           cimg_snprintf(tmp_line,tmp_line.width(),"help \"%s\"",e.command());
           images.assign().insert(gmic::stdlib);
-          images_names.assign();
-          gmic(tmp_line,images,images_names);
+          image_names.assign();
+          gmic(tmp_line,images,image_names);
         }
       } else {
         std::fprintf(cimg::output(),"\n\n");
