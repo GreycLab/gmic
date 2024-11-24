@@ -301,52 +301,52 @@ struct gmic {
   gmic& assign(const gmic& gmic_instance);
 
   template<typename T>
-  gmic(const char *const commands_line, const char *const custom_commands=0, const bool include_stdlib=true,
+  gmic(const char *const command_line, const char *const custom_commands=0, const bool include_stdlib=true,
        float *const p_progress=0, bool *const p_is_abort=0, const T& pixel_type=(T)0);
   template<typename T>
-  gmic& assign(const char *const commands_line, const char *const custom_commands=0, const bool include_stdlib=true,
+  gmic& assign(const char *const command_line, const char *const custom_commands=0, const bool include_stdlib=true,
                float *const p_progress=0, bool *const p_is_abort=0, const T& pixel_type=(T)0);
 
   template<typename T>
-  gmic(const char *const commands_line,
+  gmic(const char *const command_line,
        gmic_list<T>& images, gmic_list<char>& images_names, const char *const custom_commands=0,
        const bool include_stdlib=true, float *const p_progress=0, bool *const p_is_abort=0);
   template<typename T>
-  gmic& assign(const char *const commands_line,
+  gmic& assign(const char *const command_line,
                gmic_list<T>& images, gmic_list<char>& images_names, const char *const custom_commands=0,
                const bool include_stdlib=true, float *const p_progress=0, bool *const p_is_abort=0);
 
   // Run G'MIC pipeline on an already-constructed object.
   template<typename T>
-  gmic& run(const char *const commands_line, const T& pixel_type=(T)0);
+  gmic& run(const char *const command_line, const T& pixel_type=(T)0);
 
   template<typename T>
-  gmic& run(const char *const commands_line, gmic_list<T> &images, gmic_list<char> &images_names);
+  gmic& run(const char *const command_line, gmic_list<T> &images, gmic_list<char> &images_names);
 
   // Bridge for calling gmic with classes compatible with 'gmic_list'.
   template<typename ti, typename tn>
-  gmic(const char *const commands_line,
+  gmic(const char *const command_line,
        ti& images, tn& images_names,
        const char *const custom_commands=0,
        const bool include_stdlib=true, float *const p_progress=0, bool *const p_is_abort=0):gmic_new_attr {
-    assign(commands_line,
+    assign(command_line,
            *(gmic_list<gmic_pixel_type>*)&images,*(gmic_list<char>*)&images_names,
            custom_commands,include_stdlib,p_progress,p_is_abort);
   }
 
   template<typename ti, typename tn>
-  gmic& assign(const char *const commands_line,
+  gmic& assign(const char *const command_line,
                ti& images, tn& images_names,
                const char *const custom_commands=0,
                const bool include_stdlib=true, float *const p_progress=0, bool *const p_is_abort=0) {
-    return assign(commands_line,
+    return assign(command_line,
                   *(gmic_list<gmic_pixel_type>*)&images,*(gmic_list<char>*)&images_names,
                   custom_commands,include_stdlib,p_progress,p_is_abort);
   }
 
   template<typename ti, typename tn>
-  gmic& run(const char *const commands_line, ti& images, tn& images_names) {
-    return run(commands_line,
+  gmic& run(const char *const command_line, ti& images, tn& images_names) {
+    return run(command_line,
                *(gmic_list<gmic_pixel_type>*)&images,*(gmic_list<char>*)&images_names);
   }
 
@@ -386,7 +386,7 @@ struct gmic {
   static const gmic_image<char>& decompress_stdlib();
 
   template<typename T>
-  gmic& _gmic(const char *const commands_line, gmic_list<T>& images, gmic_list<char>& images_names,
+  gmic& _gmic(const char *const command_line, gmic_list<T>& images, gmic_list<char>& images_names,
               const char *const custom_commands, const bool include_stdlib,
               float *const p_progress, bool *const p_is_abort);
 
@@ -417,7 +417,7 @@ struct gmic {
   gmic_image<char>& selection2string(const gmic_image<unsigned int>& selection, const gmic_list<char>& images_names,
                                      const unsigned int display_selection, gmic_image<char>& res) const;
 
-  gmic_list<char> commands_line_to_CImgList(const char *const commands_line);
+  gmic_list<char> command_line_to_CImgList(const char *const command_line);
 
   void _gmic_substitute_args(const char *const argument, const char *const argument0, const char *const command,
                              const char *const item);
@@ -463,11 +463,11 @@ struct gmic {
                       const unsigned int start, const unsigned int end);
 
   template<typename T>
-  gmic& _run(const gmic_list<char>& commands_line, gmic_list<T> &images, gmic_list<char> &images_names,
+  gmic& _run(const gmic_list<char>& command_line, gmic_list<T> &images, gmic_list<char> &images_names,
              const bool push_new_run);
 
   template<typename T>
-  gmic& _run(const gmic_list<char>& commands_line, unsigned int& position, gmic_list<T>& images,
+  gmic& _run(const gmic_list<char>& command_line, unsigned int& position, gmic_list<T>& images,
              gmic_list<char>&images_names, gmic_list<T>& parent_images, gmic_list<char>& parent_images_names,
              const unsigned int *const variables_sizes, bool *const is_noargs, const char *const parent_arguments,
              const gmic_image<unsigned int> *const command_selection, const bool push_new_run);
@@ -492,7 +492,7 @@ struct gmic {
   int verbosity, network_timeout;
   bool allow_main_, is_change, is_debug, is_running, is_start, is_return, is_quit, is_debug_info,
     _is_abort, *is_abort, is_abort_thread, is_lbrace_command;
-  const char *starting_commands_line;
+  const char *starting_command_line;
 };
 
 // Class 'gmic_exception'.
