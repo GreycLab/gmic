@@ -9458,33 +9458,29 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!std::strcmp(uext,"off")) {
 
             // OFF file (geomview).
-            *gmic_use_formula = 0;
-            std::strncpy(formula,filename,_formula.width() - 1);
-            formula[_formula.width() - 1] = 0;
-
             if (*options)
               error(true,0,0,
                     "Command 'output': File '%s', format does not take any output options (options '%s' specified).",
-                    formula,options.data());
+                    _filename.data(),options.data());
 
             print(0,"Output 3D object%s as %s file '%s'.",
-                  gmic_selection.data(),uext.data(),formula);
+                  gmic_selection.data(),uext.data(),_filename.data());
 
             cimg_forY(selection,l) {
               uind = selection[l];
               const CImg<T>& img = gmic_check(images[uind]);
-              if (selection.height()!=1) cimg::number_filename(filename,l,6,formula);
+              if (selection.height()!=1) cimg::number_filename(filename,l,6,gmic_use_formula);
               CImgList<float> opacities;
               vertices.assign(img,false);
               try {
                 vertices.CImg3dtoobject3d(primitives,g_list_f,opacities,false).
-                  save_off(primitives,g_list_f,formula);
+                  save_off(primitives,g_list_f,selection.height()==1?_filename.data():formula);
               } catch (CImgException&) {
                 if (!vertices.is_CImg3d(true,&(*gmic_use_message=0)))
                   error(true,0,0,
                         "Command 'output': 3D object file '%s', invalid 3D object [%u] "
                         "in image%s (%s).",
-                        formula,uind,gmic_selection.data(),message);
+                        selection.height()==1?_filename.data():formula,uind,gmic_selection.data(),message);
                 else throw;
               }
             }
@@ -9521,7 +9517,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     stype,
                     g_list[0].width(),g_list[0].height(),
                     g_list[0].depth(),g_list[0].spectrum());
-            else print(0,"Output image%s as %s file '%s', with pixel type '%s'.",
+            else print(0,"Output image%s as %s files '%s', with pixel type '%s'.",
                        gmic_selection.data(),
                        uext.data(),_filename.data(),
                        stype);
@@ -9556,6 +9552,38 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                          "Command 'output': File '%s', invalid "
                                          "specified pixel type '%s'.",
                                          _filename.data(),stype);
+          } else if (!std::strcmp(uext,"png")) {
+              const char *const s_0 = "", *const s_8 = " 8 bit depth", *const s_16 = " 16 bit depth";
+              unsigned bit_depth = 0;
+              if (cimg_sscanf(options,"%u%c",&bit_depth,&end)!=1 ||
+                  (bit_depth!=8 && bit_depth!=16))
+                bit_depth = 0;
+              g_list.assign(selection.height());
+              cimg_forY(selection,l)
+                g_list[l].assign(images[selection[l]],true);
+              if (g_list.size()==1)
+                print(0,
+                      "Output image%s as a%s %s file '%s' (1 image %dx%dx%dx%d).",
+                      gmic_selection.data(),
+                      bit_depth==0?s_0:bit_depth==8?s_8:s_16,
+                      uext.data(),_filename.data(),
+                      g_list[0].width(),g_list[0].height(),
+                      g_list[0].depth(),g_list[0].spectrum());
+              else print(0,"Output image%s as%s %s files '%s'.",
+                         gmic_selection.data(),
+                         bit_depth==0?s_0:bit_depth==8?s_8:s_16,
+                         uext.data(),_filename.data());
+              if (!g_list)
+                error(true,0,0,
+                      "Command 'output': File '%s', instance list (%u,%p) is empty.",
+                      _filename.data(),g_list.size(),g_list.data());
+
+              if (g_list.size()==1) g_list[0].save_png(filename,bit_depth/8);
+              else cimglist_for(g_list,l) {
+                  cimg::number_filename(filename,l,6,gmic_use_formula);
+                  g_list[l].save_png(formula,bit_depth/8);
+                }
+
           } else if (!std::strcmp(uext,"tiff") || !std::strcmp(uext,"tif")) {
 
             // TIFF file.
