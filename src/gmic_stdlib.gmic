@@ -29113,12 +29113,13 @@ nn_conv2d : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $
   e[^-1] "[nn_lib] Add 'conv2d' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4 kernels, stride $5, dilation $6, border shrink $7 and "$s$8" boundary conditions."
   init=${_${_nn_network}_init}
-  _nn_conv2d $1_conv2d,$in,${3-10}
+  _nn_conv2d $1_conv2d,$in,${3-10},2
   nn_rename $1,$1_conv2d
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
 
 # [Internal] Insert 'conv2d' layer, with parameter image having name '$1'.
+# $11: initialization type = { 0:zero | 1:identity | 2:gaussian-noise }.
 _nn_conv2d :
   _${_nn_network}_layer_names.=$1,
   _${_nn_network}_layer_types.=conv2d,
@@ -29129,7 +29130,10 @@ _nn_conv2d :
   _${_nn_network}_$1_properties="kernel=$4x$4, stride=$5, dilation=$6, shrink=$7, boundary_conditions="$s$8", "\
                                 "learning_mode=$9, regularization=$10"
   if !isint($$1)
-    {[${_${_nn_network}_$2_size}][3]*$4^2+1},$3,1,1,4*g/(w-1)
+    {[${_${_nn_network}_$2_size}][3]*$4^2+1},$3
+    if $11==1 f. "const siz = $4^2; ; int(x/siz)==y%"{[${_${_nn_network}_$2_size}][3]}" && x%siz==int(siz/2)?1:0"
+    elif $11==2 f. "4*g/(w-1)"
+    fi
     if $9<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $1
   fi
@@ -29157,7 +29161,7 @@ nn_conv2dnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer
   e[^-1] "[nn_lib] Add 'conv2d+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4 kernels, stride $5, dilation $6, border shrink $7, "$s$8" boundary conditions and '$9' activation."
   init=${_${_nn_network}_init}
-  _nn_conv2d $1_conv2d,$in,${3-8},$10,$11
+  _nn_conv2d $1_conv2d,$in,${3-8},$10,$11,2
   nn_nl $1,$1_conv2d,$9
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
@@ -29178,7 +29182,7 @@ nn_conv2dnnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_laye
   e[^-1] "[nn_lib] Add 'conv2d+normalize+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4 kernels, stride $5, dilation $6, border shrink $7, "$s$8" boundary conditions and '$9' activation."
   init=${_${_nn_network}_init}
-  _nn_conv2d $1_conv2d,$in,${3-8},$10,$11
+  _nn_conv2d $1_conv2d,$in,${3-8},$10,$11,2
   _nn_normalize $1_normalize,$1_conv2d,1,3
   nn_nl $1,$1_normalize,$9
   _${_nn_network}_init=${init}"$0 $* "
@@ -29198,12 +29202,13 @@ nn_conv3d : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $
   e[^-1] "[nn_lib] Add 'conv3d' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4x$4 kernels, stride $5, dilation $6, border shrink $7 and "$s$8" boundary conditions."
   init=${_${_nn_network}_init}
-  _nn_conv3d $1_conv3d,$in,${3-10}
+  _nn_conv3d $1_conv3d,$in,${3-10},2
   nn_rename $1,$1_conv3d
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
 
 # [Internal] Insert 'conv3d' layer, with parameter image having name '$1'.
+# $11: initialization type = { 0:zero | 1:identity | 2:gaussian-noise }.
 _nn_conv3d :
   _${_nn_network}_layer_names.=$1,
   _${_nn_network}_layer_types.=conv3d,
@@ -29214,7 +29219,10 @@ _nn_conv3d :
   _${_nn_network}_$1_properties="kernel=$4x$4x$4, stride=$5, dilation=$6, shrink=$7, boundary_conditions="$s$8", "\
                                 "learning_mode=$9, regularization=$10"
   if !isint($$1)
-    {[${_${_nn_network}_$2_size}][3]*$4^3+1},$3,1,1,4*g/(w-1)
+    {[${_${_nn_network}_$2_size}][3]*$4^3+1},$3
+    if $11==1 f. "const siz = $4^2; ; int(x/siz)==y%"{[${_${_nn_network}_$2_size}][3]}" && x%siz==int(siz/2)?1:0"
+    elif $11==2 f. 4*g/(w-1)
+    fi
     if $9<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $1
   fi
@@ -29242,7 +29250,7 @@ nn_conv3dnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer
   e[^-1] "[nn_lib] Add 'conv3d+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4x$4 kernels, stride $5, dilation $6, border shrink $7, "$s$8" boundary conditions and '$9' activation."
   init=${_${_nn_network}_init}
-  _nn_conv3d $1_conv3d,$in,${3-8},$10,$11
+  _nn_conv3d $1_conv3d,$in,${3-8},$10,$11,2
   nn_nl $1,$1_conv3d,$9
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
@@ -29263,7 +29271,7 @@ nn_conv3dnnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_laye
   e[^-1] "[nn_lib] Add 'conv3d+normalize+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
          "$4x$4x$4 kernels, stride $5, dilation $6, border shrink $7, "$s$8" boundary conditions and '$9' activation."
   init=${_${_nn_network}_init}
-  _nn_conv3d $1_conv3d,$in,${3-8},$10,$11
+  _nn_conv3d $1_conv3d,$in,${3-8},$10,$11,2
   _nn_normalize $1_normalize,$1_conv3d,1,3
   nn_nl $1,$1_normalize,$9
   _${_nn_network}_init=${init}"$0 $* "
@@ -29696,7 +29704,7 @@ nn_resconv2d : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_
          "dilation $4 and "$s$5" boundary conditions."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$6,$7
+  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$6,$7,0
   nn_add $1,$1_conv2d,$1_clone0
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
@@ -29716,7 +29724,7 @@ nn_resconv2dnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_chec
          "dilation $4, "$s$5" boundary conditions and '$6' activation."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8
+  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
   nn_add $1_add,$1_conv2d,$1_clone0
   nn_nl $1,$1_add,$6
   _${_nn_network}_init=${init}"$0 $* "
@@ -29738,7 +29746,7 @@ nn_resconv2dnnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_che
          "dilation $4, "$s$5" boundary conditions and '$6' activation."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8
+  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
   _nn_normalize $1_normalize,$1_conv2d,1,3
   nn_add $1_add,$1_normalize,$1_clone0
   nn_nl $1,$1_add,$6
@@ -29758,7 +29766,7 @@ nn_resconv3d : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_
          "dilation $4 and "$s$5" boundary conditions."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$6,$7
+  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$6,$7,0
   nn_add $1,$1_conv3d,$1_clone0
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$1
@@ -29778,7 +29786,7 @@ nn_resconv3dnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_chec
          "dilation $4, "$s$5" boundary conditions and '$6' activation."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8
+  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
   nn_add $1_add,$1_conv3d,$1_clone0
   nn_nl $1,$1_add,$6
   _${_nn_network}_init=${init}"$0 $* "
@@ -29800,7 +29808,7 @@ nn_resconv3dnnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_che
          "dilation $4, "$s$5" boundary conditions and '$6' activation."
   init=${_${_nn_network}_init}
   nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8
+  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
   _nn_normalize $1_normalize,$1_conv3d,1,3
   nn_add $1_add,$1_normalize,$1_clone0
   nn_nl $1,$1_add,$6
