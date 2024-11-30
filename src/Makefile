@@ -217,7 +217,7 @@ OPT_CFLAGS += -O3 -mtune=generic # $(FLTO)
 OPT_LIBS = # $(FLTO)
 endif
 ifdef IS_CLANG
-OPT_CFLAGS += -O3 -mtune=generic # $(FLTO)
+OPT_CFLAGS += -O3 -mtune=generic --stdlib=libc++
 endif
 ifdef icpc
 OPT_CFLAGS += -fast
