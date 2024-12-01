@@ -213,7 +213,7 @@ endif
 FLTO = -flto
 ifdef IS_GCC
 OPT_CFLAGS = -O3 -mtune=generic
-OPT_LIBS = ${FLTO}
+OPT_LIBS = # ${FLTO}
 endif
 ifdef IS_CLANG
 OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++
