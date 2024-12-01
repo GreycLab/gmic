@@ -211,16 +211,17 @@ endif
 
 # Enable optimizations for 'cli'.
 FLTO = -flto
-OPT_CFLAGS =
 ifdef IS_GCC
-OPT_CFLAGS += -O3 -mtune=generic # $(FLTO)
-OPT_LIBS = # $(FLTO)
+OPT_CFLAGS = -O3 -mtune=generic
+OPT_LIBS = ${FLTO}
 endif
 ifdef IS_CLANG
-OPT_CFLAGS += -O3 -mtune=generic --stdlib=libc++
+OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++
+OPT_LIBS = ${FLTO}
 endif
 ifdef icpc
-OPT_CFLAGS += -fast
+OPT_CFLAGS = -fast
+OPT_LIBS =
 endif
 
 # Enable multi-threading support.

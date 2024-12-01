@@ -14850,8 +14850,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   cimg::mutex(24);
   for (int k = grl.width() - (ind_run<grl._width?0:1); k>=0; --k) {
     const int _k = k>=grl.width()?ind_run:k; // First try is 'ind_run' if defined
-    CImg<void*> &gr = grl[_k];
-    if (gr && gr[0]==this) { if (push_new_run) grl.remove(_k); else gr = prev_gr; break; }
+    if (_k<grl.width()) {
+      CImg<void*> &gr = grl[_k];
+      if (gr && gr[0]==this) { if (push_new_run) grl.remove(_k); else gr = prev_gr; break; }
+    }
   }
   cimg::mutex(24,0);
   return *this;
