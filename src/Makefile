@@ -230,7 +230,7 @@ ifneq ($(OS),Windows)
 PARALLEL_LIBS = -lpthread
 endif
 
-# Enable parallelization in CImg, using OpenMP.
+# Enable parallelization, using OpenMP.
 # (http://www.openmp.org/)
 ifdef IS_CLANG
 OPENMP_CFLAGS = -I/usr/lib/gcc/x86_64-linux-gnu/9/include -Dcimg_use_openmp -fopenmp=libomp
