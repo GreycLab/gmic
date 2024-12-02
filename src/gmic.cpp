@@ -4596,7 +4596,7 @@ CImg<char> gmic::substitute_item(const char *const source,
                 cimg_for(img,ptr,T) if ((unsigned char)*ptr) ++strsiz; else break;
                 if (strsiz) {
                   CImg<char> text(strsiz + 1), _text = text.get_shared_points(0,strsiz - 1,0,0,0);
-                  _text = CImg<T>(img.data(),strsiz,1,1,1,true);
+                  cimg_foroff(_text,off) _text[off] = (char)img[off]; // Something messes up with clang++ optimization
                   text.back() = 0;
                   strreplace_bw(text);
                   _text.append_string_to(substituted_items,ptr_sub);
