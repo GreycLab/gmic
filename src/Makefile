@@ -212,11 +212,11 @@ endif
 # Enable optimizations for 'cli'.
 FLTO = -flto
 ifdef IS_GCC
-OPT_CFLAGS = -O3 -mtune=generic
+OPT_CFLAGS = -O3 -mtune=generic # '-Ofast' makes things unstable
 OPT_LIBS = # ${FLTO}
 endif
 ifdef IS_CLANG
-OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++
+OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++ # '-Ofast' makes things unstable
 OPT_LIBS = ${FLTO}
 endif
 ifdef icpc
