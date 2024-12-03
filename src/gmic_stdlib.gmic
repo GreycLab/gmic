@@ -24065,7 +24065,7 @@ poweriteration : check "isint(${1=1},1) && ${2=1e-6}>0 && isint(${3=1000},1)"
     eval "
       const N = w#0;
       A = crop(#0);
-      b = expr('u(-1,1)',N); b/=norm(b);
+      b = unitnorm(expr('u(-1,1)',N));
       repeat ($1,k,
         p_lambda = inf;
         repeat ($3,
@@ -24614,8 +24614,8 @@ cubes3d : check ${1=1}>=0
           P0 = P;
           do (ref = unitnorm([ u([-1,-1,-1],[1,1,1]) ]); crossWref = cross(W,ref), norm(crossWref)<1e-5);
         );
-        U = cross(W,ref); U/=norm(U);
-        V = cross(W,U); V/=norm(V);
+        U = unitnorm(cross(W,ref));
+        V = unitnorm(cross(W,U));
         M = transpose([ U,V,W ],3);
         ref = -V;
       );
@@ -26067,15 +26067,14 @@ _specs3d :
         repeat $2 {
           0 # Next primitives
           1,{1,@{1,h-1}},1,1,"
-            unit(V) = (ref(V,_V); _V/norm(_V));
             p = I[#1,y];
             P0 = I[#0,p[0]]; P1 = I[#0,p[1]]; P2 = I[#0,p[2]];
             varname = string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])); p01 = get(varname);
-            isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unit((P0 + P1)/2)));
+            isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unitnorm((P0 + P1)/2)));
             varname = string(#48,'p',min(p[0],p[2]),'_',max(p[0],p[2])); p02 = get(varname);
-            isnan(p02)?(set(varname,p02 = da_size(#0)); da_push(#0,unit((P0 + P2)/2)));
+            isnan(p02)?(set(varname,p02 = da_size(#0)); da_push(#0,unitnorm((P0 + P2)/2)));
             varname = string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])); p12 = get(varname);
-            isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unit((P1 + P2)/2)));
+            isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unitnorm((P1 + P2)/2)));
             da_push([ p[0],p01,p02 ],[ p01,p[1],p12 ],[ p02,p12,p[2] ],[ p01,p12,p02 ])"
           rm[1,-1]
         }
@@ -26088,19 +26087,18 @@ _specs3d :
         repeat -$2 {
           0 # Next primitives
           1,{1,@{1,h-1}},1,1,"
-            unit(V) = (ref(V,_V); _V/norm(_V));
             p = I[#1,y];
             P0 = I[#0,p[0]]; P1 = I[#0,p[1]]; P2 = I[#0,p[2]]; P3 = I[#0,p[3]];
             varname = string(#48,'p',min(p[0],p[1]),'_',max(p[0],p[1])); p01 = get(varname);
-            isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unit((P0 + P1)/2)));
+            isnan(p01)?(set(varname,p01 = da_size(#0)); da_push(#0,unitnorm((P0 + P1)/2)));
             varname = string(#48,'p',min(p[1],p[2]),'_',max(p[1],p[2])); p12 = get(varname);
-            isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unit((P1 + P2)/2)));
+            isnan(p12)?(set(varname,p12 = da_size(#0)); da_push(#0,unitnorm((P1 + P2)/2)));
             varname = string(#48,'p',min(p[2],p[3]),'_',max(p[2],p[3])); p23 = get(varname);
-            isnan(p23)?(set(varname,p23 = da_size(#0)); da_push(#0,unit((P2 + P3)/2)));
+            isnan(p23)?(set(varname,p23 = da_size(#0)); da_push(#0,unitnorm((P2 + P3)/2)));
             varname = string(#48,'p',min(p[0],p[3]),'_',max(p[0],p[3])); p03 = get(varname);
-            isnan(p03)?(set(varname,p03 = da_size(#0)); da_push(#0,unit((P0 + P3)/2)));
+            isnan(p03)?(set(varname,p03 = da_size(#0)); da_push(#0,unitnorm((P0 + P3)/2)));
             pc = da_size(#0);
-            da_push(#0,unit((P0 + P1 + P2 + P3)/4));
+            da_push(#0,unitnorm((P0 + P1 + P2 + P3)/4));
             da_push([ p[0],p01,pc,p03 ],[ p01,p[1],p12,pc ],[ pc,p12,p[2],p23 ],[ p03,pc,p23,p[3] ])"
           rm[1,-1]
         }
@@ -26154,8 +26152,7 @@ _specs3d :
     s3d
     r[2] 3,{2,h/3},1,1,-1 permute[2] zycx
     f[2] "
-      V = [ i0,i1,i2 ];
-      V/=norm(V);
+      V = unitnorm([ i0,i1,i2 ]);
       theta = -acos(V[2]);
       phi = atan2(V[1],V[0]);
       R = ($1);
@@ -26555,7 +26552,7 @@ surfels3d : check "${1=1}>0 && ${2=1}>0 && ${3=1}>0"
 #@cli : Generate 3D tensor fields from selected images.
 #@cli : when 'shape'>0, it gives the ellipsoid shape precision.
 #@cli : Default values: 'radius_factor=1', 'shape=2' and 'radius_min=0.05'.
-#@cli : $ 6,6,6,9,"U = [x,y,z] - [w,h,d]/2; U/=norm(U); mul(U,U,3) + 0.3*eye(3)" tensors3d 0.8
+#@cli : $ 7,7,7,9,"U = unitnorm([x,y,z] - [w,h,d]/2); mul(U,U,3) + 0.3*eye(3)" tensors3d 0.8
 tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
   e[^-1] "Generate 3D tensor field(s) from image$?, with radius factor $1, "\
           ${"if $2 u ellipsoid else u box fi"}" shape and radius min $3."
@@ -34921,7 +34918,7 @@ math_lib :
     # Initialize data.
     meig_V = vector(#meig_m*meig_n);
     meig_H = vector(#meig_m^2);
-    ref(expr('u(-1,1)',1,meig_n),meig_vj); meig_vj/=norm(meig_vj);
+    meig_vj = unitnorm(expr('u(-1,1)',1,meig_n));
 
     # Iteration loop.
     repeat (meig_m,meig_j,
@@ -54455,12 +54452,9 @@ __fx_illuminate_shape2d : # Input selection must contains a single image. Output
       );
       res = i#0?(
         P = [ 2*x/mwh1 - 1,2*y/mwh1 - 1,0 ];
-        L = light - P;
-        L/=norm(L);
-        V = camera - P;
-        V/=norm(V);
-        N = -[ i0,i1,flatness ];
-        N/=norm(N);
+        L = unitnorm(light - P);
+        V = unitnorm(camera - P);
+        N = unitnorm(-[ i0,i1,flatness ]);
         R = 2*dot(N,L)*N - L;
         res = ka + kd*dot(L,N) + ks*max(dot(R,V),0)^alpha;
       ):0;
@@ -57104,8 +57098,8 @@ fx_mesh3d : skip "${1=},${2=}"
     );
     U = coords3d($ux,$uy);
     V = coords3d($vx,$vy);
-    W = cross(U,V); W/=norm(W);
-    nV = cross(W,U); nV/=norm(nV);
+    W = unitnorm(cross(U,V));
+    nV = unitnorm(cross(W,U));
     dot(nV,V)<0?(nV*=1);
     [ U,nV,W ]"
 
@@ -58945,8 +58939,7 @@ _fx_tree:
           len = cut("$avg_length" + u(-1,-1)*"$std_length",0,200);
           rot = rot(ang°);
           nB = B + len%*rot*AB;
-          orth = (nB - B);
-          orth/=norm(orth);
+          orth = unitnorm(nB - B);
           orth = [ -orth[1],orth[0] ];
           nthickness = thickness*("$avg_thickness" + u(-1,1)*"$std_thickness")%;
           Q0 = nB + nthickness*orth;
@@ -60416,7 +60409,7 @@ fx_solve_maze_preview :
 #@cli : $ image.jpg imagerubik3d , _fps=10 _label="Rubik~Cube"
 #@cli : $ shape_cupid 480 skeleton3d , _fps=10 _label="3D~Skeleton"
 #@cli : $ spherical3d "abs(1+0.5*cos(3*phi)*sin(4*theta))" _fps=10 _label="3D~Spherical~Function"
-#@cli : $ 6,6,6,9,"U = [x,y,z] - [w,h,d]/2; U/=norm(U); mul(U,U,3) + 0.3*eye(3)" tensors3d 0.8 _fps=10 \
+#@cli : $ 7,7,7,9,"U = unitnorm([x,y,z] - [w,h,d]/2); mul(U,U,3) + 0.3*eye(3)" tensors3d 0.8 _fps=10 \
 # _label="3D~Tensors"
 #@cli : $ text3d "G'MIC Rocks!" _fps=10 _label="3D~Text"
 #@cli : $ torus3d 10,3 color3d[-1] ${-rgb} _fps=10 _label="3D~Torus"
