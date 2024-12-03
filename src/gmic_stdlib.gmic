@@ -6915,9 +6915,9 @@ parse_gmd :
       section = subsection = subsubsection = subsubsubsection = anchor =
       bullet = subbullet = subsubbullet = center = right = table = blockquote = detail_block = code_block =
       shell = bold_italic_a = bold_italic_u = bold_a = bold_u = italic_a = italic_u = strikethrough = underline =
-      monospace = value_set = expr_highlight = url = page_link = text_link1 = text_link2 = img1 = img2 = pipeline =
+      monospace = value_set = word_highlight = url = page_link = text_link1 = text_link2 = img1 = img2 = pipeline =
       formula = opening_offset = -1;
-      expr_highlight_whitespaces = 0;
+      word_highlight_whitespaces = 0;
 
       blank(c) = isin(c,_' ',_'\n',s_whitespace,s_tab,0);
       semiblank(c) = isin(c,_' ',_'\n',_'.',_',',_';',_':',_'!',_'?',
@@ -7272,17 +7272,17 @@ parse_gmd :
       res[y] = e_value_set;
     ):
 
-    # Expression highlight: ' 'expr_highlight' '.
+    # Word highlight: ' 'word_highlight' '.
     non_escaped && c==_'\'' && nc!=c?(
-      expr_highlight<0 && semiblank(pc)?( # Opening
-        expr_highlight = y;
-        expr_highlight_whitespaces = 0;
+      word_highlight<0 && semiblank(pc)?( # Opening
+        word_highlight = y;
+        word_highlight_whitespaces = 0;
       ):
-      expr_highlight>=0 && y>expr_highlight + 1 && semiblank(nc)?( # Closing
-        opening_offset = expr_highlight;
-        res[expr_highlight++] = s_expr_highlight;
-        copy(res[expr_highlight],i[expr_highlight],y - expr_highlight); # Cancel tokens found inside
-        res[y] = e_expr_highlight;
+      word_highlight>=0 && y>word_highlight + 1 && semiblank(nc)?( # Closing
+        opening_offset = word_highlight;
+        res[word_highlight++] = s_word_highlight;
+        copy(res[word_highlight],i[word_highlight],y - word_highlight); # Cancel tokens found inside
+        res[y] = e_word_highlight;
       );
     ):
 
@@ -7390,7 +7390,7 @@ parse_gmd :
       );
 
       # Reset tokens that cannot contain whitespace.
-      (++expr_highlight_whitespaces)>2?reset(expr_highlight);
+      (++word_highlight_whitespaces)>2?reset(word_highlight);
       reset(url);
       text_link2>=0?(reset(text_link1); reset(text_link2));
       img2>=0?(reset(img1); reset(img2));
@@ -7419,7 +7419,7 @@ parse_gmd :
       reset(strikethrough);
       reset(underline);
       reset(monospace);
-      reset(expr_highlight);
+      reset(word_highlight);
       reset(url);
       reset(page_link);
       text_link2>=0?(reset(text_link1); reset(text_link2));
@@ -7454,7 +7454,7 @@ parse_gmd :
       underline>=opening_offset ? reset(underline);
       monospace>=opening_offset ? reset(monospace);
       value_set>=opening_offset ? reset(value_set);
-      expr_highlight>=opening_offset ? reset(expr_highlight);
+      word_highlight>=opening_offset ? reset(word_highlight);
       url>=opening_offset ? reset(url);
       page_link>=opening_offset ? reset(page_link);
       text_link1>=opening_offset || text_link2>=opening_offset ? (reset(text_link1); reset(text_link2));
@@ -7497,7 +7497,7 @@ gmd2html : skip "${1=}"
         write(c);
       ):(
         isin(c,e_bold_a,e_bold_u,e_bold_italic_a,e_bold_italic_u,e_italic_a,e_italic_u,
-               e_monospace,e_strikethrough,e_underline,e_expr_highlight) ? write('</span>'):
+               e_monospace,e_strikethrough,e_underline,e_word_highlight) ? write('</span>'):
         isin(c,e_bullet,e_subbullet,e_subsubbullet) ? write('</div>\n'):
         c==e_section ? write('</h2>\n'):
         c==e_subsection ? write('</h3>\n'):
@@ -7618,7 +7618,7 @@ gmd2html : skip "${1=}"
         c==s_monospace ? write('<span class=\"gmd_monospace\">'):
         c==s_value_set ? write('<span class=\"gmd_value_set\">{'):
         c==e_value_set ? write('}</span>'):
-        c==s_expr_highlight ? write('<span class=\"gmd_expr_highlight\">'):
+        c==s_word_highlight ? write('<span class=\"gmd_word_highlight\">'):
 
         c==s_url ? (
           ind_e = find(#1,e_url,y);
@@ -8006,8 +8006,8 @@ gmd2ascii :
         c==e_monospace ? write([vt100_n,_'\47']):
         c==s_value_set ? write([vt100_g,vt100_i,_'{']):
         c==e_value_set ? write([_'}',vt100_n]):
-        c==s_expr_highlight ? write([_'\47',vt100_g]):
-        c==e_expr_highlight ? write([vt100_n,_'\47']):
+        c==s_word_highlight ? write([_'\47',vt100_g]):
+        c==e_word_highlight ? write([vt100_n,_'\47']):
 
         isin(c,s_url,s_page_link,s_text_link) ? write(vt100_u):
         c==m_text_link ? (
@@ -8142,8 +8142,8 @@ _gmd_tokens :
      const e_monospace = -54;
      const s_value_set = -55;
      const e_value_set = -56;
-     const s_expr_highlight = -57;
-     const e_expr_highlight = -58;
+     const s_word_highlight = -57;
+     const e_word_highlight = -58;
 
      const s_url = -59;
      const e_url = -60;
@@ -17720,7 +17720,7 @@ scale2x :
 
 #@cli scale2x_cnn : _sharpness>=0
 #@cli : Double XY-size of selected images, using a convolutional neural network.
-#@cli : Defaut value: 'sharpness=1.25'.
+#@cli : Default value: 'sharpness=1.25'.
 #@cli : $ image.jpg rescale2d 128 +scale2x_cnn ,
 scale2x_cnn : check "${1=1.25}>=0"
   e[^-1] "Double XY-size of image$?, using a convolutional neural network, with sharpness $1."
