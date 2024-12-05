@@ -56,6 +56,7 @@ Other open-source projects are known to use some of the <b><font color="#000066"
 [![Packaging status](https://repology.org/badge/vertical-allrepos/gmic.svg?header=gmic)](https://repology.org/project/gmic/versions)
 
 </details>
+
 -----------------------
 
 ## Testing the software
