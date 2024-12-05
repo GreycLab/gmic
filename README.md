@@ -56,17 +56,20 @@ Other open-source projects are known to use some of the <b><font color="#000066"
 [![Packaging status](https://repology.org/badge/vertical-allrepos/gmic.svg?header=gmic)](https://repology.org/project/gmic/versions)
 
 </details>
-
 -----------------------
 
-## Give Us Support !
+## Testing the software
 
-  If you appreciate what we do on G'MIC, please consider supporting us !
-
-  We collaborate with ["Association LILA (Libre comme l'Art)"](https://libreart.info/en/projects/gmic),
-  a French non-profit organization which collects donations to help developing the G'MIC project.
-
-  [Visit the donation page](https://libreart.info/en/projects/gmic)
+The correct functioning of the **G'MIC** software can be tested using these two commands, which execute all the commands
+and filters available in the framework:
+~~~
+$ gmic input_text https://gmic.eu/gmic_stdlib.\$_version parse_cli images
+~~~
+and
+~~~
+$ gmic input_text https://gmic.eu/gmic_stdlib.\$_version parse_gui images
+~~~
+Please make sure you run these commands in a new empty folder, as it generates a lot of new image files.
 
 -----------------------
 
