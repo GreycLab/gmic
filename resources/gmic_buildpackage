@@ -60,7 +60,6 @@ if [ "$OSTYPE" == "msys" ]; then
     cp -rf /e/work/src/gmic-qt $HOME
     cp -rf /e/work/src/gmic/src $HOME/gmic
     cp -rf /e/work/src/gmic-community/libcgmic/*gmic* $HOME/gmic/src
-    cp -rf /e/work/src/zart $HOME/gmic/
 
     # Get version number.
     cd $HOME/gmic/src
@@ -105,9 +104,6 @@ if [ "$OSTYPE" == "msys" ]; then
     OUTDIR_LIB=gmic-${SVERSION}${SUFFIX}-lib-win${BITS}
     OUTZIP_LIB=gmic_${SVERSION}${SUFFIX}_lib_win${BITS}.zip
 
-    OUTDIR_ZART=gmic-${SVERSION}${SUFFIX}-zart-win${BITS}
-    OUTZIP_ZART=gmic_${SVERSION}${SUFFIX}_zart_win${BITS}.zip
-
     OUTDIR_QT=gmic-${SVERSION}${SUFFIX}-qt-win${BITS}
     OUTZIP_QT=gmic_${SVERSION}${SUFFIX}_qt_win${BITS}.zip
 
@@ -145,7 +141,6 @@ if [ "$OSTYPE" == "msys" ]; then
     cp -f gmic/src/gmic.h gmic/src/gmic_libc.h gmic/src/use_lib* gmic/src/lib*.d* gmic/src/lib*.a build${BITS}-lib/
     cp -f gmic-qt/release/gmic_qt.exe build${BITS}-qt/
     cp -f gmic-qt/release/gmic_gimp_qt.exe build${BITS}-gimp/
-    # cp -f gmic/zart/release/zart.exe build${BITS}-zart/
 
     # Construct G'MIC (CLI) archive.
     cp -rf build${BITS}-cli ${OUTDIR_CLI} &&
@@ -226,7 +221,7 @@ if [ "$HOSTNAME" != "C302L-G17P17.png.unicaen.fr" ] && [ "$HOSTNAME" != "C302L-G
         find gmic-${SVERSION}${SUFFIX} -exec touch {} ;
 
     cd $OUTDIR/src
-    sed "s/\$(MAKE) lib cli gimp gmic_qt libc zart/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile && mv /tmp/Makefile Makefile;
+    sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile && mv /tmp/Makefile Makefile;
     sed "s/\&\& \$(MAKE) clean//g" Makefile > /tmp/Makefile && mv /tmp/Makefile Makefile;  # Prevent 'qmake not found' bug when using dpkg-buildpackage, still don't know why.
 
     cd /tmp/$OUTDIR &&
@@ -248,7 +243,7 @@ fi
 # Build package from main machine.
 #---------------------------------
 cd ${HOME}/work/src
-rm -rf gmic-qt zart
+rm -rf gmic-qt
 git clone git@github.com:GreycLab/gmic-qt.git
 RELEASE0=`grep "#define gmic_version" gmic/src/gmic.h | tail -c5`
 RELEASE1=`echo $RELEASE0 | head -c1`
@@ -283,8 +278,6 @@ git merge develop -m "."
 git push
 git checkout develop
 rm -rf gmic-qt
-# rm -rf zart
-# ln -fs ../zart .
 ln -fs ../gmic-qt .
 
 # Perform filters update on the G'MIC server.
@@ -379,13 +372,6 @@ cp -Lrf samples/*.gmic $DIR/resources/samples
 cp -Lrf debian $DIR
 cd ..
 
-# cd zart
-# qmake zart.pro
-# make distclean
-# mkdir -p $DIR/zart
-# cp -Lrf icons images include src ui *.xml *.html README.md zart.pro zart.desktop zart.qrc $DIR/zart
-# cd ..
-
 cd gmic-qt
 qmake gmic_qt.pro
 make distclean
@@ -428,8 +414,6 @@ rm -f `find . -name "*~"`
 rm -r `find . -name "\#*"`
 rm -r `find . -name "CVS"`
 rm -r `find . -name ".git"`
-# cd zart
-# qmake CONFIG+=release GMIC_PATH=../src zart.pro
 
 # Create .tar.gz source archives.
 #--------------------------------
@@ -442,7 +426,6 @@ gzip deb_${TARFILE}
 cp -f deb_${TARFILE}.gz ${HOME}/work/src/
 
 rm -rf `basename $DIR`/debian
-#rm -rf `basename $DIR`/zart
 #rm -rf `basename $DIR`/gmic-qt
 #rm -rf `basename $DIR`/src/gmic_libc.cpp
 #rm -rf `basename $DIR`/src/gmic_libc.h
@@ -473,7 +456,7 @@ cp ${HOME}/work/src/deb_${TARFILE}.gz /tmp/ &&
     tar zxvf deb_${TARFILE}.gz &&
     find gmic-${SVERSION}${SUFFIX} -exec touch {} \; &&
     cd $OUTDIR/src &&
-    sed "s/\$(MAKE) lib cli gimp gmic_qt libc zart/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile &&
+    sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile &&
     mv /tmp/Makefile Makefile && cd ../..
 cd $OUTDIR &&
     dpkg-buildpackage -d -j3 -rfakeroot;

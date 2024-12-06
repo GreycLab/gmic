@@ -386,7 +386,7 @@ else
 endif
 endif
 	@echo "**"
-	$(MAKE) lib cli gimp gmic_qt libc zart
+	$(MAKE) lib cli gimp gmic_qt libc
 
 native:
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) -O3 -march=native" "LIBS+=$(GMIC_STD_LIBS)" cli
