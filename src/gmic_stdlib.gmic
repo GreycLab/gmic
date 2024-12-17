@@ -22210,19 +22210,35 @@ _axes :
   do N:=1+round(($M-$m)/$s,1,1) s:=2*$s while $N>$n
   u $m,{$s/2}
 
-#@cli ball : _size>0, _R,_G,_B,0<=_specular_light<=8,0<=_specular_size<=8,_shadow>=0
-#@cli : Input a 2D RGBA colored ball sprite.
-#@cli : Default values: 'size=64', 'R=255', 'G=R', 'B=R', 'specular_light=0.8', 'specular_size=1' and 'shading=1.5'.
+#@cli ball : _size>0, _R,_G,_B,_ambiant>=0,_diffuse>=0,_specular>=0,_shininess>=0
+#@cli : Input a 2D RGBA colored ball sprite, rendered using the Phong illumination model.
+#@cli : Default values: 'size=64', 'R=200', 'G=R', 'B=R', 'ambiant=0.25', 'diffuse=1', 'specular=1' and 'shininess=30'.
 #@cli : $ repeat 9 { ball {1.5^($>+2)},${-rgb} } append x
-+ball : check "${1=64}>0 && ${5=0.8}>=0 && $5<=8 && ${6=1}>=0 && $6<=8 && ${7=1.5}>=0" skip ${2=255},${3=$2},${4=$3}
-  e[^-1] "Input $1x$1 ball with color (${2-4}), specular light $5, specular size $6 and shadow factor $7."
-  l[] {
-    {2*$1},{2*$1} = 1,65%,30% distance 1 * -1
-    +n 0,1 ^[1] $7 *[1] 1.4 +*[1] $3 +*[1] $4 *[1] $2 a[^0] c
-    >=[0] {100-10*$6}% b[0] {3*$6}% n[0] 0,{$5*255} rv + c 0,255
-    100%,100% circle[1] 50%,50%,34%,1,1 *[0] [1] *. 255 a c
-    r $1,$1,1,4,2
-  }
++ball : check "isint(${1=64},1) && ${5=0.25}>=0 && ${6=1}>=0 && ${7=1}>=0 && ${8=30}>=0" skip "${2=200},${3=$2},${4=$2}"
+  e[^-1] "Input $1x$1 ball with color (${2-4}), ambiant weight $5, diffuse weight $6, specular weight $7 and "\
+         "shininess $8."
+  {s=2*$1+1;[s,s]},1,4,"
+    begin(
+      color = [ ${2-4} ];
+      ambiant_color = $5*color;
+      diffuse_color = $6*color;
+      specular_color = $7*[ 255,255,255 ];
+      const shininess = $8;
+      L = unitnorm([ 1.5,-1.5,1 ]);
+    );
+    X = 2*x/w - 1;
+    Y = 2*y/h - 1;
+    r2 = norm(X,Y)^2;
+    r2>1?[0,0,0,0]:(
+      Z = sqrt(1 - r2);
+      N = unitnorm([ X,Y,Z ]);
+      dotNL = dot(N,L);
+      R = 2*dotNL*N - L;
+      dotNL = max(0,dotNL);
+      dotRV = R[2]>=0?R[2]:-R[2]*0.8;
+      [ cut(ambiant_color + diffuse_color*dotNL + specular_color*dotRV^shininess,0,255),255 ];
+    )"
+  r. $1,$1,1,100%,2
 
 # chromeball64x64 : Output a 64x64 GreyA chrome ball sprite.
 # ${1-3} = R,G,B
@@ -36746,7 +36762,7 @@ x_bouncing : check_display $0
   520,320,1,3 plasma 1,1,9 n 0,220
   N=12
   repeat $N {
-    ball[] {v(32,80)},${-rgb}
+    ball {v(32,80)},${-rgb}
     t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=(u<0.5?1:-1)*u(1,8)
   }
   mv[0] $!
@@ -57042,18 +57058,19 @@ _fx_random3d4 : ($1) /. 3 torus3d $1,{^} rm..
 
 #@gui Ball : fx_ball, fx_ball_preview(0)
 #@gui : Radius = ~int(128,1,1024)
-#@gui : Specular Light = ~float(0.8,0,8)
-#@gui : Specular Size = ~float(1,0,8)
-#@gui : Shadow = ~float(1.5,0,4)
 #@gui : Color = ~color(255,0,255)
+#@gui : Ambiant Light = ~float(0.25,0,1)
+#@gui : Diffuse Light = ~float(1,0,1)
+#@gui : Specular Light = ~float(1,0,1)
+#@gui : Shininess = ~float(30,0,100)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/27/11</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/12/17</i>.</small>")
 fx_ball :
-  ball $1,${5-7},${2-4}
+  ball ${1-8}
   if $!>1 mv. 0 =>[0] "name(Ball),pos("{``{0,0.5*([${-max_wh}]-[w,h])}}")" else =>[0] "name(Ball)" fi
 
 fx_ball_preview :
-  fx_ball $*
+  fx_ball ${1-8}
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
 #@gui Circle Art : fx_circle_art, fx_circle_art
