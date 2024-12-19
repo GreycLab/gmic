@@ -55655,6 +55655,7 @@ fx_stencil :
 #@gui Stripes : fx_stripes, fx_stripes_preview(0)
 #@gui : Angle (deg.) = ~float(0,-180,180)
 #@gui : Number of sections = ~choice(1,"One","Two","Three","Four","Five")
+#@gui : Alignment = choice(1,"Top / Left","Center","Bottom / Right")
 #@gui : Anti-Aliasing = ~bool(1)
 #@gui : Outline Size (px) = ~int(0,0,16)
 #@gui : Outline Color = ~color(0,0,0,255)
@@ -55676,60 +55677,67 @@ fx_stencil :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/12/19</i>.</small>")
 fx_stripes :
+  __fx_stripes_preview_ $*
 
   # Build stripe pattern.
   l[] {
-    if $9
-      1,$9,1,4,[${10-13}]
-      if $4 1,$4,1,4,[${5-8}] fi
-    fi
-    if $2>0" && "$14
-      1,$14,1,4,[${15-18}]
-      if $4 1,$4,1,4,[${5-8}] fi
-    fi
-    if $2>1" && "$19
-      1,$19,1,4,[${20-23}]
-      if $4 1,$4,1,4,[${5-8}] fi
-    fi
-    if $2>2" && "$24
-      1,$24,1,4,[${25-28}]
-      if $4 1,$4,1,4,[${5-8}] fi
-    fi
-    if $2>3" && "$29
-      1,$29,1,4,[${30-33}]
-      if $4 1,$4,1,4,[${5-8}] fi
-    fi
+    repeat 5 {
+      if $nb_sections>$>" && "${section$>_size}
+        1,${section$>_size},1,4,[${section$>_R},${section$>_G},${section$>_B},${section$>_A}]
+        if $outline_size 1,$outline_size,1,4,[$outline_R,$outline_G,$outline_B,$outline_A] fi
+      fi
+    }
     a y
-    if $3 r. 1,200%,1,4 fi
+    if $is_antialias r. 1,200%,1,4 fi
+
+    # To correctly manage alignment, make angle always in range [0,90].
+    if inrange($angle,45,135) transpose angle-=90
+    elif inrange($angle,135,225) mirror y angle-=180
+    elif inrange($angle,225,315) mirror y transpose angle-=270
+    fi
+    angle%=360
   }
 
   # Render stripes on images.
   foreach[^-1] {
     w,h:=w,h rm pass.
-    {[$w,$h]*($3?2:1)},1,4,"
+    {[$w,$h]*($is_antialias?2:1)},1,4,"
       begin(
+        const alignment = $alignment;
         const boundary = 2;
-        ang = (-$1)%360;
-        R = ang==0?[1,0,0,1]:ang==90?[0,-1,1,0]:ang==180?[-1,0,0,-1]:ang==270?[0,1,-1,0]:rot(ang°);
-        w2 = round(w/2); h2 = round(h/2);
+        const angle = $angle;
+        R = angle==0?[1,0,0,1]:angle==90?[0,1,-1,0]:angle==180?[-1,0,0,-1]:angle==270?[0,-1,1,0]:rot(-angle°);
+        alignment==0?(wa = ha = 0):alignment==1?(wa = round(w/2); ha = round(h/2)):(wa = w; ha = h);
       );
-      XY = R*[ x - w2, y - h2 ];
+      XY = R*[ x - wa, y - ha ];
       I(#0,XY[0],XY[1])"
     k.
-    if $3 srgb2rgb r $w,$h,1,100%,2 rgb2srgb fi
+    if $is_antialias srgb2rgb r $w,$h,1,100%,2 rgb2srgb fi
   }
   rm.
 
 fx_stripes_preview :
+  __fx_stripes_preview_ $*
   fx_stripes $*
-  v2,v3,v4,v5:=$2>0?2:0,$2>1?2:0,$2>2?2:0,$2>3?2:0
-  u "{$1}{$2}{$3}"\
-    "{$4}{${5-8}}"\
-    "{$9}{${10-13}}"\
-    "{$14}"_$v2"{${15-18}}"_$v2\
-    "{$19}"_$v3"{${20-23}}"_$v3\
-    "{$24}"_$v4"{${25-28}}"_$v4\
-    "{$29}"_$v5"{${30-33}}"_$v5
+  v1,v2,v3,v4:=$nb_sections>1?2:0,$nb_sections>2?2:0,$nb_sections>3?2:0,$nb_sections>4?2:0
+  u "{"{$angle>180?$angle-360:$angle}"}{"{$nb_sections-1}"}{"$alignment"}{"$is_antialias"}"\
+    "{"$outline_size"}{"$outline_R,$outline_G,$outline_B,$outline_A"}"\
+    "{"$section0_size"}{"$section0_R,$section0_G,$section0_B,$section0_A"}"\
+    "{"$section1_size"}"_$v1"{"$section1_R,$section1_G,$section1_B,$section1_A"}"_$v1\
+    "{"$section2_size"}"_$v2"{"$section2_R,$section2_G,$section2_B,$section2_A"}"_$v2\
+    "{"$section3_size"}"_$v3"{"$section3_R,$section3_G,$section3_B,$section3_A"}"_$v3\
+    "{"$section4_size"}"_$v4"{"$section4_R,$section4_G,$section4_B,$section4_A"}"_$v4
+
+__fx_stripes_preview_ : # Retrieve parameters as shared variables
+  angle,nb_sections,alignment,is_antialias,\
+  outline_size,outline_R,outline_G,outline_B,outline_A,\
+  section0_size,section0_R,section0_G,section0_B,section0_A,\
+  section1_size,section1_R,section1_G,section1_B,section1_A,\
+  section2_size,section2_R,section2_G,section2_B,section2_A,\
+  section3_size,section3_R,section3_G,section3_B,section3_A,\
+  section4_size,section4_R,section4_G,section4_B,section4_A=$*
+  angle:=$angle%360
+  nb_sections+=1
 
 #@gui Tetris : fx_tetris, fx_tetris(0)
 #@gui : Scale = ~int(10,1,20)
