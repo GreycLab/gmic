@@ -55651,6 +55651,75 @@ fx_stencil :
   if $6 to_rgba replace_color 0,0,0,0,0,255,0,0,0,0 fi
   if $4 smooth {30*$4},0,1,1 fi
 
+#@gui Stripes : fx_stripes, fx_stripes_preview(0)
+#@gui : Angle (deg.) = ~float(0,-180,180)
+#@gui : Number of sections = ~choice(1,"One","Two","Three","Four")
+#@gui : Anti-Aliasing = ~bool(1)
+#@gui : Outline Size (px) = ~int(0,0,512)
+#@gui : Outline Color = ~color(0,0,0,255)
+#@gui : sep = separator(), note = note("<small><b>Section #1:</b></small>")
+#@gui : Size (px) = ~int(32,0,512)
+#@gui : Color = ~color(255,255,0,255)
+#@gui : sep = separator(), note = note("<small><b>Section #2:</b></small>")
+#@gui : Size (px) = ~int(32,0,512)_2-
+#@gui : Color = ~color(255,0,0,255)
+#@gui : sep = separator(), note = note("<small><b>Section #3:</b></small>")
+#@gui : Size (px) = ~int(32,0,512)_1-
+#@gui : Color = ~color(0,196,0,255)_1
+#@gui : sep = separator(), note = note("<small><b>Section #4:</b></small>")
+#@gui : Size (px) = ~int(32,0,512)_1-
+#@gui : Color = ~color(0,128,196,255)_1
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/12/19</i>.</small>")
+fx_stripes :
+
+  # Build stripe pattern.
+  l[] {
+    1,$9,1,4,[${10-13}]
+    if $4 1,$4,1,4,[${5-8}] fi
+    if $2>0
+      1,$14,1,4,[${15-18}]
+      if $4 1,$4,1,4,[${5-8}] fi
+      if $2>1
+        1,$19,1,4,[${20-23}]
+        if $4 1,$4,1,4,[${5-8}] fi
+        if $2>2
+          1,$24,1,4,[${25-28}]
+          if $4 1,$4,1,4,[${5-8}] fi
+        fi
+      fi
+    fi
+    a y
+    if $3 r. 1,200%,1,4 fi
+  }
+
+  # Render stripes on images.
+  foreach[^-1] {
+    w,h:=w,h rm pass.
+    {[$w,$h]*($3?2:1)},1,4,"
+      begin(
+        const boundary = 2;
+        ang = (-$1)%360;
+        R = ang==0?[1,0,0,1]:ang==90?[0,-1,1,0]:ang==180?[-1,0,0,-1]:ang==270?[0,1,-1,0]:rot(ang°);
+        w2 = round(w/2); h2 = round(h/2);
+      );
+      XY = R*[ x - w2, y - h2 ];
+      I(#0,XY[0],XY[1])"
+    k.
+    if $3 srgb2rgb r $w,$h,1,100%,2 rgb2srgb fi
+  }
+  rm.
+
+fx_stripes_preview :
+  fx_stripes $*
+  v2,v3,v4:=$2>0?2:0,$2>1?2:0,$2>2?2:0
+  u "{$1}{$2}{$3}"\
+    "{$4}{${5-8}}"\
+    "{$9}{${10-13}}"\
+    "{$14}"_$v2"{${15-18}}"_$v2\
+    "{$19}"_$v3"{${20-23}}"_$v3\
+    "{$24}"_$v4"{${25-28}}"_$v4
+
 #@gui Tetris : fx_tetris, fx_tetris(0)
 #@gui : Scale = ~int(10,1,20)
 #@gui : sep = separator()
