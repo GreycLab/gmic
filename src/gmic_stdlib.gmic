@@ -55655,6 +55655,7 @@ fx_stencil :
 #@gui : Angle (deg.) = ~float(0,-180,180)
 #@gui : Number of sections = ~choice(1,"One","Two","Three","Four","Five")
 #@gui : Alignment = choice(1,"Top / Left","Center","Bottom / Right")
+#@gui : Projection = choice{"Linear","Polar (Radius)","Polar (Angle)"}
 #@gui : Anti-Aliasing = ~bool(1)
 #@gui : Outline Size (px) = ~int(0,0,16)
 #@gui : Outline Color = ~color(0,0,0,255)
@@ -55688,14 +55689,8 @@ fx_stripes :
     }
     a y
     if $is_antialias r. 1,200%,1,4 fi
-
-    # To correctly manage alignment, make angle always in range [0,90].
-    if inrange($angle,45,135) transpose angle-=90
-    elif inrange($angle,135,225) mirror y angle-=180
-    elif inrange($angle,225,315) mirror y transpose angle-=270
-    fi
-    angle%=360
   }
+  if $projection==1 angle=0 fi
 
   # Render stripes on images.
   foreach[^-1] {
@@ -55705,10 +55700,21 @@ fx_stripes :
     f.. "
       begin(
         const alignment = $alignment;
+        const projection = $projection;
         const boundary = 2;
         const angle = $angle;
-        R = angle==0?[1,0,0,1]:angle==90?[0,1,-1,0]:angle==180?[-1,0,0,-1]:angle==270?[0,-1,1,0]:rot(-angle°);
+        R = angle==0?[1,0,0,1]:
+            angle==90?[0,1,-1,0]:
+            angle==180?[-1,0,0,-1]:
+            angle==270?[0,-1,1,0]:rot(-angle°);
         alignment==0?(wa = ha = 0):alignment==1?(wa = round(w/2); ha = round(h/2)):(wa = w; ha = h);
+      );
+      projection?(
+        cx = x - w/2;
+        cy = y - h/2;
+        r = norm(cx,cy);
+        x = 0;
+        y = projection==1?r:8*h#-1*atan2(cy,cx)/(2*pi);
       );
       XY = R*[ x - wa, y - ha ];
       I(#-1,XY[0],XY[1])"
@@ -55724,7 +55730,7 @@ fx_stripes_preview :
   __fx_stripes_preview_ $*
   fx_stripes $*
   v1,v2,v3,v4:=$nb_sections>1?2:0,$nb_sections>2?2:0,$nb_sections>3?2:0,$nb_sections>4?2:0
-  u "{"{$angle>180?$angle-360:$angle}"}{"{$nb_sections-1}"}{"$alignment"}{"$is_antialias"}"\
+  u "{"{$angle>180?$angle-360:$angle}"}{"{$nb_sections-1}"}{"$alignment"}{"$projection"}{"$is_antialias"}"\
     "{"$outline_size"}{"$outline_R,$outline_G,$outline_B,$outline_A"}"\
     "{"$section0_size"}{"$section0_R,$section0_G,$section0_B,$section0_A"}"\
     "{"$section1_size"}"_$v1"{"$section1_R,$section1_G,$section1_B,$section1_A"}"_$v1\
@@ -55733,7 +55739,7 @@ fx_stripes_preview :
     "{"$section4_size"}"_$v4"{"$section4_R,$section4_G,$section4_B,$section4_A"}"_$v4
 
 __fx_stripes_preview_ : # Retrieve parameters as shared variables
-  angle,nb_sections,alignment,is_antialias,\
+  angle,nb_sections,alignment,projection,is_antialias,\
   outline_size,outline_R,outline_G,outline_B,outline_A,\
   section0_size,section0_R,section0_G,section0_B,section0_A,\
   section1_size,section1_R,section1_G,section1_B,section1_A,\
