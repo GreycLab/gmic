@@ -55655,7 +55655,7 @@ fx_stencil :
 #@gui : Angle (deg.) = ~float(0,-180,180)
 #@gui : Number of sections = ~choice(1,"One","Two","Three","Four","Five")
 #@gui : Alignment = choice(1,"Top / Left","Center","Bottom / Right")
-#@gui : Projection = choice{"Linear","Polar (Radius)","Polar (Angle)"}
+#@gui : Projection = choice{"Standard","Concentric","Rays"}
 #@gui : Anti-Aliasing = ~bool(1)
 #@gui : Outline Size (px) = ~int(0,0,16)
 #@gui : Outline Color = ~color(0,0,0,255)
@@ -55690,7 +55690,7 @@ fx_stripes :
     a y
     if $is_antialias r. 1,200%,1,4 fi
   }
-  if $projection==1 angle=0 fi
+  if $projection angle=0 fi
 
   # Render stripes on images.
   foreach[^-1] {
@@ -55710,11 +55710,8 @@ fx_stripes :
         alignment==0?(wa = ha = 0):alignment==1?(wa = round(w/2); ha = round(h/2)):(wa = w; ha = h);
       );
       projection?(
-        cx = x - w/2;
-        cy = y - h/2;
-        r = norm(cx,cy);
-        x = 0;
-        y = projection==1?r:8*h#-1*atan2(cy,cx)/(2*pi);
+        cx = x - w/2; cy = y - h/2; r = norm(cx,cy); x = 0;
+        y = projection==1?r:int(($1 + 180)/9)*h#-1*(1 + atan2(cy,cx)/pi);
       );
       XY = R*[ x - wa, y - ha ];
       I(#-1,XY[0],XY[1])"
