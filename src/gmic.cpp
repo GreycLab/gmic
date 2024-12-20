@@ -13063,12 +13063,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const char *curr_command = "";
             for (unsigned int k = initial_callstack_size - 1; k>0 && *(curr_command = callstack[k])=='*'; --k) {}
             curr_command+=*curr_command=='+';
-            bool run_subcommand = false;
-            if (*curr_command && *command=='_' && command[1]=='_') {
-              const unsigned int l_curr_command = std::strlen(curr_command);
-              run_subcommand = !std::strncmp(command + 2,curr_command,l_curr_command) &&
-                command[2 + l_curr_command]=='_';
-            }
+            const bool run_sharedvar_command = *curr_command && *command=='_' && command[1]=='_';
 
             if (is_debug) {
               CImg<char> command_code_text(264);
@@ -13363,7 +13358,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const CImgList<char>
               ncommand_line = command_line_to_CImgList(substituted_command.data());
             CImg<unsigned int> nvariable_sizes;
-            if (!run_subcommand) {
+            if (!run_sharedvar_command) {
               nvariable_sizes.assign(gmic_varslots);
               cimg_forX(nvariable_sizes,l) nvariable_sizes[l] = variables[l]->size();
             }
@@ -13388,7 +13383,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 is_debug_info = false;
                 --verbosity;
                 _run(ncommand_line,nposition,g_list,g_list_c,images,image_names,
-                     run_subcommand?variable_sizes:nvariable_sizes,&_is_noarg,
+                     run_sharedvar_command?variable_sizes:nvariable_sizes,&_is_noarg,
                      argument,&selection,false);
                 ++verbosity;
               } catch (gmic_exception &e) {
@@ -13427,7 +13422,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 is_debug_info = false;
                 --verbosity;
                 _run(ncommand_line,nposition,g_list,g_list_c,images,image_names,
-                     run_subcommand?variable_sizes:nvariable_sizes,&_is_noarg,
+                     run_sharedvar_command?variable_sizes:nvariable_sizes,&_is_noarg,
                      argument,&selection,false);
                 ++verbosity;
               } catch (gmic_exception &e) {
@@ -13457,7 +13452,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 g_list.move_to(images,uind0);
               }
             }
-            if (!run_subcommand)
+            if (!run_sharedvar_command)
               for (unsigned int l = 0; l<gmic_varslots/2; ++l) if (variables[l]->size()>nvariable_sizes[l]) {
                   if (variable_lengths[l]->_width - nvariable_sizes[l]>variable_lengths[l]->_width/2)
                     variable_lengths[l]->resize(nvariable_sizes[l],1,1,1,0);
