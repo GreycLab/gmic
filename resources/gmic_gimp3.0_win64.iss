@@ -11,7 +11,7 @@
 ;
 ;---------------------------------------------
 
-#define AppName "G'MIC-Qt for GIMP"
+#define AppName "G'MIC-Qt for GIMP 3"
 
 [Setup]
 AppName={#AppName}
