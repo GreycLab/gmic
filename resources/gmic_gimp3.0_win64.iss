@@ -48,7 +48,6 @@ Source: build64-gimp\gmic_fonts.gmz; DestDir: {userappdata}\gmic; Flags: ignorev
 Source: build64-gimp\gmic_lightleaks.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 Source: build64-gimp\gmic_scale2x_cnn.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 
-Source: build64-gimp\libcurl-4.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libdouble-conversion.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3-3.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3_threads-3.dll; DestDir: {app}; Flags: ignoreversion
