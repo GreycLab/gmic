@@ -400,7 +400,7 @@ _lib : libgmic.so use_libgmic
 
 libgmic.so: libgmic.o
 	ar rcs libgmic.a libgmic.o
-ifeq ($(OS),Darwin)
+ifdef IS_CLANG
 	$(CXX) -shared -std=c++11 -pedantic -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
 else
 	$(CXX) -shared -std=c++11 -pedantic -Wl,-soname,libgmic.so.$(VERSION1) -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
