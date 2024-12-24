@@ -35,7 +35,6 @@ OutputBaseFilename=gmic_XXX_gimp2.10_win64
 Source: build64-gimp\platforms\qdirect2d.dll; DestDir: {app}\platforms
 Source: build64-gimp\platforms\qminimal.dll; DestDir: {app}\platforms
 Source: build64-gimp\platforms\qoffscreen.dll; DestDir: {app}\platforms
-Source: build64-gimp\platforms\qwebgl.dll; DestDir: {app}\platforms
 Source: build64-gimp\platforms\qwindows.dll; DestDir: {app}\platforms
 
 Source: build64-gimp\styles\qwindowsvistastyle.dll; DestDir: {app}\styles
