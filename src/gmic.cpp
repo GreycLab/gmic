@@ -10168,7 +10168,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 #ifdef gmic_is_parallel
 #ifdef PTHREAD_CANCEL_ENABLE
 
-#if defined(__MACOSX__) || defined(__APPLE__)
+#if defined(__MACOSX__) || defined(__APPLE__) || defined(__clang__)
               const cimg_uint64 stacksize = (cimg_uint64)8*1024*1024;
               pthread_attr_t thread_attr;
               if (!pthread_attr_init(&thread_attr) && !pthread_attr_setstacksize(&thread_attr,stacksize))
