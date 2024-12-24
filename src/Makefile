@@ -234,7 +234,7 @@ endif
 # (http://www.openmp.org/)
 ifdef IS_CLANG
 OPENMP_CFLAGS = -I/usr/lib/gcc/x86_64-linux-gnu/9/include -Dcimg_use_openmp -fopenmp=libomp
-OPENMP_LIBS =
+OPENMP_LIBS = -lomp
 else
 OPENMP_CFLAGS = -fopenmp -Dcimg_use_openmp
 OPENMP_LIBS = -lgomp
