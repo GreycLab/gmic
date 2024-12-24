@@ -51,14 +51,11 @@ Source: build64-gimp\gmic_scale2x_cnn.gmz; DestDir: {userappdata}\gmic; Flags: i
 Source: build64-gimp\libdouble-conversion.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3-3.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3_threads-3.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libgcc_s_seh-1.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libgomp-1.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libicudt75.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libicuin75.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libicuuc75.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libmd4c.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libpcre2-16-0.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libstdc++-6.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Core.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Gui.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Network.dll; DestDir: {app}; Flags: ignoreversion
