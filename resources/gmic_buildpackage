@@ -118,7 +118,9 @@ if [ "$OSTYPE" == "msys" ]; then
 
     # Generate binaries.
     cd $HOME/gmic/src && make CXX="clang++" clean && rm -f gmic *.o && cp -f /e/work/src/CImg/CImg.h .
-    make CXX="clang++" EXTRA_CFLAGS="-m${BITS}" cli # lib libc libc_static
+    if [[ "$GIMPVER" != "3.0" ]]; then
+        make CXX="clang++" EXTRA_CFLAGS="-m${BITS}" cli # lib libc libc_static
+    fi
     cd $HOME/gmic-qt && rm -rf .obj
     if [ "$1" == "final" ]; then
         qmake COMPILER=clang PRERELEASE= HOST=none gmic_qt.pro && make clean
@@ -142,24 +144,30 @@ if [ "$OSTYPE" == "msys" ]; then
 
     # Copy binaries into their respective folders.
     cd $HOME
-    cp -f gmic/src/gmic.exe build${BITS}-cli/
-    cp -f gmic/src/gmic.h gmic/src/gmic_libc.h gmic/src/use_lib* gmic/src/lib*.d* gmic/src/lib*.a build${BITS}-lib/
+    if [[ "$GIMPVER" != "3.0" ]]; then
+        cp -f gmic/src/gmic.exe build${BITS}-cli/
+        cp -f gmic/src/gmic.h gmic/src/gmic_libc.h gmic/src/use_lib* gmic/src/lib*.d* gmic/src/lib*.a build${BITS}-lib/
+    fi
     cp -f gmic-qt/release/gmic_qt.exe build${BITS}-qt/
     cp -f gmic-qt/release/gmic_gimp_qt.exe build${BITS}-gimp/
 
     # Construct G'MIC (CLI) archive.
-    cp -rf build${BITS}-cli ${OUTDIR_CLI} &&
-        cp -f /e/work/src/gmic/COPYING ${OUTDIR_CLI} &&
-        sed s\/_gmic_version\/${SVERSION}${SUFFIX}\/ /e/work/src/gmic/README > ${OUTDIR_CLI}/README &&
-        zip -r -9 ${OUTZIP_CLI} ${OUTDIR_CLI} &&
-        cp -f ${OUTZIP_CLI} /e/work/src/
+    if [[ "$GIMPVER" != "3.0" ]]; then
+        cp -rf build${BITS}-cli ${OUTDIR_CLI} &&
+            cp -f /e/work/src/gmic/COPYING ${OUTDIR_CLI} &&
+            sed s\/_gmic_version\/${SVERSION}${SUFFIX}\/ /e/work/src/gmic/README > ${OUTDIR_CLI}/README &&
+            zip -r -9 ${OUTZIP_CLI} ${OUTDIR_CLI} &&
+            cp -f ${OUTZIP_CLI} /e/work/src/
+    fi
 
     # Construct G'MIC (LIB) archive.
-    cp -rf build${BITS}-lib ${OUTDIR_LIB} &&
-        cp -f /e/work/src/gmic/COPYING ${OUTDIR_LIB} &&
-        sed s\/_gmic_version\/${SVERSION}${SUFFIX}\/ /e/work/src/gmic/README > ${OUTDIR_LIB}/README &&
-        zip -r -9 ${OUTZIP_LIB} ${OUTDIR_LIB} &&
-        cp -f ${OUTZIP_LIB} /e/work/src/
+    if [[ "$GIMPVER" != "3.0" ]]; then
+        cp -rf build${BITS}-lib ${OUTDIR_LIB} &&
+            cp -f /e/work/src/gmic/COPYING ${OUTDIR_LIB} &&
+            sed s\/_gmic_version\/${SVERSION}${SUFFIX}\/ /e/work/src/gmic/README > ${OUTDIR_LIB}/README &&
+            zip -r -9 ${OUTZIP_LIB} ${OUTDIR_LIB} &&
+            cp -f ${OUTZIP_LIB} /e/work/src/
+    fi
 
     # Construct G'MIC (Qt standalone) archive.
     cp -rf build${BITS}-qt ${OUTDIR_QT} &&
