@@ -11542,7 +11542,6 @@ _update_gmicol : # Keep only a subset of existing filters
   nmd 3,\
   "About/♥ Support Us ! ♥",\
   "About/About G'MIC",\
-  "Arrays & Tiles/Annular Steiner Chain Round Tile",\
   "Arrays & Tiles/Array [Faded]",\
   "Arrays & Tiles/Array [Mirrored]",\
   "Arrays & Tiles/Array [Random Colors]",\
@@ -11620,14 +11619,12 @@ _update_gmicol : # Keep only a subset of existing filters
   "Artistic/Stylize",\
   "Artistic/Vector Painting",\
   "Artistic/Warhol",\
-  "Artistic/Whirl Drawing",\
   "Black & White/B&W Stencil",\
   "Black & White/Black & White",\
   "Black & White/Charcoal",\
   "Black & White/Colorize [with Colormap]",\
   "Black & White/Colorize Lineart [Auto-Fill]",\
   "Black & White/Colorize Lineart [Smart Coloring]",\
-  "Black & White/Desaturate Norm",\
   "Black & White/Dithering",\
   "Black & White/Emboss",\
   "Black & White/Engrave",\
@@ -11925,6 +11922,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Patterns/Turbulent Halftone",\
   "Patterns/Voronoi",\
   "Patterns/Weave",\
+  "Patterns/Whirl Drawing",\
   "Patterns/Whirls",\
   "Rendering/3D Blocks",\
   "Rendering/3D Colored Object",\
@@ -12512,10 +12510,41 @@ upload_filters :
     file=${"arg0 $>,"$files}
     it[] $file
     basename $file basename=${}
-    if ['$basename']=='sylvie_alexandre.gmic'
-      s +,{'"#@gui <b>"'} i[1--2:2] ('"#@gui ________<b>Testing<b>\n#@gui <i>Samj</i>\n"') y a y
-    elif ['$basename']=='template.gmic'
+    if ['$basename']=='template.gmic'
       rm 0
+    elif ['$basename']!='gmic_stdlib.gmic'" && find(['"$file"'],'translation')<=0" # Normalize folder hierarchy
+      strcapitalize {b} default_name=${}
+      was_testing,is_first_subfolder=0,1
+      testing_name=
+      s +,{'\n'}
+      foreach {
+        if "find(#0,'#@gui ')==0 && find(#0,_':')<0"
+          is_testing:="find(#0,'<b>Testing</b>')>=0"
+          if $is_testing
+            rm 0
+          elif $was_testing
+            if ['$testing_name']==0
+              discard {'"#@gui "'} discard {'<i>'} discard {'</i>'} discard {'<b>'} discard {'</b>'}
+              autocrop {'" "'} autocrop {'_'}
+              testing_name={t}
+              rm 0
+            fi
+            if !$is_first_subfolder
+              rm ('"#@gui _____<b>Testing</b>\n#@gui <i>"$testing_name"</i>\n\n"':y)
+            fi
+          else
+            discard {'"#@gui "'} autocrop {'" "'} autocrop {'_'}
+            if ia==_'_' rm 0
+            else
+              if $is_first_subfolder sep= is_first_subfolder=0 else sep=_ fi
+              ('"#@gui "$sep{t}':y) k.
+            fi
+          fi
+          was_testing=$is_testing
+        fi
+      }
+      i[0] ('"#@gui <b>Testing</b>\n#@gui <i>"$testing_name"</i>\n\n"':y)
+      a y
     fi
   } }
   i[1--2] ('"\n#@gui _________________\n"') y a y
@@ -44915,13 +44944,6 @@ fx_vector_painting :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
 
-#@gui Whirl Drawing : fx_draw_whirl, fx_draw_whirl(0)
-#@gui : Amplitude = ~float(20,0,100)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
-fx_draw_whirl :
-  foreach { split_opacity draw_whirl[0] $* a c }
-
 #@gui ____<b>Black & White</b>
 #-------------------------------
 
@@ -45003,8 +45025,7 @@ fx_stencilbw :
 #@gui : Invert Background / Foreground = bool()
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/17/03</i>.</small>")
-#@gui : note = note("<small>Inspired from the Charcoal script by <i>micomicon</i> :</small>")
-#@gui : url = link("http://registry.gimp.org/node/25078")
+#@gui : note = note("<small>Inspired from the Charcoal script by <i>micomicon</i>.</small>")
 fx_charcoal :
   foreach {
     split_opacity l[0] {
@@ -52807,7 +52828,7 @@ fx_split_details_gaussian_preview :
 #@gui : note = note{"<small><b>Note:</b> This filter decomposes an image into several detail scales,
 #@gui : using wavelet atrous.
 #@gui : It should provide similar results to the
-#@gui : <a href="http://registry.gimp.org/node/11742">Wavelet Decompose Plug-in</a>
+#@gui : <a href="https://docs.gimp.org/en/plug-in-wavelet-decompose.html">Wavelet Decompose Plug-in</a>
 #@gui : (by Marco Rossini).
 #@gui : </small>"}
 #@gui : sep = separator()
@@ -55922,6 +55943,13 @@ fx_voronoi_preview :
 #@gui : Y-Curvature = ~float(0,-1,1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/18/01</i>.</small>")
+
+#@gui Whirl Drawing : fx_draw_whirl, fx_draw_whirl(0)
+#@gui : Amplitude = ~float(20,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/29/12</i>.</small>")
+fx_draw_whirl :
+  foreach { split_opacity draw_whirl[0] $* a c }
 
 #@gui Whirls : fx_whirls, fx_whirls(0)
 #@gui : Density = int(7,3,20)
