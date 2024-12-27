@@ -12512,10 +12512,16 @@ upload_filters :
     basename $file basename=${}
     if ['$basename']=='template.gmic'
       rm 0
-    elif ['$basename']!='gmic_stdlib.gmic'" && find(['"$file"'],'translation')<=0"
+    elif "s = ['"$basename"']; find(['"$file"'],'translation')<=0 && "\
+         "!isin(s,'gmic_stdlib.gmic',
+                  'andy_kelday.gmic',
+                  'kristian_jarventaus.gmic',
+                  'mathew_callaghan.gmic',
+                  'martin_souphead.gmic')"
 
       # Normalize folder hierarchy for community filters.
-      nm={n} strcapitalize {b} default_name=${} was_testing,is_first_subfolder=0,1 latest_testing_name=
+      nm={n} strcapitalize {b} default_testing_name=${} was_testing,is_first_subfolder=0,1
+      first_testing_name,latest_testing_name=
       s +,{'\n'}
       foreach {
         if "find(#0,'#@gui ')==0 && find(#0,_':')<0"
@@ -12541,12 +12547,14 @@ upload_filters :
           was_testing=$is_testing
         fi
       }
+      if ['$first_testing_name']==0 first_testing_name=$default_testing_name fi
       i[0] ('"#@gui ________<b>Testing</b>\n#@gui <i>"$first_testing_name"</i>\n"':y)
-      a y => $nm
+      ('"\n#@gui _________________\n"':y)
 
+      a y => $nm
     fi
   } }
-  i[1--2] ('"\n#@gui _________________\n"') y a y
+  a y
 
   # Create update files.
   +l. {
