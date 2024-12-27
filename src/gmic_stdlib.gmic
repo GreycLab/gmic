@@ -12515,9 +12515,7 @@ upload_filters :
     elif ['$basename']!='gmic_stdlib.gmic'" && find(['"$file"'],'translation')<=0"
 
       # Normalize folder hierarchy for community filters.
-      strcapitalize {b} default_testing_name=${}
-      was_testing,is_first_subfolder=0,1
-      testing_name=
+      nm={n} strcapitalize {b} default_name=${} was_testing,is_first_subfolder=0,1 latest_testing_name=
       s +,{'\n'}
       foreach {
         if "find(#0,'#@gui ')==0 && find(#0,_':')<0"
@@ -12525,19 +12523,17 @@ upload_filters :
           if $is_testing
             rm 0
           elif $was_testing
-            if ['$testing_name']==0
-              discard {'"#@gui "'} discard {'<i>'} discard {'</i>'} discard {'<b>'} discard {'</b>'}
-              autocrop {'" "'} autocrop {'_'}
-              testing_name={t}
-              rm 0
-            fi
-            if !$is_first_subfolder
-              rm ('"#@gui _____<b>Testing</b>\n#@gui <i>"$testing_name"</i>\n\n"':y)
-            fi
+            discard {'"#@gui "'} discard {'<i>'} discard {'</i>'} discard {'<b>'} discard {'</b>'}
+            autocrop {'" "'} autocrop {'_'}
+            latest_testing_name={t}
+            if ['$first_testing_name']==0 first_testing_name=$latest_testing_name fi
+            rm ('"#@gui ________<b>Testing</b>\n#@gui <i>"$latest_testing_name"</i>\n"':y)
+            is_first_subfolder=1
           else
-            discard {'"#@gui "'} autocrop {'" "'} autocrop {'_'}
+            discard {'"#@gui "'} autocrop {'" "'}
             if ia==_'_' rm 0
             else
+              autocrop {'_'}
               if $is_first_subfolder sep= is_first_subfolder=0 else sep=_ fi
               ('"#@gui "$sep{t}':y) k.
             fi
@@ -12545,9 +12541,9 @@ upload_filters :
           was_testing=$is_testing
         fi
       }
-      if ['$testing_name']==0 testing_name=$default_testing_name fi
-      i[0] ('"#@gui <b>Testing</b>\n#@gui <i>"$testing_name"</i>\n\n"':y)
-      a y
+      i[0] ('"#@gui ________<b>Testing</b>\n#@gui <i>"$first_testing_name"</i>\n"':y)
+      a y => $nm
+
     fi
   } }
   i[1--2] ('"\n#@gui _________________\n"') y a y
