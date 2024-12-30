@@ -3,7 +3,8 @@
 $filesDirectory = 'files/'; // Make sure this folder exists and contains the files to download
 
 // File to track download counts
-$countFile = 'download-count.txt';
+$currentMonthYear = date('Y_m'); // Format: YYYY_MM
+$countFile = "downloads_$currentMonthYear.log";
 
 // Get the requested file from the query parameter
 $requestedFile = isset($_GET['file']) ? $_GET['file'] : null;
