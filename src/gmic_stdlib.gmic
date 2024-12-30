@@ -10752,7 +10752,7 @@ update_download_html : check "
     data = crop();
     p = stop = N = 0;
     while (!stop,
-      p = find(data,'https://gmic.eu/files/',p);
+      p = find(data,'get_file.php?file=',p);
       p<0?(stop=1):(
         q = find(data,'/gmic_',p);
         str = data[q + 6,5];
@@ -17256,11 +17256,46 @@ _autocrop_coords :
   l_value=${7--1}
   res,sep=
   foreach {
+    if !w continue fi
     x0,y0,z0,c0,x1,y1,z1,c1=-1
     if $6
-      l_value:="const w1 = w - 1; const h1 = h - 1; const d1 = d - 1;
-                vmed(I[0],I[0],I(w1,0,0),I(w1,h1,0),I(0,h1,0), # I[0] must be doubled!
-                     I(0,0,d1),I(w1,0,0),I(w1,h1,d1),I(0,h1,d1))"
+      l_value:=" # Guess autocrop value (i.e. the one that occurs the most on corners)
+        const w1 = w - 1; const h1 = h - 1; const d1 = d - 1; const s1 = s - 1; const sp1 = s + 1;
+        const nb_corners = 2^((w>1) + (h>1) + (d>1) + $5*(s>1));
+        values = vector(#nb_corners*($5?2:sp1)); # Each item is (occurence,val0[,...,valN])
+        x = y = z = c = is_auto_value = off = 0;
+
+        repeat (nb_corners,p,
+          val = $5?i(x,y,z,c):I(x,y,z);
+
+          # Go to next corner.
+          x+=w1;
+          x>=w || !w1?(
+            x = 0; y+=h1;
+            y>=h || !h1?(
+              x = y = 0; z+=d1;
+              $5?(z>=d || !d1?(
+                x = y = z = 0; c+=s1)
+              );
+            );
+          );
+
+          # Check if same value has already been seen before.
+          _val = $5?0:vector(#s);
+          value_already_seen = 0;
+          repeat (p,q,
+            copy(_val,values[q*($5?2:sp1) + 1],$5?1:s);
+            val==_val?(++values[q*($5?2:sp1)]; value_already_seen = 1; break());
+          );
+          !value_already_seen?(values[off++] = 1; copy(values[off],val,$5?1:s); off+=$5?1:s); # Push unseen value
+        );
+
+        values = sort(values,0,off/($5?2:sp1),$5?2:sp1,0);
+        values[0]!=1?(copy(val,values[1],$5?s:1); is_auto_value = 1);
+        set('is_auto_value',is_auto_value);
+        val"
+
+      if !$is_auto_value u (0,0,0,0,{[w,h,d,s]-1}) return fi
     fi
     eval. "
       begin(
@@ -17275,10 +17310,10 @@ _autocrop_coords :
         $5?(c0 = min(c0,c); c1 = max(c1,c));
       );
       end(
-        $2?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?w - 1:x1));
-        $3?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?h - 1:y1));
-        $4?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?d - 1:z1));
-        $5?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?s - 1:c1));
+        $2?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?0:x1));
+        $3?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?0:y1));
+        $4?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?0:z1));
+        $5?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?0:c1));
       )"
     if !$2" && "max(${3-5}) x0,x1=0,{w-1} fi
     if !$3" && "max(${4-5}) y0,y1=0,{h-1} fi
