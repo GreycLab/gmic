@@ -17189,7 +17189,9 @@ autocrop : skip "${1=xyz}"
   e[^-1] "Autocrop image$?, for axe"$s" '"$axes"' and value '"$value"'."
   foreach {
     _autocrop_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
-    if narg(${}) z ${} fi
+    if narg(${})
+      if max(${})==-1 rm 0 else z ${} fi
+    fi
   }
 
 #@cli autocrop_components : _threshold[%],_min_area[%]>=0,_is_high_connectivity={ 0 | 1 },\
@@ -17257,7 +17259,7 @@ _autocrop_coords :
   res,sep=
   foreach {
     if !w continue fi
-    x0,y0,z0,c0,x1,y1,z1,c1=-1
+    x0,y0,z0,c0,x1,y1,z1,c1=-2
     if $6
       l_value:=" # Guess autocrop value (i.e. the one that occurs the most on corners)
         const w1 = w - 1; const h1 = h - 1; const d1 = d - 1; const s1 = s - 1; const sp1 = s + 1;
@@ -17310,15 +17312,15 @@ _autocrop_coords :
         $5?(c0 = min(c0,c); c1 = max(c1,c));
       );
       end(
-        $2?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?0:x0); set('x1',isinf(x1)?0:x1));
-        $3?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?0:y0); set('y1',isinf(y1)?0:y1));
-        $4?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?0:z0); set('z1',isinf(z1)?0:z1));
-        $5?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?0:c0); set('c1',isinf(c1)?0:c1));
+        $2?(merge(x0,min); merge(x1,max); set('x0',isinf(x0)?-1:x0); set('x1',isinf(x1)?-1:x1));
+        $3?(merge(y0,min); merge(y1,max); set('y0',isinf(y0)?-1:y0); set('y1',isinf(y1)?-1:y1));
+        $4?(merge(z0,min); merge(z1,max); set('z0',isinf(z0)?-1:z0); set('z1',isinf(z1)?-1:z1));
+        $5?(merge(c0,min); merge(c1,max); set('c0',isinf(c0)?-1:c0); set('c1',isinf(c1)?-1:c1));
       )"
     if !$2" && "max(${3-5}) x0,x1=0,{w-1} fi
     if !$3" && "max(${4-5}) y0,y1=0,{h-1} fi
     if !$4" && "$5 z0,z1=0,{d-1} fi
-    ($x0,$y0,$z0,$c0;$x1,$y1,$z1,$c1) discard. -1 res.=$sep{^} sep=, rm.
+    ($x0,$y0,$z0,$c0;$x1,$y1,$z1,$c1) discard. -2 res.=$sep{^} sep=, rm.
   }
   u $res
 
