@@ -17232,6 +17232,7 @@ autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isin
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
 #@cli : If no 'axes' are provided, autocrop is assumed to be spatial only (e.g. 'axes=xyz').
 #@cli : If no value arguments are provided, cropping value is automatically guessed.
+#@cli : If input image is constant and equal to the crop value, -1 is returned for all output coordinates.
 #@cli : Default values: 'axes=xyz'.
 #@cli : See also: ''autocrop''.
 __autocrop_coords_ : skip "${1=xyz},${2=}"
@@ -17334,11 +17335,8 @@ autocrop_seq : skip ${1=auto}
   if !$! return fi
   is_auto:=['"$1"']=='auto'
   if $!==1 _autocrop$is_auto ${1--1} return fi
-  coords=${autocrop_coords.\ ${1--1}}
-  x0,y0,z0,x1,y1,z1:=[$coords][0,6]
-  if $x0>$x1" || "$y0>$y1" || "$z0>$z1 i[0--2] 0 rm[1--1:2]
-  else z $x0,$y0,$z0,$x1,$y1,$z1
-  fi
+  coords=${autocrop_coords.\ xyz,${1--1}}
+  if max($coords)==-1 i[0--2] 0 rm[1--1:2] else z $coords fi
 
 #@cli channels : c0[%],_c1[%],_boundary_conditions
 #@cli : Keep only specified channels of selected images.
@@ -41892,7 +41890,10 @@ gui_autocrop_layers :
     mode=${-gui_layer_mode}
     opacity=${-gui_layer_opacity}
     coords=${autocrop_coords\ xy}
-    z $coords => "mode("$mode"),opacity("$opacity"),pos("{arg(1,$coords)}","{arg(2,$coords)}"),name("$nm")"
+    if max($coords)==-1 coords=0,0
+    else z $coords
+    fi
+    => "mode("$mode"),opacity("$opacity"),pos("{arg(1,$coords)}","{arg(2,$coords)}"),name("$nm")"
   }
 
 fx_logo : skip "${1= }"
