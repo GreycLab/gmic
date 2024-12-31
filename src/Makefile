@@ -400,14 +400,22 @@ _lib: libgmic.so use_libgmic
 
 libgmic.so: libgmic.o
 	ar rcs libgmic.a libgmic.o
+ifeq ($(OS),Darwin)
+	$(CXX) -dynamiclib -o libgmic.$(SOVERSION).dylib -install_name $(USR)/lib/libgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libgmic.o $(LIBS)
+else
 ifdef IS_CLANG
 	$(CXX) -shared -std=c++11 -pedantic -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
 else
 	$(CXX) -shared -std=c++11 -pedantic -Wl,-soname,libgmic.so.$(VERSION1) -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
 endif
+endif
+ifeq ($(OS),Darwin)
+	ln -fs libgmic.$(SOVERSION).dylib libgmic.dylib
+else
 ifneq ($(OS),Windows)
 	ln -fs libgmic.so.$(VERSION) libgmic.so.$(VERSION1)
 	ln -fs libgmic.so.$(VERSION1) libgmic.so
+endif
 endif
 
 libgmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
@@ -496,7 +504,7 @@ libcgmic_files:
 libcgmic.so: libcgmic.o
 	ar rcs libcgmic.a libcgmic.o
 ifeq ($(OS),Darwin)
-	$(CXX) -shared -o libcgmic.so.$(VERSION) libcgmic.o libgmic.o $(LIBS)
+	$(CXX) -dynamiclib -o libcgmic.$(SOVERSION).dylib -install_name $(USR)/lib/libcgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
 ifeq ($(OS),Windows)
 	$(CXX) -shared -o libcgmic-$(VERSION1).dll libcgmic.o libgmic.o -Wl,--output-def,libcgmic.def,--out-implib,libcgmic.a $(LIBS)
@@ -504,9 +512,13 @@ else
 	$(CXX) -shared -Wl,-soname,libcgmic.so.$(VERSION1) -o libcgmic.so.$(VERSION) libcgmic.o libgmic.o $(LIBS)
 endif
 endif
+ifeq ($(OS),Darwin)
+	ln -fs libcgmic.$(SOVERSION).dylib libcgmic.dylib
+else
 ifneq ($(OS),Windows)
 	ln -fs libcgmic.so.$(VERSION) libcgmic.so.$(VERSION1)
 	ln -fs libcgmic.so.$(VERSION1) libcgmic.so
+endif
 endif
 
 libcgmic.o: gmic_libc.cpp CImg.h gmic_libc.h gmic.h
@@ -546,7 +558,7 @@ _libc_static: libcgmic_files libcgmic_static.so use_libcgmic_static
 libcgmic_static.so: libcgmic_static.o
 	ar rcs libcgmic_static.a libcgmic_static.o
 ifeq ($(OS),Darwin)
-	$(CXX) -shared -static -o libcgmic_static.so.$(VERSION) libcgmic_static.o libgmic.o $(PIC) $(CFLAGS) $(LIBS)
+	$(CXX) -dynamiclib -o libcgmic_static.$(SOVERSION).dylib -install_name $(USR)/lib/libcgmic_static.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
 ifeq ($(OS),Windows)
 	$(CXX) -shared -static -o libcgmic_static-$(VERSION1).dll libcgmic_static.o libgmic.o $(PIC) -Wl,--output-def,libcgmic_static.def,--out-implib,libcgmic_static.a $(CFLAGS) $(LIBS)
@@ -554,9 +566,13 @@ else
 	$(CXX) -shared -Wl,-soname,libcgmic_static.so.$(VERSION1) -o libcgmic_static.so libcgmic_static.o libgmic.o $(PIC) $(CFLAGS) $(LIBS)
 endif
 endif
+ifeq ($(OS),Darwin)
+	ln -fs libcgmic_static.$(SOVERSION).dylib libcgmic_static.dylib
+else
 ifneq ($(OS),Windows)
 	ln -fs libcgmic_static.so.$(VERSION) libcgmic_static.so.$(VERSION1)
 	ln -fs libcgmic_static.so.$(VERSION1) libcgmic_static.so
+endif
 endif
 
 libcgmic_static.o: gmic_libc.cpp CImg.h gmic_libc.h gmic.h
