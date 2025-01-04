@@ -1,11 +1,11 @@
 <?php
 // Directory where your files are stored
-$filesDirectory = 'files/'; // Make sure this folder exists and contains the files to download
+$filesDirectory = 'files/'; // Ensure this folder exists and contains the files to download
 
-// File to track download counts
-$currentMonthYear = date('Y_m'); // Format: YYYY_MM
-$countFile = "downloads_$currentMonthYear";
-$globalCountFile = "downloads_all";
+// Generate filenames for the log files
+$currentMonthYear = date('Y_m'); // Format: YYYY-MM
+$currentMonthFile = "downloads_$currentMonthYear";
+$allTimeFile = "downloads_all";
 
 // Get the requested file from the query parameter
 $requestedFile = isset($_GET['file']) ? $_GET['file'] : null;
@@ -24,51 +24,55 @@ if (!file_exists($filePath)) {
     exit;
 }
 
-// Process YYYY_MM count file
-//----------------------------
-
-// Ensure the count file exists
-if (!file_exists($countFile)) {
-    file_put_contents($countFile, json_encode([])); // Initialize as an empty JSON object
+// Ensure the log files exist
+if (!file_exists($currentMonthFile)) {
+    file_put_contents($currentMonthFile, json_encode([]));
+}
+if (!file_exists($allTimeFile)) {
+    file_put_contents($allTimeFile, json_encode([]));
 }
 
-// Read the current counts from the count file
-$counts = json_decode(file_get_contents($countFile), true);
-if (!is_array($counts)) {
-    $counts = [];
+// Function to update the log file with proper locking
+function updateLogFile($logFile, $requestedFile) {
+    $handle = fopen($logFile, 'r+');
+    if ($handle === false) {
+        echo "Error: Unable to open the log file.";
+        exit;
+    }
+
+    if (flock($handle, LOCK_EX)) {
+        // Read the current counts
+        $contents = stream_get_contents($handle);
+        $counts = json_decode($contents, true);
+        if (!is_array($counts)) {
+            $counts = [];
+        }
+
+        // Increment the count for the requested file
+        if (!isset($counts[$requestedFile])) {
+            $counts[$requestedFile] = 0;
+        }
+        $counts[$requestedFile]++;
+
+        // Rewind and overwrite the file with updated counts
+        ftruncate($handle, 0);
+        rewind($handle);
+        fwrite($handle, json_encode($counts));
+
+        // Unlock the file
+        flock($handle, LOCK_UN);
+    } else {
+        echo "Error: Unable to lock the log file.";
+        fclose($handle);
+        exit;
+    }
+
+    fclose($handle);
 }
 
-// Increment the count for this file
-if (!isset($counts[$requestedFile])) {
-    $counts[$requestedFile] = 0;
-}
-$counts[$requestedFile]++;
-
-// Save the updated counts back to the file
-file_put_contents($countFile, json_encode($counts));
-
-// Process global count file
-//---------------------------
-
-// Ensure the count files exist
-if (!file_exists($globalCountFile)) {
-    file_put_contents($globalCountFile, json_encode([])); // Initialize as an empty JSON object
-}
-
-// Read the current counts from the count file
-$counts = json_decode(file_get_contents($globalCountFile), true);
-if (!is_array($counts)) {
-    $counts = [];
-}
-
-// Increment the count for this file
-if (!isset($counts[$requestedFile])) {
-    $counts[$requestedFile] = 0;
-}
-$counts[$requestedFile]++;
-
-// Save the updated counts back to the file
-file_put_contents($globalCountFile, json_encode($counts));
+// Update both the current month log and the all-time log
+updateLogFile($currentMonthFile, $requestedFile);
+updateLogFile($allTimeFile, $requestedFile);
 
 // Serve the file for download
 header('Content-Description: File Transfer');
