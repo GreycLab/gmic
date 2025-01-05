@@ -21611,7 +21611,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   foreach[^-1] {
     nm={n} pass. => img,patches
     {img,[w,h,d,4]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1), inf ]" => map
-    {patches,[w,h,d]} => occurences
+    if $penalization>1 {patches,[w,h,d]} => occurences fi
 
     repeat $5 {
       eval[map] :"begin(
@@ -21638,22 +21638,21 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             u = v(w#$patches - 1); v = v(h#$patches - 1); w = v(d#$patches - 1);
           );
           Q = crop(#$patches,u - psx2,v - psy2,w - psz2,psx,psy,psz);
-          occ = i(#$occurences,u,v,w);
+          occ = penalization>1?i(#$occurences,u,v,w):1;
           score = get_score(P,Q,occ);
           score<best_score?(
-            p_occ = i(#$occurences,best_u,best_v,best_w);
-            p_occ>0?--i(#$occurences,best_u,best_v,best_w);
+            penalization>1?(i(#$occurences,best_u,best_v,best_w)>0?--i(#$occurences,best_u,best_v,best_w));
             best_score = score;
             best_u = u;
             best_v = v;
             best_w = w;
             I(X,Y,Z) = [ best_u,best_v,best_w,best_score ];
-            ++i(#$occurences,best_u,best_v,best_w);
+            penalization>1?++i(#$occurences,best_u,best_v,best_w);
           );
         );
         ret"
     }
-    rm[occurences]
+    if narg($occurences) rm[occurences] fi
     s[map] c,-3
     if {patches,d==1} channels[map] 0,1 fi
     if $8 a[map,-1] c fi
