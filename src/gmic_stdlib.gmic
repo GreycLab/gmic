@@ -21601,7 +21601,7 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 # 'occurrence_penalization=0'.
 #@cli : $ image.jpg sample colorful +matchpatch_alt[0] [1],3 +warp[-2] [-1],0
 matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) && isint(${4=1},1) && "\
-                       "isint(${5=5},0) && isint(${6=5},0) && ${7=0}>=0 && isbool(${8=0})"
+                       "isint(${5=5},0) && isint(${6=5},1) && ${7=0}>=0 && isbool(${8=0})"
   e[^-1] "Estimate correspondence map between image$? and patch image $1, "\
    "using $2x$3x$4 patches, $5 iterations, $6 randomizations and occurrence penalization $7."
   psx,psy,psz,psx2,psy2,psz2:="p = [ ${2-4} ]; [ p,int(p/2) ]"
@@ -21632,7 +21632,13 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
 
         repeat (nb_randomizations + nb_propagations,iter,
           iter<nb_randomizations?( # Randomization step
-            u = v(w#$patches - 1); v = v(h#$patches - 1); w = v(d#$patches - 1);
+            frac = iter/(nb_randomizations + nb_propagations - 1);
+            rw = int(lerp(w#$patches,3*psx,frac));
+            rh = int(lerp(h#$patches,3*psy,frac));
+            rd = int(lerp(d#$patches,3*psz,frac));
+            u = cut(v(best_u - rw,best_u + rw - 1),0,w#$patches - 1);
+            v = cut(v(best_v - rh,best_v + rh - 1),0,h#$patches - 1);
+            w = cut(v(best_w - rd,best_w + rd - 1),0,d#$patches - 1);
           ):( # Propagation step
             dX = iter==nb_randomizations; dY = iter==nb_randomizations + 1; dZ = iter==nb_randomizations + 2;
             is_bwd?(dX*=-1; dY*=-1; dZ*=-1);
