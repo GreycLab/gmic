@@ -21623,7 +21623,6 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
         is_bwd?(X = w - 1 - x; Y = h - 1 - y; Z = d - 1 - z):(ref(x,X); ref(y,Y); ref(z,Z));
         P = crop(#$img,X - psx2,Y - psy2,Z - psz2,psx,psy,psz);
         U0 = I(X,Y,Z); best_u = U0[0]; best_v = U0[1]; best_w = U0[2]; best_score = U0[3];
-        occ0 = i(#$occurences,best_u,best_v,best_w);
 
         repeat (3 + $6,k,
           k<3?( # Propagation step
@@ -21638,17 +21637,16 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           occ = i(#$occurences,u,v,w);
           score = get_score(P,Q,occ);
           score<best_score?(
+            p_occ = i(#$occurences,best_u,best_v,best_w);
+            p_occ>0?--i(#$occurences,best_u,best_v,best_w);
             best_score = score;
             best_u = u;
             best_v = v;
             best_w = w;
             I(X,Y,Z) = [ best_u,best_v,best_w,best_score ];
+            ++i(#$occurences,best_u,best_v,best_w);
           );
         );
-
-        occ0>0?--i(#$occurences,U0[0],U0[1],U0[2]);
-        ++i(#$occurences,best_u,best_v,best_w);
-
         ret"
     }
     k[map]
