@@ -21608,6 +21608,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   foreach[^-1] {
     nm={n} pass. => img,patches
     {img,[w,h,d,4]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1), inf ]" => map
+    {patches,[w,h,d]} => occurences
 
     repeat $5 {
       eval[map] :"begin(
@@ -21615,13 +21616,15 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           const psx2 = $psx2; const psy2 = $psy2; const psz2 = $psz2;
           const boundary = 3;
           const is_bwd = "$>"%2;
-          get_score(P,Q) = norm(P - Q);
+          get_score(P,Q,occ) = (norm(P - Q)*(1.25^occ));
           ret = [ 0,0,0,0 ];
         );
 
         is_bwd?(X = w - 1 - x; Y = h - 1 - y; Z = d - 1 - z):(ref(x,X); ref(y,Y); ref(z,Z));
         P = crop(#$img,X - psx2,Y - psy2,Z - psz2,psx,psy,psz);
-        U = I(X,Y,Z); best_u = U[0]; best_v = U[1]; best_w = U[2]; best_score = U[3];
+        U0 = I(X,Y,Z); best_u = U0[0]; best_v = U0[1]; best_w = U0[2]; best_score = U0[3];
+        occ0 = i(#$occurences,best_u,best_v,best_w);
+
         repeat (3 + $6,k,
           k<3?( # Propagation step
             dX = !k; dY = k==1; dZ = k==2;
@@ -21632,7 +21635,8 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             u = v(w#$patches - 1); v = v(h#$patches - 1); w = v(d#$patches - 1);
           );
           Q = crop(#$patches,u - psx2,v - psy2,w - psz2,psx,psy,psz);
-          score = get_score(P,Q);
+          occ = i(#$occurences,u,v,w);
+          score = get_score(P,Q,occ);
           score<best_score?(
             best_score = score;
             best_u = u;
@@ -21640,7 +21644,12 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             best_w = w;
             I(X,Y,Z) = [ best_u,best_v,best_w,best_score ];
           );
-       ); ret"
+        );
+
+        occ0>0?--i(#$occurences,U0[0],U0[1],U0[2]);
+        ++i(#$occurences,best_u,best_v,best_w);
+
+        ret"
     }
     k[map]
     channels. 0,2
