@@ -14933,7 +14933,7 @@ colorblind : check "isint($1,0,7)"
 #@cli : $$ https://gmic.eu/oldtutorial/_colormap
 colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
   m0,m1="median-cut","k-means"
-  s0,s1,s2="",", sorted by increasing norm",", sorted by decreasing occurence"
+  s0,s1,s2="",", sorted by increasing norm",", sorted by decreasing occurrence"
   if $1 e[0--3] "Estimate colormap with $1 entries for image$?, by "${m$2}" method"${s$3}"."
   else e[0--3] "Estimate full colormap for image$?"${s$3}"."
   fi
@@ -17265,7 +17265,7 @@ _autocrop_coords :
       l_value:=" # Guess autocrop value (i.e. the one that occurs the most on corners)
         const w1 = w - 1; const h1 = h - 1; const d1 = d - 1; const s1 = s - 1; const sp1 = s + 1;
         const nb_corners = 2^((w>1) + (h>1) + (d>1) + $5*(s>1));
-        values = vector(#nb_corners*($5?2:sp1)); # Each item is (occurence,val0[,...,valN])
+        values = vector(#nb_corners*($5?2:sp1)); # Each item is (occurrence,val0[,...,valN])
         x = y = z = c = is_auto_value = off = 0;
 
         repeat (nb_corners,p,
@@ -21240,7 +21240,7 @@ hough : check "${1=512}>0 && ${2=$1}>0" skip ${3=1}
   Mlv:="val=-inf;for(k=0,k<l,++k,val=max(val,iM#k));floor(val)"
   l:=l +foreach { round 1,-1 histogram {$Mlv+1},0,$Mlv } +[-$l--1] # Histogram of all selected images
   1,1,1,6 eval.. "begin(id = 0); i?da_push([id++,i,x,-1,-1,-1])" rm..
-  # -> list of active leafs/nodes ( id,occurence,value,parent,child0,child1 )
+  # -> list of active leafs/nodes ( id,occurrence,value,parent,child0,child1 )
   eval "
     id = da_size();
     active = 0;
@@ -21595,15 +21595,15 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 #@cli : $ image.jpg sample colorful +matchpatch[0] [1],3 +warp[-2] [-1],0
 
 #@cli matchpatch_alt : [patch_image],_patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations,_nb_randoms>=0,\
-# occurence_penalization>=0,_output_score={ 0 | 1 }
+# occurrence_penalization>=0,_output_score={ 0 | 1 }
 #@cli : Implementation of the ''matchpatch'' command as an alternative custom command (slower).
 #@cli : Default values: 'patch_height=patch_width', 'patch_depth=1', 'nb_iterations=5', 'nb_randoms=5' and \
-# 'occurence_penalization=0'.
+# 'occurrence_penalization=0'.
 #@cli : $ image.jpg sample colorful +matchpatch_alt[0] [1],3 +warp[-2] [-1],0
 matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) && isint(${4=1},1) && "\
                        "isint(${5=5},0) && isint(${6=5},0) && ${7=0}>=0 && isbool(${8=0})"
   e[^-1] "Estimate correspondence map between image$? and patch image $1, "\
-   "using $2x$3x$4 patches, $5 iteration, $6 steps of randomization, occurence penalization $7."
+   "using $2x$3x$4 patches, $5 iterations, $6 randomizations and occurrence penalization $7."
   psx,psy,psz,psx2,psy2,psz2:="p = [ ${2-4} ]; [ p,int(p/2) ]"
   penalization:=1+$7
 
@@ -21611,7 +21611,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   foreach[^-1] {
     nm={n} pass. => img,patches
     {img,[w,h,d,4]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1), inf ]" => map
-    if $penalization>1 {patches,[w,h,d]} => occurences fi
+    if $penalization>1 {patches,[w,h,d]} => occurrences fi
 
     repeat $5 {
       eval[map] ":begin(
@@ -21641,21 +21641,21 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             u = v(w#$patches - 1); v = v(h#$patches - 1); w = v(d#$patches - 1);
           );
           Q = crop(#$patches,u - psx2,v - psy2,w - psz2,psx,psy,psz);
-          occ = penalization>1?i(#$occurences,u,v,w):1;
+          occ = penalization>1?i(#$occurrences,u,v,w):1;
           score = get_score(P,Q,occ);
           score<best_score?(
-            penalization>1?(i(#$occurences,best_u,best_v,best_w)>0?--i(#$occurences,best_u,best_v,best_w));
+            penalization>1?(i(#$occurrences,best_u,best_v,best_w)>0?--i(#$occurrences,best_u,best_v,best_w));
             best_score = score;
             best_u = u;
             best_v = v;
             best_w = w;
             I(X,Y,Z) = [ best_u,best_v,best_w,best_score ];
-            penalization>1?++i(#$occurences,best_u,best_v,best_w);
+            penalization>1?++i(#$occurrences,best_u,best_v,best_w);
           );
         );
         ret"
     }
-    if narg($occurences) rm[occurences] fi
+    if narg($occurrences) rm[occurrences] fi
     s[map] c,-3
     if {patches,d==1} channels[map] 0,1 fi
     if $8 a[map,-1] c fi
@@ -33126,7 +33126,7 @@ _blend_shapemax0 :
   point. 0,0,0,1,0 map[1] [2] rm.
 
 _blend_shapeprevalent :
-  # Retrieve occurence of each color for each distinct region.
+  # Retrieve occurrence of each color for each distinct region.
   label. 0,0 nb_labels:=iM+1 a c
   +n. 0,255 100%,100%,1,1,"H = 0; repeat (s#-1,p,(H*=31)+=j(#-1,0,0,0,p)); int(H)%2048" rm.. # Compute color hashcodes
   1,1,1,{0,s+1}x2048
@@ -33148,7 +33148,7 @@ _blend_shapeprevalent :
     found?++i[#ind,k]:da_push(#ind,[ 1,color ])"
   da_freeze[2--1] a[2--1] y rm..
 
-  # Extract most frequent occurence for each distinct region.
+  # Extract most frequent occurrence for each distinct region.
   1,$nb_labels,1,{0,s}
   eval.. "P = I; region = P[size(P) - 1]; i[#-1,region]<P[0]?(I[#-1,region] = P[0,size(P) - 1]); I"
   channels. 1,100% +channels[0] 100%
@@ -57971,7 +57971,7 @@ fx_mandelbrot_preview :
 #@gui : Density of Initial Points (%) = ~float(20,0,100)
 #@gui : Rate of Primary Segments (%) = ~float(60,0,100)
 #@gui : Rate of Secondary Segments (%) = ~float(30,0,100)
-#@gui : Max Secondary Segments Occurences = ~int(2,1,16)
+#@gui : Max Secondary Segments Occurrences = ~int(2,1,16)
 #@gui : Secondary Segments Centering Constraint (%) = ~float(50,0,100)
 #@gui : Min Segment Length (%) = ~float(10,0,100)
 #@gui : Max Segment Length (%) = ~float(50,0,100)
