@@ -21595,13 +21595,13 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 #@cli : $ image.jpg sample colorful +matchpatch[0] [1],3 +warp[-2] [-1],0
 
 #@cli matchpatch_alt : [patch_image],_patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations,_nb_randoms>=0,\
-# occurence_penalization>=0
+# occurence_penalization>=0,_output_score={ 0 | 1 }
 #@cli : Implementation of the ''matchpatch'' command as an alternative custom command (slower).
 #@cli : Default values: 'patch_height=patch_width', 'patch_depth=1', 'nb_iterations=5', 'nb_randoms=5' and \
 # 'occurence_penalization=0'.
 #@cli : $ image.jpg sample colorful +matchpatch_alt[0] [1],3 +warp[-2] [-1],0
 matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) && isint(${4=1},1) && "\
-                       "isint(${5=5},0) && isint(${6=5},0) && ${7=0}>=0"
+                       "isint(${5=5},0) && isint(${6=5},0) && ${7=0}>=0 && isbool(${8=0})"
   e[^-1] "Estimate correspondence map between image$? and patch image $1, "\
    "using $2x$3x$4 patches, $5 iteration, $6 steps of randomization, occurence penalization $7."
   psx,psy,psz,psx2,psy2,psz2:="p = [ ${2-4} ]; [ p,int(p/2) ]"
@@ -21617,9 +21617,10 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
       eval[map] :"begin(
           const psx = $psx; const psy = $psy; const psz = $psz;
           const psx2 = $psx2; const psy2 = $psy2; const psz2 = $psz2;
+          const penalization = $penalization;
           const boundary = 3;
           const is_bwd = "$>"%2;
-          get_score(P,Q,occ) = (norm(P - Q)*($penalization^occ));
+          get_score(P,Q,occ) = (norm(P - Q)*(penalization^occ));
           ret = [ 0,0,0,0 ];
         );
 
@@ -21652,8 +21653,12 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
         );
         ret"
     }
-
-    k[map] channels. 0,2 => $nm
+    rm[occurences]
+    s[map] c,-3
+    if {patches,d==1} channels[map] 0,1 fi
+    if $8 a[map,-1] c fi
+    k[map]
+    => $nm
   }
   rm.
 
