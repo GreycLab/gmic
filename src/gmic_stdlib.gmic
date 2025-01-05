@@ -21614,12 +21614,15 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
     if $penalization>1 {patches,[w,h,d]} => occurences fi
 
     repeat $5 {
-      eval[map] >"begin(
+      eval[map] ":begin(
           const psx = $psx; const psy = $psy; const psz = $psz;
           const psx2 = $psx2; const psy2 = $psy2; const psz2 = $psz2;
           const penalization = $penalization;
           const boundary = 3;
           const is_bwd = "$>"%2;
+          const is_3d = d#$patches>1;
+          const nb_randomizations = $6;
+          const nb_propagations = is_3d?3:2;
           get_score(P,Q,occ) = (norm(P - Q)*(penalization^occ));
           ret = [ 0,0,0,0 ];
         );
@@ -21628,9 +21631,9 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
         P = crop(#$img,X - psx2,Y - psy2,Z - psz2,psx,psy,psz);
         U0 = I(X,Y,Z); best_u = U0[0]; best_v = U0[1]; best_w = U0[2]; best_score = U0[3];
 
-        repeat (3 + $6,k,
-          k<3?( # Propagation step
-            dX = !k; dY = k==1; dZ = k==2;
+        repeat (nb_randomizations + nb_propagations,k,
+          k>=nb_randomizations?( # Propagation step
+            dX = k==nb_randomizations; dY = k==nb_randomizations + 1; dZ = k==nb_randomizations + 2;
             is_bwd?(dX*=-1; dY*=-1; dZ*=-1);
             U = I(X - dX,Y - dY,Z - dZ); u = U[0] + dX; v = U[1] + dY; w = U[2] + dZ;
             !inrange(u,0,w#$patches - 1) || !inrange(v,0,h#$patches - 1) || !inrange(w,0,d#$patches - 1)?continue();
