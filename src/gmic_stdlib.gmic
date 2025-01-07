@@ -21613,12 +21613,14 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   psx,psy,psz,psx2,psy2,psz2:="p = [ ${2-4} ]; [ p,int(p/2) ]"
   penalization:=1+$7
 
-  pass$1
-  foreach[^-1] {
-    nm={n} pass. => img,patches
+  pass$1 => patches
+  if !narg(['$9']) pass$9 else 0 fi => guide
+
+  foreach[^-2,-1] {
+    nm={n} => img
+    pass[patches,guide]
     {img,[w,h,d,4]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1), inf ]" => map
     if $penalization>1 {patches,[w,h,d]} => occurrences fi
-
     repeat $5 {
       eval[map] ":begin(
           const psx = $psx; const psy = $psy; const psz = $psz;
@@ -21673,7 +21675,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
     k[map]
     => $nm
   }
-  rm.
+  rm[patches,guide]
 
 #@cli plot2value
 #@cli : Retrieve values from selected 2D graph plots.
