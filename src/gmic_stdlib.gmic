@@ -21614,12 +21614,17 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   penalization:=1+$7
 
   pass$1 => patches
-  if !narg(['$9']) pass$9 else 0 fi => guide
+  if narg(['$9']) pass$9 else 0 fi => guide
 
   foreach[^-2,-1] {
     nm={n} => img
-    pass[patches,guide]
-    {img,[w,h,d,4]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1), inf ]" => map
+    pass[patches] pass[guide] 0
+
+    if {guide,w} =>[guide] map
+    else {img,[w,h,d,3]},"[ v(w#$patches - 1), v(h#$patches - 1), v(d#$patches - 1) ]" => map
+    fi
+    channels[map] 0,2 100%,100%,1,1,inf a[map,-1] c
+
     if $penalization>1 {patches,[w,h,d]} => occurrences fi
     repeat $5 {
       eval[map] ":begin(
