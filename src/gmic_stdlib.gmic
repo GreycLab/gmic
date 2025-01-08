@@ -21610,8 +21610,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
   e[^-1] "Estimate correspondence map between image$? and patch image $1, "\
    "using $2x$3x$4 patches, $5 iterations, $6 randomizations and occurrence penalization $7 "\
    "("${s{8==1}}" score returned)."
-  psx,psy,psz,psx2,psy2,psz2:="p = [ ${2-4} ]; [ p,int(p/2) ]"
-  penalization:=1+$7
+  psx,psy,psz,psx1,psy1,psz1,psx2,psy2,pz2,penalization:="p = [ ${2-4} ]; [ p,p2 = int(p/2),p - p2 - 1, 1 + $7 ]"
 
   pass$1 => patches
   if narg($9) pass$9 else 0 fi => guide
@@ -21629,6 +21628,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
     repeat $5 {
       eval[map] ":begin(
           const psx = $psx; const psy = $psy; const psz = $psz;
+          const psx1 = $psx1; const psy1 = $psy1; const psz1 = $psz1;
           const psx2 = $psx2; const psy2 = $psy2; const psz2 = $psz2;
           const penalization = $penalization;
           const is_bwd = "$>"%2;
@@ -21638,10 +21638,14 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           ret = [ 0,0,0,0 ];
         );
 
-        cx = psx2; cy = psy2; cz = psz2;
-
         is_bwd?(X = w - 1 - x; Y = h - 1 - y; Z = d - 1 - z):(ref(x,X); ref(y,Y); ref(z,Z));
-        P = crop(#$img,X - cx,Y - cy,Z - cz,psx,psy,psz);
+
+        # Determine patch center, to handle patches at image boundary.
+        cx1 = X<=psx1?X:X<w - psx2?psx1:psx + X - w; cx2 = psx - cx1 - 1;
+        cy1 = Y<=psy1?Y:Y<h - psy2?psy1:psy + Y - h; cy2 = psy - cy1 - 1;
+        cz1 = Z<=psz1?Z:Z<d - psz2?psz1:psz + Z - d; cz2 = psz - cz1 - 1;
+
+        P = crop(#$img,X - cx1,Y - cy1,Z - cz1,psx,psy,psz);
         U0 = I(X,Y,Z); best_u = U0[0]; best_v = U0[1]; best_w = U0[2]; best_score = U0[3];
 
         repeat (nb_randomizations + nb_propagations,iter,
@@ -21650,16 +21654,18 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             rw = int(lerp(w#$patches,3*psx,frac));
             rh = int(lerp(h#$patches,3*psy,frac));
             rd = int(lerp(d#$patches,3*psz,frac));
-            u = cut(v(best_u - rw,best_u + rw),0,w#$patches - 1);
-            v = cut(v(best_v - rh,best_v + rh),0,h#$patches - 1);
-            w = cut(v(best_w - rd,best_w + rd),0,d#$patches - 1);
+            u = cut(v(best_u - rw,best_u + rw),cx1,w#$patches - 1 - cx2);
+            v = cut(v(best_v - rh,best_v + rh),cy1,h#$patches - 1 - cy2);
+            w = cut(v(best_w - rd,best_w + rd),cz1,d#$patches - 1 - cz2);
           ):( # Propagation step
             dX = iter==nb_randomizations; dY = iter==nb_randomizations + 1; dZ = iter==nb_randomizations + 2;
             is_bwd?(dX*=-1; dY*=-1; dZ*=-1);
             U = I(X - dX,Y - dY,Z - dZ); u = U[0] + dX; v = U[1] + dY; w = U[2] + dZ;
-            !inrange(u,0,w#$patches - 1) || !inrange(v,0,h#$patches - 1) || !inrange(w,0,d#$patches - 1)?continue();
+            !inrange(u,cx1,w#$patches - 1 - cx2) ||
+            !inrange(v,cy1,h#$patches - 1 - cy2) ||
+            !inrange(w,cz1,d#$patches - 1 - cz2)?continue();
           );
-          Q = crop(#$patches,u - cx,v - cy,w - cz,psx,psy,psz);
+          Q = crop(#$patches,u - cx1,v - cy1,w - cz1,psx,psy,psz);
           occ = penalization>1?i(#$occurrences,u,v,w):1;
           score = get_score(P,Q,occ);
           score<best_score?(
