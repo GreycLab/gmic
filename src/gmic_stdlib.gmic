@@ -21631,7 +21631,6 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           const psx = $psx; const psy = $psy; const psz = $psz;
           const psx2 = $psx2; const psy2 = $psy2; const psz2 = $psz2;
           const penalization = $penalization;
-          const boundary = 3;
           const is_bwd = "$>"%2;
           const nb_randomizations = $6;
           const nb_propagations = d#$patches>1?3:2;
@@ -21639,8 +21638,10 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           ret = [ 0,0,0,0 ];
         );
 
+        cx = psx2; cy = psy2; cz = psz2;
+
         is_bwd?(X = w - 1 - x; Y = h - 1 - y; Z = d - 1 - z):(ref(x,X); ref(y,Y); ref(z,Z));
-        P = crop(#$img,X - psx2,Y - psy2,Z - psz2,psx,psy,psz);
+        P = crop(#$img,X - cx,Y - cy,Z - cz,psx,psy,psz);
         U0 = I(X,Y,Z); best_u = U0[0]; best_v = U0[1]; best_w = U0[2]; best_score = U0[3];
 
         repeat (nb_randomizations + nb_propagations,iter,
@@ -21658,7 +21659,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             U = I(X - dX,Y - dY,Z - dZ); u = U[0] + dX; v = U[1] + dY; w = U[2] + dZ;
             !inrange(u,0,w#$patches - 1) || !inrange(v,0,h#$patches - 1) || !inrange(w,0,d#$patches - 1)?continue();
           );
-          Q = crop(#$patches,u - psx2,v - psy2,w - psz2,psx,psy,psz);
+          Q = crop(#$patches,u - cx,v - cy,w - cz,psx,psy,psz);
           occ = penalization>1?i(#$occurrences,u,v,w):1;
           score = get_score(P,Q,occ);
           score<best_score?(
