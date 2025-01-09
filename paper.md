@@ -195,6 +195,10 @@ One of those made the cover of _Nature_ of October 2023 (Fig. 9).
 
 ![Left: image of protostar, processed with `G'MIC` (courtesy of Mark McCaughrean/ESA). Right: effect of the `G'MIC` **Banding Denoise** algorithm on a JWST image (courtesy of Judy Schmidt).](images/nature.png)
 
+# Acknowledgments
+
+We would like to express our deepest gratitude to the developers, contributors and donors, both regular and one-off, all over the world. We are very grateful to the “CNRS Sciences Informatiques” institute, which helped accelerate G'MIC's growth by funding a development engineer for two consecutive years, and to the heads of the GREYC laboratory, who have supported this project from the outset. We would also like to thank our amazing community of users, who regularly provide us with beautiful/fun/innovative creations in which G'MIC filters have been used.
+
 # In Memoriam
 
 This article is dedicated to Sébastien Fourey, co-developer of the G'MIC project, who passed away in October 2024.
