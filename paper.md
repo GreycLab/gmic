@@ -139,7 +139,7 @@ the [software's forum](https://discuss.pixls.us/c/software/gmic/10), hosted by _
 an association that promotes the use of open-source software dedicated to photography and image creation.
 
 The `G'MIC` source code is available on these various GitHub repositories:
-[`gmic`](https://github.com/GreycLab/gmic/) (interpreter), [`gmic-qt`](https://github.com/c-koi/gmic-qt/) (plug-in) and
+[`gmic`](https://github.com/GreycLab/gmic/) (interpreter), [`gmic-qt`](https://github.com/GreycLab/gmic-qt/) (plug-in) and
 [`gmic-community`](https://github.com/GreycLab/gmic-community/) (external contributions, documentation).
 
 # Examples of Research Work Conducted With `G'MIC`
