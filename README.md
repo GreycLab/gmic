@@ -99,7 +99,8 @@ To cite G'MIC in your own publications, please reference the JOSS article, publi
   pages = {6618},
   author = {David Tschumperlé and Sébastien Fourey and Garry Osgood},
   title = {G'MIC: An Open-Source Self-Extending Framework for Image Processing},
-  journal = {Journal of Open Source Software} }
+  journal = {Journal of Open Source Software}
+}
 ~~~
 
 -----------------------
