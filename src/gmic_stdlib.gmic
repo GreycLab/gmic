@@ -27993,7 +27993,8 @@ nn_lib :
     );
 
     nn_add_backward(OUT,IN0,IN1) = (
-      d#IN0 = d#IN1 = d#OUT;
+      !isnum(IN0#)?(d#IN0 = d#OUT);
+      !isnum(IN1#)?(d#IN1 = d#OUT);
     );
 
     # append: Append two inputs as a new output.
@@ -28600,8 +28601,8 @@ nn_lib :
     );
 
     nn_mul_backward(OUT,IN0,IN1) = (
-      d#IN0 = IN1#*d#OUT;
-      d#IN1 = IN0#*d#OUT;
+      !isnum(IN0#)?(d#IN0 = IN1#*d#OUT);
+      !isnum(IN1#)?(d#IN1 = IN0#*d#OUT);
     );
 
     # nl: Non-linearity.
@@ -30168,7 +30169,9 @@ nn_print :
       input_siz,sep=
       repeat narg($input) {
         in=${arg0\ $>,$input}
-        input_siz.=$sep${_${_nn_network}_${in}_size}
+        if isnum($in) input_siz.=1
+        else input_siz.=$sep${_${_nn_network}_${in}_size}
+        fi
         sep=" and "
       }
     fi
