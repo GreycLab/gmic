@@ -29136,16 +29136,22 @@ nn_check_layer :
 
 #@cli nn_add : out,in0,_in1
 #@cli : Add an 'add' layer to the current network.
+#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
-nn_add : if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
-         if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-         check "isvarname('$1') && "[${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}]
-  e[^-1] "[nn_lib] Add 'add' layer '$1' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+nn_add : check "isvarname('$1')"
+  isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
+  if !$isnum0 nn_check_layer $in0 else out_size=${_${_nn_network}_${in0}_size} fi
+  if !$isnum1 nn_check_layer $in1 else out_size=${_${_nn_network}_${in1}_size} fi
+  if !isnum($in0)" && "!isnum($in1) check [${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}] fi
+
+  e[^-1] "[nn_lib] Add 'mul' layer '$1' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
   _${_nn_network}_layer_names.=$1,
   _${_nn_network}_layer_types.=add,
-  _${_nn_network}_$1_size=${_${_nn_network}_${in0}_size}
+  _${_nn_network}_$1_size=$out_size
   _${_nn_network}_$1_input=$in0,$in1
-  _${_nn_network}_$1_forward="begin(nn_add_init_forward($1,"$in0"));"\
+  _${_nn_network}_$1_forward="begin(nn_add_init_forward($1,"${in$isnum0}"));"\
                              "nn_add_forward($1,"$in0","$in1");"
   _${_nn_network}_$1_backward="nn_add_backward($1,"$in0","$in1");"
   _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
@@ -29592,16 +29598,22 @@ nn_maxpool3d : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_
 
 #@cli nn_mul : out,in0,_in1
 #@cli : Add an 'mul' layer to the current network.
+#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
-nn_mul : if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
-         if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-         check "isvarname('$1') && "[${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}]
+nn_mul : check "isvarname('$1')"
+  isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
+  if !$isnum0 nn_check_layer $in0 else out_size=${_${_nn_network}_${in0}_size} fi
+  if !$isnum1 nn_check_layer $in1 else out_size=${_${_nn_network}_${in1}_size} fi
+  if !isnum($in0)" && "!isnum($in1) check [${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}] fi
+
   e[^-1] "[nn_lib] Add 'mul' layer '$1' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
   _${_nn_network}_layer_names.=$1,
   _${_nn_network}_layer_types.=mul,
-  _${_nn_network}_$1_size=${_${_nn_network}_${in0}_size}
+  _${_nn_network}_$1_size=$out_size
   _${_nn_network}_$1_input=$in0,$in1
-  _${_nn_network}_$1_forward="begin(nn_mul_init_forward($1,"$in0"));"\
+  _${_nn_network}_$1_forward="begin(nn_mul_init_forward($1,"${in$isnum0}"));"\
                              "nn_mul_forward($1,"$in0","$in1");"
   _${_nn_network}_$1_backward="nn_mul_backward($1,"$in0","$in1");"
   _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
