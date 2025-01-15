@@ -29336,51 +29336,51 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
   _nn_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0
+# _learning_mode,_regularization>=0,_initialization
 #@cli : Add a 'conv3d' layer (3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
+#@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'learning_mode=3' and 'regularization=0'.
-nn_conv3d : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-            check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
-                  "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0" skip "${6=1}"
+# 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
+                  "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,\
+    regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  e[^-1] "[nn_lib] Add 'conv3d' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
-         "$4x$4x$4 kernels, stride $5, dilation $6, border shrink $7 and "$s$8" boundary conditions."
-  init=${_${_nn_network}_init}
-  _nn_conv3d $1_conv3d,$in,${3-10},2
-  nn_rename $1,$1_conv3d
-  _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
-
-# [Internal] Insert 'conv3d' layer, with parameter image having name '$1'.
-# $11: initialization type = { 0:zero | 1:identity | 2:gaussian-noise }.
-_nn_conv3d :
-  _${_nn_network}_layer_names.=$1,
+  e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
+         "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=conv3d,
-  _${_nn_network}_$1_size:=s=[${_${_nn_network}_$2_size}];[int(s[0,3]/$5)-2*$7,$3]
-  _${_nn_network}_$1_learning_mode=$9
-  _${_nn_network}_$1_input=$2
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  _${_nn_network}_$1_properties="kernel=$4x$4x$4, stride=$5, dilation=$6, shrink=$7, boundary_conditions="$s$8", "\
-                                "learning_mode=$9, regularization=$10"
-  if !isint($$1)
-    {[${_${_nn_network}_$2_size}][3]*$4^3+1},$3
-    if $11==1 f. "const siz = $4^2; ; int(x/siz)==y%"{[${_${_nn_network}_$2_size}][3]}" && x%siz==int(siz/2)?1:0"
-    elif $11==2 f. 4*g/(w-1)
+  _${_nn_network}_${out}_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
+  _${_nn_network}_${out}_learning_mode=$learning_mode
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
+                                    "dilation="$dilation", shrink="$shrink", "\
+                                    "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
+                                    "regularization="$regularization
+  if !isint(${$out})
+    {[${_${_nn_network}_${in}_size}][3]*$kernel_size^3+1},$nb_channels
+    if $initialization==1
+      f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${_nn_network}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
+    elif $initialization==2
+      f. "4*g/(w-1)"
     fi
-    if $9<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => $1
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $out
   fi
-  _${_nn_network}_$1_forward="begin(nn_conv3d_init_forward($1,$2,${4-8}));"\
-                             "nn_conv3d_forward($1,$2);"
-  _${_nn_network}_$1_backward="begin(nn_conv3d_init_backward($1,$2,$10));"\
-                              "nn_conv3d_backward($1,$2);"\
-                              "end(nn_conv3d_end_backward($1));"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_forward="begin(nn_conv3d_init_forward("$out,$in,$kernel_size,$stride,$dilation,$shrink,\
+                                                                $boundary_conditions"));"\
+                                 "nn_conv3d_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="begin(nn_conv3d_init_backward("$out,$in,$regularization"));"\
+                                  "nn_conv3d_backward("$out,$in");"\
+                                  "end(nn_conv3d_end_backward("$out"));"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
+  _nn_previous_layer=$out
 
 #@cli nn_conv3dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
 # _activation,_learning_mode,_regularization>=0
@@ -29858,20 +29858,23 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resconv2dnnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-                  check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
+nn_resconv2dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                   skip "${4=1}","${6=leakyrelu}"
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3x$3 kernels, "\
-         "dilation $4, "$s$5" boundary conditions and '$6' activation."
+  e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         ${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
+         ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${_nn_network}_init}
-  nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv2d $1_conv2d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
-  _nn_normalize $1_normalize,$1_conv2d,1,3
-  nn_add $1_add,$1_normalize,$1_clone0
-  nn_nl $1,$1_add,$6
+  nn_clone ${out}_clone0,${out}_clone1,$in
+  nn_conv2d ${out}_conv2d,.,{[${_${_nn_network}_${in}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
+            $learning_mode,$regularization,0
+  nn_normalize ${out}_normalize,.,1,3
+  nn_add ${out}_add,.,$1_clone1
+  nn_nl $out,${out}_add,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_resconv3d : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_learning_mode,_regularization>=0
 #@cli : Add a 'resconv3d' (residual 3D convolutional layer) to the current network.
