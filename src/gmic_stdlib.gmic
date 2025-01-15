@@ -29120,6 +29120,7 @@ nn_lib :
 #@cli : Default value: 'network_name=nn'.
 nn_init :
   if isvarname(['"${1=nn}"']) network="$1" else network="nn" noarg fi
+
   e[^-1] "[nn_lib] Initialize new network '"$network"'."
   _nn_network=$network
   _${_nn_network}_layer_names,_${_nn_network}_layer_types,_${_nn_network}_trainer_data,\
@@ -29233,6 +29234,7 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
 nn_clone : check "isvarname('$1') && isvarname('$2')"
   if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   out0,out1=$1,$2
+
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$_nn_network"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
   _${_nn_network}_layer_names.=$out0,$out1,
@@ -29262,6 +29264,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     learning_mode,regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
@@ -29309,6 +29312,7 @@ nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     activation,learning_mode,regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv2d+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
@@ -29335,6 +29339,7 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     activation,learning_mode,regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv2d+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
@@ -29360,6 +29365,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,\
     regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
@@ -29408,6 +29414,7 @@ nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,\
     regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv3d+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink", "\
@@ -29435,6 +29442,7 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,\
     regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^-1] "[nn_lib] Add 'conv3d+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink", "\
@@ -29455,6 +29463,7 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
   e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
         "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
   _${_nn_network}_layer_names.=$out,
@@ -29526,6 +29535,7 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
 nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=2},0,2)"
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,learning_mode,regularization,initialization=$1,${3-6}
+
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "$nb_channels" channels."
   _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=fc,
@@ -29560,6 +29570,7 @@ nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=
           skip ${4=leakyrelu}
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
+
   e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${_nn_network}_init}
@@ -29578,6 +29589,7 @@ nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>
            skip ${4=leakyrelu}
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
+
   e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${_nn_network}_init}
@@ -29587,18 +29599,20 @@ nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$out
 
-#@cli nn_input : name,width,_height,_depth,_spectrum
+#@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
 nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4=1},1) && isint(${5=1},1)"
-  e[^-1] "[nn_lib] Add input '$1' to network '"$_nn_network"', with size ($2,$3,$4,$5)."
-  _${_nn_network}_layer_names.=$1,
+  out,width,height,depth,spectrum=${1-5}
+
+  e[^-1] "[nn_lib] Add input '"$out"' to network '"$_nn_network"', with size ("$width,$height,$depth,$spectrum")."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=input,
-  _${_nn_network}_$1_size=$2,$3,$4,$5
-  _${_nn_network}_$1_forward="begin(nn_input_init_forward($1,$2,$3,$4,$5));"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
+  _${_nn_network}_${out}_size=$width,$height,$depth,$spectrum
+  _${_nn_network}_${out}_forward="begin(nn_input_init_forward("$out,$width,$height,$depth,$spectrum"));"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_maxpool2d : out,_in,_patch_size>1
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
