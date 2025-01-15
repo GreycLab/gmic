@@ -29484,65 +29484,69 @@ nn_dropout : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer 
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
 #@cli : Default value: 'learning_mode=3', 'regularization=0' and 'initialization=2'.
-nn_fc : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-        check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=2},0,2)"
-  e[^-1] "[nn_lib] Add 'fc' layer '$1' to network '"$_nn_network"', with input '"$in"' and $3 channels."
-  _${_nn_network}_layer_names.=$1,
+nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=2},0,2)"
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,nb_channels,learning_mode,regularization,initialization=$1,${3-6}
+  e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "$nb_channels" channels."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=fc,
-  _${_nn_network}_$1_size=1,1,1,$3
-  _${_nn_network}_$1_learning_mode=$4
-  _${_nn_network}_$1_input=$in
-  _${_nn_network}_$1_properties="learning_mode=$4, regularization=$5"
-  if !isint($$1)
-    {prod(${_${_nn_network}_${in}_size})+1},$3
-    if $6==1 f. "x==w-1?0:(x%h)==(y%(w-1))"
-    elif $6==2 f. "4*g/(w-1)"
+  _${_nn_network}_${out}_size=1,1,1,$3
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_learning_mode=$learning_mode
+  _${_nn_network}_${out}_properties="learning_mode="$learning_mode", regularization="$regularization
+  if !isint(${$out})
+    {prod(${_${_nn_network}_${in}_size})+1},$nb_channels
+    if $initialization==1 f. "x==w-1?0:(x%h)==(y%(w-1))"
+    elif $initialization==2 f. "4*g/(w-1)"
     fi
-    if $4<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => $1
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $out
   fi
-  _${_nn_network}_$1_forward="begin(nn_fc_init_forward($1,"$in"));"\
-                             "nn_fc_forward($1,"$in");"
-  _${_nn_network}_$1_backward="begin(nn_fc_init_backward($1,$5));"\
-                              "nn_fc_backward($1,"$in");"\
-                              "end(nn_fc_end_backward($1));"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_forward="begin(nn_fc_init_forward("$out,$in"));"\
+                                 "nn_fc_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="begin(nn_fc_init_backward("$out,$regularization"));"\
+                                  "nn_fc_backward("$out,$in");"\
+                                  "end(nn_fc_end_backward("$out"));"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
-#@cli nn_fcnl : out,in,nb_neurons>0,_activation,0<=_learning_mode<=3,_regularization>=0,_initialization
+#@cli nn_fcnl : out,in,nb_channels>0,_activation,0<=_learning_mode<=3,_regularization>=0,_initialization
 #@cli : Add a 'fcnl' layer (fully connected layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
 #@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
-nn_fcnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-          check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=2},0,2)"
+nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=2},0,2)"
           skip ${4=leakyrelu}
-  e[^-1] "[nn_lib] Add 'fc+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels "\
-         "and '$4' activation."
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
+  e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         $nb_channels" channels and '"$activation"' activation."
   init=${_${_nn_network}_init}
-  nn_fc $1_fc,$in,$3,${5-7}
-  nn_nl $1,.,$4
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
-#@cli nn_fcnnl : out,in,nb_neurons>0,_activation,0<=_learning_mode<=3,_regularization>=0
+#@cli nn_fcnnl : out,in,nb_channels>0,_activation,0<=_learning_mode<=3,_regularization>=0,_initialization
 #@cli : Add a 'fcnnl' layer (fully connected layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_fcnnl : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-           check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0"
+#@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
+#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=2},0,2)"
            skip ${4=leakyrelu}
-  e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels "\
-         "and '$4' activation."
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
+  e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         $nb_channels" channels and '"$activation"' activation."
   init=${_${_nn_network}_init}
-  _nn_fc $1_fc,$in,$3,$5,$6,2
-  _nn_normalize $1_normalize,$1_fc,0,3
-  nn_nl $1,$1_normalize,$4
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_normalize ${out}_normalize,.,0,3
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_input : name,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
@@ -29920,50 +29924,53 @@ nn_resconv3dnnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_che
 #@cli : Add a 'resfc' (residual fully connecter layer) to the current network.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'learning_mode=3' and 'regularization=0'.
-nn_resfc : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-           check "isvarname('$1') && isint(${3=3},0,3) && ${4=0}>=0"
-  e[^-1] "[nn_lib] Add 'resfc' layer '$1' to network '"$_nn_network"', with input '"$in"'."
+nn_resfc : check "isvarname('$1') && isint(${3=3},0,3) && ${4=0}>=0"
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,learning_mode,regularization=$1,${3-4}
+  e[^-1] "[nn_lib] Add 'resfc' layer '"$out"' to network '"$_nn_network"', with input '"$in"'."
   init=${_${_nn_network}_init}
-  nn_clone $1_clone0,$1_clone1,$in
-  _nn_fc $1_fc,$1_clone1,{prod(${_${_nn_network}_${in}_size})},$3,$4,0
-  nn_add $1,$1_fc,$1_clone0
+  nn_clone ${out}_clone0,${out}_clone1,$in
+  nn_fc ${out}_fc,.,{prod(${_${_nn_network}_${in}_size})},$learning_mode,$regularization,0
+  nn_add $out,.,${out}_clone1
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_resfcnl : out,_in,_activation,0<=_learning_mode<=3,_regularization>=0
 #@cli : Add a 'resfcnl' (residual fully connecter layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resfcnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-             check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
-             skip ${3=leakyrelu}
-  e[^-1] "[nn_lib] Add 'resfc+nl' layer '$1' to network '"$_nn_network"', with input '"$in"' and '$4' activation."
+nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=leakyrelu}
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,activation,learning_mode,regularization=$1,${3-5}
+  e[^-1] "[nn_lib] Add 'resfc+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+         "'"$activation"' activation."
   init=${_${_nn_network}_init}
-  nn_clone $1_clone0,$1_clone1,$in
-  _nn_fc $1_fc,$1_clone1,{prod(${_${_nn_network}_${in}_size})},$4,$5,0
-  nn_add $1_add,$1_fc,$1_clone0
-  nn_nl $1,$1_add,$3
+  nn_clone ${out}_clone0,${out}_clone1,$in
+  nn_fc ${out}_fc,.,{prod(${_${_nn_network}_${in}_size})},$learning_mode,$regularization,0
+  nn_add ${out}_add,.,${out}_clone1
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_resfcnnl : out,_in,_activation,0<=_learning_mode<=3,_regularization>=0
 #@cli : Add a 'resfcnnl' (residual fully connecter layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resfcnnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-              check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
+nn_resfcnnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
               skip ${3=leakyrelu}
-  e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '$1' to network '"$_nn_network"', with input '"$in"' "\
-         "and '$4' activation."
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,activation,learning_mode,regularization=$1,${3-5}
+  e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+         "'"$activation"' activation."
   init=${_${_nn_network}_init}
-  nn_clone $1_clone0,$1_clone1,$in
-  _nn_fc $1_fc,$1_clone1,{prod(${_${_nn_network}_${in}_size})},$4,$5,0
-  _nn_normalize $1_normalize,$1_fc,0,3
-  nn_add $1_add,$1_normalize,$1_clone0
-  nn_nl $1,$1_add,$3
+  nn_clone ${out}_clone0,${out}_clone1,$in
+  nn_fc ${out}_fc,.,{prod(${_${_nn_network}_${in}_size})},$learning_mode,$regularization,0
+  nn_normalize ${out}_normalize,.
+  nn_add ${out}_add,.,${out}_clone1
+  nn_nl ${out},.,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_reshape : out,in,width>0,height>0,depth>0,spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
