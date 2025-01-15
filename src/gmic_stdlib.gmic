@@ -29801,42 +29801,48 @@ nn_patchdown3d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli nn_patchup2d : out,_in,_patch_size>1
 #@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
-nn_patchup2d : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2},2)"
-  e[^-1] "[nn_lib] Add 'patchup2d' layer '$1' to network '"$_nn_network"', with input '"$in"' and patch size $3x$3."
-  _${_nn_network}_layer_names.=$1,
+nn_patchup2d : check "isvarname('$1') && isint(${3=2},2)"
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,patch_size=$1,$3
+
+  e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+         "and patch size "${patch_size}x${patch_size}"."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=patchup2d,
-  _${_nn_network}_$1_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,2]*$3),s[2],s[3]/$3^2]
-  _${_nn_network}_$1_input=$in
-  _${_nn_network}_$1_properties="patch_size=$3x$3"
-  _${_nn_network}_$1_forward="begin(nn_patchup2d_init_forward($1,"$in",$3));"\
-                             "nn_patchup2d_forward($1,"$in");"
-  _${_nn_network}_$1_backward="begin(nn_patchup2d_init_backward($1,"$in",$3));"\
-                              "nn_patchup2d_backward($1,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,2]*$patch_size),s[2],s[3]/$patch_size^2]
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_properties="patch_size="${patch_size}x${patch_size}
+  _${_nn_network}_${out}_forward="begin(nn_patchup2d_init_forward("$out,$in,$patch_size"));"\
+                                 "nn_patchup2d_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="begin(nn_patchup2d_init_backward("$out,$in,$patch_size"));"\
+                                  "nn_patchup2d_backward("$out,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_patchup3d : out,_in,_patch_size>1
 #@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
-nn_patchup3d : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-               check "isvarname('$1') && isint(${3=2,2})"
-  e[^-1] "[nn_lib] Add 'patchup3d' layer '$1' to network '"$_nn_network"', with input '"$in"' and patch size $3x$3x$3."
-  _${_nn_network}_layer_names.=$1,
+nn_patchup3d : check "isvarname('$1') && isint(${3=2,2})"
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,patch_size=$1,$3
+
+  e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+         "and patch size "${patch_size}x${patch_size}x${patch_size}"."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=patchup3d,
-  _${_nn_network}_$1_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,3]*$3),s[3]/$3^3]
-  _${_nn_network}_$1_input=$in
-  _${_nn_network}_$1_properties="patch_size=$3x$3x$3"
-  _${_nn_network}_$1_forward="begin(nn_patchup3d_init_forward($1,"$in",$3));"\
-                             "nn_patchup3d_forward($1,"$in");"
-  _${_nn_network}_$1_backward="begin(nn_patchup3d_init_backward($1,"$in",$3));"\
-                              "nn_patchup3d_backward($1,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,3]*$patch_size),s[3]/$patch_size^3]
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
+  _${_nn_network}_${out}_forward="begin(nn_patchup3d_init_forward("$out,$in,$patch_size"));"\
+                                 "nn_patchup3d_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="begin(nn_patchup3d_init_backward("$out,$in,$patch_size"));"\
+                                  "nn_patchup3d_backward("$out,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_rename : out,_in
 #@cli : Add a 'rename' layer to the current network.
