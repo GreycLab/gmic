@@ -29230,21 +29230,24 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli nn_clone : name0,name1,_in
 #@cli : Add a 'clone' layer to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
-nn_clone : if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
-           check "isvarname('$1') && isvarname('$2')"
-  e[^-1] "[nn_lib] Add 'clone' layer to network '"$_nn_network"', with input '"$in"' and outputs '$1' and '$2'."
-  _${_nn_network}_layer_names.=$1,$2,
+nn_clone : check "isvarname('$1') && isvarname('$2')"
+  if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
+  out0,out1=$1,$2
+
+  e[^-1] "[nn_lib] Add 'clone' layer to network '"$_nn_network"', with input '"$in"' and "\
+         "outputs '"$out0"' and '"$out1"'."
+  _${_nn_network}_layer_names.=$out0,$out1
   _${_nn_network}_layer_types.=clone,clone,
-  _${_nn_network}_$1_size=${_${_nn_network}_${in}_size}
-  _${_nn_network}_$2_size=${_${_nn_network}_${in}_size}
-  _${_nn_network}_$1_input,_${_nn_network}_$2_input=$in
-  _${_nn_network}_$1_forward="begin(nn_clone_init_forward($1,$2,"$in"));"\
-                             "nn_clone_forward($1,$2,"$in");"
-  _${_nn_network}_$1_backward="nn_clone_backward($1,$2,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out0}_size=${_${_nn_network}_${in}_size}
+  _${_nn_network}_${out1}_size=${_${_nn_network}_${in}_size}
+  _${_nn_network}_${out0}_input,_${_nn_network}_${out1}_input=$in
+  _${_nn_network}_${out0}_forward="begin(nn_clone_init_forward("$out0,$out1,$in"));"\
+                                  "nn_clone_forward("$out0,$out1,$in");"
+  _${_nn_network}_${out0}_backward="nn_clone_backward("$out0,$out1,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out0}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out0}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_regularization>=0,_initialization
