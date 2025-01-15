@@ -28076,7 +28076,7 @@ nn_lib :
 
     # conv2d: 2D convolutional layer.
     #--------------------------------
-    nn_conv2d_init_forward(OUT,IN,size,stride,dilation,shrink,boundary_conditions) = (
+    nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $OUT#;
       const OUT#_shrink = shrink;
       const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
@@ -28084,7 +28084,7 @@ nn_lib :
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
-      const OUT#_kernel_size = size;
+      const OUT#_kernel_size = kernel_size;
       const OUT#_kernel_center = OUT#_kernel_size - 1 - int(OUT#_kernel_size/2);
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
@@ -28191,7 +28191,7 @@ nn_lib :
 
     # conv3d: 3D convolutional layer.
     #--------------------------------
-    nn_conv3d_init_forward(OUT,IN,size,stride,dilation,shrink,boundary_conditions) = (
+    nn_conv3d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $OUT#;
       const OUT#_shrink = shrink;
       const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
@@ -28199,7 +28199,7 @@ nn_lib :
       const OUT#_depth = int(IN#_depth/stride) - 2*OUT#_shrink;
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
-      const OUT#_kernel_size = size;
+      const OUT#_kernel_size = kernel_size;
       const OUT#_kernel_center = OUT#_kernel_size - 1 - int(OUT#_kernel_size/2);
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
@@ -29238,51 +29238,50 @@ nn_clone : if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_laye
   _nn_previous_layer=$1
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# 0<=_learning_mode<=3,_regularization>=0
+# 0<=_learning_mode<=3,_regularization>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
+#@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
 # 'shrink=0', 'boundary_conditions=1', 'learning_mode=3' and 'regularization=0'.
-nn_conv2d : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-            check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
-                  "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0" skip "${6=1}"
+nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
+                  "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
+    learning_mode,regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  e[^-1] "[nn_lib] Add 'conv2d' layer '$1' to network '"$_nn_network"', with input '"$in"', $3 channels, "\
-         "$4x$4 kernels, stride $5, dilation $6, border shrink $7 and "$s$8" boundary conditions."
-  init=${_${_nn_network}_init}
-  _nn_conv2d $1_conv2d,$in,${3-10},2
-  nn_rename $1,$1_conv2d
-  _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
-
-# [Internal] Insert 'conv2d' layer, with parameter image having name '$1'.
-# $11: initialization type = { 0:zero | 1:identity | 2:gaussian-noise }.
-_nn_conv2d :
-  _${_nn_network}_layer_names.=$1,
+  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
+         "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=conv2d,
-  _${_nn_network}_$1_size:=s=[${_${_nn_network}_$2_size}];[int(s[0,2]/$5)-2*$7,s[2],$3]
-  _${_nn_network}_$1_learning_mode=$9
-  _${_nn_network}_$1_input=$2
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  _${_nn_network}_$1_properties="kernel=$4x$4, stride=$5, dilation=$6, shrink=$7, boundary_conditions="$s$8", "\
-                                "learning_mode=$9, regularization=$10"
-  if !isint($$1)
-    {[${_${_nn_network}_$2_size}][3]*$4^2+1},$3
-    if $11==1 f. "const siz = $4^2; ; int(x/siz)==y%"{[${_${_nn_network}_$2_size}][3]}" && x%siz==int(siz/2)?1:0"
-    elif $11==2 f. "4*g/(w-1)"
+  _${_nn_network}_${out}_size:=s=[${_${_nn_network}_${in}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_learning_mode=$learning_mode
+  _${_nn_network}_${out}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
+                                    "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
+                                    "learning_mode="$learning_mode", regularization="$regularization
+  if !isint(${$out})
+    {[${_${_nn_network}_${in}_size}][3]*$kernel_size^2+1},$nb_channels
+    if $initialization==1
+      f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${_nn_network}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
+    elif $initialization==2
+      f. "4*g/(w-1)"
     fi
-    if $9<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => $1
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $out
   fi
-  _${_nn_network}_$1_forward="begin(nn_conv2d_init_forward($1,$2,${4-8}));"\
-                             "nn_conv2d_forward($1,$2);"
-  _${_nn_network}_$1_backward="begin(nn_conv2d_init_backward($1,$2,$10));"\
-                              "nn_conv2d_backward($1,$2);"\
-                              "end(nn_conv2d_end_backward($1));"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_forward="begin(nn_conv2d_init_forward("$out,$in,$kernel_size,$dilation,\
+                                 $shrink,$boundary_conditions"));"\
+                                 "nn_conv2d_forward("$out,$in");"
+  _${_nn_network}_$1_backward="begin(nn_conv2d_init_backward("$out,$in,$regularization"));"\
+                              "nn_conv2d_backward("$out,$in");"\
+                              "end(nn_conv2d_end_backward("$out"));"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
+  _nn_previous_layer=$out
 
 #@cli nn_conv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
 # _activation,0<=_learning_mode<=3,regularization>=0
