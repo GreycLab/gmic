@@ -29499,21 +29499,24 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
-nn_dropout : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-             check "isvarname('$1') && inrange($3,0,1,1,0)"
-  e[^-1] "[nn_lib] Add 'dropout' layer '$1' to network '"$_nn_network"', with input '"$in"' and dropout rate $3."
-  _${_nn_network}_layer_names.=$1,
+nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,dropout_rate=$1,$3
+
+  e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+         "dropout rate "$dropout_rate"."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=dropout,
-  _${_nn_network}_$1_size=${_${_nn_network}_${in}_size}
-  _${_nn_network}_$1_input=$in
-  _${_nn_network}_$1_properties="dropout_rate=$3"
-  _${_nn_network}_$1_forward="begin(nn_dropout_init_forward($1,"$in",$3));"\
-                             "nn_dropout_forward($1,"$in");"
-  _${_nn_network}_$1_backward="nn_dropout_backward($1,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size=${_${_nn_network}_${in}_size}
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_properties="dropout_rate="$dropout_rate
+  _${_nn_network}_${out}_forward="begin(nn_dropout_init_forward("$out,$in,$dropout_rate"));"\
+                                 "nn_dropout_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="nn_dropout_backward("$out,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_regularization>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
