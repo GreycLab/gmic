@@ -29233,10 +29233,9 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
 nn_clone : check "isvarname('$1') && isvarname('$2')"
   if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   out0,out1=$1,$2
-
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$_nn_network"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
-  _${_nn_network}_layer_names.=$out0,$out1
+  _${_nn_network}_layer_names.=$out0,$out1,
   _${_nn_network}_layer_types.=clone,clone,
   _${_nn_network}_${out0}_size=${_${_nn_network}_${in}_size}
   _${_nn_network}_${out1}_size=${_${_nn_network}_${in}_size}
@@ -29316,7 +29315,7 @@ nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}
   init=${_${_nn_network}_init}
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
             $regularization,$initialization
-  nn_nl ${out},.,$activation
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$out
 
@@ -29343,7 +29342,7 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
             $regularization,$initialization
   nn_normalize ${out}_normalize,.,1,3
-  nn_nl ${out},.,$activation
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$out
 
@@ -30015,7 +30014,7 @@ nn_resfcnnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
   nn_fc ${out}_fc,.,{prod(${_${_nn_network}_${in}_size})},$learning_mode,$regularization,0
   nn_normalize ${out}_normalize,.
   nn_add ${out}_add,.,${out}_clone1
-  nn_nl ${out},.,$activation
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
   _nn_previous_layer=$out
 
@@ -30312,6 +30311,9 @@ nn_size :
   repeat narg(${_${_nn_network}_layer_names})-1 {
     type=${arg0\ $>,${_${_nn_network}_layer_types}}
     name=${arg0\ $>,${_${_nn_network}_layer_names}}
+
+    e "DEBUG : Name = "$name", Type = "$type
+
     if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={$name,whds} fi
   }
   u $siz
