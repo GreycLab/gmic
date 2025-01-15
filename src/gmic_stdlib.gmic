@@ -29917,19 +29917,22 @@ nn_resconv3d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) &&
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
 # activation='leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resconv3dnl : if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-                 check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3) && ${8=0}>=0"
+nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  e[^-1] "[nn_lib] Add 'resconv3dnl' layer '$1' to network '"$_nn_network"', with input '"$in"', $3x$3x$3 kernels, "\
-         "dilation $4, "$s$5" boundary conditions and '$6' activation."
+  e[^-1] "[nn_lib] Add 'resconv3dnl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+         ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
+         ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${_nn_network}_init}
-  nn_clone $1_clone0,$1_clone1,$in
-  _nn_conv3d $1_conv3d,$1_clone1,{[${_${_nn_network}_${in}_size}][3]},$3,1,$4,0,$5,$7,$8,0
-  nn_add $1_add,$1_conv3d,$1_clone0
-  nn_nl $1,$1_add,$6
+  nn_clone ${out}_clone0,${out}_clone1,$in
+  nn_conv3d ${out}_conv3d,.,{[${_${_nn_network}_${in}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
+            $learning_mode,$regularization,0
+  nn_add ${out}_add,.,$1_clone1
+  nn_nl $out,.,$activation
   _${_nn_network}_init=${init}"$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_resconv3dnnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
 # _regularization>=0
