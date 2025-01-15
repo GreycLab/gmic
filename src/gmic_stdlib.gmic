@@ -30345,13 +30345,13 @@ nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}'
         if ['$optimizer']=='rmsprop'
           name_g2=${name}_g2
           if !isint(${_nn_$name_g2}) +f[_nn_$name] 0 => _nn_$name_g2 fi
-          _${_nn_network}_trainer_data.=$name_g2,
+          _${_nn_network}_trainer_data.=_nn_$name_g2,
 
         elif isin('$optimizer','adam','adamax')
           name_m,name_v=${name}_m,${name}_v
           if !isint(${_nn_$name_m}) +f[_nn_$name] 0 => _nn_$name_m fi
           if !isint(${_nn_$name_v}) +f[_nn_$name] 0 => _nn_$name_v fi
-          _${_nn_network}_trainer_data.=$name_m,$name_v,
+          _${_nn_network}_trainer_data.=_nn_$name_m,_nn_$name_v,
         fi
       fi
     fi
@@ -30407,7 +30407,7 @@ nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
   repeat narg(${_${_nn_network}_layer_names})-1 {
     type=${arg0\ $>,${_${_nn_network}_layer_types}}
     name=${arg0\ $>,${_${_nn_network}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=$c$name c=, fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
   }
   ('${_${_nn_network}_init}') autocrop. {'" "'} => _nn_init
   o[$sel,-1] "$1"
@@ -30423,7 +30423,7 @@ nn_store : check "isbool(${2=1})"
   repeat narg(${_${_nn_network}_layer_names})-1 {
     type=${arg0\ $>,${_${_nn_network}_layer_types}}
     name=${arg0\ $>,${_${_nn_network}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=$c$name c=, fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
   }
   ('${_${_nn_network}_init}') autocrop. {'" "'} => _nn_init
   +store[$sel,-1] "$1"
