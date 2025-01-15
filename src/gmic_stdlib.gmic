@@ -29451,25 +29451,26 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
 #@cli : Add a 'crop' layer to the current network.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default value: 'boundary_conditions=0'.
-nn_crop : if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-          check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
+nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-  e[^1] "[nn_lin] Add 'crop' layer '$1' to network '"$_nn_network"', with input '"$in"', "\
-        "coordinates (${3-6})-(${7-10}) and "$s$11" boundary conditions."
-  _${_nn_network}_layer_names.=$1,
+  e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+        "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=crop,
-  cmin:=vmin([${3-6}],[${7-10}])
-  cmax:=vmax([${3-6}],[${7-10}])
-  _${_nn_network}_$1_size:=[$cmax]-[$cmin]+1
-  _${_nn_network}_$1_input=$in
-  _${_nn_network}_$1_properties="coordinates=(${3-6})x(${7-10})"
-  _${_nn_network}_$1_forward="begin(nn_crop_init_forward($1,"$in",${3-11}));"\
-                             "nn_crop_forward($1,"$in");"
-  _${_nn_network}_$1_backward="nn_crop_backward($1,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  cmin:=vmin([$x0,$y0,$z0,$c0],[$x1,$y1,$z1,$c1])
+  cmax:=vmax([$x0,$y0,$z0,$c0],[$x1,$y1,$z1,$c1])
+  _${_nn_network}_${out}_size:=[$cmax]-[$cmin]+1
+  _${_nn_network}_${out}_input=$in
+  _${_nn_network}_${out}_properties="coordinates=("$x0,$y0,$z0,$c0")x("$x1,$y1,$z1,$c1")"
+  _${_nn_network}_${out}_forward="begin(nn_crop_init_forward("$out,$in,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1"));"\
+                                 "nn_crop_forward("$out,$in");"
+  _${_nn_network}_${out}_backward="nn_crop_backward("$out,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_distance : out,in0,_in1,_metric={ 0:squared-L2 | p>0:Lp-norm }
 #@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
