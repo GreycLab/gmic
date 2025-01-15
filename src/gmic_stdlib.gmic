@@ -29125,7 +29125,7 @@ nn_init :
   _nn_network=$network
   _${network}_layer_names,_${network}_layer_types,_${network}_trainer_data,\
    _${network}_forward,_${network}_loss,_${network}_backward,_${network}_update,_nn_previous_layer=
-  _${network}_init="$0 "${network}" "
+  _${network}_init="$0 "$network" "
 
 #@cli nn_check_layer : layer_name
 #@cli : Check that layer with specified name exists in the current network.
@@ -29141,16 +29141,16 @@ nn_check_layer :
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
 nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  network=$_nn_network
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
-  network=$_nn_network
   check [${_${network}_${in0}_size}]==[${_${network}_${in1}_size}]
   out,out_size=$1,
   if !$isnum0 nn_check_layer $in0 out_size=${_${network}_${in0}_size} fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${network}_${in1}_size} fi
   if !isnum($in0)" && "!isnum($in1) check [${_${network}_${in0}_size}]==[${_${network}_${in1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$network"', with inputs '"$in0"' and '"$in1"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=add,
   _${network}_${out}_size=$out_size
@@ -29167,13 +29167,13 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
 #@cli : Add an 'append' layer to the current network.
 #@cli : Default value: 'in1=. (previous layer)'.
 nn_append : check "isvarname('$1')"
+  network=$_nn_network
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-  network=$_nn_network
   check [${_${network}_${in0}_size}][0,3]==[${_${network}_${in1}_size}][0,3]
   out=$1
 
-  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$network"', with inputs '"$in0"' and '"$in1"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=append,
   _${network}_${out}_size:=[${_${network}_${in0}_size}]+[0,0,0,[${_${network}_${in1}_size}][3]]
@@ -29190,11 +29190,11 @@ nn_append : check "isvarname('$1')"
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_avgpool2d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'avgpool2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'avgpool2d' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "patch size "${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=avgpool2d,
@@ -29213,11 +29213,11 @@ nn_avgpool2d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'avgpool3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'avgpool3d' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "patch size "${patch_size}x${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=avgpool3d,
@@ -29236,11 +29236,11 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'clone' layer to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_clone : check "isvarname('$1') && isvarname('$2')"
-  if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   network=$_nn_network
+  if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   out0,out1=$1,$2
 
-  e[^-1] "[nn_lib] Add 'clone' layer to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'clone' layer to network '"$network"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
   _${network}_layer_names.=$out0,$out1,
   _${network}_layer_types.=clone,clone,
@@ -29265,13 +29265,13 @@ nn_clone : check "isvarname('$1') && isvarname('$2')"
 # 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     learning_mode,regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${network}_layer_names.=$out,
@@ -29314,13 +29314,13 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
 nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=2},0,2)"
               skip "${6=1}","${9=leakyrelu}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     activation,learning_mode,regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv2d+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv2d+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -29342,13 +29342,13 @@ nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}
 nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=2},0,2)"
                skip "${6=1}","${9=leakyrelu}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     activation,learning_mode,regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv2d+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv2d+normalize+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -29369,13 +29369,13 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
 # 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,\
     regularization,initialization=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${network}_layer_names.=$out,
@@ -29419,13 +29419,13 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
 nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=2},0,2)"
               skip "${6=1}","${9=leakyrelu}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,\
     regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv3d+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv3d+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
@@ -29448,13 +29448,13 @@ nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}
 nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0 && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=2},0,2)"
                skip "${6=1}","${9=leakyrelu}"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,\
     regularization,initialization=$1,${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv3d+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv3d+normalize+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
@@ -29471,12 +29471,12 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default value: 'boundary_conditions=0'.
 nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=$1,${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$network"', with input '"$in"', "\
         "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=crop,
@@ -29497,14 +29497,14 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
 #@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
 #@cli : Default value: 'in=. (previous layer)',
 nn_distance : check "isvarname('$1') && ${4=0}>=0"
+  network=$_nn_network
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-  network=$_nn_network
   check [${_${network}_${in0}_size}]==[${_${network}_${in1}_size}]
   out,metric=$1,$4
   s0,s1="squared-L2 norm","L$4"
 
-  e[^-1] "[nn_lib] Add 'distance' layer '"$out"' ("${s{$metric>0}}") to network '"$_nn_network"', "\
+  e[^-1] "[nn_lib] Add 'distance' layer '"$out"' ("${s{$metric>0}}") to network '"$network"', "\
          "with inputs '"$in0"' and '"$in1"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=distance,
@@ -29522,11 +29522,11 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
 nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,dropout_rate=$1,$3
 
-  e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "dropout rate "$dropout_rate"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=dropout,
@@ -29547,11 +29547,11 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
 #@cli : 'initialization' can be { 0:zero | 1:identity | 2:gaussian-noise }.
 #@cli : Default value: 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=2},0,2)"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,learning_mode,regularization,initialization=$1,${3-6}
 
-  e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "$nb_channels" channels."
+  e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$network"', with input '"$in"' and "$nb_channels" channels."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=fc,
   _${network}_${out}_size=1,1,1,$3
@@ -29583,11 +29583,11 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
 #@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=2},0,2)"
           skip ${4=leakyrelu}
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
 
-  e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${network}_init}
   nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
@@ -29603,11 +29603,11 @@ nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=
 #@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=2},0,2)"
            skip ${4=leakyrelu}
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,nb_channels,activation,learning_mode,regularization,initialization=$1,${3-7}
 
-  e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${network}_init}
   nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
@@ -29623,7 +29623,7 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
   network=$_nn_network
   out,width,height,depth,spectrum=${1-5}
 
-  e[^-1] "[nn_lib] Add input '"$out"' to network '"$_nn_network"', with size ("$width,$height,$depth,$spectrum")."
+  e[^-1] "[nn_lib] Add input '"$out"' to network '"$network"', with size ("$width,$height,$depth,$spectrum")."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=input,
   _${network}_${out}_size=$width,$height,$depth,$spectrum
@@ -29636,11 +29636,11 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=maxpool2d,
@@ -29659,11 +29659,11 @@ nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_maxpool3d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=maxpool3d,
@@ -29683,15 +29683,15 @@ nn_maxpool3d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
 nn_mul : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  network=$_nn_network
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
-  network=$_nn_network
   out,out_size=$1,
   if !$isnum0 nn_check_layer $in0 out_size=${_${network}_${in0}_size} fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${network}_${in1}_size} fi
   if !isnum($in0)" && "!isnum($in1) check [${_${network}_${in0}_size}]==[${_${network}_${in1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$network"', with inputs '"$in0"' and '"$in1"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=mul,
   _${network}_${out}_size=$out_size
@@ -29710,11 +29710,11 @@ nn_mul : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
 # swish | tanh }.
 #@cli : Default values: 'in=. (previous layer)' and 'activation=leakyrelu'.
 nn_nl : check "isvarname('$1')" skip ${3=leakyrelu}
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,activation=$1,$3
 
-  e[^-1] "[nn_lib] Add 'nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'nl' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and '"$activation"' activation."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=nl,
@@ -29740,11 +29740,12 @@ nn_nl : check "isvarname('$1')" skip ${3=leakyrelu}
 #@cli : 'learning_mode' can be { 0:no learning | 1:alpha only | 2:beta only | 3:alpha+beta }
 #@cli : Default values: 'in=. (previous layer)','normalization_mode=0' and 'learning_mode=3'.
 nn_normalize : check "isvarname('$1') && isbool(${3=0}) && isint(${4=3},0,3)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,normalization_mode,learning_mode=$1,${3-4}
   s0,s1=global,channel-by-channel
-  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+
+  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and "${s$normalization_mode}" normalization."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=normalize,
@@ -29771,11 +29772,11 @@ nn_normalize : check "isvarname('$1') && isbool(${3=0}) && isint(${4=3},0,3)"
 #@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchdown2d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'patchdown2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'patchdown2d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=patchdown2d,
@@ -29799,11 +29800,11 @@ nn_patchdown2d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchdown3d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'patchdown3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'patchdown3d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=patchdown3d,
@@ -29827,11 +29828,11 @@ nn_patchdown3d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchup2d : check "isvarname('$1') && isint(${3=2},2)"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=patchup2d,
@@ -29851,11 +29852,11 @@ nn_patchup2d : check "isvarname('$1') && isint(${3=2},2)"
 #@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
 #@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
 nn_patchup3d : check "isvarname('$1') && isint(${3=2,2})"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,patch_size=$1,$3
 
-  e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and patch size "${patch_size}x${patch_size}x${patch_size}"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=patchup3d,
@@ -29875,11 +29876,11 @@ nn_patchup3d : check "isvarname('$1') && isint(${3=2,2})"
 #@cli : Add a 'rename' layer to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
 nn_rename : check "isvarname('$1')"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out=$1
 
-  e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$_nn_network"', with input '"$in"'."
+  e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$network"', with input '"$in"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=rename,
   _${network}_${out}_size=${_${network}_${in}_size}
@@ -29899,12 +29900,12 @@ nn_rename : check "isvarname('$1')"
 # 'learning_mode=3' and 'regularization=0'.
 nn_resconv2d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3) && ${7=0}>=0"
                skip "${4=1}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,learning_mode,regularization=$1,${3-7}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv2d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv2d' layer '"$out"' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}" kernels, dilation "$dilation" and "\
          ${s$boundary_conditions}" boundary conditions."
   init=${_${network}_init}
@@ -29924,12 +29925,12 @@ nn_resconv2d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) &&
 # 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv2dnl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv2dnl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -29951,12 +29952,12 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
 # 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resconv2dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                   skip "${4=1}","${6=leakyrelu}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -29977,12 +29978,12 @@ nn_resconv2dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3)
 # 'learning_mode=3' and 'regularization=0'.
 nn_resconv3d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3) && ${7=0}>=0"
                skip "${4=1}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,learning_mode,regularization=$1,${3-7}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv3d' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv3d' layer '"$out"' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation" and "\
          ${s$boundary_conditions}" boundary conditions."
   init=${_${network}_init}
@@ -30002,12 +30003,12 @@ nn_resconv3d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) &&
 # activation='leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv3dnl' layer '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv3dnl' layer '"$out"' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -30029,12 +30030,12 @@ nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
 # 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resconv3dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                   skip "${4=1}","${6=leakyrelu}"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=$1,${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'resconv3dnnl' layer '$1' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'resconv3dnnl' layer '$1' to network '"$network"', with input '"$in"', "\
          ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${network}_init}
@@ -30052,11 +30053,11 @@ nn_resconv3dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3)
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'learning_mode=3' and 'regularization=0'.
 nn_resfc : check "isvarname('$1') && isint(${3=3},0,3) && ${4=0}>=0"
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,learning_mode,regularization=$1,${3-4}
 
-  e[^-1] "[nn_lib] Add 'resfc' layer '"$out"' to network '"$_nn_network"', with input '"$in"'."
+  e[^-1] "[nn_lib] Add 'resfc' layer '"$out"' to network '"$network"', with input '"$in"'."
   init=${_${network}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
   nn_fc ${out}_fc,.,{prod(${_${network}_${in}_size})},$learning_mode,$regularization,0
@@ -30069,11 +30070,11 @@ nn_resfc : check "isvarname('$1') && isint(${3=3},0,3) && ${4=0}>=0"
 #@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=leakyrelu}
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,activation,learning_mode,regularization=$1,${3-5}
 
-  e[^-1] "[nn_lib] Add 'resfc+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'resfc+nl' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "'"$activation"' activation."
   init=${_${network}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
@@ -30090,11 +30091,11 @@ nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=
 #@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
 nn_resfcnnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
               skip ${3=leakyrelu}
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,activation,learning_mode,regularization=$1,${3-5}
 
-  e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "'"$activation"' activation."
   init=${_${network}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
@@ -30108,11 +30109,11 @@ nn_resfcnnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
 #@cli nn_reshape : out,in,width>0,height>0,depth>0,spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
 nn_reshape : check "isvarname('$1')"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,width,height,depth,spectrum=$1,${3-6}
 
-  e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$network"', with input '"$in"' "\
          "and size ("$width,$height,$depth,$spectrum")."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=reshape,
@@ -30134,15 +30135,15 @@ nn_reshape : check "isvarname('$1')"
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
 nn_resize : check "isvarname('$1') && $3>0 && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0"
             skip ${7=3}
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   if ispercentage($3) width:=max(1,round([${_${network}_${in}_size}][1]*$3)) else width=$3 fi
   if ispercentage($4) height:=max(1,round([${_${network}_${in}_size}][1]*$4)) else height=$4 fi
   if ispercentage($5) depth:=max(1,round([${_${network}_${in}_size}][2]*$5)) else depth=$5 fi
   if ispercentage($6) spectrum:=max(1,round([${_${network}_${in}_size}][3]*$6)) else spectrum=$6 fi
   out,interpolation=$1,$7
 
-  e[^-1] "[nn_lib] Add 'resize' layer '"$out"' to network '"$_nn_network"', with input '"$in"' and "\
+  e[^-1] "[nn_lib] Add 'resize' layer '"$out"' to network '"$network"', with input '"$in"' and "\
          "output size ("$width","$height","$depth","$spectrum")."
   _${network}_layer_names.=$1,
   _${network}_layer_types.=resize,
@@ -30162,15 +30163,15 @@ nn_resize : check "isvarname('$1') && $3>0 && ${4=100%}>0 && ${5=100%}>0 && ${6=
 #@cli : Add a 'run' layer to the current network.
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
 nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && ${7=100%}>0"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   if ispercentage($4) width:=max(1,round([${_${network}_${in}_size}][0]*$4)) else width=$4 fi
   if ispercentage($5) height:=max(1,round([${_${network}_${in}_size}][1]*$5)) else height=$5 fi
   if ispercentage($6) depth:=max(1,round([${_${network}_${in}_size}][2]*$6)) else depth=$6 fi
   if ispercentage($7) spectrum:=max(1,round([${_${network}_${in}_size}][3]*$7)) else spectrum=$7 fi
   out,command=$1,"$2"
 
-  e[^-1] "[nn_lib] Add 'run' layer '"$out"' to network '"$_nn_network"', with input '"$in"', command '"$command"' "\
+  e[^-1] "[nn_lib] Add 'run' layer '"$out"' to network '"$network"', with input '"$in"', command '"$command"' "\
          "and output size ("$width","$height","$depth","$spectrum")."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=run,
@@ -30188,17 +30189,17 @@ nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && 
 #@cli nn_select : _network_name
 #@cli : Select network with specified name as the current one.
 nn_select : check "isvarname(['$1'])"
-  e[^-1] "[nn_lib] Select '$1' as the current network."
   _nn_network=$1
+  e[^-1] "[nn_lib] Select '"$_nn_network"' as the current network."
 
 #@cli nn_split : out0,out1,in,nb_channels0>0
 #@cli : Add a 'split' layer to the current network.
 nn_split : check "isvarname('$1') && isvarname('$2')"
-  if ['$3']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   network=$_nn_network
+  if ['$3']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   out0,out1,nb_channels0=${1-2},$3
 
-  e[^-1] "[nn_lib] Add 'split' layer to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'split' layer to network '"$network"', with input '"$in"' "\
          "and outputs '"$out0"' and '"$out1"'."
   _${network}_layer_names.=$out0,$out1,
   _${network}_layer_types.=split,split,
@@ -30217,11 +30218,11 @@ nn_split : check "isvarname('$1') && isvarname('$2')"
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
 nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,ground_truth=$1,$3
 
-  e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$network"', with input '"$in"' "\
          "and ground truth '"$ground_truth"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=loss_binary_crossentropy,
@@ -30238,11 +30239,11 @@ nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
 #@cli nn_loss_crossentropy : out,in,ground_truth
 #@cli : Add a 'crossentropy' loss to the current network (cross entropy).
 nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,ground_truth=$1,$3
 
-  e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$network"', with input '"$in"' "\
          "and ground truth '"$ground_truth"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=loss_crossentropy,
@@ -30259,11 +30260,11 @@ nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
 #@cli nn_loss_mse : out,in,ground_truth
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
 nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,ground_truth=$1,$3
 
-  e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$_nn_network"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$network"', with input '"$in"' "\
          "and ground truth '"$ground_truth"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=loss_mse,
@@ -30281,10 +30282,10 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
 #@cli : Add a 'normp' loss to the current network (||out - ground_truth||_p).
 #@cli : Default value: 'metric=1'.
 nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,ground_truth,metric=$1,${3-4}
-  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$_nn_network"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$network"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and metric "$metric"."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=loss_normp,
@@ -30301,11 +30302,11 @@ nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
 #@cli nn_loss_softmax_crossentropy : out,in,ground_truth
 #@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
 nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   network=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   out,ground_truth=$1,$3
 
-  e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$_nn_network"', "\
+  e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$network"', "\
          "with input '"$in"' and ground truth '"$ground_truth"'."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=loss_softmax_crossentropy,
@@ -30323,9 +30324,10 @@ nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
 #@cli : Print info on current neural network.
 nn_print :
   network=$_nn_network
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
+
   e[^-1] "[nn_lib] Print info on neural network '"$network"'."
-  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b v 0
-  e " * Network name: "$b$network$n
+  v 0 e " * Network name: "$b$network$n
   repeat narg(${_${network}_layer_names})-1 {
     type=${arg0\ $>,${_${network}_layer_types}}
     name=${arg0\ $>,${_${network}_layer_names}}
@@ -30344,7 +30346,7 @@ nn_print :
         sep=" and "
       }
     fi
-    e "   - Layer: "$b$_nn_network" / "$name$n" (type: "$g$type$n")"
+    e "   - Layer: "$b$network" / "$name$n" (type: "$g$type$n")"
     if ['$input']!=0
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
@@ -30366,11 +30368,11 @@ nn_print :
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
 #@cli : Default values: 'loss=. (previous loss)', 'learning_rate=2.5e-4', 'optimizer=rmsprop' and 'scheduler=constant'.
 nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}') && isvarname('${5=constant}')"
-  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
   network=$_nn_network
+  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
   out,learning_rate,optimizer,scheduler=$1,${3-5}
 
-  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$loss"' of network '"$_nn_network"', "\
+  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$loss"' of network '"$network"', "\
          "with learning rate '"$learning_rate"', "$optimizer" optimizer and "$scheduler" scheduler."
   _${network}_layer_names.=$out,
   _${network}_layer_types.=trainer,
@@ -30431,8 +30433,9 @@ _nn_scheduler_cosine : 1
 #@cli nn_size
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
-  e[^-1] "[nn_lib] Return size of the current network."
   network=$_nn_network
+
+  e[^-1] "[nn_lib] Return size of network '"$network"'."
   siz=0
   repeat narg(${_${network}_layer_names})-1 {
     type=${arg0\ $>,${_${network}_layer_types}}
@@ -30447,11 +30450,10 @@ nn_size :
 #@cli : Default value: 'include_trainer_data=1'.
 +nn_load : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
   e[^-1] "[nn_lib] Load network from file '$1'."
-  network=$_nn_network
   l[] {
     "$1" run {t} rm.
     if !$2 # Discard training data
-      nmd ${_${network}_layer_names} k[${}]
+      nmd ${_${_nn_network}_layer_names} k[${}]
     fi
   }
 
@@ -30462,7 +30464,8 @@ nn_size :
 nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
   network=$_nn_network
   s0,s1=""," (include trainer data)"
-  e[^-1] "[nn_lib] Save current network as file '$1'"$s$2"."
+
+  e[^-1] "[nn_lib] Save network '"$network"' as file '$1'"$s$2"."
   if $2 sel=${_${network}_trainer_data} fi c=
   repeat narg(${_${network}_layer_names})-1 {
     type=${arg0\ $>,${_${network}_layer_types}}
@@ -30479,7 +30482,8 @@ nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
 nn_store : check "isbool(${2=1})"
   network=$_nn_network
   s0,s1=""," (include trainer data)"
-  e[^-1] "[nn_lib] Store current network into variable '$1'"$s$2"."
+
+  e[^-1] "[nn_lib] Store network '"$network"' into variable '$1'"$s$2"."
   if $2 sel=${_${network}_trainer_data} fi c=
   repeat narg(${_${network}_layer_names})-1 {
     type=${arg0\ $>,${_${network}_layer_types}}
