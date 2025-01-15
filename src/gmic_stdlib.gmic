@@ -29475,24 +29475,27 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
 #@cli nn_distance : out,in0,_in1,_metric={ 0:squared-L2 | p>0:Lp-norm }
 #@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
 #@cli : Default value: 'in=. (previous layer)',
-nn_distance : if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
-              if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-              check "isvarname('$1') && ${4=0}>=0 && "[${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}]
+nn_distance : check "isvarname('$1') && ${4=0}>=0"
+  if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  check [${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}]
+  out,metric=$1,$4
   s0,s1="squared-L2 norm","L$4"
-  e[^-1] "[nn_lib] Add 'distance' layer '$1' ("${s{$4>0}}") to network '"$_nn_network"', "\
+
+  e[^-1] "[nn_lib] Add 'distance' layer '"$out"' ("${s{$metric>0}}") to network '"$_nn_network"', "\
          "with inputs '"$in0"' and '"$in1"'."
-  _${_nn_network}_layer_names.=$1,
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=distance,
-  _${_nn_network}_$1_size=1,1,1,1
-  _${_nn_network}_$1_input=$in0,$in1
-  _${_nn_network}_$1_properties="metric="${s{$4>0}}
-  _${_nn_network}_$1_forward="begin(nn_distance_init_forward($1,$4));"\
-                             "nn_distance_forward($1,"$in0","$in1");"
-  _${_nn_network}_$1_backward="nn_distance_backward($1,"$in0","$in1");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size=1,1,1,1
+  _${_nn_network}_${out}_input=$in0,$in1
+  _${_nn_network}_${out}_properties="metric="${s{$metric>0}}
+  _${_nn_network}_${out}_forward="begin(nn_distance_init_forward("$out,$metric"));"\
+                                 "nn_distance_forward("$out,$in0,$in1");"
+  _${_nn_network}_${out}_backward="nn_distance_backward("$out,$in0,$in1");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $*"
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
