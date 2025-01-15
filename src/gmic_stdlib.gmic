@@ -30142,24 +30142,27 @@ nn_select : check "isvarname(['$1'])"
   e[^-1] "[nn_lib] Select '$1' as the current network."
   _nn_network=$1
 
-#@cli nn_split : name0,name1,in,nb_channels0>0
+#@cli nn_split : out0,out1,in,nb_channels0>0
 #@cli : Add a 'split' layer to the current network.
-nn_split : if ['$3']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
-           check "isvarname('$1') && isvarname('$2')"
-  e[^-1] "[nn_lib] Add 'split' layer to network '"$_nn_network"', with input '"$in"' and outputs '$1' and '$2'."
-  _${_nn_network}_layer_names.=$1,$2,
+nn_split : check "isvarname('$1') && isvarname('$2')"
+  if ['$3']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
+  out0,out1,nb_channels0=${1-2},$3
+
+  e[^-1] "[nn_lib] Add 'split' layer to network '"$_nn_network"', with input '"$in"' "\
+         "and outputs '"$out0"' and '"$out1"'."
+  _${_nn_network}_layer_names.=$out0,$out1,
   _${_nn_network}_layer_types.=split,split,
-  _${_nn_network}_$1_size:=[[${_${_nn_network}_${in}_size}][0,3],$4]
-  _${_nn_network}_$1_input=$2
-  _${_nn_network}_$2_size:=[${_${_nn_network}_${in}_size}]-[0,0,0,$4]
-  _${_nn_network}_$2_input=$2
-  _${_nn_network}_$1_forward="begin(nn_split_init_forward($1,$2,"$in",$4));"\
-                             "nn_split_forward($1,$2,"$in");"
-  _${_nn_network}_$1_backward="nn_split_backward($1,$2,"$in");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out0}_size:=[[${_${_nn_network}_${in}_size}][0,3],$nb_channels]
+  _${_nn_network}_${out0}_input=$in
+  _${_nn_network}_${out1}_size:=[${_${_nn_network}_${in}_size}]-[0,0,0,$nb_channels]
+  _${_nn_network}_${out1}_input=$in
+  _${_nn_network}_${out0}_forward="begin(nn_split_init_forward("$out0,$out1,$in,$nb_channels"));"\
+                                  "nn_split_forward("$out0,$out1,$in");"
+  _${_nn_network}_${out0}_backward="nn_split_backward("$out0,$out1,$in");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out0}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out0}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out0
 
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
