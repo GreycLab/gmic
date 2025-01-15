@@ -29139,46 +29139,48 @@ nn_check_layer :
 #@cli : Add an 'add' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
-nn_add : check "isvarname('$1')"
-  isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
-  out_size=
+  check [${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}]
+  out,out_size=$1,
   if !$isnum0 nn_check_layer $in0 out_size=${_${_nn_network}_${in0}_size} fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${_nn_network}_${in1}_size} fi
   if !isnum($in0)" && "!isnum($in1) check [${_${_nn_network}_${in0}_size}]==[${_${_nn_network}_${in1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '$1' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
-  _${_nn_network}_layer_names.=$1,
+  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=add,
-  _${_nn_network}_$1_size=$out_size
-  _${_nn_network}_$1_input=$in0,$in1
-  _${_nn_network}_$1_forward="begin(nn_add_init_forward($1,"${in$isnum0}"));"\
-                             "nn_add_forward($1,"$in0","$in1");"
-  _${_nn_network}_$1_backward="nn_add_backward($1,"$in0","$in1");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size=$out_size
+  _${_nn_network}_${out}_input=$in0,$in1
+  _${_nn_network}_${out}_forward="begin(nn_add_init_forward("$out,${in$isnum0}"));"\
+                                 "nn_add_forward("$out,$in0,$in1");"
+  _${_nn_network}_${out}_backward="nn_add_backward("$out,$in0,$in1");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_append : out,in0,_in1
 #@cli : Add an 'append' layer to the current network.
 #@cli : Default value: 'in1=. (previous layer)'.
-nn_append : if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
-            if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-            check "isvarname('$1') && "[${_${_nn_network}_${in0}_size}][0,3]==[${_${_nn_network}_${in1}_size}][0,3]
-  e[^-1] "[nn_lib] Add 'append' layer '$1' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
-  _${_nn_network}_layer_names.=$1,
+nn_append : check "isvarname('$1')"
+  if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  check [${_${_nn_network}_${in0}_size}][0,3]==[${_${_nn_network}_${in1}_size}][0,3]
+  out=$1
+  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$_nn_network"', with inputs '"$in0"' and '"$in1"'."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=append,
-  _${_nn_network}_$1_size:=[${_${_nn_network}_${in0}_size}]+[0,0,0,[${_${_nn_network}_${in1}_size}][3]]
-  _${_nn_network}_$1_input=$in0,$in1
-  _${_nn_network}_$1_forward="begin(nn_append_init_forward($1,"$in0","$in1"));"\
-                             "nn_append_forward($1,"$in0","$in1");"
-  _${_nn_network}_$1_backward="nn_append_backward($1,"$in0","$in1");"
-  _${_nn_network}_forward.=${_${_nn_network}_$1_forward}
-  _${_nn_network}_backward..=${_${_nn_network}_$1_backward}
+  _${_nn_network}_${out}_size:=[${_${_nn_network}_${in0}_size}]+[0,0,0,[${_${_nn_network}_${in1}_size}][3]]
+  _${_nn_network}_${out}_input=$in0,$in1
+  _${_nn_network}_${out}_forward="begin(nn_append_init_forward("$out,$in0,$in1"));"\
+                                 "nn_append_forward("$out,$in0,$in1");"
+  _${_nn_network}_${out}_backward="nn_append_backward("$out,$in0,$in1");"
+  _${_nn_network}_forward.=${_${_nn_network}_${out}_forward}
+  _${_nn_network}_backward..=${_${_nn_network}_${out}_backward}
   _${_nn_network}_init.="$0 $* "
-  _nn_previous_layer=$1
+  _nn_previous_layer=$out
 
 #@cli nn_avgpool2d : out,_in,_patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
