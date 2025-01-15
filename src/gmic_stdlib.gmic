@@ -30304,47 +30304,50 @@ nn_print :
   }
   e "\n * Total: "${b}{narg(${_${_nn_network}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
 
-#@cli nn_trainer : name,_loss,_learning_rate>0,_optimizer,_scheduler
+#@cli nn_trainer : out,_loss,_learning_rate>0,_optimizer,_scheduler
 #@cli : Add a network trainer to the current network.
 #@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
 #@cli : Default values: 'loss=. (previous loss)', 'learning_rate=2.5e-4', 'optimizer=rmsprop' and 'scheduler=constant'.
-nn_trainer : if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
-             check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}') && isvarname('${5=constant}')"
-  e[^-1] "[nn_lib] Add trainer '$1' for loss '"$loss"' of network '"$_nn_network"', with learning rate '$3', "\
-         "$4 optimizer and $5 scheduler."
-  _${_nn_network}_layer_names.=$1,
+nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}') && isvarname('${5=constant}')"
+  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
+  out,learning_rate,optimizer,scheduler=$1,${3-5}
+
+  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$loss"' of network '"$_nn_network"', "\
+         "with learning rate '"$learning_rate"', "$optimizer" optimizer and "$scheduler" scheduler."
+  _${_nn_network}_layer_names.=$out,
   _${_nn_network}_layer_types.=trainer,
-  _${_nn_network}_$1_size=0,0,0,0
-  _${_nn_network}_$1_properties="loss="$loss", learning_rate=$3, optimizer=$4, scheduler=$5"
-  if !isint($$1)
+  _${_nn_network}_${out}_size=0,0,0,0
+  _${_nn_network}_${out}_properties="loss="$loss", learning_rate="$learning_rate", "\
+                                    "optimizer="$optimizer", scheduler="$scheduler
+  if !isint(${$out})
     # (iteration,learning_rate,initial_learning_rate,previous_loss,best_loss;
     # {optimizer variables};
     # {scheduler variables})
-    l[] { (0,$3,$3,inf,inf) _nn_optimizer_$4 _nn_scheduler_$5 a y => $1 }
+    l[] { (0,$learning_rate,$learning_rate,inf,inf) _nn_optimizer_$optimizer _nn_scheduler_$scheduler a y => $out }
   else
-    =[$1] $3,1,0 # Set learning rate in existing trainer
-    =[$1] $3,2,0
+    =[$out] $learning_rate,1,0 # Set learning rate in existing trainer
+    =[$out] $learning_rate,2,0
   fi
 
   # Generate code for updating network weights.
-  _${_nn_network}_update="begin(nn_trainer_init_update($1,"$loss",$4,$5));end("
+  _${_nn_network}_update="begin(nn_trainer_init_update("$out,$loss,$optimizer,$scheduler"));end("
   repeat narg(${_${_nn_network}_layer_names})-1 {
     type=${arg0\ $>,${_${_nn_network}_layer_types}}
     name=${arg0\ $>,${_${_nn_network}_layer_names}}
     learning_mode=${_${_nn_network}_${name}_learning_mode}
 
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
-      _${_nn_network}_update.="nn_"${type}"_update("$name,$4,$learning_mode");"
+      _${_nn_network}_update.="nn_"${type}"_update("$name,$optimizer,$learning_mode");"
 
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
-        if ['$4']=='rmsprop'
+        if ['$optimizer']=='rmsprop'
           name_g2=${name}_g2
           if !isint(${$name_g2}) +f[$name] 0 => $name_g2 fi
           _${_nn_network}_trainer_data.=$name_g2,
 
-        elif isin('$4','adam','adamax')
+        elif isin('$optimizer','adam','adamax')
           name_m,name_v=${name}_m,${name}_v
           if !isint(${$name_m}) +f[$name] 0 => $name_m fi
           if !isint(${$name_v}) +f[$name] 0 => $name_v fi
@@ -30353,7 +30356,9 @@ nn_trainer : if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_chec
       fi
     fi
   }
-  _${_nn_network}_update.="nn_trainer_update($1,"$loss",$5));" # <- Keep this as last thing done in an 'end()' block!
+
+  _${_nn_network}_update.="nn_trainer_update("$out,$loss,$scheduler"));"
+  # ^ Keep this as last thing done in an 'end()' block! ^
 
 _nn_optimizer_sgd : 1
 _nn_optimizer_rmsprop : 1
@@ -30374,9 +30379,6 @@ nn_size :
   repeat narg(${_${_nn_network}_layer_names})-1 {
     type=${arg0\ $>,${_${_nn_network}_layer_types}}
     name=${arg0\ $>,${_${_nn_network}_layer_names}}
-
-    e "DEBUG : Name = "$name", Type = "$type
-
     if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={$name,whds} fi
   }
   u $siz
