@@ -29129,7 +29129,7 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   if !$isnum1 nn_check_layer $in1 out_size=${_${net}_${in1}_size} fi
   if !isnum($in0)" && "!isnum($in1) check [${_${net}_${in0}_size}]==[${_${net}_${in1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'add' layer '"$net/$out"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${net}_${out}_size=$out_size
@@ -29268,7 +29268,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
   _${net}_${out}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
                             "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
                             "learning_mode="$learning_mode", regularization="$regularization
-  if !isint(${_nn_$out})
+  if !isint(${${net}_$out})
     {[${_${net}_${in}_size}][3]*$kernel_size^2+1},$nb_channels
     if $initialization==1
       f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${net}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
@@ -29276,7 +29276,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
       f. "4*g/(w-1)"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => _nn_$out
+    => ${net}_$out
   fi
   _${net}_${out}_forward="begin(nn_conv2d_init_forward("$out,$in,$kernel_size,$stride,$dilation,\
                           $shrink,$boundary_conditions"));"\
@@ -29373,7 +29373,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
                             "dilation="$dilation", shrink="$shrink", "\
                             "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
                             "regularization="$regularization
-  if !isint(${_nn_$out})
+  if !isint(${${net}_$out})
     {[${_${net}_${in}_size}][3]*$kernel_size^3+1},$nb_channels
     if $initialization==1
       f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${net}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
@@ -29381,7 +29381,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
       f. "4*g/(w-1)"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => _nn_$out
+    => ${net}_$out
   fi
   _${net}_${out}_forward="begin(nn_conv3d_init_forward("$out,$in,$kernel_size,$stride,$dilation,$shrink,\
                                                         $boundary_conditions"));"\
@@ -29544,13 +29544,13 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${net}_${out}_input=$in
   _${net}_${out}_learning_mode=$learning_mode
   _${net}_${out}_properties="learning_mode="$learning_mode", regularization="$regularization
-  if !isint(${_nn_$out})
+  if !isint(${${net}_$out})
     {prod(${_${net}_${in}_size})+1},$nb_channels
     if $initialization==1 f. "x==w-1?0:(x%h)==(y%(w-1))"
     elif $initialization==2 f. "4*g/(w-1)"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
-    => _nn_$out
+    => ${net}_$out
   fi
   _${net}_${out}_forward="begin(nn_fc_init_forward("$out,$in"));"\
                          "nn_fc_forward("$out,$in");"
@@ -29872,10 +29872,10 @@ nn_normalize : check "isvarname('$1') && isbool(${3=0}) && isint(${4=3},0,3)"
   _${net}_${out}_input=$in
   _${net}_${out}_learning_mode=$learning_mode
   _${net}_${out}_properties="normalization="${s$normalization_mode}", learning_mode="$learning_mode
-  if !isint(${_nn_$out})
+  if !isint(${${net}_$out})
     (1,0,0,-1) # alpha,beta,running_avg,running_var
     if $normalization_mode r. 100%,{[${_${net}_${in}_size}][3]} fi # channel-by-channel normalization
-    => _nn_$out
+    => ${net}_$out
   fi
   _${net}_${out}_forward="begin(nn_normalize_init_forward("$out,$in,$normalization_mode"));"\
                          "nn_normalize_forward("$out,$in");"
@@ -30017,7 +30017,7 @@ nn_print :
         sep=" and "
       }
     fi
-    e "   - Layer: "$b$net" / "$name$n" (type: "$g$type$n")"
+    e "   - Layer: "$b$name$n" (type: "$g$type$n")"
     if ['$input']!=0
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
@@ -30380,7 +30380,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={_nn_$name,whds} fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={${net}_$name,whds} fi
   }
   u $siz
 
@@ -30442,14 +30442,15 @@ nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}'
   _${net}_${out}_size=0,0,0,0
   _${net}_${out}_properties="loss="$loss", learning_rate="$learning_rate", "\
                             "optimizer="$optimizer", scheduler="$scheduler
-  if !isint(${_nn_$out})
+  if !isint(${${net}_$out})
     # (iteration,learning_rate,initial_learning_rate,previous_loss,best_loss;
     # {optimizer variables};
     # {scheduler variables})
-    l[] { (0,$learning_rate,$learning_rate,inf,inf) _nn_optimizer_$optimizer _nn_scheduler_$scheduler a y => _nn_$out }
+    l[] { (0,$learning_rate,$learning_rate,inf,inf) _nn_optimizer_$optimizer _nn_scheduler_$scheduler a y }
+    => ${net}_$out
   else
-    =[_nn_$out] $learning_rate,1,0 # Set learning rate in existing trainer
-    =[_nn_$out] $learning_rate,2,0
+    =[${net}_$out] $learning_rate,1,0 # Set learning rate in existing trainer
+    =[${net}_$out] $learning_rate,2,0
   fi
 
   # Generate code for updating network weights.
@@ -30465,15 +30466,13 @@ nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}'
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
         if ['$optimizer']=='rmsprop'
-          name_g2=${name}_g2
-          if !isint(${_nn_$name_g2}) +f[_nn_$name] 0 => _nn_$name_g2 fi
-          _${net}_trainer_data.=_nn_$name_g2,
+          if !isint(${${net}_${name}_g2}) +f[${net}_$name] 0 => ${net}_${name}_g2 fi
+          _${net}_trainer_data.=${net}_${name}_g2,
 
         elif isin('$optimizer','adam','adamax')
-          name_m,name_v=${name}_m,${name}_v
-          if !isint(${_nn_$name_m}) +f[_nn_$name] 0 => _nn_$name_m fi
-          if !isint(${_nn_$name_v}) +f[_nn_$name] 0 => _nn_$name_v fi
-          _${net}_trainer_data.=_nn_$name_m,_nn_$name_v,
+          if !isint(${${net}_${name}_m}) +f[${net}_$name] 0 => ${net}_${name}_m fi
+          if !isint(${${net}_${name}_v}) +f[${net}_$name] 0 => ${net}_${name}_v fi
+          _${net}_trainer_data.=${net}_${name}_m,${net}_${name}_v,
         fi
       fi
     fi
