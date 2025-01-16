@@ -28474,11 +28474,16 @@ nn_lib :
 
     # input: Input image or vector data.
     #-----------------------------------
-    nn_input_init_forward(OUT,w,h,d,s) = (
+    nn_input_init_forward(OUT,IN,w,h,d,s) = (
       const OUT#_width = w;
       const OUT#_height = h;
       const OUT#_depth = d;
       const OUT#_spectrum = s;
+      ref(IN#,OUT#);
+    );
+
+    nn_input_backward(OUT,IN) = (
+      ref(d#OUT,d#IN);
     );
 
     # maxpool2d : 2D max pooling.
@@ -29124,7 +29129,6 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
   nin0,nin1=${net}_$in0,${net}_$in1
-  check [${_${nin0}_size}]==[${_${nin1}_size}]
   out_size=
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
@@ -29544,7 +29548,7 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
 #@cli : Default value: 'learning_mode=3', 'regularization=0' and 'initialization=2'.
 nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=2},0,2)"
   net,out=$_nn_network,$1 nout=${net}_$out
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi # nn_check_layer $in
   nin=${net}_$in
   nb_channels,learning_mode,regularization,initialization=${3-6}
 
@@ -29638,8 +29642,10 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
   _${net}_layer_names.=$out,
   _${net}_layer_types.=input,
   _${nout}_size=$width,$height,$depth,$spectrum
-  _${nout}_forward="begin(nn_input_init_forward("$nout,$width,$height,$depth,$spectrum"));"
+  _${nout}_forward="begin(nn_input_init_forward("$nout,$out,$width,$height,$depth,$spectrum"));"
+  _${nout}_backward="nn_input_backward("$nout,$out");"
   _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-5} "
   _nn_previous_layer=$out
 
@@ -29828,8 +29834,8 @@ nn_mul : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
   nin0,nin1=${net}_$in0,${net}_$in1
   out_size=
-  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
-  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
+  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} nin0=${net}_$in0 else nin0=$in0 fi
+  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} nin1=${net}_$in1 else nin1=$in1 fi
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
