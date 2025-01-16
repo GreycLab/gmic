@@ -29115,27 +29115,6 @@ nn_lib :
       d#IN = L#_softmax - TRUTH;
     );"
 
-#@cli nn_init : _network_name
-#@cli : Initialize new network with specified name, and select it as the current one.
-#@cli : Default value: 'network_name=nn'.
-nn_init :
-  if isvarname(['"${1=nn}"']) net="$1" else net="nn" noarg fi
-
-  e[^-1] "[nn_lib] Initialize new network '"$net"'."
-  _nn_network=$net
-  _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
-   _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_nn_previous_layer=
-  _${net}_init="$0 \""$net"\" "
-
-#@cli nn_check_layer : layer_name
-#@cli : Check that layer with specified name exists in the current network.
-nn_check_layer :
-  if !isvarname(['"$1"'])
-    error[0--3] "Command 'nn_check_layer': Invalid layer name '$1'."
-  elif narg(${_${_nn_network}_$1_size})!=4
-    error[0--3] "Command 'nn_check_layer': Layer with name '$1' does not exist."
-  fi
-
 #@cli nn_add : out,in0,_in1
 #@cli : Add an 'add' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
@@ -29231,6 +29210,15 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
   _${net}_backward..=${_${net}_${out}_backward}
   _${net}_init.="$0 ${1-3} "
   _nn_previous_layer=$out
+
+#@cli nn_check_layer : layer_name
+#@cli : Check that layer with specified name exists in the current network.
+nn_check_layer :
+  if !isvarname(['"$1"'])
+    error[0--3] "Command 'nn_check_layer': Invalid layer name '$1'."
+  elif narg(${_${_nn_network}_$1_size})!=4
+    error[0--3] "Command 'nn_check_layer': Layer with name '$1' does not exist."
+  fi
 
 #@cli nn_clone : name0,name1,_in
 #@cli : Add a 'clone' layer to the current network.
@@ -29616,6 +29604,18 @@ nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>
   _${net}_init=${init}"$0 ${1-7} "
   _nn_previous_layer=$out
 
+#@cli nn_init : _network_name
+#@cli : Initialize new network with specified name, and select it as the current one.
+#@cli : Default value: 'network_name=nn'.
+nn_init :
+  if isvarname(['"${1=nn}"']) net="$1" else net="nn" noarg fi
+
+  e[^-1] "[nn_lib] Initialize new network '"$net"'."
+  _nn_network=$net
+  _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
+   _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_nn_previous_layer=
+  _${net}_init="$0 \""$net"\" "
+
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
@@ -29630,6 +29630,127 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
   _${net}_${out}_forward="begin(nn_input_init_forward("$out,$width,$height,$depth,$spectrum"));"
   _${net}_forward.=${_${net}_${out}_forward}
   _${net}_init.="$0 ${1-5} "
+  _nn_previous_layer=$out
+
+#@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:no | 1:yes }
+#@cli : Load and initialize network saved as a .gmz file.
+#@cli : Neural network files can be only loaded in .gmz format.
+#@cli : Default value: 'include_trainer_data=1'.
++nn_load : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
+  e[^-1] "[nn_lib] Load network from file '$1'."
+  l[] {
+    "$1" run {t} rm.
+    if !$2 rm[${${_nn_network}_trainer_data}] fi # Discard training data
+  }
+
+#@cli nn_loss_binary_crossentropy : out,in,ground_truth
+#@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
+nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
+  net=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,ground_truth=$1,$3
+
+  e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"' "\
+         "and ground truth '"$ground_truth"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_binary_crossentropy,
+  _${net}_${out}_size=1,1,1,1
+  _${net}_${out}_input=$in
+  _${net}_${out}_properties="ground_truth="$ground_truth
+  _${net}_${out}_backward="nn_loss_binary_crossentropy_backward("$out,$in,$ground_truth");"
+  _${net}_loss.="begin(nn_loss_binary_crossentropy_init_forward("$out"));"\
+                "nn_loss_binary_crossentropy_forward("$out,$in,$ground_truth");"\
+                "end(nn_loss_binary_crossentropy_end_forward("$out"));"
+  _${net}_backward..=${_${net}_${out}_backward}
+  _${net}_init.="$0 ${1-3} "
+  _nn_previous_layer=$out
+
+#@cli nn_loss_crossentropy : out,in,ground_truth
+#@cli : Add a 'crossentropy' loss to the current network (cross entropy).
+nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
+  net=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,ground_truth=$1,$3
+
+  e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"' "\
+         "and ground truth '"$ground_truth"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_crossentropy,
+  _${net}_${out}_size=1,1,1,1
+  _${net}_${out}_input=$in
+  _${net}_${out}_properties="ground_truth="$ground_truth
+  _${net}_${out}_backward="nn_loss_crossentropy_backward("$out,$in,$ground_truth");"
+  _${net}_loss.="begin(nn_loss_crossentropy_init_forward("$out"));"\
+                "nn_loss_crossentropy_forward("$out,$in,$ground_truth");"\
+                "end(nn_loss_crossentropy_end_forward("$out"));"
+  _${net}_backward..=${_${net}_${out}_backward}
+  _${net}_init.="$0 ${1-3} "
+  _nn_previous_layer=$out
+
+#@cli nn_loss_mse : out,in,ground_truth
+#@cli : Add a 'mse' loss to the current network (mean-squared error).
+nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
+  net=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,ground_truth=$1,$3
+
+  e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"' "\
+         "and ground truth '"$ground_truth"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_mse,
+  _${net}_${out}_size=1,1,1,1
+  _${net}_${out}_input=$in
+  _${net}_${out}_properties="ground_truth="$ground_truth
+  _${net}_${out}_backward="nn_loss_mse_backward("$out,$in,$ground_truth");"
+  _${net}_loss.="begin(nn_loss_mse_init_forward("$out"));"\
+                "nn_loss_mse_forward("$out,$in,$ground_truth");"\
+                "end(nn_loss_mse_end_forward("$out"));"
+  _${net}_backward..=${_${net}_${out}_backward}
+  _${net}_init.="$0 ${1-3} "
+  _nn_previous_layer=$out
+
+#@cli nn_loss_normp : out,in,ground_truth,_metric={ 0:squared-L2 | p>0:Lp-norm }
+#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_p).
+#@cli : Default value: 'metric=1'.
+nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
+  net=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,ground_truth,metric=$1,${3-4}
+  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and metric "$metric"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_normp,
+  _${net}_${out}_size=1,1,1,1
+  _${net}_${out}_input=$in
+  _${net}_${out}_properties="ground_truth="$ground_truth", metric="$metric
+  _${net}_${out}_backward="nn_loss_normp_backward("$out,$in,$ground_truth");"
+  _${net}_loss.="begin(nn_loss_normp_init_forward("$out,$metric"));"\
+                "nn_loss_normp_forward("$out,$in,$ground_truth");"\
+                "end(nn_loss_normp_end_forward("$out"));"
+  _${net}_backward..=${_${net}_${out}_backward}
+  _${net}_init.="$0 ${1-4} "
+  _nn_previous_layer=$out
+
+#@cli nn_loss_softmax_crossentropy : out,in,ground_truth
+#@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
+nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
+  net=$_nn_network
+  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  out,ground_truth=$1,$3
+
+  e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
+         "with input '"$in"' and ground truth '"$ground_truth"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_softmax_crossentropy,
+  _${net}_${out}_size=1,1,1,1
+  _${net}_${out}_input=$in
+  _${net}_${out}_properties="ground_truth="$ground_truth
+  _${net}_${out}_backward="nn_loss_softmax_crossentropy_backward("$out,$in,$ground_truth");"
+  _${net}_loss.="begin(nn_loss_softmax_crossentropy_init_forward("$out"));"\
+                "nn_loss_softmax_crossentropy_forward("$out,$in,$ground_truth");"\
+                "end(nn_loss_softmax_crossentropy_end_forward("$out"));"
+  _${net}_backward..=${_${net}_${out}_backward}
+  _${net}_init.="$0 ${1-3} "
   _nn_previous_layer=$out
 
 #@cli nn_maxpool2d : out,_in,_patch_size>1
@@ -29871,6 +29992,48 @@ nn_patchup3d : check "isvarname('$1') && isint(${3=2,2})"
   _${net}_backward..=${_${net}_${out}_backward}
   _${net}_init.="$0 ${1-3} "
   _nn_previous_layer=$out
+
+#@cli nn_print
+#@cli : Print info on current neural network.
+nn_print :
+  net=$_nn_network
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
+
+  e[^-1] "[nn_lib] Print info on neural network '"$net"'."
+  v 0 e " * Network name: "$b$net$n
+  repeat narg(${_${net}_layer_names})-1 {
+    type=${arg0\ $>,${_${net}_layer_types}}
+    name=${arg0\ $>,${_${net}_layer_names}}
+    learning_mode=${_${net}_${name}_learning_mode}
+    properties=${_${net}_${name}_properties}
+    input=${_${net}_${name}_input}
+    if narg($input)==1
+      input_siz=${_${net}_${input}_size}
+    else
+      input_siz,sep=
+      repeat narg($input) {
+        in=${arg0\ $>,$input}
+        if isnum($in) input_siz.=1
+        else input_siz.=$sep${_${net}_${in}_size}
+        fi
+        sep=" and "
+      }
+    fi
+    e "   - Layer: "$b$net" / "$name$n" (type: "$g$type$n")"
+    if ['$input']!=0
+      s={`find(['$input'],_',')>0?_'s':0`}
+      e "       * Input"$s": "$c$input$n" ("$input_siz")"
+    fi
+    e "       * Output size: "$c${_${net}_${name}_size}$n
+    if ['$properties']!=0
+      ies={`find(['$properties'],_',')>0?'ies':[_'y',0,0]`}
+      e "       * Propert"$ies": "$c$properties$n
+    fi
+    if isint(${$name})
+      e "       * Parameters: "$c{$name,whds}$n
+    fi
+  }
+  e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
 
 #@cli nn_rename : out,_in
 #@cli : Add a 'rename' layer to the current network.
@@ -30185,11 +30348,44 @@ nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && 
   _${net}_init.="$0 ${1-2},\"$3\",${4-7} "
   _nn_previous_layer=$out
 
+#@cli nn_save : 'filename.gmz',_include_trainer_data={ 0:no | 1:yes }
+#@cli : Save current network as a .gmz file.
+#@cli : `.gmz` is mandatory extension, specifying another file extension will throw an error.
+#@cli : Default value: 'include_trainer_data=1'.
+nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
+  net=$_nn_network
+  s0,s1=""," (include trainer data)"
+
+  e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
+  if $2 sel=${_${net}_trainer_data} fi c=
+  repeat narg(${_${net}_layer_names})-1 {
+    type=${arg0\ $>,${_${net}_layer_types}}
+    name=${arg0\ $>,${_${net}_layer_names}}
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
+  }
+  ('${_${net}_init}') autocrop. {'" "'} => _nn_init
+  o[$sel,-1] "$1"
+  rm. is_change 0
+
 #@cli nn_select : _network_name
 #@cli : Select network with specified name as the current one.
 nn_select : check "isvarname(['$1'])"
   _nn_network=$1
   e[^-1] "[nn_lib] Select '"$_nn_network"' as the current network."
+
+#@cli nn_size
+#@cli: Return size of the current network (i.e. number of stored parameters).
+nn_size :
+  net=$_nn_network
+
+  e[^-1] "[nn_lib] Return size of network '"$net"'."
+  siz=0
+  repeat narg(${_${net}_layer_names})-1 {
+    type=${arg0\ $>,${_${net}_layer_types}}
+    name=${arg0\ $>,${_${net}_layer_names}}
+    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={_nn_$name,whds} fi
+  }
+  u $siz
 
 #@cli nn_split : out0,out1,in,nb_channels0>0
 #@cli : Add a 'split' layer to the current network.
@@ -30214,157 +30410,23 @@ nn_split : check "isvarname('$1') && isvarname('$2')"
   _${net}_init.="$0 ${1-4} "
   _nn_previous_layer=$out0
 
-#@cli nn_loss_binary_crossentropy : out,in,ground_truth
-#@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
-nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
+#@cli nn_store : 'variable_name',_include_trainer_data={ 0:no | 1:yes }
+#@cli : Store current network into a variable.
+#@cli : Default value: 'include_trainer_data=1'.
+nn_store : check "isbool(${2=1})"
   net=$_nn_network
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  out,ground_truth=$1,$3
+  s0,s1=""," (include trainer data)"
 
-  e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"' "\
-         "and ground truth '"$ground_truth"'."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_binary_crossentropy,
-  _${net}_${out}_size=1,1,1,1
-  _${net}_${out}_input=$in
-  _${net}_${out}_properties="ground_truth="$ground_truth
-  _${net}_${out}_backward="nn_loss_binary_crossentropy_backward("$out,$in,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_binary_crossentropy_init_forward("$out"));"\
-                "nn_loss_binary_crossentropy_forward("$out,$in,$ground_truth");"\
-                "end(nn_loss_binary_crossentropy_end_forward("$out"));"
-  _${net}_backward..=${_${net}_${out}_backward}
-  _${net}_init.="$0 ${1-3} "
-  _nn_previous_layer=$out
-
-#@cli nn_loss_crossentropy : out,in,ground_truth
-#@cli : Add a 'crossentropy' loss to the current network (cross entropy).
-nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
-  net=$_nn_network
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  out,ground_truth=$1,$3
-
-  e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"' "\
-         "and ground truth '"$ground_truth"'."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_crossentropy,
-  _${net}_${out}_size=1,1,1,1
-  _${net}_${out}_input=$in
-  _${net}_${out}_properties="ground_truth="$ground_truth
-  _${net}_${out}_backward="nn_loss_crossentropy_backward("$out,$in,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_crossentropy_init_forward("$out"));"\
-                "nn_loss_crossentropy_forward("$out,$in,$ground_truth");"\
-                "end(nn_loss_crossentropy_end_forward("$out"));"
-  _${net}_backward..=${_${net}_${out}_backward}
-  _${net}_init.="$0 ${1-3} "
-  _nn_previous_layer=$out
-
-#@cli nn_loss_mse : out,in,ground_truth
-#@cli : Add a 'mse' loss to the current network (mean-squared error).
-nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
-  net=$_nn_network
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  out,ground_truth=$1,$3
-
-  e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"' "\
-         "and ground truth '"$ground_truth"'."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_mse,
-  _${net}_${out}_size=1,1,1,1
-  _${net}_${out}_input=$in
-  _${net}_${out}_properties="ground_truth="$ground_truth
-  _${net}_${out}_backward="nn_loss_mse_backward("$out,$in,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_mse_init_forward("$out"));"\
-                "nn_loss_mse_forward("$out,$in,$ground_truth");"\
-                "end(nn_loss_mse_end_forward("$out"));"
-  _${net}_backward..=${_${net}_${out}_backward}
-  _${net}_init.="$0 ${1-3} "
-  _nn_previous_layer=$out
-
-#@cli nn_loss_normp : out,in,ground_truth,_metric={ 0:squared-L2 | p>0:Lp-norm }
-#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_p).
-#@cli : Default value: 'metric=1'.
-nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
-  net=$_nn_network
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  out,ground_truth,metric=$1,${3-4}
-  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$net"', with input '"$in"', "\
-         "ground truth '"$ground_truth"' and metric "$metric"."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_normp,
-  _${net}_${out}_size=1,1,1,1
-  _${net}_${out}_input=$in
-  _${net}_${out}_properties="ground_truth="$ground_truth", metric="$metric
-  _${net}_${out}_backward="nn_loss_normp_backward("$out,$in,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_normp_init_forward("$out,$metric"));"\
-                "nn_loss_normp_forward("$out,$in,$ground_truth");"\
-                "end(nn_loss_normp_end_forward("$out"));"
-  _${net}_backward..=${_${net}_${out}_backward}
-  _${net}_init.="$0 ${1-4} "
-  _nn_previous_layer=$out
-
-#@cli nn_loss_softmax_crossentropy : out,in,ground_truth
-#@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
-nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
-  net=$_nn_network
-  if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  out,ground_truth=$1,$3
-
-  e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
-         "with input '"$in"' and ground truth '"$ground_truth"'."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_softmax_crossentropy,
-  _${net}_${out}_size=1,1,1,1
-  _${net}_${out}_input=$in
-  _${net}_${out}_properties="ground_truth="$ground_truth
-  _${net}_${out}_backward="nn_loss_softmax_crossentropy_backward("$out,$in,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_softmax_crossentropy_init_forward("$out"));"\
-                "nn_loss_softmax_crossentropy_forward("$out,$in,$ground_truth");"\
-                "end(nn_loss_softmax_crossentropy_end_forward("$out"));"
-  _${net}_backward..=${_${net}_${out}_backward}
-  _${net}_init.="$0 ${1-3} "
-  _nn_previous_layer=$out
-
-#@cli nn_print
-#@cli : Print info on current neural network.
-nn_print :
-  net=$_nn_network
-  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
-
-  e[^-1] "[nn_lib] Print info on neural network '"$net"'."
-  v 0 e " * Network name: "$b$net$n
+  e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+  if $2 sel=${_${net}_trainer_data} fi c=
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    learning_mode=${_${net}_${name}_learning_mode}
-    properties=${_${net}_${name}_properties}
-    input=${_${net}_${name}_input}
-    if narg($input)==1
-      input_siz=${_${net}_${input}_size}
-    else
-      input_siz,sep=
-      repeat narg($input) {
-        in=${arg0\ $>,$input}
-        if isnum($in) input_siz.=1
-        else input_siz.=$sep${_${net}_${in}_size}
-        fi
-        sep=" and "
-      }
-    fi
-    e "   - Layer: "$b$net" / "$name$n" (type: "$g$type$n")"
-    if ['$input']!=0
-      s={`find(['$input'],_',')>0?_'s':0`}
-      e "       * Input"$s": "$c$input$n" ("$input_siz")"
-    fi
-    e "       * Output size: "$c${_${net}_${name}_size}$n
-    if ['$properties']!=0
-      ies={`find(['$properties'],_',')>0?'ies':[_'y',0,0]`}
-      e "       * Propert"$ies": "$c$properties$n
-    fi
-    if isint(${$name})
-      e "       * Parameters: "$c{$name,whds}$n
-    fi
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
   }
-  e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
+  ('${_${net}_init}') autocrop. {'" "'} => _nn_init
+  +store[$sel,-1] "$1"
+  rm.
 
 #@cli nn_trainer : out,_loss,_learning_rate>0,_optimizer,_scheduler
 #@cli : Add a network trainer to the current network.
@@ -30419,7 +30481,6 @@ nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}'
       fi
     fi
   }
-
   _${net}_update.="nn_trainer_update("$out,$loss,$scheduler"));" # Last thing that must happen in 'end()'!
   _${net}_init.="$0 ${1-5} "
 
@@ -30433,68 +30494,6 @@ _nn_scheduler_linear : 1
 _nn_scheduler_exponential : 1
 _nn_scheduler_adaptive : (0,0,0)
 _nn_scheduler_cosine : 1
-
-#@cli nn_size
-#@cli: Return size of the current network (i.e. number of stored parameters).
-nn_size :
-  net=$_nn_network
-
-  e[^-1] "[nn_lib] Return size of network '"$net"'."
-  siz=0
-  repeat narg(${_${net}_layer_names})-1 {
-    type=${arg0\ $>,${_${net}_layer_types}}
-    name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={_nn_$name,whds} fi
-  }
-  u $siz
-
-#@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:no | 1:yes }
-#@cli : Load and initialize network saved as a .gmz file.
-#@cli : Neural network files can be only loaded in .gmz format.
-#@cli : Default value: 'include_trainer_data=1'.
-+nn_load : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
-  e[^-1] "[nn_lib] Load network from file '$1'."
-  l[] {
-    "$1" run {t} rm.
-    if !$2 rm[${${_nn_network}_trainer_data}] fi # Discard training data
-  }
-
-#@cli nn_save : 'filename.gmz',_include_trainer_data={ 0:no | 1:yes }
-#@cli : Save current network as a .gmz file.
-#@cli : `.gmz` is mandatory extension, specifying another file extension will throw an error.
-#@cli : Default value: 'include_trainer_data=1'.
-nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
-  net=$_nn_network
-  s0,s1=""," (include trainer data)"
-
-  e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
-  if $2 sel=${_${net}_trainer_data} fi c=
-  repeat narg(${_${net}_layer_names})-1 {
-    type=${arg0\ $>,${_${net}_layer_types}}
-    name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
-  }
-  ('${_${net}_init}') autocrop. {'" "'} => _nn_init
-  o[$sel,-1] "$1"
-  rm. is_change 0
-
-#@cli nn_store : 'variable_name',_include_trainer_data={ 0:no | 1:yes }
-#@cli : Store current network into a variable.
-#@cli : Default value: 'include_trainer_data=1'.
-nn_store : check "isbool(${2=1})"
-  net=$_nn_network
-  s0,s1=""," (include trainer data)"
-
-  e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
-  if $2 sel=${_${net}_trainer_data} fi c=
-  repeat narg(${_${net}_layer_names})-1 {
-    type=${arg0\ $>,${_${net}_layer_types}}
-    name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}_nn_$name c=, fi
-  }
-  ('${_${net}_init}') autocrop. {'" "'} => _nn_init
-  +store[$sel,-1] "$1"
-  rm.
 
 #----------------------------------
 #
