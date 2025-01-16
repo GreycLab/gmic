@@ -29123,20 +29123,21 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi
-  check [${_${net}_${in0}_size}]==[${_${net}_${in1}_size}]
+  nin0,nin1=${net}_$in0,${net}_$in1
+  check [${_${nin0}_size}]==[${_${nin1}_size}]
   out_size=
-  if !$isnum0 nn_check_layer $in0 out_size=${_${net}_${in0}_size} fi
-  if !$isnum1 nn_check_layer $in1 out_size=${_${net}_${in1}_size} fi
-  if !isnum($in0)" && "!isnum($in1) check [${_${net}_${in0}_size}]==[${_${net}_${in1}_size}] fi
+  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
+  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
+  if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'add' layer '"$net/$out"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_add_init_forward("$out,${in$isnum0}"));"\
-                   "nn_add_forward("$out,$in0,$in1");"
-  _${nout}_backward="nn_add_backward("$out,$in0,$in1");"
+  _${nout}_forward="begin(nn_add_init_forward("$nout,${nin$isnum0}"));"\
+                   "nn_add_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-3} "
@@ -29149,16 +29150,17 @@ nn_append : check "isvarname('$1')"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-  check [${_${net}_${in0}_size}][0,3]==[${_${net}_${in1}_size}][0,3]
+  nin0,nin1=${net}_$in0,${net}_$in1
+  check [${_${nin0}_size}][0,3]==[${_${nin1}_size}][0,3]
 
   e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=append,
-  _${nout}_size:=[${_${net}_${in0}_size}]+[0,0,0,[${_${net}_${in1}_size}][3]]
+  _${nout}_size:=[${_${nin0}_size}]+[0,0,0,[${_${nin1}_size}][3]]
   _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_append_init_forward("$out,$in0,$in1"));"\
-                   "nn_append_forward("$out,$in0,$in1");"
-  _${nout}_backward="nn_append_backward("$out,$in0,$in1");"
+  _${nout}_forward="begin(nn_append_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_append_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_append_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-3} "
@@ -29170,18 +29172,19 @@ nn_append : check "isvarname('$1')"
 nn_avgpool2d : check "isvarname('$1') && isint(${3=2},2)"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'avgpool2d' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "patch size "${patch_size}x${patch_size}"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=avgpool2d,
-  _${nout}_size:=s=[${_${net}_${in}_size}];[int(s[0,2]/$patch_size),s[2,2]]
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}
-  _${nout}_forward="begin(nn_avgpool2d_init_forward("$out,$in,$patch_size"));"\
-                   "nn_avgpool2d_forward("$out,$in");"
-  _${nout}_backward="nn_avgpool2d_backward("$out,$in");"
+  _${nout}_forward="begin(nn_avgpool2d_init_forward("$nout,$nin,$patch_size"));"\
+                   "nn_avgpool2d_forward("$nout,$nin");"
+  _${nout}_backward="nn_avgpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-3} "
@@ -29193,18 +29196,19 @@ nn_avgpool2d : check "isvarname('$1') && isint(${3=2},2)"
 nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'avgpool3d' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "patch size "${patch_size}x${patch_size}x${patch_size}"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=avgpool3d,
-  _${nout}_size:=s=[${_${net}_${in}_size}];[int(s[0,3]/$patch_size),s[3]]
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
-  _${nout}_forward="begin(nn_avgpool3d_init_forward("$out,$in,$patch_size"));"\
-                   "nn_avgpool3d_forward("$out,$in");"
-  _${nout}_backward="nn_avgpool3d_backward("$out,$in");"
+  _${nout}_forward="begin(nn_avgpool3d_init_forward("$nout,$nin,$patch_size"));"\
+                   "nn_avgpool3d_forward("$nout,$nin");"
+  _${nout}_backward="nn_avgpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-3} "
@@ -29225,17 +29229,18 @@ nn_check_layer :
 nn_clone : check "isvarname('$1') && isvarname('$2')"
   net,out0,out1=$_nn_network,${1,2} nout0,nout1=${net}_$out0,${net}_$out1
   if ['${3=.}']=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
+  nin=${net}_$in
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
   _${net}_layer_names.=$out0,$out1,
   _${net}_layer_types.=clone,clone,
-  _${nout0}_size=${_${net}_${in}_size}
-  _${nout1}_size=${_${net}_${in}_size}
+  _${nout0}_size=${_${nin}_size}
+  _${nout1}_size=${_${nin}_size}
   _${nout0}_input,_${nout1}_input=$in
-  _${nout0}_forward="begin(nn_clone_init_forward("$out0,$out1,$in"));"\
-                    "nn_clone_forward("$out0,$out1,$in");"
-  _${nout0}_backward="nn_clone_backward("$out0,$out1,$in");"
+  _${nout0}_forward="begin(nn_clone_init_forward("$nout0,$nout1,$nin"));"\
+                    "nn_clone_forward("$nout0,$nout1,$nin");"
+  _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1-3} "
@@ -29253,6 +29258,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,\
     learning_mode,regularization,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -29262,28 +29268,28 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
-  _${nout}_size:=s=[${_${net}_${in}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
                       "learning_mode="$learning_mode", regularization="$regularization
   if !isint(${$nout})
-    {[${_${net}_${in}_size}][3]*$kernel_size^2+1},$nb_channels
+    {[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels
     if $initialization==1
-      f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${net}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
     elif $initialization==2
       f. "4*g/(w-1)"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
   fi
-  _${nout}_forward="begin(nn_conv2d_init_forward("$out,$in,$kernel_size,$stride,$dilation,\
+  _${nout}_forward="begin(nn_conv2d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,\
                    $shrink,$boundary_conditions"));"\
-                   "nn_conv2d_forward("$out,$in");"
-  _${nout}_backward="begin(nn_conv2d_init_backward("$out,$in,$regularization"));"\
-                    "nn_conv2d_backward("$out,$in");"\
-                    "end(nn_conv2d_end_backward("$out"));"
+                   "nn_conv2d_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$regularization"));"\
+                    "nn_conv2d_backward("$nout,$nin");"\
+                    "end(nn_conv2d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-11} "
@@ -29357,6 +29363,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=2},0,2)" skip "${6=1}"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,\
     regularization,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -29366,7 +29373,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
-  _${nout}_size:=s=[${_${net}_${in}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
   _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
@@ -29374,21 +29381,21 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1}>0
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
                       "regularization="$regularization
   if !isint(${$nout})
-    {[${_${net}_${in}_size}][3]*$kernel_size^3+1},$nb_channels
+    {[${_${nin}_size}][3]*$kernel_size^3+1},$nb_channels
     if $initialization==1
-      f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${net}_${in}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
     elif $initialization==2
       f. "4*g/(w-1)"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
   fi
-  _${nout}_forward="begin(nn_conv3d_init_forward("$out,$in,$kernel_size,$stride,$dilation,$shrink,\
+  _${nout}_forward="begin(nn_conv3d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,$shrink,\
                                                   $boundary_conditions"));"\
-                   "nn_conv3d_forward("$out,$in");"
-  _${nout}_backward="begin(nn_conv3d_init_backward("$out,$in,$regularization"));"\
-                    "nn_conv3d_backward("$out,$in");"\
-                    "end(nn_conv3d_end_backward("$out"));"
+                   "nn_conv3d_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$regularization"));"\
+                    "nn_conv3d_backward("$nout,$nin");"\
+                    "end(nn_conv3d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-11} "
@@ -29459,6 +29466,7 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && ${5=1
 nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -29471,9 +29479,9 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
   _${nout}_size:=[$cmax]-[$cmin]+1
   _${nout}_input=$in
   _${nout}_properties="coordinates=("$x0,$y0,$z0,$c0")x("$x1,$y1,$z1,$c1")"
-  _${nout}_forward="begin(nn_crop_init_forward("$out,$in,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1"));"\
-                   "nn_crop_forward("$out,$in");"
-  _${nout}_backward="nn_crop_backward("$out,$in");"
+  _${nout}_forward="begin(nn_crop_init_forward("$nout,$nin,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1"));"\
+                   "nn_crop_forward("$nout,$nin");"
+  _${nout}_backward="nn_crop_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-11} "
@@ -29486,7 +29494,8 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
   if ['${3=.}']=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-  check [${_${net}_${in0}_size}]==[${_${net}_${in1}_size}]
+  nin0,nin1=${net}_$in0,${net}_$in1
+  check [${_${nin0}_size}]==[${_${nin1}_size}]
   metric=$4
   s0,s1="squared-L2 norm","L$4"
 
@@ -29497,9 +29506,9 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in0,$in1
   _${nout}_properties="metric="${s{$metric>0}}
-  _${nout}_forward="begin(nn_distance_init_forward("$out,$metric"));"\
-                   "nn_distance_forward("$out,$in0,$in1");"
-  _${nout}_backward="nn_distance_backward("$out,$in0,$in1");"
+  _${nout}_forward="begin(nn_distance_init_forward("$nout,$metric"));"\
+                   "nn_distance_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_distance_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-4}"
@@ -29510,22 +29519,25 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
 nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
   net,out=$_nn_network,$1 nout=${net}_$out
   if ['$2']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nin=${net}_$in
   dropout_rate=$3
 
   e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "dropout rate "$dropout_rate"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=dropout,
-  _${nout}_size=${_${net}_${in}_size}
+  _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_properties="dropout_rate="$dropout_rate
-  _${nout}_forward="begin(nn_dropout_init_forward("$out,$in,$dropout_rate"));"\
-                   "nn_dropout_forward("$out,$in");"
-  _${nout}_backward="nn_dropout_backward("$out,$in");"
+  _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate"));"\
+                   "nn_dropout_forward("$nout,$nin");"
+  _${nout}_backward="nn_dropout_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-3} "
   _nn_previous_layer=$out
+
+# TODO AFTER
 
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_regularization>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
