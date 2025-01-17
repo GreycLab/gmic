@@ -18681,49 +18681,43 @@ denoise_haar : check "${1=1.4}>=0 && isint(${2=0},0) && isint(${3=10},1)"
     rm[0] / $3 r $w,$h,$d,100%,0
   => $nm }
 
-#@cli denoise_cnn : _std_noise>=0,_patch_size>0
+#@cli denoise_cnn : _noise_level>=0,_patch_size>0
 #@cli : Denoise selected images using a convolutional neural network (CNN).
 #@cli : Input value range should be [0,255]. Output value range is [0,255].
-#@cli : Default value: 'patch_size=64'.
-#@cli : $ image.jpg noise 20 cut 0,255 +denoise_cnn
-denoise_cnn : skip "${1=0},${2=64}"
+#@cli : If 'std_noise==0', the noise level is automatically estimated for each selected image.
+#@cli : Default value: 'noise_level=0 (auto)' and 'patch_size=64'.
+#@cli : $ image.jpg noise 20 cut 0,255 +denoise_cnn 0
+denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
+  s0,s1="noise level $1","automatic estimation of noise level"
+  e[^-1] "Denoise image$? using a convolutional neural network, with "${s{!$1}}" and patch size $2."
   N=$!
-  if isint($1,0,4) check "isint($2,1)" type=$1 else type=0 noarg fi
-  s0,s1,s2,s3,s4=soft,heavy,heavy,poisson+gaussian,poisson+gaussian2
-  e[^-1] "Denoise image$? using a convolutional neural network (for "${s$type}"-noise), with patch size $2."
-
-  # Load denoising network.
-  if 0${_is_denoise_cnn_$type} ${_denoise_cnn_$type}
+  if 0${_is_denoise_cnn} ${_denoise_cnn}
   else l[] {
     l[] {
       input_cached gmic_denoise_cnn.gmz
-      onfail error[0--5] "Command 'denoise_cnn': Unable to load network file 'gmic_denoise_cnn.gmz'."
+      onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
     }
-    k[$type] unserialize +store _denoise_cnn_$type _is_denoise_cnn_$type=1
+    replace_str. "nn_input IN,64,64,1,4","nn_input IN,$2,$2,1,4"
+    replace_str. "nn_crop IN_RGB,IN1,0,0,0,0,63,63,0,2,0","nn_crop IN_RGB,IN1,0,0,0,0,"{[$2,$2]-1}",0,2,0"
+    +store _denoise_cnn _is_denoise_cnn=1
   } fi
-  ps=$2
+  run {t} rm.
+  overlap:=floor($2/4)
 
-  replace_str. "nn_input X,32,32,1,3","nn_input X,"$ps","$ps",1,3" # Set patch size
-  run {t} rm[-2,-1]
-
-  # Process images.
-  repeat $N { l[$>,$N--1] {
-    w,h:=w#0,h#0 to_color[0]
-    if $type==3 srgb2rgb[0]
-    elif $type==4 srgb2rgb[0] /[0] 255
-    fi
-
-    # Denoise tiles.
-    img2patches[0] $ps,6,3
-    1,1,{0,d},1,*${-nn_lib}"X = crop(#0,0,0,z,0,$ps,$ps,1,3);"${_nn_forward}"draw(#0,nn_OUT,0,0,z,0,$ps,$ps,1,3)" rm.
-    patches2img[0] $w,$h,6,30%
-    c[0] 0,255
-
-    if $type==3 rgb2srgb[0]
-    elif $type==4 *[0] 255 rgb2srgb[0]
-    fi
-  } }
-  rm[$N--1]
+  repeat $N {
+    mv[0] $! to_rgb. w,h:=w,h
+    if $1 std_noise=$1 else std_noise=${-std_noise.} fi
+    100%,100%,1,1,{10*$std_noise} a[-2,-1] c
+    img2patches. $2,$overlap,3
+    100%,100%,100%,3
+    1,1,100%,1,:${-nn_lib}"
+      IN = crop(#-2,0,0,z,w#-1,h#-1,1)/255;
+      "${_denoise_forward}"
+      draw(#-1,denoise_OUT,0,0,z,w#-1,h#-1,1)"
+    rm[-3,-1]
+    patches2img. $w,$h,$overlap,50% *. 255 c. 0,255
+  }
+  k[-$N--1]
 
 #@cli denoise_patchpca : _strength>=0,_patch_size>0,_lookup_size>0,_spatial_sampling>0
 #@cli : Denoise selected images using the patch-pca algorithm.
