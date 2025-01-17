@@ -28989,6 +28989,24 @@ nn_lib :
       copy(d#IN[size(OUT0#)],d#OUT1,size(OUT1#));
     );
 
+    # sub: Subtract two inputs.
+    #---------------------------
+    nn_sub_init_forward(OUT,IN) = (
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_sub_forward(OUT,IN0,IN1) = (
+      OUT# = IN0# - IN1#;
+    );
+
+    nn_sub_backward(OUT,IN0,IN1) = (
+      !isnum(IN0#)?(d#IN0 = d#OUT);
+      !isnum(IN1#)?(d#IN1 = -d#OUT);
+    );
+
     #----------------
     # Loss functions.
     #----------------
@@ -30462,6 +30480,34 @@ nn_store : check "isbool(${2=1})"
   ('${_${net}_init}') autocrop. {'" "'} => ${net}__init__
   +store[$sel,-1] "$1"
   rm.
+
+#@cli nn_sub : out,in0,_in1
+#@cli : Add an 'sub' layer to the current network.
+#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
+#@cli : Default value: 'in1=. (previous layer)'.
+nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  net,out=$_nn_network,$1
+  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+
+  out_size=
+  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
+  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
+  if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+
+  e[^-1] "[nn_lib] Add 'sub' layer '"$net/$out"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=sub,
+  _${nout}_size=$out_size
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
+                   "nn_sub_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1} "
+  _${net}_previous_layer=$out
 
 #@cli nn_trainer : out,_in,_learning_rate>0,_optimizer,_scheduler
 #@cli : Add a network trainer to the current network.
