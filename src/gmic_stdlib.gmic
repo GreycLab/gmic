@@ -29667,7 +29667,8 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
 #@cli : Neural network files can be only loaded in .gmz format.
 #@cli : Default value: 'include_trainer_data=1'.
 +nn_load : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
-  e[^-1] "[nn_lib] Load network from file '$1'."
+  s0,s1=""," (include training data)"
+  e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
   l[] {
     "$1" run {t} rm. net=$_nn_network
     repeat narg(${_${net}_layer_names})-1 {
@@ -30420,26 +30421,11 @@ nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && 
 #@cli : Default value: 'include_trainer_data=1'.
 nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
   net=$_nn_network
-  s0,s1=""," (include trainer data)"
+  s0,s1=""," (include training data)"
 
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
-  repeat narg(${_${net}_layer_names})-1 {
-    type=${"arg0 $>,"${_${net}_layer_types}}
-    name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer')
-      sel.=${c}${net}_$name c=,
-      if $2
-        nm=${net}_${name}_g2 if isint(${$nm}) sel.=$c$nm c=, fi
-        nm=${net}_${name}_v if isint(${$nm}) sel.=$c$nm c=, fi
-        nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
-      fi
-    elif '$type'=='trainer'
-      sel.=${c}${net}_$name c=,
-    fi
-  }
-  ('${_${net}_init}') autocrop. {'" "'} => ${net}__init__
-  o[$sel,-1] "$1"
-  rm. is_change 0
+  __nn_store $2 o[$sel,-1] "$1" rm.
+  is_change 0
 
 #@cli nn_select : _network_name
 #@cli : Select network with specified name as the current one.
@@ -30490,18 +30476,28 @@ nn_split : check "isvarname('$1') && isvarname('$2')"
 #@cli : Default value: 'include_trainer_data=1'.
 nn_store : check "isbool(${2=1})"
   net=$_nn_network
-  s0,s1=""," (include trainer data)"
+  s0,s1=""," (include training data)"
 
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
-  if $2 sel=${_${net}_trainer_data} fi c=
+  __nn_store $2 +store[$sel,-1] "$1" rm.
+
+__nn_store :
+  net=$_nn_network
   repeat narg(${_${net}_layer_names})-1 {
-    type=${arg0\ $>,${_${net}_layer_types}}
-    name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer') sel.=${c}${net}_$name c=, fi
+    type=${"arg0 $>,"${_${net}_layer_types}}
+    name=${"arg0 $>,"${_${net}_layer_names}}
+    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer')
+      sel.=${c}${net}_$name c=,
+      if $1
+        nm=${net}_${name}_g2 if isint(${$nm}) sel.=$c$nm c=, fi
+        nm=${net}_${name}_v if isint(${$nm}) sel.=$c$nm c=, fi
+        nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
+      fi
+    elif '$type'=='trainer'
+      sel.=${c}${net}_$name c=,
+    fi
   }
   ('${_${net}_init}') autocrop. {'" "'} => ${net}__init__
-  +store[$sel,-1] "$1"
-  rm.
 
 #@cli nn_sub : out,in0,_in1
 #@cli : Add an 'sub' layer to the current network.
