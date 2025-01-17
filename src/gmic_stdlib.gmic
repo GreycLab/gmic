@@ -18703,17 +18703,8 @@ denoise_cnn : skip "${1=0},${2=64}"
     k[$type] unserialize +store _denoise_cnn_$type _is_denoise_cnn_$type=1
   } fi
   ps=$2
-  replace_str. "nn_layer_","nn_" # Upward compatibility
-  replace_str. "nn_input X,32,32,1,3","nn_input X,"$ps","$ps",1,3" # Set patch size
 
-  # Preserve upward compatibility.
-  if !$1
-    replace_str. "nn_crop OUT,OUT0,2,2,0,29,29,0","nn_crop OUT,OUT0,2,2,0,0,29,29,0,2"
-  elif inrange($1,1,4)
-    replace_str. "nn_crop OUT,OUT0,2,2,0,29,29,0","nn_crop OUT,OUT0,2,2,0,0,29,29,0,2"
-    replace_str. ",1,1,0 ",",1,1,0,1,0 "
-    replace_str. ",1,1,1 ",",1,1,0,1,1 "
-  fi
+  replace_str. "nn_input X,32,32,1,3","nn_input X,"$ps","$ps",1,3" # Set patch size
   run {t} rm[-2,-1]
 
   # Process images.
@@ -18725,7 +18716,7 @@ denoise_cnn : skip "${1=0},${2=64}"
 
     # Denoise tiles.
     img2patches[0] $ps,6,3
-    1,1,{0,d},1,*${-nn_lib}"X = crop(#0,0,0,z,0,$ps,$ps,1,3);"${_nn_forward}"draw(#0,OUT0,0,0,z,0,$ps,$ps,1,3)" rm.
+    1,1,{0,d},1,*${-nn_lib}"X = crop(#0,0,0,z,0,$ps,$ps,1,3);"${_nn_forward}"draw(#0,nn_OUT,0,0,z,0,$ps,$ps,1,3)" rm.
     patches2img[0] $w,$h,6,30%
     c[0] 0,255
 
@@ -29666,7 +29657,6 @@ nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
                 "nn_loss_binary_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_binary_crossentropy_end_forward("$nout"));"
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
   _nn_previous_layer=$out
 
 #@cli nn_loss_crossentropy : out,in,ground_truth
@@ -29688,7 +29678,6 @@ nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
                 "nn_loss_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_crossentropy_end_forward("$nout"));"
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
   _nn_previous_layer=$out
 
 #@cli nn_loss_mse : out,in,ground_truth
@@ -29710,7 +29699,6 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
   _nn_previous_layer=$out
 
 #@cli nn_loss_normp : out,in,ground_truth,_metric={ 0:squared-L2 | p>0:Lp-norm }
@@ -29733,7 +29721,6 @@ nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
                 "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_normp_end_forward("$nout"));"
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
   _nn_previous_layer=$out
 
 #@cli nn_loss_softmax_crossentropy : out,in,ground_truth
@@ -29755,7 +29742,6 @@ nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
                 "nn_loss_softmax_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_softmax_crossentropy_end_forward("$nout"));"
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
   _nn_previous_layer=$out
 
 #@cli nn_maxpool2d : out,_in,_patch_size>1
@@ -30485,7 +30471,6 @@ nn_trainer : check "isvarname('$1') && ${3=2.5e-4}>0 && isvarname('${4=rmsprop}'
     fi
   }
   _${net}_update.="nn_trainer_update("$nout,$nin,$scheduler"));" # Last thing that must happen in 'end()'!
-  _${net}_init.="$0 ${1--1} "
 
 _nn_optimizer_sgd : 1
 _nn_optimizer_rmsprop : 1
