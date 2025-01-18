@@ -56699,6 +56699,7 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 #@gui : Strength (%) = float(0,0,100)_1
 #@gui : Opacity (%) = float(75,0,100)
 #@gui : Iterations = int(1,1,5)
+#@gui : Preview = bool(1)
 #@gui : sep = separator()
 #@gui : Update Neural Network = button()
 #@gui : sep = separator()
@@ -56710,12 +56711,16 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/18</i>.</small>")
 fx_denoise :
-  if $5 delete ${-path_cache}gmic_denoise_cnn.gmz fi
-  repeat $4 { denoise_cnn {$1?0:$2},64 progress {round(($>+1)/$2*100)} }
+  if $6 delete ${-path_cache}gmic_denoise_cnn.gmz fi
+  repeat $4 {
+    denoise_cnn {$1?0:$2},64
+  }
 
 fx_denoise_preview :
-  fx_denoise $*
-  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{0}"
+  foreach {
+    if $5 fx_denoise $* fi
+  }
+  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{0}"
 
 #@gui Smooth [Guided] : fx_smooth_guided, fx_smooth_guided_preview(0)
 #@gui : Guide As = choice("Self","Top Layer","Bottom Layer")
