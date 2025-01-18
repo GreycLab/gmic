@@ -18691,34 +18691,34 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
   s0,s1="noise level $1","automatic noise level estimation"
   e[^-1] "Denoise image$? using a convolutional neural network, with "${s{!$1}}" and patch size $2."
   N=$!
-  if 0${_is_denoise_cnn} ${_denoise_cnn}
-  else l[] {
-    l[] {
-      input_cached gmic_denoise_cnn.gmz
-      onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
-    }
-    +store _denoise_cnn _is_denoise_cnn=1
+  if !0${_is_denoise_cnn} l[] {
+    input_cached gmic_denoise_cnn.gmz
+    store _denoise_cnn _is_denoise_cnn=1
+    onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
   } fi
-  replace_str. "nn_input IN,64,64,1,4","nn_input IN,$2,$2,1,4"
-  replace_str. "nn_crop IN_RGB,IN1,0,0,0,0,63,63,0,2,0","nn_crop IN_RGB,IN1,0,0,0,0,"{[$2,$2]-1}",0,2,0"
-  run {t} rm.
+  l[] {
+    $_denoise_cnn
+    replace_str. "nn_input IN,64,64,1,4","nn_input IN,$2,$2,1,4"
+    replace_str. "nn_crop IN_RGB,IN1,0,0,0,0,63,63,0,2,0","nn_crop IN_RGB,IN1,0,0,0,0,"{[$2,$2]-1}",0,2,0"
+    run {t}
+    rm
+  }
   overlap:=floor($2/4)
 
-  repeat $N {
-    mv[0] $! to_rgb. w,h:=w,h
-    img2patches. $2,$overlap,3
+  foreach { split_opacity l[0] {
+    slices 50% w,h,s:=w,h,s to_rgb
+    img2patches $2,$overlap,3
     if $1 100%,100%,1,1,{10*$1} a[-2,-1] c
     else l. { s z foreach { 100%,100%,1,1,{10*${-std_noise}} a c } a z }
     fi
     100%,100%,100%,3
-    1,1,100%,1,:${-nn_lib}"
-      IN = crop(#-2,0,0,z,w#-1,h#-1,1)/255;
+    $_denoise_cnn
+    1,1,{0,d},1,:${-nn_lib}"
+      IN = crop(#0,0,0,z,w#0,h#0,1)/255;
       "${_denoise_forward}"
-      draw(#-1,denoise_OUT,0,0,z,w#-1,h#-1,1)"
-    rm[-3,-1]
-    patches2img. $w,$h,$overlap,50% *. 255 c. 0,255
-  }
-  k[-$N--1]
+      draw(#1,denoise_OUT,0,0,z,w#1,h#1,1)"
+    k[1] r 100%,100%,100%,$s patches2img $w,$h,$overlap,50% * 255 c 0,255
+  } a c }
 
 #@cli denoise_patchpca : _strength>=0,_patch_size>0,_lookup_size>0,_spatial_sampling>0
 #@cli : Denoise selected images using the patch-pca algorithm.
@@ -30468,12 +30468,19 @@ nn_split : check "isvarname('$1') && isvarname('$2')"
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:no | 1:yes }
 #@cli : Store current network into a variable.
 #@cli : Default value: 'include_trainer_data=1'.
-nn_store : check "isbool(${2=1})"
++nn_store : check "isbool(${2=1})"
   net=$_nn_network
   s0,s1=""," (include training data)"
 
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 +store[$sel,-1] "$1" rm.
+
+nn_store : check "isbool(${2=1})"
+  net=$_nn_network
+  s0,s1=""," (include training data)"
+
+  e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+  __nn_store $2 store[$sel,-1] "$1"
 
 __nn_store :
   net=$_nn_network
