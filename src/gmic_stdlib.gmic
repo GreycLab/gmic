@@ -56696,7 +56696,7 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 
 #@gui Denoise : fx_denoise,fx_denoise_preview(0)
 #@gui : Automatic Noise Level Estimation = bool(1)
-#@gui : Strength (%) = float(0,0,100)_1
+#@gui : Strength (%) = float(0,0,200)_1
 #@gui : Opacity (%) = float(75,0,100)
 #@gui : Iterations = int(1,1,5)
 #@gui : Preview = bool(1)
@@ -56713,11 +56713,13 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 fx_denoise :
   if $6 delete ${-path_cache}gmic_denoise_cnn.gmz fi
   repeat $4 {
-    denoise_cnn {$1?0:$2},64
+    +denoise_cnn {$1?0:max(1,$2)},64
+    blend alpha,$3%
   }
 
 fx_denoise_preview :
   foreach {
+    r {min(w,256)},{min(h,256)},1,100%,0,0,0.5,0.5
     if $5 fx_denoise $* fi
   }
   u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{0}"
