@@ -28318,6 +28318,24 @@ nn_lib :
                   0);
     );
 
+    # div: Divide two inputs.
+    #------------------------
+    nn_div_init_forward(OUT,IN) = (
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_div_forward(OUT,IN0,IN1) = (
+      OUT# = IN0#/IN1#;
+    );
+
+    nn_div_backward(OUT,IN0,IN1) = (
+      !isnum(IN0#)?(d#IN0 = d#OUT/IN#1);
+      !isnum(IN1#)?(d#IN1 = -d#OUT*IN0#/(IN1#^2);
+    );
+
     # distance : Distance between two inputs.
     #----------------------------------------
     nn_distance_init_forward(OUT,metric) = (
@@ -29524,6 +29542,33 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
+#@cli nn_div : out,in0,_in1
+#@cli : Add a 'div' layer to the current network.
+#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
+#@cli : Default value: 'in1=. (previous layer)'.
+nn_div : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+  net,out=$_nn_network,$1
+  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+  out_size=
+  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} nin0=${net}_$in0 else nin0=$in0 fi
+  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} nin1=${net}_$in1 else nin1=$in1 fi
+  if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+
+  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=div,
+  _${nout}_size=$out_size
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_div_init_forward("$out,${nin$isnum0}"));"\
+                   "nn_div_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1} "
+  _${net}_previous_layer=$out
+
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
 nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
@@ -29842,7 +29887,7 @@ nn_maxpool3d : check "isvarname('$1') && isint(${3=2},2)"
   _${net}_previous_layer=$out
 
 #@cli nn_mul : out,in0,_in1
-#@cli : Add an 'mul' layer to the current network.
+#@cli : Add a 'mul' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
 nn_mul : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
@@ -30501,7 +30546,7 @@ __nn_store :
   ('${_${net}_init}':y) autocrop. {'" "'} => ${net}__init__
 
 #@cli nn_sub : out,in0,_in1
-#@cli : Add an 'sub' layer to the current network.
+#@cli : Add a 'sub' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'in1=. (previous layer)'.
 nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
