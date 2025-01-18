@@ -56688,15 +56688,12 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
   ac "repeat $3 { bilateral $1,$2 }",$4
 
 #@gui Denoise : fx_denoise,fx_denoise_preview(0)
-#@gui : Noise type = choice{"Soft","Heavy","Heavy (Faster)","Poisson + Gaussian","Poisson + Gaussian (v2)"}
+#@gui : Automatic Noise Level Estimation = bool(1)
+#@gui : Strength (%) = float(0,0,100)_1
+#@gui : Opacity (%) = float(75,0,100)
 #@gui : Iterations = int(1,1,5)
 #@gui : sep = separator()
 #@gui : Update Neural Network = button()
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small>
 #@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
@@ -56704,15 +56701,14 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 #@gui : if you don't have many CPU cores available.
 #@gui : </small>"}
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/11/06</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/18</i>.</small>")
 fx_denoise :
-  if $3 delete ${-path_cache}gmic_denoise_cnn.gmz fi
-  repeat $2 { denoise_cnn $1,64 progress {round(($>+1)/$2*100)} }
+  if $5 delete ${-path_cache}gmic_denoise_cnn.gmz fi
+  repeat $4 { denoise_cnn {$1?0:$2},64 progress {round(($>+1)/$2*100)} }
 
 fx_denoise_preview :
-  if $3 delete ${-path_cache}gmic_denoise_cnn.gmz fi
-  foreach { if max(w,h)>280 rs {[min(280,0$_preview_width),min(280,0$_preview_height)]},0,2 fi }
-  gui_split_preview "fx_denoise $*",${-3--1}
+  fx_denoise $*
+  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{0}"
 
 #@gui Smooth [Guided] : fx_smooth_guided, fx_smooth_guided_preview(0)
 #@gui : Guide As = choice("Self","Top Layer","Bottom Layer")
