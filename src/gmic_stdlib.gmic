@@ -18706,9 +18706,10 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
 
   repeat $N {
     mv[0] $! to_rgb. w,h:=w,h
-    if $1 std_noise=$1 else std_noise=${-std_noise.} fi
-    100%,100%,1,1,{10*$std_noise} a[-2,-1] c
     img2patches. $2,$overlap,3
+    if $1 100%,100%,1,1,{10*$1} a[-2,-1] c
+    else l. { s z foreach { 100%,100%,1,1,{10*${-std_noise}} a c } a z }
+    fi
     100%,100%,100%,3
     1,1,100%,1,:${-nn_lib}"
       IN = crop(#-2,0,0,z,w#-1,h#-1,1)/255;
