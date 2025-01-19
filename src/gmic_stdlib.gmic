@@ -5277,35 +5277,22 @@ _input_glob :
 #@cli : Input specified filename, assumed to be stored in one of the G'MIC resource folder.
 #@cli : If file not found and 'try_downloading=1', file is downloaded from the G'MIC server and stored
 #@cli : in the '${-path_cache}' folder.
+#@cli : This command returns the full path to the corresponding file.
 #@cli : Default value: 'try_downloading_from_gmic_server=1'.
 +input_cached : check "isbool(${2=1})"
   basename "$1" basename=${}
   e[^-1] "Input cached file '"$basename"'."
-  if ['$GMIC_SYSTEM_PATH']!=0 g_path_unix=$GMIC_SYSTEM_PATH/ else g_path_unix=/usr/lib/gimp/2.0/plug-ins/ fi
-  path_test0=${-path_cache}
-  path_test1=$_path_rc
-  path_test2=${-path_gimp}plug-ins/
-  path_test3=${-path_gimp}plug-ins/gmic_gimp_qt/
-  if !${-is_windows}
-    path_test4=/usr/share/gmic/
-    path_test5=$g_path_unix
-  else
-    path_test4=$g_path_unix
-  fi
-  file_found=0
-  repeat inf {
-    if ['{/${path_test$>}}']==0 break fi
-    file=${path_test$>}$basename
-    l[] { i $file file_found=1 onfail }
-    if $file_found break fi
-  }
-  if !$file_found" && $2" # Try downloading from the G'MIC server
+
+  path_cached_file "$1" file=${}
+  if ['$file']!=0 $file
+  elif $2 # Try downloading from the G'MIC server
     url=https://gmic.eu/"$1"
-    l[] { i $url o ${-path_cache}$basename file_found=1 is_change 1 onfail }
+    l[] { file=${-path_cache}$basename i $url o $file is_change 1 onfail file= }
+    if ['$file']==0
+      error[0--3] "Command 'input_cached': Unknown filename '"{/"$1"}"'."
+    fi
   fi
-  if !$file_found
-    error[0--3] "Command 'input_cached': Unknown filename '"{/"$1"}"'."
-  fi
+  u $file
 
 #@cli in : eq. to 'input_normalized'.
 +in :
@@ -36113,6 +36100,30 @@ path_cache :
     fi
   fi
   u $_path_cache
+
+#@cli path_cached_file : "filename"
+#@cli : Return path of the specified cached file, or "" if file has not been yet cached.
+path_cached_file :
+  basename "$1" basename=${}
+  e[^-1] "Return path of cached file '"$basename"'."
+  test_path0=${-path_cache}
+  test_path1=$_path_rc
+  test_path2=${-path_gimp}plug-ins/
+  test_path3=${-path_gimp}plug-ins/gmic_gimp_qt/
+  if ['$GMIC_SYSTEM_PATH']!=0 g_path_unix=$GMIC_SYSTEM_PATH/ else g_path_unix=/usr/lib/gimp/2.0/plug-ins/ fi
+  if !${-is_windows}
+    test_path4=/usr/share/gmic/
+    test_path5=$g_path_unix
+  else
+    test_path4=$g_path_unix
+  fi
+
+  repeat inf {
+    if ['{/${test_path$>}}']==0 file= break fi
+    file=${test_path$>}$basename
+    if isfile(['{/$file}']) break fi
+  }
+  u $file
 
 #@cli path_current
 #@cli : Return current folder from where G'MIC has been run.
