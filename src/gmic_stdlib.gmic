@@ -30136,31 +30136,6 @@ nn_rename : check "isvarname('$1')"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_resconv2d : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_learning_mode,_regularization>=0
-#@cli : Add a 'resconv2d' (residual 2D convolutional layer) to the current network.
-#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'learning_mode=3' and 'regularization=0'.
-nn_resconv2d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3) && ${7=0}>=0"
-               skip "${4=1}"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,learning_mode,regularization=${3-7}
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-
-  e[^-1] "[nn_lib] Add 'resconv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         ${kernel_size}x${kernel_size}" kernels, dilation "$dilation" and "\
-         ${s$boundary_conditions}" boundary conditions."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv2d ${out}_conv2d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,0
-  nn_add $out,.,${out}_clone1
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
 #@cli nn_resconv2dnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
 # _regularization>=0
 #@cli : Add a 'resconv2dnl' (residual 2D convolutional layer followed by a non-linearity) to the current network.
@@ -30181,64 +30156,14 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv2d ${out}_conv2d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
+  nb_channels:=[${_${nin}_size}][3]
+  nn_conv2d ${out}_conv2d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
+            $learning_mode,$regularization,0
+  nn_nl ${out}_nl0,.,$activation
+  nn_conv2d ${out}_conv2d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
             $learning_mode,$regularization,0
   nn_add ${out}_add,.,${out}_clone1
   nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_resconv2dnnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
-#@cli : Add a 'resconv2dnnl' (residual 2D convolutional layer followed by a normalization layer, then a non-linearity)\
-# to the current network.
-#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resconv2dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
-                  skip "${4=1}","${6=leakyrelu}"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-
-  e[^-1] "[nn_lib] Add 'resconv2dnnl' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         ${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
-         ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv2d ${out}_conv2d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,0
-  nn_normalize ${out}_normalize,.,1,3
-  nn_add ${out}_add,.,${out}_clone1
-  nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_resconv3d : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_learning_mode,_regularization>=0
-#@cli : Add a 'resconv3d' (residual 3D convolutional layer) to the current network.
-#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'learning_mode=3' and 'regularization=0'.
-nn_resconv3d : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${6=3},0,3) && ${7=0}>=0"
-               skip "${4=1}"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,learning_mode,regularization=${3-7}
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-
-  e[^-1] "[nn_lib] Add 'resconv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation" and "\
-         ${s$boundary_conditions}" boundary conditions."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv3d ${out}_conv3d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,0
-  nn_add $out,.,${out}_clone1
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
@@ -30262,57 +30187,14 @@ nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv3d ${out}_conv3d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
+  nb_channels:=[${_${nin}_size}][3]
+  nn_conv3d ${out}_conv3d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
+            $learning_mode,$regularization,0
+  nn_nl ${out}_nl0,.,$activation
+  nn_conv3d ${out}_conv3d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
             $learning_mode,$regularization,0
   nn_add ${out}_add,.,$1_clone1
   nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_resconv3dnnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
-#@cli : Add a 'resconv3dnnl' (residual 3D convolutional layer followed by a normalization layer, then a non-linearity)\
-# to the current network.
-#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resconv3dnnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
-                  skip "${4=1}","${6=leakyrelu}"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
-  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
-
-  e[^-1] "[nn_lib] Add 'resconv3dnnl' layer '$1' to network '"$net"', with input '"$in"', "\
-         ${kernel_size}x${kernel_size}x${kernel_size}" kernels, dilation "$dilation", "\
-         ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_conv3d ${out}_conv3d,.,{[${_${nin}_size}][3]},$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,0
-  nn_normalize ${out}_normalize,.,1,3
-  nn_add ${out}_add,.,$1_clone1
-  nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_resfc : out,_in,_learning_mode,_regularization>=0
-#@cli : Add a 'resfc' (residual fully connecter layer) to the current network.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'learning_mode=3' and 'regularization=0'.
-nn_resfc : check "isvarname('$1') && isint(${3=3},0,3) && ${4=0}>=0"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  learning_mode,regularization=${3-4}
-
-  e[^-1] "[nn_lib] Add 'resfc' layer '"$out"' to network '"$net"', with input '"$in"'."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_fc ${out}_fc,.,{prod(${_${nin}_size})},$learning_mode,$regularization,0
-  nn_add $out,.,${out}_clone1
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
@@ -30330,30 +30212,10 @@ nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=
          "'"$activation"' activation."
   init=${_${net}_init}
   nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_fc ${out}_fc,.,{prod(${_${nin}_size})},$learning_mode,$regularization,0
-  nn_add ${out}_add,.,${out}_clone1
-  nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_resfcnnl : out,_in,_activation,_learning_mode,_regularization>=0
-#@cli : Add a 'resfcnnl' (residual fully connecter layer followed by a normalization layer, then a non-linearity) \
-# to the current network.
-#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
-nn_resfcnnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0"
-              skip ${3=leakyrelu}
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  activation,learning_mode,regularization=${3-5}
-
-  e[^-1] "[nn_lib] Add 'resfc+normalize+nl' layer '"$out"' to network '"$net"', with input '"$in"' and "\
-         "'"$activation"' activation."
-  init=${_${net}_init}
-  nn_clone ${out}_clone0,${out}_clone1,$in
-  nn_fc ${out}_fc,.,{prod(${_${nin}_size})},$learning_mode,$regularization,0
-  nn_normalize ${out}_normalize,.
+  nb_channels:=prod(${_${nin}_size})
+  nn_fc ${out}_fc0,.,$nb_channels,$learning_mode,$regularization,0
+  nn_nl ${out}_nl0,.,$activation
+  nn_fc ${out}_fc1,.,$nb_channels,$learning_mode,$regularization,0
   nn_add ${out}_add,.,${out}_clone1
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
