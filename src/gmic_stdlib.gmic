@@ -27632,14 +27632,8 @@ nn_lib :
       merge(nn_batch_size,+);
     );
 
-    nn_define_backward(IN) = (
-      !isvar(d#IN)?(d#IN = size(IN#)?vector(#size(IN#)):0);
-    );
-    nn_define_backward(IN0,IN1) = (
-      !isvar(d#IN0)?(d#IN0 = size(IN0#)?vector(#size(IN0#)):0);
-      !isvar(d#IN1)?(d#IN1 = size(IN1#)?vector(#size(IN1#)):0);
-    );
-
+    nn_define_backward(IN) = (!isvar(d#IN)?(d#IN = size(IN#)?vector(#size(IN#)):0));
+    nn_define_backward(IN0,IN1) = (nn_define_backward(IN0#); nn_define_backward(IN1#));
     nn_display(L) = display(L#,L#_width,L#_height,L#_depth,L#_spectrum);
     nn_display(L,M) = display(L#,M#_width,M#_height,M#_depth,M#_spectrum);
     nn_store(N,L) = store(N#,L#,L#_width,L#_height,L#_depth,L#_spectrum);
@@ -28241,7 +28235,6 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN.
-      d#IN = vector(#size(IN#));
       repeat (IN#_spectrum,_nn_k,
         draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
              correlate(d#OUT#_prestrided,
@@ -28255,7 +28248,7 @@ nn_lib :
                        OUT#_dilation,OUT#_dilation,OUT#_dilation,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
                        IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1);
+             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,-1);
       );
 
       # Compute dLOSS/dbiases.
@@ -28322,10 +28315,11 @@ nn_lib :
     );
 
     nn_crop_backward(OUT,IN) = (
-      d#IN = crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                  -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
-                  IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                  0);
+      nn_define_backward(IN#);
+      d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                 -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
+                 IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                 0);
     );
 
     # div: Divide two inputs.
@@ -28342,8 +28336,9 @@ nn_lib :
     );
 
     nn_div_backward(OUT,IN0,IN1) = (
-      !isnum(IN0#)?(d#IN0 = d#OUT/IN#1);
-      !isnum(IN1#)?(d#IN1 = -d#OUT*IN0#/(IN1#^2));
+      nn_define_backward(IN0#,IN1#);
+      !isnum(IN0#)?(d#IN0+=d#OUT/IN#1);
+      !isnum(IN1#)?(d#IN1+=-d#OUT*IN0#/(IN1#^2));
     );
 
     # distance : Distance between two inputs.
@@ -28362,14 +28357,15 @@ nn_lib :
     );
 
     nn_distance_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#,IN1#);
       !OUT_#metric?( # L2-squared
-        d#IN0 = 2*OUT#_diff;
+        d#IN0+=2*OUT#_diff;
       ):OUT#_metric==2?( # L2
-        d#IN0 = OUT#_diff/(1e-8 + OUT#[0]);
+        d#IN0+=OUT#_diff/(1e-8 + OUT#[0]);
       ):( # L
-        d#IN0 = (abs(OUT#_diff)/(1e-8 + OUT#[0]))^(OUT#_metric - 1)*sign(OUT#_diff);
+        d#IN0+=(abs(OUT#_diff)/(1e-8 + OUT#[0]))^(OUT#_metric - 1)*sign(OUT#_diff);
       );
-      d#IN1 = -d#IN0;
+      d#IN1+=-d#IN0;
     );
 
     # dropout : Dropout layer.
@@ -28397,10 +28393,11 @@ nn_lib :
     );
 
     nn_dropout_backward(OUT,IN) = (
+      nn_define_backward(IN#);
       OUT#_dropout_rate && nn_is_training?(
-        d#IN = d#OUT*OUT#_dropout_mask;
+        d#IN+=d#OUT*OUT#_dropout_mask;
       ):(
-        d#IN = d#OUT; # Can't use 'ref()' here as condition unknown at compile time
+        d#IN+=d#OUT;
       );
     );
 
@@ -28429,7 +28426,7 @@ nn_lib :
 
     nn_fc_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN = mul(transpose(OUT#_params,size(IN#)),d#OUT);
+      d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
       d#OUT#_params = mul(d#OUT,IN#,size(IN#));
       d#OUT#_biases = d#OUT;
       OUT#_regularization>0?(
@@ -28532,7 +28529,7 @@ nn_lib :
     );
 
     nn_maxpool2d_backward(OUT,IN) = (
-      d#IN = vector(#size(IN#));
+      nn_define_backward(IN#);
       _nn_offOUT = 0;
       repeat (OUT#_spectrum,_nn_c,
         repeat (OUT#_depth,_nn_z,
@@ -28544,7 +28541,7 @@ nn_lib :
               _nn_from_x = _nn_from%OUT#_patch_size;
               _nn_from_y = int(_nn_from/OUT#_patch_size);
               _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x + IN#_width*(_nn_yp + _nn_from_y);
-              d#IN[_nn_offIN] = d#OUT[_nn_offOUT++];
+              d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
           );
         );
@@ -28584,7 +28581,7 @@ nn_lib :
     );
 
     nn_maxpool3d_backward(OUT,IN) = (
-      d#IN = vector(#size(IN#));
+      nn_define_backward(IN#);
       _nn_offOUT = 0;
       repeat (OUT#_spectrum,_nn_c,
         _nn_offIN0 = IN#_width*IN#_height*IN#_depth*_nn_c;
@@ -28599,7 +28596,7 @@ nn_lib :
               _nn_from_z = int(_nn_from/OUT#_patch_size^2);
               _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x +
                           IN#_width*(_nn_yp + _nn_from_y + IN#_height*(_nn_zp + _nn_from_z));
-              d#IN[_nn_offIN] = d#OUT[_nn_offOUT++];
+              d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
           );
         );
@@ -28620,8 +28617,9 @@ nn_lib :
     );
 
     nn_mul_backward(OUT,IN0,IN1) = (
-      !isnum(IN0#)?(d#IN0 = IN1#*d#OUT);
-      !isnum(IN1#)?(d#IN1 = IN0#*d#OUT);
+      nn_define_backward(IN0#,IN1#);
+      !isnum(IN0#)?(d#IN0+=IN1#*d#OUT);
+      !isnum(IN1#)?(d#IN1+=IN0#*d#OUT);
     );
 
     # nl: Non-linearity.
@@ -28639,8 +28637,8 @@ nn_lib :
     );
 
     nn_nl_backward(OUT,IN,activation) = (
-      d#IN = vector(#size(IN#));
-      fill(d#IN,_nn_k,d#OUT[_nn_k]*nn_activation_d_#activation(IN#[_nn_k]));
+      nn_define_backward(IN#);
+      fill(d#IN,_nn_k,d#IN[_nn_k] + d#OUT[_nn_k]*nn_activation_d_#activation(IN#[_nn_k]));
     );
 
     # Special case: Softmax.
@@ -28649,8 +28647,8 @@ nn_lib :
     );
 
     nn_softmax_backward(OUT,IN) = (
-      d#IN = d#OUT - dot(d#OUT,OUT#);
-      d#IN*=OUT#;
+      nn_define_backward(IN#);
+      d#IN+=(d#OUT - dot(d#OUT,OUT#))*OUT#;
     );
 
     # normalize: Layer normalization.
@@ -28706,10 +28704,9 @@ nn_lib :
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_is_channelwise?( # Channel-by-channel normalization
-        d#IN = vector(#size(IN#));
         repeat (size(#OUT#_avg),_nn_k,
           OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/OUT#_std[_nn_k]);
+          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/OUT#_std[_nn_k],OUT#_whd,1,1,-1);
           batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
           batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
           OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
@@ -28717,7 +28714,7 @@ nn_lib :
           batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
         );
       ):( # Global normalization
-        d#IN = d#OUT*(OUT#_alpha[0]/OUT#_std[0]);
+        d#IN+=d#OUT*(OUT#_alpha[0]/OUT#_std[0]);
         batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
         batch_d#OUT#_beta+=sum(d#OUT);
         batch_#OUT#_avg+=avg(IN#);
@@ -28806,7 +28803,7 @@ nn_lib :
 
     nn_patchdown2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN = map(OUT#_map_backward,d#OUT);
+      d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
     # patchdown3d: 3D downscale by patch.
@@ -28837,7 +28834,7 @@ nn_lib :
 
     nn_patchdown3d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN = map(OUT#_map_backward,d#OUT);
+      d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
     # patchup2d: 2D upscale by patch.
@@ -28868,7 +28865,7 @@ nn_lib :
 
     nn_patchup2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN = map(OUT#_map_backward,d#OUT);
+      d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
     # patchup3d: 3D upscale by patch.
@@ -28899,7 +28896,7 @@ nn_lib :
 
     nn_patchup3d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN = map(OUT#_map_backward,d#OUT);
+      d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
     # rename: Rename input.
@@ -28950,18 +28947,19 @@ nn_lib :
     );
 
     nn_resize_backward(OUT,IN) = (
-      d#IN = resize(d#OUT,
-                    OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                    IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                    arg0(OUT#_interpolation,
-                      0,                      # Zero padding
-                      OUT#_is_downscale?4:2,  # Nearest neighbor
-                      OUT#_is_downscale?1:2,  # Moving average (downscale) / nearest-neighbor (upscale)
-                      OUT#_is_downscale?1:2,  # Moving average (downscale) / linear (upscale)
-                      4,                      # Grid
-                      OUT#_is_downscale?1:2,  # Moving average / cubic
-                      OUT#_is_downscale?1:2); # Moving average / lanczos
-                    );
+      nn_define_backward(IN#);
+      d#IN+=resize(d#OUT,
+                   OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   arg0(OUT#_interpolation,
+                     0,                      # Zero padding
+                     OUT#_is_downscale?4:2,  # Nearest neighbor
+                     OUT#_is_downscale?1:2,  # Moving average (downscale) / nearest-neighbor (upscale)
+                     OUT#_is_downscale?1:2,  # Moving average (downscale) / linear (upscale)
+                     4,                      # Grid
+                     OUT#_is_downscale?1:2,  # Moving average / cubic
+                     OUT#_is_downscale?1:2); # Moving average / lanczos
+                   );
     );
 
     # run: Transform input with G'MIC command.
@@ -28986,10 +28984,11 @@ nn_lib :
     );
 
     nn_run_backward(OUT,IN) = (
-      d#IN = resize(d#OUT,
-                    OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                    IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                    3);
+      nn_define_backward(IN#);
+      d#IN+=resize(d#OUT,
+                   OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   3);
     );
 
     # split: Split input as two outputs.
@@ -29016,13 +29015,13 @@ nn_lib :
     );
 
     nn_split_backward(OUT0,OUT1,IN) = (
-      d#IN = vector(#size(IN#));
+      nn_define_backward(IN#);
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-           d#OUT0,0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+           d#OUT0,0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum,-1);
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
            d#OUT1,IN#_width - OUT1#_width,IN#_height - OUT1#_height,
                   IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
-           OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
+           OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum,-1);
     );
 
     # sub: Subtract two inputs.
@@ -29039,8 +29038,9 @@ nn_lib :
     );
 
     nn_sub_backward(OUT,IN0,IN1) = (
-      !isnum(IN0#)?(d#IN0 = d#OUT);
-      !isnum(IN1#)?(d#IN1 = -d#OUT);
+      nn_define_backward(IN0#,IN1#);
+      !isnum(IN0#)?(d#IN0+=d#OUT);
+      !isnum(IN1#)?(d#IN1+=-d#OUT);
     );
 
     #----------------
