@@ -27631,6 +27631,12 @@ nn_lib :
       merge(nn_batch_size,+);
     );
 
+    nn_generic_init_backward(OUT) = begin(size(OUT#)?(d#OUT = vector(#size(OUT#))):(d#OUT = 0));
+    nn_generic_init_backward(OUT0,OUT1) = begin(
+      size(OUT0#)?(d#OUT0 = vector(#size(OUT0#))):(d#OUT0 = 0);
+      size(OUT1#)?(d#OUT1 = vector(#size(OUT1#))):(d#OUT1 = 0);
+    );
+
     nn_display(L) = display(L#,L#_width,L#_height,L#_depth,L#_spectrum);
     nn_display(L,M) = display(L#,M#_width,M#_height,M#_depth,M#_spectrum);
     nn_store(N,L) = store(N#,L#,L#_width,L#_height,L#_depth,L#_spectrum);
@@ -29167,7 +29173,8 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_add_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_add_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_add_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29192,7 +29199,8 @@ nn_append : check "isvarname('$1') && isin(_'$4',_'x',_'y',_'z',_'c')"
   _${nout}_properties="axis="$axis
   _${nout}_forward="begin(nn_append_init_forward("$nout,$nin0,$nin1,$axis"));"\
                    "nn_append_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_append_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_append_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29216,7 +29224,8 @@ nn_avgpool2d : check "isvarname('$1') && isint(${3=2},2)"
   _${nout}_properties="patch_size="${patch_size}x${patch_size}
   _${nout}_forward="begin(nn_avgpool2d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_avgpool2d_forward("$nout,$nin");"
-  _${nout}_backward="nn_avgpool2d_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_avgpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29240,7 +29249,8 @@ nn_avgpool3d : check "isvarname('$1') && isint(${3=2},2)"
   _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
   _${nout}_forward="begin(nn_avgpool3d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_avgpool3d_forward("$nout,$nin");"
-  _${nout}_backward="nn_avgpool3d_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_avgpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29272,7 +29282,8 @@ nn_clone : check "isvarname('$1') && isvarname('$2')"
   _${nout0}_input,_${nout1}_input=$in
   _${nout0}_forward="begin(nn_clone_init_forward("$nout0,$nout1,$nin"));"\
                     "nn_clone_forward("$nout0,$nout1,$nin");"
-  _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
+  _${nout0}_backward="nn_generic_init_backward("$nout0,$nout1");"\
+                     "nn_clone_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29515,7 +29526,8 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
   _${nout}_properties="coordinates=("$x0,$y0,$z0,$c0")x("$x1,$y1,$z1,$c1")"
   _${nout}_forward="begin(nn_crop_init_forward("$nout,$nin,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1,$boundary_conditions"));"\
                    "nn_crop_forward("$nout,$nin");"
-  _${nout}_backward="nn_crop_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_crop_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29542,7 +29554,8 @@ nn_distance : check "isvarname('$1') && ${4=0}>=0"
   _${nout}_properties="metric="${s{$metric>0}}
   _${nout}_forward="begin(nn_distance_init_forward("$nout,$metric"));"\
                    "nn_distance_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_distance_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_distance_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29569,7 +29582,8 @@ nn_div : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_div_init_forward("$out,${nin$isnum0}"));"\
                    "nn_div_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_div_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29592,7 +29606,8 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
   _${nout}_properties="dropout_rate="$dropout_rate
   _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate"));"\
                    "nn_dropout_forward("$nout,$nin");"
-  _${nout}_backward="nn_dropout_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_dropout_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29701,7 +29716,8 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
   _${net}_layer_types.=input,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_forward="begin(nn_input_init_forward("$nout,$out,$width,$height,$depth,$spectrum"));"
-  _${nout}_backward="nn_input_backward("$nout,$out");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_input_backward("$nout,$out");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29748,7 +29764,8 @@ nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3')"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth
-  _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.="begin(nn_loss_binary_crossentropy_init_forward("$nout"));"\
                 "nn_loss_binary_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_binary_crossentropy_end_forward("$nout"));"
@@ -29770,7 +29787,8 @@ nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3')"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth
-  _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.="begin(nn_loss_crossentropy_init_forward("$nout"));"\
                 "nn_loss_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_crossentropy_end_forward("$nout"));"
@@ -29792,7 +29810,8 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth
-  _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_loss_mse_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.="begin(nn_loss_mse_init_forward("$nout"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
@@ -29815,7 +29834,8 @@ nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", metric="$metric
-  _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_loss_normp_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.="begin(nn_loss_normp_init_forward("$nout,$metric"));"\
                 "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_normp_end_forward("$nout"));"
@@ -29837,7 +29857,8 @@ nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3')"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth
-  _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.="begin(nn_loss_softmax_crossentropy_init_forward("$nout"));"\
                 "nn_loss_softmax_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_softmax_crossentropy_end_forward("$nout"));"
@@ -29862,7 +29883,8 @@ nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2)"
   _${nout}_properties="patch_size="${patch_size}x${patch_size}
   _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_maxpool2d_forward("$nout,$nin");"
-  _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_maxpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29886,7 +29908,8 @@ nn_maxpool3d : check "isvarname('$1') && isint(${3=2},2)"
   _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
   _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_maxpool3d_forward("$nout,$nin");"
-  _${nout}_backward="nn_maxpool3d_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_maxpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29913,7 +29936,8 @@ nn_mul : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_mul_init_forward("$out,${nin$isnum0}"));"\
                    "nn_mul_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_mul_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_mul_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -29938,12 +29962,13 @@ nn_nl : check "isvarname('$1')" skip ${3=leakyrelu}
   _${nout}_input=$in
   _${nout}_properties="activation="$activation
   _${nout}_forward="begin(nn_nl_init_forward("$nout,$nin"));"
+  _${nout}_backward="nn_generic_init_backward("$nout");"
   if ['$activation']=='softmax'
     _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_backward("$nout,$nin");"
+    _${nout}_backward.="nn_softmax_backward("$nout,$nin");"
   else
     _${nout}_forward.="nn_nl_forward("$nout,$nin,$activation");"
-    _${nout}_backward="nn_nl_backward("$nout,$nin,$activation");"
+    _${nout}_backward.="nn_nl_backward("$nout,$nin,$activation");"
   fi
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
@@ -30149,7 +30174,8 @@ nn_rename : check "isvarname('$1')"
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"
-  _${nout}_backward="nn_rename_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_rename_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -30259,7 +30285,8 @@ nn_reshape : check "isvarname('$1')"
                 "to output ("${_${nout}_size}")."
   fi
   _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"
-  _${nout}_backward="begin(nn_reshape_init_backward("$nout,$nin"));"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "begin(nn_reshape_init_backward("$nout,$nin"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -30288,7 +30315,8 @@ nn_resize : check "isvarname('$1') && $3>0 && ${4=100%}>0 && ${5=100%}>0 && ${6=
   _${nout}_properties="interpolation="$interpolation
   _${nout}_forward="begin(nn_resize_init_forward("$nout,$nin,$width,$height,$depth,$spectrum,$interpolation"));"\
                    "nn_resize_forward("$nout,$nin");"
-  _${nout}_backward="nn_resize_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_resize_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -30316,7 +30344,8 @@ nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && 
   _${nout}_properties="command='"$command"'"
   _${nout}_forward="begin(nn_run_init_forward("$nout,$nin,'$command',$width,$height,$depth,$spectrum"));"\
                    "nn_run_forward("$nout,$nin");"
-  _${nout}_backward="nn_run_backward("$nout,$nin");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_run_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-2},\"$3\",${4--1} "
@@ -30374,7 +30403,8 @@ nn_split : check "isvarname('$1') && isvarname('$2') && isin(_'$4',_'x',_'y',_'z
   _${nout0}_properties,_${nout1}_properties="axis="$axis
   _${nout0}_forward="begin(nn_split_init_forward("$nout0,$nout1,$nin,$axis,$size0"));"\
                     "nn_split_forward("$nout0,$nout1,$nin");"
-  _${nout0}_backward="nn_split_backward("$nout0,$nout1,$nin");"
+  _${nout0}_backward="nn_generic_init_backward("$nout0,$nout1");"\
+                     "nn_split_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1} "
@@ -30437,7 +30467,8 @@ nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_generic_init_backward("$nout");"\
+                    "nn_sub_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
