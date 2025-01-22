@@ -28966,27 +28966,35 @@ nn_lib :
 
     # split: Split input as two outputs.
     #-----------------------------------
-    nn_split_init_forward(OUT0,OUT1,IN,nb_channels0) = (
-      const OUT0#_width = IN#_width;
-      const OUT0#_height = IN#_height;
-      const OUT0#_depth = IN#_depth;
-      const OUT0#_spectrum = nb_channels0;
-      const OUT1#_width = IN#_width;
-      const OUT1#_height = IN#_height;
-      const OUT1#_depth = IN#_depth;
-      const OUT1#_spectrum = IN#_spectrum - nb_channels0;
+    nn_split_init_forward(OUT0,OUT1,IN,axis,size0) = (
+      const OUT0#_axis = _'#axis';
+      const OUT0#_width = OUT0#_axis==_'x'?size0:IN#_width;
+      const OUT0#_height = OUT0#_axis==_'y'?size0:IN#_height;
+      const OUT0#_depth = OUT0#_axis==_'z'?size0:IN#_depth;
+      const OUT0#_spectrum = OUT0#_axis==_'c'?size0:IN#_spectrum;
+      const OUT1#_width = IN#_width - (OUT0#_axis==_'x'?size0:0);
+      const OUT1#_height = IN#_height - (OUT0#_axis==_'y'?size0:0);
+      const OUT1#_depth = IN#_depth - (OUT0#_axis==_'z'?size0:0);
+      const OUT1#_spectrum = IN#_spectrum - (OUT0#_axis==_'c'?size0:0);
     );
 
     nn_split_forward(OUT0,OUT1,IN) = (
-      const OUT0#_siz0 = OUT0#_width*OUT0#_height*OUT0#_depth*OUT0#_spectrum;
-      OUT0# = IN#[0,OUT0#_siz0];
-      OUT1# = IN#[OUT0#_siz0,OUT1#_width*OUT1#_height*OUT1#_depth*OUT1#_spectrum];
+      OUT0# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+      OUT1# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   IN#_width - OUT1#_width,IN#_height - OUT1#_height,
+                   IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
+                   OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
     );
 
     nn_split_backward(OUT0,OUT1,IN) = (
       d#IN = vector(#size(IN#));
-      copy(d#IN,d#OUT0,size(OUT0#));
-      copy(d#IN[size(OUT0#)],d#OUT1,size(OUT1#));
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT0,0,0,0,0,OUT#0_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT1,IN#_width - OUT1#_width,IN#_height - OUT1#_height,
+                  IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
+           OUT#1_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
     );
 
     # sub: Subtract two inputs.
@@ -30336,23 +30344,25 @@ nn_size :
   }
   u $siz
 
-#@cli nn_split : out0,out1,in,nb_channels0>0
+#@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0
 #@cli : Add a 'split' layer to the current network.
-nn_split : check "isvarname('$1') && isvarname('$2')"
+nn_split : check "isvarname('$1') && isvarname('$2') && isin(_'$4',_'x',_'y',_'z',_'c') && isint($5,1)"
   net,out0,out1=$_nn_network,${1,2}
   if ['$3']=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
-  nb_channels0=$4
+  axis,size0=${4-5}
 
-  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"' "\
-         "and outputs '"$out0"' and '"$out1"'."
+  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
+         "outputs '"$out0"', '"$out1"', axis '"$axis"' and size0 "$size0"."
   _${net}_layer_names.=$out0,$out1,
   _${net}_layer_types.=split,split,
-  _${nout0}_size:=[[${_${nin}_size}][0,3],$nb_channels]
+  ind_axis:=s='$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
+  _${nout0}_size:=s=[${_${nin}_size}];s[$ind_axis]=$size0;s
   _${nout0}_input=$in
-  _${nout1}_size:=[${_${nin}_size}]-[0,0,0,$nb_channels]
+  _${nout1}_size:=s=[${_${nin}_size}];s[$ind_axis]-=$size0;s
   _${nout1}_input=$in
-  _${nout0}_forward="begin(nn_split_init_forward("$nout0,$nout1,$nin,$nb_channels"));"\
+  _${nout0}_properties,_${nout1}_properties="axis="$axis
+  _${nout0}_forward="begin(nn_split_init_forward("$nout0,$nout1,$nin,$axis,$size0"));"\
                     "nn_split_forward("$nout0,$nout1,$nin");"
   _${nout0}_backward="nn_split_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
