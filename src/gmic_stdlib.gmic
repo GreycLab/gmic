@@ -27972,22 +27972,31 @@ nn_lib :
 
     # append: Append two inputs as a new output.
     #--------------------------------------------
-    nn_append_init_forward(OUT,IN0,IN1) = (
-      const OUT#_width = IN0#_width;
-      const OUT#_height = IN0#_height;
-      const OUT#_depth = IN0#_depth;
-      const OUT#_spectrum = IN0#_spectrum + IN1#_spectrum;
+    nn_append_init_forward(OUT,IN0,IN1,axis) = (
+      const OUT#_axis = _'#axis';
+      const OUT#_width = IN0#_width + (OUT#_axis==_'x'?IN1#_width:0);
+      const OUT#_height = IN0#_height + (OUT#_axis==_'y'?IN1#_height:0);
+      const OUT#_depth = IN0#_depth + (OUT#_axis==_'z'?IN1#_depth:0);
+      const OUT#_spectrum = IN0#_spectrum + (OUT#_axis==_'c'?IN1#_spectrum:0);
     );
 
     nn_append_forward(OUT,IN0,IN1) = (
       OUT# = vector(#size(IN0#) + size(IN1#));
-      copy(OUT#,IN0#,size(IN0#));
-      copy(OUT#[size(IN0#)],IN1#,size(IN1#));
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN0#,0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN1#,OUT#_width - IN1#_width,OUT#_height - IN1#_height,
+                OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
+           IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
     );
 
     nn_append_backward(OUT,IN0,IN1) = (
-      d#IN0 = d#OUT[0,size(IN0#)];
-      d#IN1 = d#OUT[size(IN0#),size(IN1#)];
+      d#IN0 = crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                   0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      d#IN1 = crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                   OUT#_width - IN1#_width,OUT#_height - IN1#_height,
+                   OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
+                   IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
     );
 
     # avgpool2d : 2D average pooling.
@@ -28990,11 +28999,11 @@ nn_lib :
     nn_split_backward(OUT0,OUT1,IN) = (
       d#IN = vector(#size(IN#));
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-           d#OUT0,0,0,0,0,OUT#0_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+           d#OUT0,0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
            d#OUT1,IN#_width - OUT1#_width,IN#_height - OUT1#_height,
                   IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
-           OUT#1_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
+           OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
     );
 
     # sub: Subtract two inputs.
@@ -29165,22 +29174,24 @@ nn_add : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_append : out,in0,_in1
+#@cli nn_append : out,in0,in1,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
-#@cli : Default value: 'in1=. (previous layer)'.
-nn_append : check "isvarname('$1')"
+nn_append : check "isvarname('$1') && isin(_'$4',_'x',_'y',_'z',_'c')"
   net,out=$_nn_network,$1
   if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
+  if ['$3']=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  check [${_${nin0}_size}][0,3]==[${_${nin1}_size}][0,3]
+  axis=$4
+  ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
+  check s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];s0[$ind_axis]=s1[$ind_axis]=-1;s0==s1
 
-  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs '"$in0"', '"$in1"' and axis '"$axis"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=append,
-  _${nout}_size:=[${_${nin0}_size}]+[0,0,0,[${_${nin1}_size}][3]]
+  _${nout}_size:=s=[${_${nin0}_size}];s[$ind_axis]+=[${_${nin1}_size}][$ind_axis];s
   _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_append_init_forward("$nout,$nin0,$nin1"));"\
+  _${nout}_properties="axis="$axis
+  _${nout}_forward="begin(nn_append_init_forward("$nout,$nin0,$nin1,$axis"));"\
                    "nn_append_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_append_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
@@ -30351,12 +30362,12 @@ nn_split : check "isvarname('$1') && isvarname('$2') && isin(_'$4',_'x',_'y',_'z
   if ['$3']=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
   axis,size0=${4-5}
+  ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
 
   e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
          "outputs '"$out0"', '"$out1"', axis '"$axis"' and size0 "$size0"."
   _${net}_layer_names.=$out0,$out1,
   _${net}_layer_types.=split,split,
-  ind_axis:=s='$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
   _${nout0}_size:=s=[${_${nin}_size}];s[$ind_axis]=$size0;s
   _${nout0}_input=$in
   _${nout1}_size:=s=[${_${nin}_size}];s[$ind_axis]-=$size0;s
