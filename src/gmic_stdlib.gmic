@@ -705,6 +705,7 @@ reference : skip "${2=}"
 "* 'ispercentage(arg)' returns `1` (true) or `0` (false) whether 'arg' ends with a '%' or not."\n\
 "* 'isvarname(\\'str\\')' returns '0' (false) or '1' (true) whether its string argument would be a valid to name "\
 "a variable or not."\n\
+"* 'isvar(varname)' returns '0' (false) or '1' (true) whether 'varname' is an already defined variable or not."\n\
 "* 'isin(v,a_1,...,a_n)' returns '0' (false) or '1' (true) whether the first argument 'v' appears in the set of other "\
 "argument 'a_i'."\n\
 "* 'isint(x,_xmin,_xmax)' returns '1' (true), if 'x' is an integer in range '[xmin,xmax]', otherwise '0' (false)."\n\
@@ -27971,8 +27972,8 @@ nn_lib :
     );
 
     nn_add_backward(OUT,IN0,IN1) = (
-      !isnum(IN0#)?(d#IN0 = d#OUT);
-      !isnum(IN1#)?(d#IN1 = d#OUT);
+      !isnum(IN0#)?(d#IN0+=d#OUT);
+      !isnum(IN1#)?(d#IN1+=d#OUT);
     );
 
     # append: Append two inputs as a new output.
@@ -28104,6 +28105,7 @@ nn_lib :
       const OUT#_regularization = regularization;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      nn_generic_init_backward(OUT);
     );
 
     nn_conv2d_backward(OUT,IN) = (
@@ -28220,6 +28222,7 @@ nn_lib :
       const OUT#_regularization = regularization;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      nn_generic_init_backward(OUT);
     );
 
     nn_conv3d_backward(OUT,IN) = (
@@ -28417,6 +28420,7 @@ nn_lib :
       const OUT#_regularization = regularization;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      nn_generic_init_backward(OUT);
     );
 
     nn_fc_backward(OUT,IN) = (
@@ -28692,6 +28696,7 @@ nn_lib :
       batch_d#OUT#_beta = vector(#size(OUT#_avg));
       batch_#OUT#_avg = vector(#size(OUT#_avg));
       batch_#OUT#_var = vector(#size(OUT#_avg));
+      nn_generic_init_backward(OUT);
     );
 
     nn_normalize_backward(OUT,IN) = (
@@ -28792,6 +28797,7 @@ nn_lib :
         xi = int(x/N); yi = int(y/N); ci = fx + N*fy + N2*c;
         xi + w/N*yi + wh/N2*z + whd/N2*ci',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
+      nn_generic_init_backward(OUT);
     );
 
     nn_patchdown2d_backward(OUT,IN) = (
@@ -28822,6 +28828,7 @@ nn_lib :
         xi = int(x/N); yi = int(y/N); zi = int(z/N); ci = fx + N*fy + N2*fz + N3*c;
         xi + w/N*yi + wh/N2*zi + whd/N3*ci',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
+      nn_generic_init_backward(OUT);
     );
 
     nn_patchdown3d_backward(OUT,IN) = (
@@ -28852,6 +28859,7 @@ nn_lib :
         fx = N*x + c%N; fy = N*y + int(c/N)%N;
         fx + N*w*fy + N2*wh*z + N2*whd*int(c/N2)',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
+      nn_generic_init_backward(OUT);
     );
 
     nn_patchup2d_backward(OUT,IN) = (
@@ -28882,6 +28890,7 @@ nn_lib :
         fx = N*x + c%N; fy = N*y + int(c/N)%N; fz = N*z + int(c/N2)%N;
         fx + N*w*fy + N2*wh*fz + N3*whd*int(c/N3)',
         IN#_width,IN#_height,IN#_depth,IN#_spectrum);
+      nn_generic_init_backward(OUT);
     );
 
     nn_patchup3d_backward(OUT,IN) = (
