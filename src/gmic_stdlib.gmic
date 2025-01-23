@@ -28331,13 +28331,14 @@ nn_lib :
     );
 
     nn_div_forward(OUT,IN0,IN1) = (
-      OUT# = IN0#/IN1#;
+      OUT#_nonzero_IN1 = (1e-8 + abs(IN1#))*sign(IN1#);
+      OUT# = IN0#/OUT#_nonzero_IN1;
     );
 
     nn_div_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
-      !isnum(IN0#)?(d#IN0+=d#OUT/IN#1);
-      !isnum(IN1#)?(d#IN1+=-d#OUT*IN0#/(IN1#^2));
+      !isnum(IN0#)?(d#IN0+=d#OUT/OUT#_nonzero_IN1);
+      !isnum(IN1#)?(d#IN1+=-d#OUT*IN0#/OUT#_nonzero_IN1^2);
     );
 
     # distance : Distance between two inputs.
@@ -28351,18 +28352,18 @@ nn_lib :
     );
 
     nn_distance_forward(OUT,IN0,IN1) = (
-      OUT#_diff = IN0# - IN1#;
-      OUT# = [ OUT#_metric>0?norm#OUT#_metric(OUT#_diff):norm(OUT#_diff)^2 ];
+      OUT#_delta = IN0# - IN1#;
+      OUT# = [ OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2 ];
     );
 
     nn_distance_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
       !OUT_#metric?( # L2-squared
-        d#IN0+=2*OUT#_diff;
+        d#IN0+=2*OUT#_delta;
       ):OUT#_metric==2?( # L2
-        d#IN0+=OUT#_diff/(1e-8 + OUT#[0]);
+        d#IN0+=OUT#_delta/(1e-8 + OUT#[0]);
       ):( # L
-        d#IN0+=(abs(OUT#_diff)/(1e-8 + OUT#[0]))^(OUT#_metric - 1)*sign(OUT#_diff);
+        d#IN0+=(abs(OUT#_delta)/(1e-8 + OUT#[0]))^(OUT#_metric - 1)*sign(OUT#_delta);
       );
       d#IN1+=-d#IN0;
     );
