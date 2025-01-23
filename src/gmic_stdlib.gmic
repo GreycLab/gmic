@@ -28105,7 +28105,6 @@ nn_lib :
     );
 
     nn_conv2d_backward(OUT,IN) = (
-      nn_define_backward(IN#);
 
       # Handle strided convolution case.
       OUT#_stride==1?(
@@ -28116,6 +28115,7 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN.
+      nn_define_backward(IN#);
       repeat (IN#_spectrum,_nn_k,
         draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
              correlate(d#OUT#_prestrided,
@@ -28129,7 +28129,8 @@ nn_lib :
                        OUT#_dilation,OUT#_dilation,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,0,
                        IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,-1);
+             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
+             -1); # Add to d#IN
       );
 
       # Compute dLOSS/dbiases.
@@ -28221,7 +28222,6 @@ nn_lib :
     );
 
     nn_conv3d_backward(OUT,IN) = (
-      nn_define_backward(IN#);
 
       # Handle strided convolution case.
       OUT#_stride==1?(
@@ -28232,6 +28232,7 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN.
+      nn_define_backward(IN#);
       repeat (IN#_spectrum,_nn_k,
         draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
              correlate(d#OUT#_prestrided,
@@ -28245,7 +28246,8 @@ nn_lib :
                        OUT#_dilation,OUT#_dilation,OUT#_dilation,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
                        IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,-1);
+             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
+             -1); # Add to d#IN
       );
 
       # Compute dLOSS/dbiases.
