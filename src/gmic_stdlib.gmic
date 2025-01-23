@@ -29126,7 +29126,7 @@ nn_lib :
 
     nn_loss_normp_forward(L,IN,TRUTH) = (
       L#_delta = IN# - TRUTH;
-      L# = (!L#_metric?norm(L#_delta)^2:norm#L#_metric(L#_delta))/size(IN#);
+      L# = norm#L#_metric(L#_delta)/size(IN#);
       batch_#L+=L#;
     );
 
@@ -29138,12 +29138,14 @@ nn_lib :
 
     nn_loss_normp_backward(L,IN,TRUTH) = (
       nn_define_backward(IN#);
-      !L#_metric?( # L2-squared (MSE)
-        d#IN = 2*L#_delta;
-      ):L#_metric==2?( # L2
-        d#IN/=(1e-8 + L#);
-      ):( # Lp
-        d#IN+=(abs(L#_delta)/(1e-8 + L#))^(L#_metric - 1)*sign(L#_delta);
+      L#_metric==2?( # L2
+        d#IN+=L#_delta/(1e-8 + L#);
+      ):L#_metric==1?( # L1
+        d#IN+=sign(L#_delta);
+      ):L#_metric>1?( # Lp with p>1
+        d#IN+= (1e-8 + L#)^(1/L#_metric - 1)*abs(L#_delta)^(L#_metric - 1)*sign(L#_delta);
+      ):( # Lp with 0<p<1
+        d#IN+= L#^(1/L#_metric - 1)*(1e-8 + abs(L#_delta))^(L#_metric - 1)*sign(L#_delta);
       );
     );
 
@@ -29824,10 +29826,10 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3')"
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
-#@cli nn_loss_normp : out,in,ground_truth,_metric={ 0:squared-L2 (MSE) | p>0:Lp-norm }
-#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_p).
+#@cli nn_loss_normp : out,in,ground_truth,_metric>0
+#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_metric).
 #@cli : Default value: 'metric=1'.
-nn_loss_normp : check "isvarname('$1') && isvarname('$3') && isint(${4=1},0)"
+nn_loss_normp : check "isvarname('$1') && isvarname('$3') && ${4=1}>0"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
