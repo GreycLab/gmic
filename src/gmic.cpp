@@ -5671,25 +5671,26 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         gmic_simple_command("abs",abs,"Compute pointwise absolute value of image%s.");
 
         // Absolute value cut.
-/*        if (!std::strcmp("abscut",command)) {
+        if (!std::strcmp("abscut",command)) {
           gmic_substitute_args(false);
-          int rounding_type = 0;
-          value = 1;
-          if ((cimg_sscanf(argument,"%lf%c",
-                           &value,&end)==1 ||
-               cimg_sscanf(argument,"%lf,%d%c",
-                           &value,&rounding_type,&end)==2) &&
-              value>=0 && rounding_type>=-1 && rounding_type<=1) ++position;
-          else { value = 1; rounding_type = 0; }
-          print(0,"Round values of image%s by %g and %s rounding.",
-                gmic_selection.data(),
-                value,
-                rounding_type<0?"backward":rounding_type>0?"forward":"nearest");
-          cimg_forY(selection,l) gmic_apply(round(value,rounding_type),true);
+          vmin = -cimg::type<double>::inf();
+          vmax = cimg::type<double>::inf();
+          value = 0;
+          if (cimg_sscanf(argument,"%lf%c",
+                          &vmin,&end)==1 ||
+              cimg_sscanf(argument,"%lf,%lf%c",
+                          &vmin,&vmax,&end)==2 ||
+              cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                          &vmin,&vmax,&value,&end)==3) {
+            print(0,"Cut absolute values of image%s in range [%g,%g], with offset %g.",
+                  gmic_selection.data(),
+                  vmin,vmax,value);
+            cimg_forY(selection,l) gmic_apply(abscut(vmin,vmax,value),true);
+          } else arg_error("abscut");
           is_change = true;
+          ++position;
           continue;
         }
-*/
 
         // Bitwise and.
         gmic_arithmetic_command("and",
