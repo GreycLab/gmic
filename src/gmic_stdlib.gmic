@@ -27706,7 +27706,7 @@ nn_lib :
     # sinc: Sinc.
     #------------
     nn_activation_sinc(z) = sinc(z);
-    nn_activation_d_sinc(z) = ((cos(z) - sinc(z))/(1e-8 + z));
+    nn_activation_d_sinc(z) = ((cos(z) - sinc(z))/abscut(z,1e-8));
 
     # sqr: Square.
     #-------------
@@ -28340,7 +28340,7 @@ nn_lib :
     );
 
     nn_div_forward(OUT,IN0,IN1) = (
-      OUT#_nonzero_IN1 = (1e-8 + abs(IN1#))*sign(IN1#);
+      OUT#_nonzero_IN1 = abscut(IN1#,1e-8);
       OUT# = IN0#/OUT#_nonzero_IN1;
     );
 
@@ -28674,8 +28674,7 @@ nn_lib :
       OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_avg = crop(##OUT#_ind,2,1);
       OUT#_var = crop(##OUT#_ind,3,1);
-      OUT#_std = sqrt(OUT#_var);
-      OUT#_std+=1e-8;
+      OUT#_std = sqrt(OUT#_var) + 1e-8;
     );
 
     nn_normalize_forward(OUT,IN) = (
@@ -29063,8 +29062,8 @@ nn_lib :
     );
 
     nn_loss_binary_crossentropy_forward(L,IN,TRUTH) = (
-      L#_epsiloned = vmax(IN#,1e-32);
-      L#_epsiloned1 = vmax(1 - IN#,1e-32);
+      L#_epsiloned = vmax(IN#,1e-8);
+      L#_epsiloned1 = vmax(1 - IN#,1e-8);
       L# = -sum(TRUTH*log(L#_epsiloned) + (1 - TRUTH)*log(L#_epsiloned1))/size(IN#)*L#_weight;
       batch_#L+=L#;
     );
