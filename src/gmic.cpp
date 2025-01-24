@@ -2438,7 +2438,7 @@ static void *gmic_parallel(void *arg) {
 const char *gmic::builtin_command_names[] = {
 
   // Commands of length>3.
-  "acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
+  "abscut","acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
   "bilateral","blur","boxfilter","break",
   "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
@@ -5669,6 +5669,27 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Absolute value.
         gmic_simple_command("abs",abs,"Compute pointwise absolute value of image%s.");
+
+        // Absolute value cut.
+/*        if (!std::strcmp("abscut",command)) {
+          gmic_substitute_args(false);
+          int rounding_type = 0;
+          value = 1;
+          if ((cimg_sscanf(argument,"%lf%c",
+                           &value,&end)==1 ||
+               cimg_sscanf(argument,"%lf,%d%c",
+                           &value,&rounding_type,&end)==2) &&
+              value>=0 && rounding_type>=-1 && rounding_type<=1) ++position;
+          else { value = 1; rounding_type = 0; }
+          print(0,"Round values of image%s by %g and %s rounding.",
+                gmic_selection.data(),
+                value,
+                rounding_type<0?"backward":rounding_type>0?"forward":"nearest");
+          cimg_forY(selection,l) gmic_apply(round(value,rounding_type),true);
+          is_change = true;
+          continue;
+        }
+*/
 
         // Bitwise and.
         gmic_arithmetic_command("and",
