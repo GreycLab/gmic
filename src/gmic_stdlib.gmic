@@ -5275,17 +5275,19 @@ _input_glob :
     a x => "$1"
   }
 
-#@cli input_cached : "basename.ext",_try_downloading_from_gmic_server={ 0 | 1 }
+#@cli input_cached : "basename.ext",_downloading_from_gmic_server
 #@cli : Input specified filename, assumed to be stored in one of the G'MIC resource folder.
 #@cli : If file not found and 'try_downloading=1', file is downloaded from the G'MIC server and stored
 #@cli : in the '${-path_cache}' folder.
 #@cli : This command returns the full path to the corresponding file.
+#@cli : 'downloading_from_gmic_server' can be { 0:no | 1:yes, if file not found | 2:yes, \
+# if file not in regular cache folder }.
 #@cli : Default value: 'try_downloading_from_gmic_server=1'.
-+input_cached : check "isbool(${2=1})"
++input_cached : check "isint(${2=1},0,2)"
   basename "$1" basename=${}
   e[^-1] "Input cached file '"$basename"'."
-
   path_cached_file "$1" file=${}
+  if "$2==2 && find(['"$file"'],['"{/${-path_cache}}"'])<0" file= fi
   if ['$file']!=0 $file
   elif $2 # Try downloading from the G'MIC server
     url=https://gmic.eu/"$1"
