@@ -18693,28 +18693,24 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
     onfail error[0--5] "Command 'denoise_cnn': Unable to load network file 'gmic_denoise_cnn.gmz'."
   } fi
   l[] {
-    $_denoise_cnn
-    replace_str. "nn_input IN,64,64,1,4","nn_input IN,$2,$2,1,4"
-    replace_str. "nn_crop IN_RGB,IN1,0,0,0,0,63,63,0,2,0","nn_crop IN_RGB,IN1,0,0,0,0,"{[$2,$2]-1}",0,2,0"
-    run {t}
-    rm
+    $_denoise_cnn replace_str. "64,64,1","$2,$2,1" run {t} rm
   }
-  overlap:=floor($2/4)
+  patch_size,overlap:=$2,floor($2/4)
 
   foreach { split_opacity l[0] {
     slices 50% w,h,s:=w,h,s to_rgb
-    img2patches $2,$overlap,3
-    if $1 100%,100%,1,1,{10*$1} a[-2,-1] c
-    else l. { s z foreach { 100%,100%,1,1,{10*${-std_noise}} a c } a z }
-    fi
-    100%,100%,100%,3
+    img2patches $patch_size,$overlap,3
+    if $1 1,1,100%,1,$1 else +l. { s z foreach { (${-std_noise}) k. } a z } fi # Noise estimation
+    $patch_size,$patch_size,100%,3
+
     $_denoise_cnn
     1,1,{0,d},1,:${-nn_lib}"
       IN = crop(#0,0,0,z,w#0,h#0,1)/255;
+      NL = [ i[#1,z] ];
       "${_denoise_forward}"
       !t?critical(run('progress ',100*z*n/d));
-      draw(#1,denoise_OUT,0,0,z,w#1,h#1,1)"
-    k[1] r 100%,100%,100%,$s patches2img $w,$h,$overlap,50% * 255 c 0,255
+      draw(#2,denoise_OUT,0,0,z,w#2,h#2,1)"
+    k[2] r 100%,100%,100%,$s patches2img $w,$h,$overlap,50% * 255 c 0,255
   } a c }
 
 #@cli denoise_patchpca : _strength>=0,_patch_size>0,_lookup_size>0,_spatial_sampling>0
@@ -56685,10 +56681,10 @@ fx_smooth_antialias :
 fx_smooth_bilateral : skip ${5=0},${6=0}
   ac "repeat $3 { bilateral $1,$2 }",$4
 
-#@gui Denoise : fx_denoise,fx_denoise_preview(0)
+#@gui Denoise [CNN] : fx_denoise,fx_denoise_preview(0)
 #@gui : Automatic Noise Level Estimation = bool(1)
-#@gui : Strength (%) = float(0,0,200)_1
-#@gui : Opacity (%) = float(75,0,100)
+#@gui : Strength (%) = float(0,0,100)_1
+#@gui : Opacity (%) = float(100,0,100)
 #@gui : Iterations = int(1,1,5)
 #@gui : Preview = bool(1)
 #@gui : sep = separator()
@@ -56704,7 +56700,7 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 fx_denoise :
   if $6 delete ${"path_cached_file gmic_denoise_cnn.gmz"} fi
   repeat $4 {
-    +denoise_cnn {$1?0:max(1,$2)},64
+    +denoise_cnn {$1?0:max(1,$2/2)},64
     blend alpha,$3%
   }
 
