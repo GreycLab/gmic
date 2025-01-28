@@ -29066,132 +29066,152 @@ nn_lib :
 
     # binary_crossentropy : Binary cross-entropy.
     #--------------------------------------------
-    nn_loss_binary_crossentropy_init_forward(L,weight) = (
-      const L#_weight = weight;
-      batch_#L = 0;
+    nn_loss_binary_crossentropy_init_forward(OUT,weight) = (
+      const OUT#_width = 1;
+      const OUT#_height = 1;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+      const OUT#_weight = weight;
+      batch_#OUT = 0;
     );
 
-    nn_loss_binary_crossentropy_forward(L,IN,TRUTH) = (
-      L#_epsiloned = vmax(IN#,1e-8);
-      L#_epsiloned1 = vmax(1 - IN#,1e-8);
-      L# = -sum(TRUTH*log(L#_epsiloned) + (1 - TRUTH)*log(L#_epsiloned1))/size(IN#)*L#_weight;
-      batch_#L+=L#;
+    nn_loss_binary_crossentropy_forward(OUT,IN,TRUTH) = (
+      OUT#_epsiloned = vmax(IN#,1e-8);
+      OUT#_epsiloned1 = vmax(1 - IN#,1e-8);
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1))/size(IN#)*OUT#_weight;
+      batch_#OUT+=OUT#_single;
     );
 
-    nn_loss_binary_crossentropy_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
+    nn_loss_binary_crossentropy_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
     );
 
-    nn_loss_binary_crossentropy_backward(L,IN,TRUTH) = (
+    nn_loss_binary_crossentropy_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(IN# - TRUTH)/(L#_epsiloned*L#_epsiloned1)*L#_weight;
+      d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
     );
 
     # crossentropy : Cross-entropy.
     #------------------------------
-    nn_loss_crossentropy_init_forward(L,weight) = (
-      const L#_weight = weight;
-      batch_#L = 0;
+    nn_loss_crossentropy_init_forward(OUT,weight) = (
+      const OUT#_width = 1;
+      const OUT#_height = 1;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+      const OUT#_weight = weight;
+      batch_#OUT = 0;
     );
 
-    nn_loss_crossentropy_forward(L,IN,TRUTH) = (
-      L#_epsiloned = vmax(IN#,1e-8);
-      L# = -sum(TRUTH*log(L#_epsiloned))/size(IN#)*L#_weight;
-      batch_#L+=L#;
+    nn_loss_crossentropy_forward(OUT,IN,TRUTH) = (
+      OUT#_epsiloned = vmax(IN#,1e-8);
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned))/size(IN#)*OUT#_weight;
+      batch_#OUT+=OUT#_single;
     );
 
-    nn_loss_crossentropy_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
+    nn_loss_crossentropy_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
     );
 
-    nn_loss_crossentropy_backward(L,IN,TRUTH) = (
+    nn_loss_crossentropy_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=-TRUTH/L#_epsiloned*L#_weight;
+      d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
     );
 
     # mse : Mean-squared error.
     #--------------------------
-    nn_loss_mse_init_forward(L,weight) = (
-      const L#_weight = weight;
-      batch_#L = 0;
+    nn_loss_mse_init_forward(OUT,weight) = (
+      const OUT#_width = 1;
+      const OUT#_height = 1;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+      const OUT#_weight = weight;
+      batch_#OUT = 0;
     );
 
-    nn_loss_mse_forward(L,IN,TRUTH) = (
-      L#_delta = IN# - TRUTH;
-      L# = norm(L#_delta)^2/size(IN#)*L#_weight;
-      batch_#L+=L#;
+    nn_loss_mse_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm(OUT#_delta)^2/size(IN#)*OUT#_weight;
+      batch_#OUT+=OUT#_single;
     );
 
-    nn_loss_mse_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
+    nn_loss_mse_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
     );
 
-    nn_loss_mse_backward(L,IN,TRUTH) = (
+    nn_loss_mse_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=2*L#_delta*L#_weight;
+      d#IN+=2*OUT#_delta*OUT#_weight;
     );
 
     # normp : p-norm.
     #-----------------
-    nn_loss_normp_init_forward(L,metric,weight) = (
-      const L#_metric = metric;
-      const L#_weight = weight;
-      batch_#L = 0;
+    nn_loss_normp_init_forward(OUT,metric,weight) = (
+      const OUT#_width = 1;
+      const OUT#_height = 1;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+      const OUT#_metric = metric;
+      const OUT#_weight = weight;
+      batch_#OUT = 0;
     );
 
-    nn_loss_normp_forward(L,IN,TRUTH) = (
-      L#_delta = IN# - TRUTH;
-      L# = norm#L#_metric(L#_delta)/size(IN#)*L#_weight;
-      batch_#L+=L#;
+    nn_loss_normp_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm#OUT#_metric(OUT#_delta)/size(IN#)*OUT#_weight;
+      batch_#OUT+=OUT#_single;
     );
 
-    nn_loss_normp_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
+    nn_loss_normp_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
     );
 
-    nn_loss_normp_backward(L,IN,TRUTH) = (
+    nn_loss_normp_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      L#_metric==2?( # L2
-        d#IN+=L#_delta/(1e-8 + L#)*L#_weight;
-      ):L#_metric==1?( # L1
-        d#IN+=sign(L#_delta)*L#_weight;
-      ):L#_metric>1?( # Lp with p>1
-        d#IN+=(1e-8 + L#)^(1/L#_metric - 1)*abs(L#_delta)^(L#_metric - 1)*sign(L#_delta)*L#_weight;
+      OUT#_metric==2?( # L2
+        d#IN+=OUT#_delta/(1e-8 + OUT#)*OUT#_weight;
+      ):OUT#_metric==1?( # L1
+        d#IN+=sign(OUT#_delta)*OUT#_weight;
+      ):OUT#_metric>1?( # Lp with p>1
+        d#IN+=(1e-8 + OUT#)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
       ):( # Lp with 0<p<1
-        d#IN+=L#^(1/L#_metric - 1)*(1e-8 + abs(L#_delta))^(L#_metric - 1)*sign(L#_delta)*L#_weight;
+        d#IN+=OUT#^(1/OUT#_metric - 1)*(1e-8 + abs(OUT#_delta))^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
       );
     );
 
     # softmax_crossentropy : Softmax + cross entropy.
     #------------------------------------------------
-    nn_loss_softmax_crossentropy_init_forward(L,weight) = (
-      const L#_weight = weight;
-      batch_#L = 0;
+    nn_loss_softmax_crossentropy_init_forward(OUT,weight) = (
+      const OUT#_width = 1;
+      const OUT#_height = 1;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+      const OUT#_weight = weight;
+      batch_#OUT = 0;
     );
 
-    nn_loss_softmax_crossentropy_forward(L,IN,TRUTH) = (
-      L#_softmax = vmax(softmax(IN#),1e-8);
-      L# = -sum(TRUTH*log(L#_softmax))/size(IN#)*L#_weight;
-      batch_#L+=L#;
+    nn_loss_softmax_crossentropy_forward(OUT,IN,TRUTH) = (
+      OUT#_softmax = vmax(softmax(IN#),1e-8);
+      OUT#_single = -sum(TRUTH*log(OUT#_softmax))/size(IN#)*OUT#_weight;
+      batch_#OUT+=OUT#_single;
     );
 
-    nn_loss_softmax_crossentropy_end_forward(L) = (
-      merge(batch_#L,+);
-      batch_#L/=nn_batch_size;
-      L# = batch_#L;
+    nn_loss_softmax_crossentropy_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
     );
 
-    nn_loss_softmax_crossentropy_backward(L,IN,TRUTH) = (
+    nn_loss_softmax_crossentropy_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(L#_softmax - TRUTH)*L#_weight;
+      d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
 #@cli nn_add : out,in0,_in1
