@@ -49,6 +49,8 @@ Source: build64-gimp\gmic_lightleaks.gmz; DestDir: {userappdata}\gmic; Flags: ig
 Source: build64-gimp\gmic_scale2x_cnn.gmz; DestDir: {userappdata}\gmic; Flags: ignoreversion
 
 Source: build64-gimp\libc++.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libcrypto-3-x64.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libcurl-4.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libdouble-conversion.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3_threads-3.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3-3.dll; DestDir: {app}; Flags: ignoreversion
@@ -58,6 +60,10 @@ Source: build64-gimp\libicuuc75.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libmd4c.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libomp.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libpcre2-16-0.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libpng16-16.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libssh2-1.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libssl-3-x64.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libunistring-5.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Core.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Gui.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\Qt5Network.dll; DestDir: {app}; Flags: ignoreversion
