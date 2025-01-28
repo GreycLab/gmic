@@ -29066,19 +29066,8 @@ nn_lib :
 
     # add : Sum of losses.
     #---------------------
-    nn_loss_add_init_forward(OUT) = (
-      batch_#OUT = 0;
-    );
-
-    nn_loss_add_forward(OUT,IN0,IN1) = (
-      OUT#_single = IN0#_single + IN1#_single;
-      batch_#OUT+=OUT#_single;
-    );
-
-    nn_loss_add_end_forward(OUT) = (
-      merge(batch_#OUT,+);
-      batch_#OUT/=nn_batch_size;
-      OUT# = batch_#OUT;
+    nn_loss_add_end_forward(OUT,IN0,IN1) = (
+      OUT# = IN0# + IN1#;
     );
 
     # binary_crossentropy : Binary cross-entropy.
@@ -29811,18 +29800,15 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
 nn_loss_add : check "isvarname('$1')"
   net,out=$_nn_network,$1
   if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$2 fi
+  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
-  _${nout}_input=$in0,in1
-  _${nout}_properties="ground_truth="$ground_truth
-  _${nout}_loss="begin(nn_loss_add_init_forward("$nout"));"\
-                "nn_loss_add_forward("$nout,$nin0,$nin1");"\
-                "end(nn_loss_add_end_forward("$nout"));"
+  _${nout}_input=$in0,$in1
+  _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nin0,$nin1"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
