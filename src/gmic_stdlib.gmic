@@ -29064,13 +29064,26 @@ nn_lib :
     # Loss functions.
     #----------------
 
+    # add : Sum of losses.
+    #---------------------
+    nn_loss_add_init_forward(OUT) = (
+      batch_#OUT = 0;
+    );
+
+    nn_loss_add_forward(OUT,IN0,IN1) = (
+      OUT#_single = IN0#_single + IN1#_single;
+      batch_#OUT+=OUT#_single;
+    );
+
+    nn_loss_add_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
     # binary_crossentropy : Binary cross-entropy.
     #--------------------------------------------
     nn_loss_binary_crossentropy_init_forward(OUT,weight) = (
-      const OUT#_width = 1;
-      const OUT#_height = 1;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
@@ -29096,10 +29109,6 @@ nn_lib :
     # crossentropy : Cross-entropy.
     #------------------------------
     nn_loss_crossentropy_init_forward(OUT,weight) = (
-      const OUT#_width = 1;
-      const OUT#_height = 1;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
@@ -29124,10 +29133,6 @@ nn_lib :
     # mse : Mean-squared error.
     #--------------------------
     nn_loss_mse_init_forward(OUT,weight) = (
-      const OUT#_width = 1;
-      const OUT#_height = 1;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
@@ -29152,10 +29157,6 @@ nn_lib :
     # normp : p-norm.
     #-----------------
     nn_loss_normp_init_forward(OUT,metric,weight) = (
-      const OUT#_width = 1;
-      const OUT#_height = 1;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
       const OUT#_metric = metric;
       const OUT#_weight = weight;
       batch_#OUT = 0;
@@ -29189,10 +29190,6 @@ nn_lib :
     # softmax_crossentropy : Softmax + cross entropy.
     #------------------------------------------------
     nn_loss_softmax_crossentropy_init_forward(OUT,weight) = (
-      const OUT#_width = 1;
-      const OUT#_height = 1;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
@@ -29807,6 +29804,28 @@ nn_input : check "isvarname('$1') && isint($2,1) && isint(${3=1},1) && isint(${4
     }
     k[$sel]
   }
+
+#@cli nn_loss_add : out,in0,_in1
+#@cli : Add a 'add' loss to the current network (sum of losses).
+#@cli : Default value: 'in1=. (previous loss)'.
+nn_loss_add : check "isvarname('$1')"
+  net,out=$_nn_network,$1
+  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$2 fi
+  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+
+  e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_add,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in0,in1
+  _${nout}_properties="ground_truth="$ground_truth
+  _${nout}_loss="begin(nn_loss_add_init_forward("$nout"));"\
+                "nn_loss_add_forward("$nout,$nin0,$nin1");"\
+                "end(nn_loss_add_end_forward("$nout"));"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_previous_layer=$out
 
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
