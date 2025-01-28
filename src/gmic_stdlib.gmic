@@ -27819,7 +27819,7 @@ nn_lib :
       nn_scheduler_#S#_update(#T,#L);
       i[##T#_ind,0] = ++nn_iteration;
       i[##T#_ind,1] = nn_learning_rate;
-      i[##T#_ind,3] = L#[0];
+      i[##T#_ind,3] = L#;
       i[##T#_ind,4] = min(nn_best_loss,L#);
     );
 
@@ -29085,7 +29085,7 @@ nn_lib :
     nn_loss_binary_crossentropy_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
-      OUT# = [ batch_#OUT ];
+      OUT# = batch_#OUT;
     );
 
     nn_loss_binary_crossentropy_backward(OUT,IN,TRUTH) = (
@@ -29113,7 +29113,7 @@ nn_lib :
     nn_loss_crossentropy_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
-      OUT# = [ batch_#OUT ];
+      OUT# = batch_#OUT;
     );
 
     nn_loss_crossentropy_backward(OUT,IN,TRUTH) = (
@@ -29141,7 +29141,7 @@ nn_lib :
     nn_loss_mse_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
-      OUT# = [ batch_#OUT ];
+      OUT# = batch_#OUT;
     );
 
     nn_loss_mse_backward(OUT,IN,TRUTH) = (
@@ -29170,7 +29170,7 @@ nn_lib :
     nn_loss_normp_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
-      OUT# = [ batch_#OUT ];
+      OUT# = batch_#OUT;
     );
 
     nn_loss_normp_backward(OUT,IN,TRUTH) = (
@@ -29206,7 +29206,7 @@ nn_lib :
     nn_loss_softmax_crossentropy_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
-      OUT# = [ batch_#OUT ];
+      OUT# = batch_#OUT;
     );
 
     nn_loss_softmax_crossentropy_backward(OUT,IN,TRUTH) = (
@@ -29824,10 +29824,11 @@ nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_binary_crossentropy_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_binary_crossentropy_init_forward("$nout,$weight"));"\
                 "nn_loss_binary_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_binary_crossentropy_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
@@ -29847,10 +29848,11 @@ nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum(${4=1}
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_crossentropy_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_crossentropy_init_forward("$nout,$weight"));"\
                 "nn_loss_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_crossentropy_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
@@ -29870,10 +29872,11 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_mse_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$weight"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
@@ -29893,10 +29896,11 @@ nn_loss_normp : check "isvarname('$1') && isvarname('$3') && ${4=1}>0 && isnum($
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", metric="$metric", weight="$weight
-  _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_normp_init_forward("$nout,$metric,$weight"));"\
+  _${nout}_loss="begin(nn_loss_normp_init_forward("$nout,$metric,$weight"));"\
                 "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_normp_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
@@ -29915,10 +29919,11 @@ nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3') && isnu
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.="begin(nn_loss_softmax_crossentropy_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_softmax_crossentropy_init_forward("$nout,$weight"));"\
                 "nn_loss_softmax_crossentropy_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_softmax_crossentropy_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
