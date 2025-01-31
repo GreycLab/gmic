@@ -57301,48 +57301,51 @@ fx_extrude25d :
     shear_factor:=1-$shear%
 
     # Transform input layer as a binary shape (with possible anti-aliasing).
-    if isin(s,2,4) channels. 100% else norm. fi
+    is_alpha:=isin(s,2,4)
+    if $is_alpha s. c,-{s-1} n. 0,1 if iM k. else rm. is_alpha=0 fi fi
+    if !$is_alpha norm. n. 0,1 fi
     if $angle rotate. $angle,1,1 fi
     if $shear r. 100%,{max(1,$shear_factor*h)},1,100% fi
-    if $negate negate. fi
-    if h>1 autocrop fi
-    if w
-      n. 0,1
+    if $negate negate. else autocrop. fi
+    frame. xy,1,{$negate?1:0}
 
-      # Estimate continuous field of normal vectors.
-      +ge[0] 20% l. {
-        edgels -1
-        foreach {
-          s c,-2 channels. 0,1 f. "arg0(i0,[1,0],[0,1],[-1,0],[0,-1])"
-          guided. $normal_smoothness,100 orientation. a c
-        }
-        a y
+    # Estimate continuous field of normal vectors.
+    +ge[0] 20% l. {
+      edgels -1
+      foreach {
+        s c,-2 channels. 0,1 f. "arg0(i0,[1,0],[0,1],[-1,0],[0,-1])"
+        guided. $normal_smoothness,100 orientation. a c
       }
+      a y
+    }
 
-      # Render colored sides of shape object.
-      {0,[w,h]},1,4
-        eval.. "begin(
-          colr = [ "$Rr,$Gr,$Br" ];
-          colb = [ "$Rb,$Gb,$Bb" ];
-          coll = [ "$Rl,$Gl,$Bl" ];
-          const N = max(1,20*(1 - $shading%^0.5));
-        );
-        ar = max(0,i2)^N;
-        ab = max(0,i3)^N;
-        al = max(0,-i2)^N;
-        col = (ar*colr + ab*colb + al*coll)/max(1e-8,ar + ab + al);
-        I(#-1,i0,i1) = [ col,1 ]"
-      rm..
-      s. c,-3 . dilate.. 11 -[-2,-1] inpaint.. .,0,1 rm. # Perform dilation of side colors
-      to_a.
+    # Render colored sides of shape object.
+    {0,[w,h]},1,4
+      eval.. "begin(
+        colr = [ "$Rr,$Gr,$Br" ];
+        colb = [ "$Rb,$Gb,$Bb" ];
+        coll = [ "$Rl,$Gl,$Bl" ];
+        const N = max(1,20*(1 - $shading%^0.5));
+      );
+      ar = max(0,i2)^N;
+      ab = max(0,i3)^N;
+      al = max(0,-i2)^N;
+      col = (ar*colr + ab*colb + al*coll)/max(1e-8,ar + ab + al);
+      x = i0; y = i1;
+      x && y && x<w#-1-1 && y<h#-1-1?(I(#-1,i0,i1) = [ col,1 ])"
+    rm..
 
-      # Render 2.5D extruded view.
-      depth:=int(h*$depth%/max(0.01,$shear_factor))
-      {0,[w,h+$depth]},1,4
-      1,$depth,1,1,">begin(M = crop(#0); S = crop(#1)); draw(#-1,S,0,$depth - y,0,0,w#1,h#1,1,s#1,1,M)" rm.
-      ($Rt^$Gt^$Bt^255) r. [0],[0],1,4 j.. .,0,0,0,0,1,[0] rm. # Add top face
-      k. c 0,255
-    fi
+    s. c,-3 . dilate.. 11 -[-2,-1] inpaint.. .,0,1 rm. # Perform dilation of side colors
+    to_a.
+    if $negate line. 0,100%,100%,100%,1,$Rt,$Gt,$Bt,255 fi
+
+    # Render 2.5D extruded view.
+    depth:=int(h*$depth%/max(0.01,$shear_factor))
+    {0,[w,h+$depth]},1,4
+    1,$depth,1,1,">begin(M = crop(#0); S = crop(#1)); draw(#-1,S,0,$depth - y,0,0,w#1,h#1,1,s#1,1,M)" rm.
+    ($Rt^$Gt^$Bt^255) r. [0],[0],1,4 j.. .,0,0,0,0,1,[0] rm. # Add top face
+    k. c 0,255
+
     if $_is_preview r. $_preview_area_width,$_preview_area_height,1,4,0,0,0.5,0.5
     else r. {[max($w,w),max($h,h)]},1,4,0,0,0.5,0.5
     fi
