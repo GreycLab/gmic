@@ -57313,9 +57313,19 @@ fx_extrude25d :
     +ge[0] 20% l. {
       edgels -1
       foreach {
-        s c,-2
-        channels. 0,1 f. "arg0(i0,[1,0],[0,1],[-1,0],[0,-1])"
-        boxfilter. y,5,0,2,3 b. y,$normal_smoothness,2
+        s c,-2 channels. 0,1 f. "arg0(i0,[1,0],[0,1],[-1,0],[0,-1])" a c
+        1,1,1,4
+        eval.. ">begin(y0 = 0; XY0 = N = [ -1,-1 ]); # Average normals at each point
+          XY = [ i0,i1 ];
+          XY!=XY0?(
+            y0?(da_push([ XY,unitnorm(N/max(1,y - y0)) ]));
+            y0 = y; N = [ i2,i3 ]; XY0 = XY;
+          ):(
+            N+=[ i2,i3 ];
+          ); end(da_freeze())"
+        rm.. s. c,-2
+        repeat 3 { median. 5 }
+        b. y,$normal_smoothness,2
         orientation. a c
       }
       a y
@@ -57336,8 +57346,8 @@ fx_extrude25d :
       x = i0; y = i1;
       x && y && x<w#-1-1 && y<h#-1-1?(I(#-1,i0,i1) = [ col,1 ])"
     rm..
-
-    s. c,-3 . dilate.. 11 -[-2,-1] inpaint.. .,0,1 rm. # Perform dilation of side colors
+    s. c,-3 f. "n = i; n?(I(#-2)/=n; 1):0" # Perform normal averaging on each point
+    . dilate.. 11 -[-2,-1] inpaint.. .,0,1 rm. # Perform dilation of side colors
     to_a.
     if $negate line. 0,100%,100%,100%,1,$Rt,$Gt,$Bt,255 fi
 
