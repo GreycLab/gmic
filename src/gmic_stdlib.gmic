@@ -57275,6 +57275,84 @@ fx_render3d : skip ${14=1}
     fi
   }
 
+#@gui 2.5D Extrusion : fx_extrude25d,fx_extrude25d_preview(1)
+#@gui : Depth (%) = float(10,0,50)
+#@gui : Angle = point(80,60)_0
+#@gui : Shear (%) = float(25,0,100)
+#@gui : Negate = bool(0)
+#@gui : Normal Smoothness = float(10,0,50)
+#@gui : sep = separator()
+#@gui : Color Shading (%) = float(50,0,100)
+#@gui : Top Color = color(255,200,0)
+#@gui : Right Color = color(255,128,0)
+#@gui : Bottom Color = color(128,64,0)
+#@gui : Left Color = color(64,0,0)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/01/31</i>.</small>")
+__fx_extrude25d :
+  depth,angx,angy,shear,negate,normal_smoothness,shading,\
+  Rt,Gt,Bt,Rr,Gr,Br,Rb,Gb,Bb,Rl,Gl,Bl:=${1-19}
+  angle:=rad2deg(atan2($angy-50,$angx-50))
+
+fx_extrude25d :
+  __fx_extrude25d $*
+  foreach {
+    w,h:=w,h
+    shear_factor:=1-$shear%
+
+    # Transform input layer as a binary shape (with possible anti-aliasing).
+    if isin(s,2,4) channels. 100% else norm. fi
+    if $angle rotate. $angle,1,1 fi
+    if $shear r. 100%,{max(1,$shear_factor*h)},1,100% fi
+    if $negate negate. fi
+    if h>1 autocrop fi
+    if w
+      n. 0,1
+
+      # Estimate continuous field of normal vectors.
+      +ge[0] 20% l. {
+        edgels -1
+        foreach {
+          s c,-2 channels. 0,1 f. "arg0(i0,[1,0],[0,1],[-1,0],[0,-1])"
+          guided. $normal_smoothness,100 orientation. a c
+        }
+        a y
+      }
+
+      # Render colored sides of shape object.
+      {0,[w,h]},1,4
+        eval.. "begin(
+          colr = [ "$Rr,$Gr,$Br" ];
+          colb = [ "$Rb,$Gb,$Bb" ];
+          coll = [ "$Rl,$Gl,$Bl" ];
+          const N = max(1,20*(1 - $shading%^0.5));
+        );
+        ar = max(0,i2)^N;
+        ab = max(0,i3)^N;
+        al = max(0,-i2)^N;
+        col = (ar*colr + ab*colb + al*coll)/max(1e-8,ar + ab + al);
+        I(#-1,i0,i1) = [ col,1 ]"
+      rm..
+      s. c,-3 . dilate.. 11 -[-2,-1] inpaint.. .,0,1 rm. # Perform dilation of side colors
+      to_a.
+
+      # Render 2.5D extruded view.
+      depth:=int(h*$depth%/max(0.01,$shear_factor))
+      {0,[w,h+$depth]},1,4
+      1,$depth,1,1,">begin(M = crop(#0); S = crop(#1)); draw(#-1,S,0,$depth - y,0,0,w#1,h#1,1,s#1,1,M)" rm.
+      ($Rt^$Gt^$Bt^255) r. [0],[0],1,4 j.. .,0,0,0,0,1,[0] rm. # Add top face
+      k. c 0,255
+    fi
+    if $_is_preview r. $_preview_area_width,$_preview_area_height,1,4,0,0,0.5,0.5
+    else r. {[max($w,w),max($h,h)]},1,4,0,0,0.5,0.5
+    fi
+  }
+
+fx_extrude25d_preview :
+  __fx_extrude25d $* _is_preview=1 fx_extrude25d $*
+  line 50%,50%,$angx%,$angy%,1,0x0F0F0F0F,0
+  line 50%,50%,$angx%,$angy%,1,0xF0F0F0F0,255
+
 #@gui 3D Blocks : fx_blocks3d, fx_blocks3d(1)
 #@gui : Resolution = int(32,1,128)
 #@gui : Smoothness = float(0,0,40)
