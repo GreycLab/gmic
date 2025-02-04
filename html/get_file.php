@@ -2,10 +2,10 @@
 // Directory where your files are stored
 $filesDirectory = 'files/'; // Ensure this folder exists and contains the files to download
 
-// Generate filenames for the log files
-$currentMonthYear = date('Y_m'); // Format: YYYY-MM
-$currentMonthFile = "downloads_$currentMonthYear";
-$allTimeFile = "downloads_all";
+// Generate filenames for logs
+$currentMonthYear = date('Y_m'); // Format: YYYY_MM
+$currentMonthFile = "download_$currentMonthYear";
+$allTimeFile = "download_all";
 
 // Get the requested file from the query parameter
 $requestedFile = isset($_GET['file']) ? $_GET['file'] : null;
@@ -32,14 +32,17 @@ if (!file_exists($allTimeFile)) {
     file_put_contents($allTimeFile, json_encode([]));
 }
 
-// Function to update the log file with proper locking
+// Function to update the log file safely
 function updateLogFile($logFile, $requestedFile) {
+    $tempFile = "$logFile.tmp"; // Temporary file for atomic writing
+
     $handle = fopen($logFile, 'r+');
-    if ($handle === false) {
+    if (!$handle) {
         echo "Error: Unable to open the log file.";
         exit;
     }
 
+    // Lock the file
     if (flock($handle, LOCK_EX)) {
         // Read the current counts
         $contents = stream_get_contents($handle);
@@ -54,10 +57,11 @@ function updateLogFile($logFile, $requestedFile) {
         }
         $counts[$requestedFile]++;
 
-        // Rewind and overwrite the file with updated counts
-        ftruncate($handle, 0);
-        rewind($handle);
-        fwrite($handle, json_encode($counts));
+        // Write to a temporary file first (atomic write)
+        file_put_contents($tempFile, json_encode($counts));
+
+        // Replace the original file with the new one
+        rename($tempFile, $logFile);
 
         // Unlock the file
         flock($handle, LOCK_UN);
