@@ -4,8 +4,8 @@ $filesDirectory = 'files/'; // Ensure this folder exists and contains the files 
 
 // Generate filenames for logs
 $currentMonthYear = date('Y_m'); // Format: YYYY_MM
-$currentMonthFile = "download_$currentMonthYear";
-$allTimeFile = "download_all";
+$currentMonthFile = "downloads_$currentMonthYear";
+$allTimeFile = "downloads_all";
 
 // Get the requested file from the query parameter
 $requestedFile = isset($_GET['file']) ? $_GET['file'] : null;
