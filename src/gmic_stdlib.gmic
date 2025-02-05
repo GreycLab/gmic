@@ -30537,6 +30537,61 @@ nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
+#@cli nn_tconv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
+# _learning_mode,_regularization>=0,_initialization
+#@cli : Add a 'tconv2d' layer (2D transposed convolutional layer) to the current network.
+#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
+#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
+#@cli : 'initialization' can be { 0:zero | 1:identity | 2:Lecun-initialization | 3:He-initialization }.
+#@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', \
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+nn_tconv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
+                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
+  net,out=$_nn_network,$1
+  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${net}_$in
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,\
+    initialization=${3-11}
+  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  e[^-1] "[nn_lib] Add 'tconv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
+         "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
+  init=${_${net}_init}
+  nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
+  nn_conv2d ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$learning_mode,\
+            $regularization,$initialization
+  _${net}_init=${init}"$0 ${1--1} "
+  _${net}_previous_layer=$out
+
+#@cli nn_tconv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
+# _activation,_learning_mode,_regularization>=0,_initialization
+#@cli : Add a 'tconv2dnl' layer (2D transposed convolutional layer+nonlinearity) to the current network.
+#@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
+#@cli : 'learning_mode' can be { 0:no learning | 1:weights only | 2:biases only | 3:weights+biases }.
+#@cli : 'initialization' can be { 0:zero | 1:identity | 2:Lecun-initialization | 3:He-initialization }.
+#@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', 'shrink=0', 'boundary_conditions=1', \
+# 'activation=leakyrelu' 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
+                     "isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
+               skip "${6=1}","${9=leakyrelu}"
+  net,out=$_nn_network,$1
+  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${net}_$in
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+    initialization=${3-12}
+  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  e[^-1] "[nn_lib] Add 'tconv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
+         "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
+  init=${_${net}_init}
+  nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
+  nn_conv2dnl ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$activation,$learning_mode,\
+              $regularization,$initialization
+  _${net}_init=${init}"$0 ${1--1} "
+  _${net}_previous_layer=$out
+
 #@cli nn_trainer : out,_in,_learning_rate>0,_optimizer,_scheduler
 #@cli : Add a network trainer to the current network.
 #@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
