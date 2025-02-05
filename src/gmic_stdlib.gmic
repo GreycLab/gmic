@@ -20806,9 +20806,43 @@ at_line :
 #@cli at_curve : x0[%],y0[%],z0[%],...,xN[%],yn[%],zn[%]
 #@cli : Retrieve pixels of the selected images belonging to the specified cubic spline curve that passes \
 # across the specified points.
+#@cli : $ image.jpg +at_curve 0,0,0,80%,50%,0,100%,100%,0
++at_curve :
+  v + _at_curve $*
+
 at_curve :
-  repeat $#/3 { =
-  e[^-1] "Retrieve pixels of image$?, belonging to cubic spline curve ()
+  v + +_at_curve $* v - rm[0-{$!/2-1}]
+
++_at_curve :
+  $=arg
+  nb_points:=int($#/3)
+  if $^>=0
+    s= repeat $nb_points { x,y,z:=3*$>+[1,2,3] s.=$c(${arg$x},${arg$y},${arg$z}) c=- }
+    e[0--4] "Retrieve pixels of image$?, belonging to cubic spline curve "$s"."
+  fi
+  foreach {
+    $nb_points,1,1,3,"begin(s_arg = 'arg'); # Retrieve image coordinates
+      sX = get(string(s_arg,3*x + 1),32,1); X = s2v(sX,0);
+      sY = get(string(s_arg,3*x + 2),32,1); Y = s2v(sY,0);
+      sZ = get(string(s_arg,3*x + 3),32,1); Z = s2v(sZ,0);
+      find(sX,_'%')>0?(X*=(w#0-1)%);
+      find(sY,_'%')>0?(Y*=(h#0-1)%);
+      find(sZ,_'%')>0?(Z*=(d#0-1)%);
+      round([ X,Y,Z ])"
+    length:="L = 1; repeat (w - 1,k,L+=max(abs(I[k + 1] - I[k]))); L" # Rought estimation of curve length
+    r. $length,1,1,3,5 round.
+    1,$length,1,{0,s} =. $length,0,100%,0,100%
+    eval.. ">begin(P0 = I);
+      P1 = I;
+      x && P1!=P0?(
+        dl = max(abs(P0 - P1));
+        repeat (dl,k,P = round(lerp(P0,P1,k/dl)); da_push(I(#0,P)));
+      );
+      P0 = P1;
+      end(da_push(I(#0,P0)); da_freeze())" rm..
+    permute. yxzc
+  }
+  mv[1--1:2] $!
 
 #@cli at_quadrangle : x0[%],y0[%],x1[%],y1[%],x2[%],y2[%],x3[%],y3[%],_interpolation,_boundary_conditions : \
 # x0[%],y0[%],z0[%],x1[%],y1[%],z1[%],x2[%],y2[%],z2[%],x3[%],y3[%],z3[%],_interpolation,_boundary_conditions
