@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
                      e.what(),cimg::t_normal);
         std::fflush(cimg::output());
       }
-      if (*e.command()) {
+      if (*e.command() && std::strcmp(e.command(),"check")) {
         std::fprintf(cimg::output(),"\n[gmic] Command '%s%s%s' has the following description: \n",
                      cimg::t_red,e.command(),cimg::t_normal);
         std::fflush(cimg::output());
