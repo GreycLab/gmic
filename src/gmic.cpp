@@ -10524,7 +10524,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             }
           }
           const unsigned int nb = value<=0?0U:
-            cimg::type<double>::is_inf(value)?~0U:(unsigned int)cimg::round(value);
+            cimg::type<double>::is_inf(value)?~0U:(unsigned int)value;
           ++position;
 
           if (!nb) {
