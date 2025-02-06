@@ -20604,42 +20604,6 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0},0) && 
     rm. r $width,$height,1,100%,0,0,0.5,0.5
   }
 
-# _syntexturize_matchpatch : [correspondence_map],blend_size>0
-_syntexturize_matchpatch : check ${is_image_arg\ $1}" && isint(${2=3},0)"
-  if $2<=1 pass$1 warp[^-1] .,0 rm.
-  else repeat $! { pass$1 l[$>,-1] {
-    [1],[1],1,[0]
-    f. "*begin(
-          boundary = 1;
-          const patch_size = $2;
-          const p2 = int(patch_size/2);
-          const p1 = patch_size - p2 - 1;
-          avg = resize([0],s#0);
-
-          # Pre-compute gaussian kernel.
-          wpq = resize([0],patch_size^2);
-          g = 0;
-          for (q = -p1, q<=p2, ++q,
-            for (p = -p1, p<=p2, ++p,
-              wpq[g++] = exp(-(p^2 + q^2)/(2*(0.3*patch_size)^2));
-            );
-          );
-        );
-        g = 0;
-        avg = 0;
-        norm = 0;
-        for (q = -p1, q<=p2, ++q,
-          for (p = -p1, p<=p2, ++p,
-            U = I(#1,x + p,y + q);
-            w = wpq[g++];
-            avg+=w*I(#0,U - [p,q]);
-            norm+=w;
-          );
-        );
-        avg/norm"
-    k.
-  } } fi
-
 #@cli tv_flow : _nb_iter>=0,_dt,_keep_sequence={ 0 | 1 }
 #@cli : Apply iterations of the total variation flow on selected images.
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
