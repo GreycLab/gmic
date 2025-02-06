@@ -2911,18 +2911,18 @@ CImg<char> gmic::callstack2string(const CImg<unsigned int>& callstack_selection,
 // Pop callstack until it reaches a certain size.
 //-----------------------------------------------
 // Used to ensure that callstack stays coherent when errors occurs in '_run()'.
-void gmic::pop_callstack(const unsigned int callstack_size) {
+void gmic::pop_callstack(const unsigned int min_callstack_size) {
   unsigned int cs = callstack.size();
   nb_remaining_fr = 0;
-  while (cs>callstack_size) {
+  while (cs>min_callstack_size) {
     const char *const s = callstack[--cs];
     if (*s=='*') switch (s[1]) {
       case 'r' : ++nb_remaining_fr; --nb_repeatdones; break;
       case 'd' : --nb_dowhiles; break;
       case 'f' : ++nb_remaining_fr; if (s[4]!='e') --nb_fordones; else --nb_foreachdones; break;
       }
-    callstack.remove();
   }
+  if (cs<callstack.size()) callstack.remove(cs,callstack.size() - 1);
 }
 
 // Parse items from a G'MIC command line.
