@@ -2912,9 +2912,10 @@ CImg<char> gmic::callstack2string(const CImg<unsigned int>& callstack_selection,
 //-----------------------------------------------
 // Used to ensure that callstack stays coherent when errors occurs in '_run()'.
 void gmic::pop_callstack(const unsigned int callstack_size) {
+  unsigned int cs = callstack.size();
   nb_remaining_fr = 0;
-  while (callstack.size()>callstack_size) {
-    const char *const s = callstack.back();
+  while (cs>callstack_size) {
+    const char *const s = callstack[--cs];
     if (*s=='*') switch (s[1]) {
       case 'r' : ++nb_remaining_fr; --nb_repeatdones; break;
       case 'd' : --nb_dowhiles; break;
