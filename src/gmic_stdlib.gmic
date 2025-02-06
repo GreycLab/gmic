@@ -32480,6 +32480,25 @@ stylize :
   } } rm.
   um stylize_match
 
+# [Internal] Upscale selected 2d displacement images.
+# $1=width[%]>0 $2=_height[%]>0
+upscale_displacement2d :
+  foreach {
+    nw,nh:=ispercentage($1)?w*$1:$1,ispercentage($2)?h*$2:$2
+    sh. 0 *. {$nw/w} rm. sh. 1 *. {$nh/h} rm. round.
+    100%,100%,1,1,1 r $nw,$nh,1,100%,4
+    do
+      f. "begin(const boundary = 1; U = [ 1,0 ]; V = [ 0,1 ]);
+          i?1:(
+            j(-1,0)?(I(#-2) = J(#-2,-1,0) + U; 1):
+            j(0,-1)?(I(#-2) = J(#-2,0,-1) + V; 1):
+            j(1,0)?(I(#-2) = J(#-2,1,0) - U; 1):
+            j(0,1)?(I(#-2) = J(#-2,0,1) - V; 1):
+            0)"
+    while !im
+    rm.
+  }
+
 #@cli tetris : _scale>0
 #@cli : Apply tetris effect on selected images.
 #@cli : Default value: 'scale=10'.
