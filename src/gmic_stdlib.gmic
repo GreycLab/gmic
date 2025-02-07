@@ -32852,23 +32852,13 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
           const pd2 = pd - pd1 - 1;
           const pwhd = pw*ph*pd;
           return = vector(s);
-
-          # Pre-compute gaussian weights.
-          if (stdf<5,
-            weights = vectorpwhd();
-            offw = 0;
-            for (zw = -pd1, zw<=pd2, ++zw,
-              for (yw = -ph1, yw<=ph2, ++yw,
-                for (xw = -pw1, xw<=pw2, ++xw,
-                  weights[offw++] = exp(-xw^2/(2*(stdf*pw)^2) - yw^2/(2*(stdf*ph)^2) - zw^2/(2*(stdf*pd)^2));
-                );
-              );
-            );
+          stdf<5?( # Pre-compute gaussian weights
+            weights = expr(string('gauss(x - int(w/2),',stdf*pw,',0)*
+                                   gauss(y - int(h/2),',stdf*ph,',0)*
+                                   gauss(z - int(d/2),',stdf*pd,',0)'),pw,ph,pd);
           );
         );
-        u = i(x,y,z,0);
-        v = i(x,y,z,1);
-        w = i(x,y,z,2);
+        u = i(x,y,z,0); v = i(x,y,z,1); w = i(x,y,z,2);
         patch = crop(#0,u - pw1,v - ph1,w - pd1,pw,ph,pd,boundary);
         stdf<5?
           draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1,weights):
@@ -32881,22 +32871,18 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
           const ph = $3;
           const stdf = $5;
           const boundary = $6;
-
           const pw1 = int(pw/2);
           const pw2 = pw - pw1 - 1;
           const ph1 = int(ph/2);
           const ph2 = ph - ph1 - 1;
           const pwh = pw*ph;
           return = vector(s);
-
-          # Pre-compute gaussian weights.
-          stdf<5?(
+          stdf<5?( # Pre-compute gaussian weights
             weights = expr(string('gauss(x - int(w/2),',stdf*pw,',0)*
                                    gauss(y - int(h/2),',stdf*ph,',0)'),pw,ph);
           );
         );
-        u = i(x,y,z,0);
-        v = i(x,y,z,1);
+        u = i(x,y,z,0); v = i(x,y,z,1);
         patch = crop(#0,u - pw1,v - ph1,pw,ph,boundary);
         stdf<5?
           draw(#2,patch,x - pw1,y - ph1,0,0,pw,ph,1,s#0,-1,weights):
