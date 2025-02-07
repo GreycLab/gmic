@@ -20601,7 +20601,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0},0) && 
       }
       rm..
     }
-    warp_patch.. .,$5
+    warp_patch.. .,$5,$5,1,0.3,3,1
     rm. r $width,$height,1,100%,0,0,0.5,0.5
   }
 
@@ -32400,7 +32400,7 @@ stylize :
         repeat $nb_matches {
           matchpatch. ...,$patch_size_analysis,$patch_size_analysis,1,$mprec0,$mprec1,$penalize_repetitions,0,..
           -.. . abs.. diff={-2,ia} rm..
-          +warp_patch.. .,$patch_size_synthesis,$patch_size_synthesis,1
+          +warp_patch.. .,$patch_size_synthesis,$patch_size_synthesis,1,0.3,3,1
           if {*}" && "(!($>%5)" || "$nb_matches<=10)
             +r. $wsiz,1,100%
             to. "Scale "$scale/$nb_scales1": "{round(100*($>+1)/$nb_matches)}%,5,2,24 w. -1,-1,0 rm.
@@ -32819,24 +32819,25 @@ twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
 #@cli : $$ https://gmic.eu/oldtutorial/_warp
 
 #@cli warp_patch : [displacement_map],patch_width>=1,_patch_height>=1,_patch_depth>=1,_std_factor>0,\
-# _boundary_conditions.
+# _boundary_conditions,_fast_approximation={ 0 | 1 }
 #@cli : Patch-warp selected images, with specified 2D or 3D displacement map (in backward-absolute mode).
 #@cli : Argument 'std_factor' sets the std of the gaussian weights for the patch overlap,
 #@cli : equal to 'std = std_factor*patch_size'.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
-#@cli : Default values: 'std_factor=0.3' and 'boundary_conditions=3'.
+#@cli : Default values: 'std_factor=0.3', 'boundary_conditions=3' and 'fast_approximation=0'.
 warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
-                   "isint(${4=1},1) && isnum(${5=0.3}) && $5>0 && isint(${6=3},0,3)"
+                   "isint(${4=1},1) && isnum(${5=0.3}) && $5>0 && isint(${6=3},0,3) && isbool(${7=0})"
   e[^-1] "Warp image$? using patch-blending, with displacement map $1, using $2x$3x$4 patches, std factor $5
           and "${"arg0 $6,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   if $2<=1 pass$1 warp[^-1] .,0 rm. return fi
+  if $7 par=: else par=> fi
   repeat $! { pass$1 l[$>,-1] {
     nm={0,n}
     [0],[0],[0],1,1 a[0,-1] c # Add weighting channel
     100%,100%,100%,{0,s}
 
     if s#1>=3 # 3D version
-      eval[1] ">
+      eval[1] $par"
         begin(
           const pw = $2;
           const ph = $3;
@@ -32874,7 +32875,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
           draw(#2,patch,x - pw1,y - ph1,z - pd1,0,pw,ph,pd,s#0,-1);
         return"
     else # 2D version
-      eval[1] ">
+        eval[1] $par"
         begin(
           const pw = $2;
           const ph = $3;
