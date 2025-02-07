@@ -32380,10 +32380,8 @@ stylize :
         if {*} w. fi
 
         # Inject gradients from target (in Lab colorspace).
-        fidelity:=max(0,$fidelity_finest+($fidelity_coarsest-$fidelity_finest)*$factor)
-        fidelity_smoothness:=$fidelity_smoothness_finest+\
-                             ($fidelity_smoothness_coarsest-$fidelity_smoothness_finest)*$factor
-
+        fidelity:=lerp($fidelity_finest,$fidelity_coarsest,$factor)
+        fidelity_smoothness:=lerp($fidelity_smoothness_finest,$fidelity_smoothness_coarsest,$factor)
         if $fidelity>0.1
           sh. 0,2 sh[-5] 0,2 +gradient_norm[-2,-1] rm[-4,-3] # Gradient norm on colors only
           *. $fidelity argmax[-2,-1] b. xy,$fidelity_smoothness n. 0,{min(1,$fidelity)}
@@ -32394,9 +32392,8 @@ stylize :
         rm[-4]
 
         # Iterate patch-matching steps.
-        nb_matches:=max(0,round($nb_matches_finest+($nb_matches_coarsest-$nb_matches_finest)*$factor^2))
-        nb_scales1:=$nb_scales-1
-        nb_matches1:=$nb_matches-1
+        nb_matches:=max(0,round(lerp($nb_matches_finest,$nb_matches_coarsest,$factor^2)))
+        nb_scales1,nb_matches1:=[$nb_scales,$nb_matches]-1
         if {*} +r. $wsiz,1,100% to. "Scale "$scale/$nb_scales1": 0%",5,2,24 w. -1,-1,0 rm. fi
 
         repeat $nb_matches {
