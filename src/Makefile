@@ -75,7 +75,7 @@
 #
 
 #---------------------------
-# Set OS-specific variables.
+# Set OS-specific variables
 #---------------------------
 
 # Try to auto-detect target OS.
@@ -175,7 +175,7 @@ QMAKE = qmake
 endif
 
 #--------------------------------------------------------
-# Define compilation flags to se for each enable feature.
+# Define compilation flags to se for each enable feature
 #--------------------------------------------------------
 
 # Flags set to describe a 'prerelease' version.
@@ -369,10 +369,10 @@ endif
 endif
 
 #-------------------------------
-# Define main Makefile entries.
+# Define main Makefile entries
 #-------------------------------
 
-# Multi-targets.
+# Multi-targets
 #---------------
 all:
 	@echo "**"
@@ -391,7 +391,7 @@ endif
 native:
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) -O3 -march=native" "LIBS+=$(GMIC_STD_LIBS)" cli
 
-# libgmic.
+# libgmic
 #---------
 lib:
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib
@@ -424,31 +424,41 @@ libgmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 use_libgmic : use_libgmic.cpp libgmic.so
 	$(CXX) -o use_libgmic use_libgmic.cpp -std=c++11 -pedantic -lgmic $(LIBS)
 
-# CLI.
-#-----
-cli:
+# CLI: Command line tool 'gmic'
+#-------------------------------
+
+# Regular builds
+#
+cli: # Default: Without OpenCV support
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-dev:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
-
-debug:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
-
-valgrind:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
-
-gprof:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g -pg" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
-
-opencv:
+opencv: # Default: With OpenCV support
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) $(OPENCV_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS) $(OPENCV_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-half:
+half: # Using float16 rather than float32 to store images
 	$(MAKE) "CFLAGS+=$(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) -Dcimg_use_half -I/usr/include/OpenEXR -Dgmic_pixel_type=half" \
 	        "LIBS+=gmic.o $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS)" gmic.o _cli
+
+dev: # Without optimizations enabled, used for quick compile
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+
+# Debug builds
+#
+debug: # With sanitize-address enabled and symbols kept, to track bugs
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+
+valgrind: # With symbols kept, to track bugs with valgrind
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+
+# Profiling builds
+#
+perf: # With optimization enabled and symbols kept, for code profiling
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+
+gprof: # With optimization enabled, symbols kept and gprof enabled, for code profiling
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g -pg" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 _cli: gmic$(EXE)
 
@@ -458,13 +468,13 @@ gmic$(EXE): gmic_cli.cpp gmic.o
 gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
 
-# CLI (shared).
+# CLI (shared)
 #--------------
 cli_shared:
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli
 	$(STRIP) gmic$(EXE)
 
-# CLI (static).
+# CLI (static)
 #--------------
 GMIC_STATIC_CLI_PATH = $(PREFIX)/$(LIB)/x86_64-linux-gnu
 GMIC_STATIC_CLI_EXTRA =
@@ -481,7 +491,7 @@ cli_static:
 	$(MAKE) "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-# libcgmic.
+# libcgmic
 #----------
 libc:
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib _libc
@@ -530,7 +540,7 @@ libcgmic.o: gmic_libc.cpp CImg.h gmic_libc.h gmic.h
 use_libcgmic: use_libcgmic.c gmic_libc.h
 	$(CC) -std=c99 -o use_libcgmic use_libcgmic.c -lcgmic $(LIBS)
 
-# libcgmic (static).
+# libcgmic (static)
 #-------------------
 GMIC_LIBC_STATIC_CFLAGS = $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS)
 ifeq ($(OS),Window)
@@ -584,7 +594,7 @@ libcgmic_static.o: gmic_libc.cpp CImg.h gmic_libc.h gmic.h
 use_libcgmic_static: use_libcgmic.c gmic_libc.h
 	$(CC) -std=c99 -o use_libcgmic_static use_libcgmic.c -lcgmic_static $(LIBS)
 
-# G'MIC Online.
+# G'MIC Online
 #--------------
 GMICOL_LIB_PATH = /usr/lib/x86_64-linux-gnu/
 GMICOL_CFLAGS = $(MANDATORY_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) -Dcimg_display=0 # $(OPENMP_CFLAGS)
@@ -594,7 +604,7 @@ gmicol:
 	$(MAKE) "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMICOL_LIBS) $(OPT_LIBS)" _cli
 	$(STRIP) gmic$(EXE)
 
-# G'MIC-Qt.
+# G'MIC-Qt
 #----------
 gimp: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=gimp gmic_qt.pro && $(MAKE)
@@ -636,7 +646,7 @@ gmic_qt_files:
 	   if [ -d ../../gmic-qt ]; then ln -fs ../gmic-qt ..; fi \
 	 fi
 
-# G'MIC-Qt (shared).
+# G'MIC-Qt (shared)
 #-------------------
 gimp_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=on HOST=gimp gmic_qt.pro && $(MAKE)
@@ -646,7 +656,7 @@ gmic_qt_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=on HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
-# ZArt.
+# ZArt
 #------
 zart_shared: zart_files CImg.h gmic_stdlib_community.h
 ifeq ($(OS),Darwin)
@@ -687,7 +697,7 @@ zart_files:
 	   if [ -d ../../zart ]; then ln -fs ../zart ..; fi \
 	 fi
 
-# Get header files.
+# Get header files
 #------------------
 CImg.h:
 	@echo "> Retrieve CImg Library..."
@@ -767,14 +777,14 @@ do_gmic_stdlib_community.h:
 	@\gmic v - _upload /tmp/gmic_stdlib_community$(VERSION).h
 	@\gmic v - _upload gmic_stdlib_community.h
 
-# Bash completion script.
+# Bash completion script
 #------------------------
 bashcompletion:
 	@mkdir -p ../resources
 	@\gmic gmic_stdlib.gmic it gmic_stdlib.gmic parse_cli bashcompletion > ../resources/gmic_bashcompletion.sh
 	@echo "Bash completion script 'gmic_bashcompletion.sh' has been successfully generated in '../resources/'."
 
-# Man pages.
+# Man pages
 #-----------
 man:
 	@mkdir -p ../man
@@ -782,7 +792,7 @@ man:
 	@gzip -f ../man/gmic.1
 	@echo "Man file 'gmic.1.gz' has been successfully generated in '../man/'."
 
-# Install / uninstall / clean.
+# Install / uninstall / clean
 #-----------------------------
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/$(INCLUDE)
