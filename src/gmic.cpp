@@ -3600,7 +3600,11 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
                                             line_number,command_files.width() - 1);
         if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
         debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
-        ((CImg<char>(debug_info,l_debug_info + 2,1,1,1,true),body)>'x').move_to(body);
+
+        CImg<char> nbody(body._width + l_debug_info + 2);
+        std::memcpy(nbody.data(),debug_info.data(),l_debug_info + 2);
+        std::memcpy(nbody.data() + l_debug_info + 2,body.data(),body._width);
+        nbody.move_to(body);
       }
       if (!search_sorted(s_name,command_names[hash],command_names[hash].size(),pos)) {
         command_names[hash].insert(1,pos);
