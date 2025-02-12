@@ -190,7 +190,7 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
 CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
   const unsigned int len = _width - (_width && !back()?1:0);
   if (ptrd + len>=img.end()) {
-    CImg<T> tmp(std::max(8U,2*img._width + len + 1));
+    CImg<T> tmp(std::max(32U,2*img._width + len + 1));
     std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - img._data);
     tmp.move_to(img);
@@ -206,7 +206,7 @@ CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
 static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
   const unsigned int len = c?1:0;
   if (ptrd + len>=img.end()) {
-    CImg<T> tmp(std::max(8U,2*img._width + len + 1));
+    CImg<T> tmp(std::max(32U,2*img._width + len + 1));
     std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - img._data);
     tmp.move_to(img);
@@ -3444,20 +3444,20 @@ const char *gmic::set_variable(const char *const name, const char operation,
 
     if (operation=='.' || operation==',') { // Append and prepend
       const unsigned int varlength = varlengths[ind];
-      if (!varwidth) CImg<char>(s_value._data,l_value + 1,1,1,1,true).move_to(vars[ind]);
+      if (!varwidth) CImg<char>(s_value.data(),l_value + 1,1,1,1,true).move_to(vars[ind]);
       else if (l_value && operation=='.') { // Append
         if (varlength + l_value + 1>varwidth) { // Reallocation needed
           CImg<char> tmp(2*varwidth + l_value + 1);
           std::memcpy(tmp,vars[ind],varlength);
           tmp.move_to(vars[ind]);
         }
-        std::memcpy(vars[ind]._data + varlength,s_value,l_value + 1);
+        std::memcpy(vars[ind].data() + varlength,s_value,l_value + 1);
       } else if (l_value && operation==',') { // Prepend
         if (varlength + l_value + 1>varwidth) { // Reallocation needed
           CImg<char> tmp(2*varwidth + l_value + 1);
-          std::memcpy(tmp._data + l_value,vars[ind],varlength + 1);
+          std::memcpy(tmp.data() + l_value,vars[ind],varlength + 1);
           tmp.move_to(vars[ind]);
-        } else std::memmove(vars[ind]._data + l_value,vars[ind]._data,varlength + 1);
+        } else std::memmove(vars[ind].data() + l_value,vars[ind].data(),varlength + 1);
         std::memcpy(vars[ind],s_value,l_value);
       }
       varlengths[ind]+=l_value;
@@ -3535,7 +3535,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
   unsigned int line_number = 0, hash = ~0U, pos = ~0U;
   bool is_last_slash = false, _is_last_slash = false, is_newline = false;
   int l_debug_info = 0;
-  char sep = 0;
+  char sep = 0, *ptr_body = 0;
   if (command_file) {
     CImg<char>::string(command_file).move_to(command_files);
     CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'.
@@ -3589,6 +3589,9 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
     if (is_plus) *s_name = '+';
     *ns_name = sep = 0;
 
+    const unsigned int prev_hash = hash, prev_pos = pos;
+    const char *const prev_ptr_body = ptr_body;
+
     if ((!is_last_slash && std::strchr(lines,':') && // Check for a command definition (or implicit '_main_')
          cimg_sscanf(nlines,"%255[a-zA-Z0-9_] %c%262143[^\n]",ns_name,&sep,s_body.data())>=2 &&
          (*nlines<'0' || *nlines>'9') && sep==':' && *s_body!='=') || ((*s_name=0), hash==~0U)) {
@@ -3619,14 +3622,18 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
         command_has_arguments[hash].insert(1,pos);
         if (count_new) ++*count_new;
       } else if (count_replaced) ++*count_replaced;
+
       CImg<char>::string(s_name).move_to(command_names[hash][pos]);
-      CImg<char>::vector((char)has_arguments(body)).
-        move_to(command_has_arguments[hash][pos]);
-      body.move_to(commands[hash][pos]);
+      CImg<char>::vector((char)has_arguments(body)).move_to(command_has_arguments[hash][pos]);
+      ptr_body = commands[hash][pos];
+      body.append_string_to(commands[hash][pos],ptr_body);
+
+      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) // Freeze previous command body
+        commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
 
     } else { // Continuation of a previous line
-      if (!is_last_slash) commands[hash][pos].back() = ' ';
-      else --(commands[hash][pos]._width);
+
+      if (!is_last_slash) CImg<char>::append_string_to(' ',commands[hash][pos],ptr_body);
       const CImg<char> body = CImg<char>(lines,(unsigned int)(linee - lines + 2));
       command_has_arguments[hash](pos,0) |= (char)has_arguments(body);
       if (add_debug_info && !is_last_slash) { // Insert code with debug info
@@ -3637,11 +3644,15 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
                                        line_number,command_files.width() - 1);
         if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
         debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
-        ((commands[hash][pos],CImg<char>(debug_info,l_debug_info + 2,1,1,1,true),body)>'x').
-          move_to(commands[hash][pos]);
-      } else commands[hash][pos].append(body,'x'); // Insert code without debug info
+        CImg<char>(debug_info,l_debug_info + 2,1,1,1,true).append_string_to(commands[hash][pos],ptr_body);
+        body.append_string_to(commands[hash][pos],ptr_body);
+      } else body.append_string_to(commands[hash][pos],ptr_body); // Insert code without debug info
     }
   }
+
+  if (hash!=~0U && pos!=~0U && ptr_body) // Freeze latest processed command
+    commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
+
   cimg::mutex(23,0);
   return *this;
 }
