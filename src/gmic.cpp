@@ -198,7 +198,6 @@ CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
   return img;
 }
 
-
 static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
   if (ptrd + 1>=img.end()) {
     CImg<T> tmp(std::max(8U,2*img._width + 1));
@@ -216,7 +215,7 @@ static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
 CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
   const unsigned int len = _width - (_width && !back()?1:0);
   if (ptrd + len + 1>=img.end()) {
-    CImg<T> tmp(std::max(8U,img._width + std::max(len + 1,img._width)));
+    CImg<T> tmp(std::max(8U,2*img._width + len + 1));
     std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - img._data);
     tmp.move_to(img);
