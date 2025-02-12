@@ -3625,7 +3625,9 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
       CImg<char>::string(s_name).move_to(command_names[hash][pos]);
       CImg<char>::vector((char)has_arguments(body)).move_to(command_has_arguments[hash][pos]);
+      commands[hash][pos].assign(512);
       ptr_body = commands[hash][pos];
+      *ptr_body = 0;
       body.append_string_to(commands[hash][pos],ptr_body);
 
       if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
@@ -4251,10 +4253,10 @@ CImg<char> gmic::substitute_item(const char *const source,
                                  const CImg<unsigned int> *const command_selection,
                                  const bool is_image_expr) {
   if (!source) return CImg<char>();
-  CImg<char> substituted_items(64), inbraces, substr(40), vs;
-  char *ptr_sub = substituted_items.data();
+  CImg<char> substituted_items(512), inbraces, substr(40), vs;
   CImg<unsigned int> _ind;
   const char dot = is_image_expr?'.':0;
+  char *ptr_sub = substituted_items.data();
   *ptr_sub = 0;
 
   for (const char *nsource = source; *nsource; )
@@ -13068,11 +13070,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (is_command) {
             bool has_arguments = false, _is_noarg = false;
             CImg<char> substituted_command(1024);
-            char *ptr_sub = substituted_command.data();
             const char
               *const command_code = commands[hash_custom][ind_custom].data(),
               *const command_code_back = &commands[hash_custom][ind_custom].back(),
               *const command_name = is_specialized_get?_command:command;
+            char *ptr_sub = substituted_command.data();
+            *ptr_sub = 0;
 
             const char *curr_command = "";
             for (unsigned int k = initial_callstack_size - 1; k>0 && *(curr_command = callstack[k])=='*'; --k) {}
