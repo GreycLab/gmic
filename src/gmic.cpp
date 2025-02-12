@@ -3628,11 +3628,10 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
       ptr_body = commands[hash][pos];
       body.append_string_to(commands[hash][pos],ptr_body);
 
-      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) // Freeze previous command body
+      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) // Freeze body of previous command
         commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
 
     } else { // Continuation of a previous line
-
       if (!is_last_slash) CImg<char>::append_string_to(' ',commands[hash][pos],ptr_body);
       const CImg<char> body = CImg<char>(lines,(unsigned int)(linee - lines + 2));
       command_has_arguments[hash](pos,0) |= (char)has_arguments(body);
@@ -3650,9 +3649,8 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
     }
   }
 
-  if (hash!=~0U && pos!=~0U && ptr_body) // Freeze latest processed command
+  if (hash!=~0U && pos!=~0U && ptr_body) // Freeze body of latest command
     commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
-
   cimg::mutex(23,0);
   return *this;
 }
@@ -4503,7 +4501,7 @@ CImg<char> gmic::substitute_item(const char *const source,
               cimg_snprintf(substr,substr.width(),"%d%c",(int)(unsigned char)*s,delimiter);
               CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
             }
-            if (*substr) --ptr_sub; // Remove last delimiter
+            if (*substr) *(--ptr_sub) = 0; // Remove last delimiter
           }
           *substr = 0; is_substituted = true;
         }
@@ -4656,7 +4654,7 @@ CImg<char> gmic::substitute_item(const char *const source,
                   cimg_snprintf(substr,substr.width(),"%.17g%c",(double)values[q],delimiter);
                   CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
                 }
-                if (values) --ptr_sub; // Remove last delimiter
+                if (values) *(--ptr_sub) = 0; // Remove last delimiter
               }
             }
             *substr = 0; is_substituted = true;
@@ -13130,14 +13128,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             CImg<char> inbraces;
 
             for (const char *nsource = command_code; *nsource;)
-              if (*nsource!='$') {
-
-                // If not starting with '$'.
+              if (*nsource!='$') { // If not starting with '$'.
                 const char *const nsource0 = nsource;
                 nsource = std::strchr(nsource0,'$');
                 if (!nsource) nsource = command_code_back;
                 CImg<char>(nsource0,(unsigned int)(nsource - nsource0),1,1,1,true).
                   append_string_to(substituted_command,ptr_sub);
+
               } else { // '$' expression found
                 CImg<char> substr(324);
                 inbraces.assign(1,1,1,1,0);
@@ -13189,7 +13186,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     cimg_snprintf(substr,substr.width(),"%u,",selection[i]);
                     CImg<char>::string(substr,false,true).append_string_to(substituted_command,ptr_sub);
                   }
-                  if (selection) --ptr_sub; // Remove last delimiter
+                  if (selection) *(--ptr_sub) = 0; // Remove last delimiter
 
                   // Substitute $= -> transfer (quoted) arguments to named variables.
                 } else if (nsource[1]=='=' &&
@@ -13314,7 +13311,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                             g_list_c[uind].append_string_to(substituted_command,ptr_sub);
                             CImg<char>::append_string_to(',',substituted_command,ptr_sub);
                           }
-                          --ptr_sub; // Remove last delimiter
+                          *(--ptr_sub) = 0; // Remove last delimiter
                           has_arguments = true;
                         }
                       }
