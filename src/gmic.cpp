@@ -4246,8 +4246,7 @@ CImg<char> gmic::substitute_item(const char *const source,
       // If not starting with '{', '.' or '$'.
       const char *const nsource0 = nsource;
       do { ++nsource; } while (*nsource && *nsource!='{' && *nsource!='$' && *nsource!=dot);
-      CImg<char>(nsource0,(unsigned int)(nsource - nsource0),1,1,1,true).
-        append_string_to(substituted_items,ptr_sub);
+      CImg<char>(nsource0,(unsigned int)(nsource - nsource0),1,1,1,true).append_string_to(substituted_items,ptr_sub);
     } else { // '{...}', '...' or '${...}' expression found
       bool is_2dollars = false, is_braces = false, is_substituted = false;
       int ind = 0, l_inbraces = 0;
@@ -4285,10 +4284,7 @@ CImg<char> gmic::substitute_item(const char *const source,
         char delimiter = 0;
         unsigned int p = 0;
         for (p = 1; p>0 && *ptr_end; ++ptr_end) { if (*ptr_end=='{') ++p; if (*ptr_end=='}') --p; }
-        if (p) {
-          CImg<char>::append_string_to(*(nsource++),substituted_items,ptr_sub);
-          continue;
-        }
+        if (p) { CImg<char>::append_string_to(*(nsource++),substituted_items,ptr_sub); continue; }
         l_inbraces = (int)(ptr_end - ptr_beg - 1);
         if (l_inbraces>0) {
           if ((*ptr_beg!='`' || ptr_beg[1]!='`') && *ptr_beg!='/' &&
@@ -4459,8 +4455,7 @@ CImg<char> gmic::substitute_item(const char *const source,
                   if (flush_request) ik = false;
                 }
               }
-              if (is_substituted)
-                CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
+              if (is_substituted) CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
               if (e_feature) {
                 *e_feature = ','; feature = e_feature + 1;
                 CImg<char>::append_string_to(delimiter,substituted_items,ptr_sub);
@@ -4473,8 +4468,7 @@ CImg<char> gmic::substitute_item(const char *const source,
         // Double-backquoted string.
         if (!is_substituted && inbraces.width()>=3 && *inbraces=='`' && inbraces[1]=='`') {
           strreplace_bw(inbraces.data() + 2);
-          CImg<char>(inbraces.data() + 2,inbraces.width() - 3,1,1,1,true).
-            append_string_to(substituted_items,ptr_sub);
+          CImg<char>(inbraces.data() + 2,inbraces.width() - 3,1,1,1,true).append_string_to(substituted_items,ptr_sub);
           *substr = 0; is_substituted = true;
         }
 
@@ -13184,7 +13178,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     cimg_snprintf(substr,substr.width(),"%u,",selection[i]);
                     CImg<char>::string(substr,false,true).append_string_to(substituted_command,ptr_sub);
                   }
-                  if (selection) --ptr_sub;
+                  if (selection) --ptr_sub; // Remove last delimiter
 
                   // Substitute $= -> transfer (quoted) arguments to named variables.
                 } else if (nsource[1]=='=' &&
