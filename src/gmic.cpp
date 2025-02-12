@@ -185,35 +185,35 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   return res;
 }
 
-// Append instance string to target string 'img'.
-// 'ptrd' is an updated pointer to the null terminator of 'img'.
-CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
+// Append instance string to target string 'str'.
+// 'ptrd' is an updated pointer to the null terminator of 'str'.
+CImg<T>& append_string_to(CImg<T>& str, T* &ptrd) const {
   const unsigned int len = _width - (_width && !back()?1:0);
-  if (ptrd + len>=img.end()) {
-    CImg<T> tmp(std::max(32U,2*img._width + len + 1));
-    std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
-    ptrd = tmp._data + (ptrd - img._data);
-    tmp.move_to(img);
+  if (ptrd + len>=str.end()) {
+    CImg<T> tmp(std::max(32U,2*str._width + len + 1));
+    std::memcpy(tmp,str,(ptrd - str._data)*sizeof(T));
+    ptrd = tmp._data + (ptrd - str._data);
+    tmp.move_to(str);
   }
   std::memcpy(ptrd,_data,len*sizeof(T));
   ptrd+=len;
   *ptrd = 0;
-  return img;
+  return str;
 }
 
-// Append character to target string 'img'.
-// 'ptrd' is an updated pointed to the null terminator of 'img'.
-static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
+// Append character 'c' to target string 'str'.
+// 'ptrd' is an updated pointed to the null terminator of 'str'.
+static CImg<T>& append_string_to(const char c, CImg<T>& str, T* &ptrd) {
   const unsigned int len = c?1:0;
-  if (ptrd + len>=img.end()) {
-    CImg<T> tmp(std::max(32U,2*img._width + len + 1));
-    std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
-    ptrd = tmp._data + (ptrd - img._data);
-    tmp.move_to(img);
+  if (ptrd + len>=str.end()) {
+    CImg<T> tmp(std::max(32U,2*str._width + len + 1));
+    std::memcpy(tmp,str,(ptrd - str._data)*sizeof(T));
+    ptrd = tmp._data + (ptrd - str._data);
+    tmp.move_to(str);
   }
   if (c) *(ptrd++) = c;
   *ptrd = 0;
-  return img;
+  return str;
 }
 
 // Return a copymarked version of an image name.
