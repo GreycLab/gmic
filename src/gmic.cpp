@@ -3532,9 +3532,9 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
   if (!data_commands || !*data_commands) return *this;
   cimg::mutex(23);
   CImg<char> s_body(256*1024), s_line(256*1024), s_name(257), debug_info(32);
-  unsigned int line_number = 0, pos = 0;
+  unsigned int line_number = 0, hash = ~0U, pos = ~0U;
   bool is_last_slash = false, _is_last_slash = false, is_newline = false;
-  int hash = -1, l_debug_info = 0;
+  int l_debug_info = 0;
   char sep = 0;
   if (command_file) {
     CImg<char>::string(command_file).move_to(command_files);
@@ -3591,13 +3591,13 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
     if ((!is_last_slash && std::strchr(lines,':') && // Check for a command definition (or implicit '_main_')
          cimg_sscanf(nlines,"%255[a-zA-Z0-9_] %c%262143[^\n]",ns_name,&sep,s_body.data())>=2 &&
-         (*nlines<'0' || *nlines>'9') && sep==':' && *s_body!='=') || ((*s_name=0), hash<0)) {
+         (*nlines<'0' || *nlines>'9') && sep==':' && *s_body!='=') || ((*s_name=0), hash==~0U)) {
       const char *_s_body = s_body;
       if (sep==':') while (*_s_body && cimg::is_blank(*_s_body)) ++_s_body;
-      CImg<char> body = CImg<char>::string(hash<0 && !*s_name?lines:_s_body);
-      if (hash<0 && !*s_name) std::strcpy(s_name,"_main_");
+      CImg<char> body = CImg<char>::string(hash==~0U && !*s_name?lines:_s_body);
+      if (hash==~0U && !*s_name) std::strcpy(s_name,"_main_");
       if (is_main_ && !std::strcmp(s_name,"_main_")) *is_main_ = true;
-      hash = (int)hashcode(s_name,false);
+      hash = hashcode(s_name,false);
 
       if (add_debug_info) { // Insert debug info code in body
         if (command_files.width()<2)
