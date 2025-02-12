@@ -185,36 +185,11 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   return res;
 }
 
-CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
-  if (!_width) return img;
-  if (ptrd + _width>=img.end()) {
-    CImg<T> tmp(std::max(8U,2*img._width + _width + 1));
-    std::memcpy(tmp,img,img._width*sizeof(T));
-    ptrd = tmp._data + (ptrd - img._data);
-    tmp.move_to(img);
-  }
-  std::memcpy(ptrd,_data,_width*sizeof(T));
-  ptrd+=_width;
-  return img;
-}
-
-static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
-  if (ptrd + 1>=img.end()) {
-    CImg<T> tmp(std::max(8U,2*img._width + 1));
-    std::memcpy(tmp,img,img._width*sizeof(T));
-    ptrd = tmp._data + (ptrd - img._data);
-    tmp.move_to(img);
-  }
-  *(ptrd++) = c;
-  return img;
-}
-
-/*
 // Append instance string to target string 'img'.
 // 'ptrd' is an updated pointer to the null terminator of 'img'.
 CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
   const unsigned int len = _width - (_width && !back()?1:0);
-  if (ptrd + len + 1>=img.end()) {
+  if (ptrd + len>=img.end()) {
     CImg<T> tmp(std::max(8U,2*img._width + len + 1));
     std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - img._data);
@@ -225,23 +200,21 @@ CImg<T>& append_string_to(CImg<T>& img, T* &ptrd) const {
   *ptrd = 0;
   return img;
 }
-*/
 
-/*
 // Append character to target string 'img'.
 // 'ptrd' is an updated pointed to the null terminator of 'img'.
 static CImg<T>& append_string_to(const char c, CImg<T>& img, T* &ptrd) {
-  if (ptrd + 2>=img.end()) {
-    CImg<T> tmp(std::max(8U,2*img._width));
+  const unsigned int len = c?1:0;
+  if (ptrd + len>=img.end()) {
+    CImg<T> tmp(std::max(8U,2*img._width + len + 1));
     std::memcpy(tmp,img,(ptrd - img._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - img._data);
     tmp.move_to(img);
   }
-  *(ptrd++) = c;
+  if (c) *(ptrd++) = c;
   *ptrd = 0;
   return img;
 }
-*/
 
 // Return a copymarked version of an image name.
 // This method has no 'in-place' version, at it is always better to call the new instance version.
@@ -4265,6 +4238,7 @@ CImg<char> gmic::substitute_item(const char *const source,
   char *ptr_sub = substituted_items.data();
   CImg<unsigned int> _ind;
   const char dot = is_image_expr?'.':0;
+  *ptr_sub = 0;
 
   for (const char *nsource = source; *nsource; )
     if (*nsource!='{' && *nsource!='$' && *nsource!=dot) {
@@ -4509,8 +4483,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           const char *s = inbraces.data() + 1;
           vs.assign(inbraces.width()*4);
           const unsigned int l = strescape(s,vs);
-          CImg<char>(vs,l,1,1,1,true).
-            append_string_to(substituted_items,ptr_sub);
+          CImg<char>(vs,l,1,1,1,true).append_string_to(substituted_items,ptr_sub);
           *substr = 0; is_substituted = true;
         }
 
@@ -4523,10 +4496,9 @@ CImg<char> gmic::substitute_item(const char *const source,
             cimg::strunescape(inbraces);
             for (*substr = 0; *s; ++s) {
               cimg_snprintf(substr,substr.width(),"%d%c",(int)(unsigned char)*s,delimiter);
-              CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-                append_string_to(substituted_items,ptr_sub);
+              CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
             }
-            if (*substr) --ptr_sub;
+            if (*substr) --ptr_sub; // Remove last delimiter
           }
           *substr = 0; is_substituted = true;
         }
@@ -4638,7 +4610,7 @@ CImg<char> gmic::substitute_item(const char *const source,
               break;
             case '^' : { // Sequence of all pixel values
               img.value_string(delimiter,0,"%.17g").move_to(vs);
-              if (vs && *vs) { --vs._width; vs.append_string_to(substituted_items,ptr_sub); }
+              if (vs && *vs) vs.append_string_to(substituted_items,ptr_sub);
               *substr = 0; is_substituted = true;
             } break;
             }
@@ -4648,7 +4620,7 @@ CImg<char> gmic::substitute_item(const char *const source,
             if (l_feature>=2) {
               if (feature[1]=='^' && !feature[2]) { // All pixel values
                 img.value_string(delimiter,0,"%.17g").move_to(vs);
-                if (vs && *vs) { --vs._width; vs.append_string_to(substituted_items,ptr_sub); }
+                if (vs && *vs) vs.append_string_to(substituted_items,ptr_sub);
                 *substr = 0; is_substituted = true;
               } else {
                 CImg<char> subset(feature + 1,l_feature);
@@ -4676,12 +4648,10 @@ CImg<char> gmic::substitute_item(const char *const source,
                 verbosity = o_verbosity;
                 o_status.move_to(status);
                 cimg_foroff(values,q) {
-                  cimg_snprintf(substr,substr.width(),"%.17g",(double)values[q]);
-                  CImg<char>::string(substr,true,true).
-                    append_string_to(substituted_items,ptr_sub);
-                  *(ptr_sub - 1) = delimiter;
+                  cimg_snprintf(substr,substr.width(),"%.17g%c",(double)values[q],delimiter);
+                  CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
                 }
-                if (values) --ptr_sub;
+                if (values) --ptr_sub; // Remove last delimiter
               }
             }
             *substr = 0; is_substituted = true;
@@ -4702,12 +4672,11 @@ CImg<char> gmic::substitute_item(const char *const source,
               img.eval(output,feature,0,0,0,0,&images);
               if (is_string) {
                 vs.assign(output.height() + 1,1,1,1).fill(output).back() = 0;
-                CImg<char>::string(vs,false,true).
-                  append_string_to(substituted_items,ptr_sub);
+                CImg<char>::string(vs,false,true).append_string_to(substituted_items,ptr_sub);
               } else {
                 if (output.height()>1) { // Vector-valued result
                   output.value_string(delimiter,0,is_rounded?"%g":"%.17g").move_to(vs);
-                  if (vs && *vs) { --vs._width; vs.append_string_to(substituted_items,ptr_sub); }
+                  if (vs && *vs) vs.append_string_to(substituted_items,ptr_sub);
                 } else { // Scalar result
                   if (is_rounded) cimg_snprintf(substr,substr.width(),"%g",*output);
                   else cimg_snprintf(substr,substr.width(),"%.17g",*output);
@@ -4724,8 +4693,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           }
         }
         if (is_substituted && *substr)
-          CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-            append_string_to(substituted_items,ptr_sub);
+          CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
         continue;
 
         //  '${...}' and '$${...}' expressions.
@@ -4753,8 +4721,7 @@ CImg<char> gmic::substitute_item(const char *const source,
         if (command_selection) {
           const unsigned int substr_width = (unsigned int)substr.width();
           selection2string(*command_selection,image_names,1,substr);
-          CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-            append_string_to(substituted_items,ptr_sub);
+          CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
           substr.assign(substr_width);
           nsource+=2;
         } else CImg<char>::append_string_to(*(nsource++),substituted_items,ptr_sub);
@@ -4762,29 +4729,26 @@ CImg<char> gmic::substitute_item(const char *const source,
         // Substitute '$!' -> Number of images in the list.
       } else if (nsource[1]=='!') {
         cimg_snprintf(substr,substr.width(),"%u",images.size());
-        CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-          append_string_to(substituted_items,ptr_sub);
+        CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
         nsource+=2;
 
         // Substitute '$^' -> Verbosity level.
       } else if (nsource[1]=='^') {
         cimg_snprintf(substr,substr.width(),"%d",verbosity);
-        CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-          append_string_to(substituted_items,ptr_sub);
+        CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
         nsource+=2;
 
         // Substitute '$|' -> Timer value.
       } else if (nsource[1]=='|') {
         cimg_snprintf(substr,substr.width(),"%.17g",(cimg::time() - reference_time)/1000.);
-        CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-          append_string_to(substituted_items,ptr_sub);
+        CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
         nsource+=2;
 
         // Substitute '$/' -> Current call stack.
       } else if (nsource[1]=='/') {
         cimglist_for(callstack,i) {
           callstack[i].append_string_to(substituted_items,ptr_sub);
-          *(ptr_sub - 1) = '/';
+          CImg<char>::append_string_to('/',substituted_items,ptr_sub);
         }
         nsource+=2;
 
@@ -4824,8 +4788,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           } break;
           }
         }
-        CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-          append_string_to(substituted_items,ptr_sub);
+        CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
         nsource+=2;
 
         // Substitute '$$command' and '$${command}' -> Source of custom command.
@@ -4884,8 +4847,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           is_return = false;
         }
         if (status.width()>1)
-          CImg<char>(status.data(),(unsigned int)std::strlen(status),1,1,1,true).
-            append_string_to(substituted_items,ptr_sub);
+          CImg<char>::string(status,false,true).append_string_to(substituted_items,ptr_sub);
 
         // Replace '$' by itself.
       } else CImg<char>::append_string_to(*(nsource++),substituted_items,ptr_sub);
@@ -13195,15 +13157,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 if (nsource[1]=='#') {
                   nsource+=2;
                   cimg_snprintf(substr,substr.width(),"%u",nb_arguments);
-                  CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-                    append_string_to(substituted_command,ptr_sub);
+                  CImg<char>::string(substr,false,true).append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
                   // Substitute $* -> copy of the specified arguments string.
                 } else if (nsource[1]=='*') {
                   nsource+=2;
-                  CImg<char>(argument,(unsigned int)std::strlen(argument),1,1,1,true).
-                    append_string_to(substituted_command,ptr_sub);
+                  CImg<char>::string(argument,false,true).append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
                   // Substitute $"*" -> copy of the specified "quoted" arguments string.
@@ -13211,8 +13171,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   nsource+=4;
                   for (unsigned int i = 1; i<=nb_arguments; ++i) {
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
-                    CImg<char>(g_list_c[i].data(),g_list_c[i].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                    g_list_c[i].append_string_to(substituted_command,ptr_sub);
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
                     if (i!=nb_arguments) CImg<char>::append_string_to(',',substituted_command,ptr_sub);
                   }
@@ -13223,8 +13182,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   nsource+=3;
                   cimg_forY(selection,i) {
                     cimg_snprintf(substr,substr.width(),"%u,",selection[i]);
-                    CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                    CImg<char>::string(substr,false,true).append_string_to(substituted_command,ptr_sub);
                   }
                   if (selection) --ptr_sub;
 
@@ -13236,13 +13194,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   CImg<char>::append_string_to(' ',substituted_command,ptr_sub);
                   for (unsigned int i = 0; i<=nb_arguments; ++i) {
                     cimg_snprintf(substr,substr.width(),"%s%u%c",title,i,i==nb_arguments?'=':',');
-                    CImg<char>(substr.data(),(unsigned int)std::strlen(substr),1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                    CImg<char>::string(substr,false,true).append_string_to(substituted_command,ptr_sub);
                   }
                   for (unsigned int i = 0; i<=nb_arguments; ++i) {
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
-                    CImg<char>(g_list_c[i].data(),g_list_c[i].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                    g_list_c[i].append_string_to(substituted_command,ptr_sub);
                     CImg<char>::append_string_to('\"',substituted_command,ptr_sub);
                     CImg<char>::append_string_to(i==nb_arguments?' ':',',substituted_command,ptr_sub);
                   }
@@ -13260,9 +13216,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                           nb_arguments,nb_arguments!=1?"s":"");
                   }
                   nsource+=cimg_snprintf(substr,substr.width(),"$%d",iind) + (sep=='}'?2:0);
-                  if (g_list_c[niind].width()>1)
-                    CImg<char>(g_list_c[niind].data(),g_list_c[niind].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                  g_list_c[niind].append_string_to(substituted_command,ptr_sub);
                   if (niind!=0) has_arguments = true;
 
                   // Substitute ${i=$j} -> value of the i^th argument, or the default value,
@@ -13282,9 +13236,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     g_list_c[iind] = g_list_c[niind1];
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
-                  if (g_list_c[iind].width()>1)
-                    CImg<char>(g_list_c[iind].data(),g_list_c[iind].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                  g_list_c[iind].append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
                   // Substitute ${i=$#} -> value of the i^th argument, or the default value,
@@ -13298,9 +13250,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
                   nsource+=cimg_snprintf(substr,substr.width(),"${%d=$#}",iind);
-                  if (g_list_c[iind].width()>1)
-                    CImg<char>(g_list_c[iind].data(),g_list_c[iind].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                  g_list_c[iind].append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
                   // Substitute ${i=default} -> value of the i^th argument,
@@ -13315,9 +13265,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                       move_to(g_list_c[iind]);
                     if (iind>(int)nb_arguments) nb_arguments = (unsigned int)iind;
                   }
-                  if (g_list_c[iind].width()>1)
-                    CImg<char>(g_list_c[iind].data(),g_list_c[iind].width() - 1,1,1,1,true).
-                      append_string_to(substituted_command,ptr_sub);
+                  g_list_c[iind].append_string_to(substituted_command,ptr_sub);
                   has_arguments = true;
 
                   // Substitute any other expression starting by '$'.
@@ -13358,10 +13306,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                     "Command '%s': Undefined argument '$%d', "
                                     "in expression '${%s}'.",
                                     command_name,uind,inbraces.data());
-                            CImg<char>(g_list_c[uind],true).append_string_to(substituted_command,ptr_sub);
-                            *(ptr_sub - 1) = ',';
+                            g_list_c[uind].append_string_to(substituted_command,ptr_sub);
+                            CImg<char>::append_string_to(',',substituted_command,ptr_sub);
                           }
-                          --ptr_sub;
+                          --ptr_sub; // Remove last delimiter
                           has_arguments = true;
                         }
                       }
