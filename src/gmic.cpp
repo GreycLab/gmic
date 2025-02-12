@@ -3628,8 +3628,12 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
       ptr_body = commands[hash][pos];
       body.append_string_to(commands[hash][pos],ptr_body);
 
-      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) // Freeze body of previous command
-        commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
+      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
+        if (commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
+          commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
+        else
+          commands[prev_hash][prev_pos]._width = prev_ptr_body - commands[prev_hash][prev_pos].data() + 1;
+      }
 
     } else { // Continuation of a previous line
       if (!is_last_slash) CImg<char>::append_string_to(' ',commands[hash][pos],ptr_body);
@@ -3649,8 +3653,12 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
     }
   }
 
-  if (hash!=~0U && pos!=~0U && ptr_body) // Freeze body of latest command
-    commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
+  if (hash!=~0U && pos!=~0U && ptr_body) { // Freeze body of latest processed command
+    if (commands[hash][pos].end() - ptr_body>256)
+      commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
+    else
+      commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
+  }
   cimg::mutex(23,0);
   return *this;
 }
