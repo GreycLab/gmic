@@ -190,7 +190,10 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
 CImg<T>& append_string_to(CImg<T>& str, T* &ptrd) const {
   const unsigned int len = _width - (_width && !back()?1:0);
   if (ptrd + len>=str.end()) {
-    CImg<T> tmp(std::max(32U,2*str._width + len + 1));
+    const unsigned int
+      mlen = str._width + len + 1, // Minimal required size
+      nlen = len<=str._width/2?std::max(2*str._width,mlen):mlen;
+    CImg<T> tmp(nlen);
     std::memcpy(tmp,str,(ptrd - str._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - str._data);
     tmp.move_to(str);
@@ -206,7 +209,10 @@ CImg<T>& append_string_to(CImg<T>& str, T* &ptrd) const {
 static CImg<T>& append_string_to(const char c, CImg<T>& str, T* &ptrd) {
   const unsigned int len = c?1:0;
   if (ptrd + len>=str.end()) {
-    CImg<T> tmp(std::max(32U,2*str._width + len + 1));
+    const unsigned int
+      mlen = str._width + len + 1, // Minimal required size
+      nlen = std::max(2*str._width,mlen);
+    CImg<T> tmp(nlen);
     std::memcpy(tmp,str,(ptrd - str._data)*sizeof(T));
     ptrd = tmp._data + (ptrd - str._data);
     tmp.move_to(str);
@@ -9640,7 +9646,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     g_list[0].width(),g_list[0].height(),
                     g_list[0].depth(),g_list[0].spectrum());
             else print(0,"Output image%s as %s file '%s', with pixel type '%s', "
-                       "%s compression, %s-page mode and %s bigtiff support.",
+                       "%s compression, %s-page mode and %sbigtiff support.",
                        gmic_selection.data(),
                        uext.data(),_filename.data(),stype,
                        compression_type==2?"JPEG":compression_type==1?"LZW":"no",
