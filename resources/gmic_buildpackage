@@ -201,11 +201,11 @@ fi
 DIST=`lsb_release -d | tail -c+13 | xargs`
 BITS=`uname -m`
 
+IS_300=`grep \(3\) /usr/include/gimp-3.0/libgimpbase/gimpversion.h | wc -l`
 IS_210=`grep \(10\) /usr/include/gimp-2.0/libgimpbase/gimpversion.h | wc -l`
-IS_300=`grep \(10\) /usr/include/gimp-3.0/libgimpbase/gimpversion.h | wc -l`
 
-if [ "$IS_210" == "1" ]; then GIMPVER=2.10
-elif [ "$IS_300" == "1" ]; then GIMPVER=3.0
+if [ "$IS_300" == "1" ]; then GIMPVER=3.0
+elif [ "$IS_210" == "1" ]; then GIMPVER=2.10
 else GIMPVER=2.8
 fi
 
@@ -218,8 +218,7 @@ if [ "$HOSTNAME" != "C302L-G17P17.png.unicaen.fr" ] && [ "$HOSTNAME" != "C302L-G
     RELEASE3=`echo $RELEASE0 | head -c3 | tail -c1`
     VERSION=${RELEASE1}${RELEASE2}${RELEASE3}
     SVERSION=${RELEASE1}.${RELEASE2}.${RELEASE3}
-    CODENAME=`lsb_release -i | tail -c+16 | xargs``lsb_release -r | tail -c+10 | xargs | sed 's/\./-/g'`_`lsb_release -c | tail -c+10 | xargs`
-    CODENAME="$(echo $CODENAME | tr '[A-Z]' '[a-z]')"
+    CODENAME=`. /etc/os-release && echo "${ID}_${VERSION_CODENAME}"`
     BITS=`uname -m`
     if [ "$BITS" == "x86_64" ]; then BITS=64; ARCH=amd64; PARCH=x86_64; else BITS=32; ARCH=i386; PARCH=i386; fi
     if [ "$1" == "final" ]; then SUFFIX=""; else SUFFIX=_pre; fi
@@ -229,6 +228,14 @@ if [ "$HOSTNAME" != "C302L-G17P17.png.unicaen.fr" ] && [ "$HOSTNAME" != "C302L-G
     OUTPAK=gmic_${SVERSION}${SUFFIX}_${CODENAME}_${ARCH}.deb
     OUTZIP_GIMP=gmic_${SVERSION}${SUFFIX}_gimp${GIMPVER}_${CODENAME}_${ARCH}.zip
     GENERIC_OUTZIP_GIMP=gmic_${SVERSION}${SUFFIX}_gimp${GIMPVER}_linux${BITS}.zip
+
+    echo "> Codename = '$CODENAME'"
+    echo "> Bits = $BITS"
+    echo "> GIMP version = $GIMPVER"
+    echo "> Output .tar file = '$TARFILE'"
+    echo "> Output directory = '$OUTDIR/'"
+    echo "> Output package = '$OUTPAK'"
+    echo "> Output GIMP plugin = '$OUTZIP_GIMP'"
 
     while [ ! -f deb_${TARFILE}.gz ]; do sleep 10; done
     sleep 10
@@ -270,8 +277,7 @@ RELEASE2=`echo $RELEASE0 | head -c2 | tail -c1`
 RELEASE3=`echo $RELEASE0 | head -c3 | tail -c1`
 VERSION=${RELEASE1}${RELEASE2}${RELEASE3}
 SVERSION=${RELEASE1}.${RELEASE2}.${RELEASE3}
-CODENAME=`lsb_release -i | tail -c+16 | xargs``lsb_release -r | tail -c+10 | xargs | sed 's/\./-/g'`_`lsb_release -c | tail -c+10 | xargs`
-CODENAME="$(echo $CODENAME | tr '[A-Z]' '[a-z]')"
+CODENAME=`. /etc/os-release && echo "${ID}_${VERSION_CODENAME}"`
 BITS=`uname -m`
 if [ "$BITS" == "x86_64" ]; then BITS=64; ARCH=amd64; PARCH=x86_64; else BITS=32; ARCH=i386; PARCH=i386; fi
 if [ "$1" == "final" ]; then SUFFIX=""; LSUFFIX=""; else SUFFIX=_pre; LSUFFIX=_pre`date +%y%m%d%H`; fi
