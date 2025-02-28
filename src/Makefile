@@ -798,7 +798,7 @@ man:
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)/$(INCLUDE)
 	mkdir -p $(DESTDIR)$(PREFIX)/$(BIN)
-	mkdir -p $(DESTDIR)$(PLUGIN)
+	mkdir -p $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
 	mkdir -p $(DESTDIR)$(SHARE)/gmic
 	mkdir -p $(DESTDIR)$(PREFIX)/$(LIB)
 	@if [ -f gmic ]; then cp -f gmic $(DESTDIR)$(PREFIX)/$(BIN); fi
@@ -810,7 +810,7 @@ install:
 	@if [ -f ../resources/gmic_lightleaks.gmz ]; then cp -f ../resources/gmic_lightleaks.gmz $(DESTDIR)$(SHARE)/gmic; fi
 	@if [ -f ../zart/zart ]; then cp -f ../zart/zart $(DESTDIR)$(PREFIX)/$(BIN); fi
 	@if [ -f ../gmic-qt/gmic_qt ]; then cp -f ../gmic-qt/gmic_qt $(DESTDIR)$(PREFIX)/$(BIN); fi
-	@if [ -f ../gmic-qt/gmic_gimp_qt ]; then cp -f ../gmic-qt/gmic_gimp_qt $(DESTDIR)$(PLUGIN); fi
+	@if [ -f ../gmic-qt/gmic_gimp_qt ]; then cp -f ../gmic-qt/gmic_gimp_qt $(DESTDIR)$(PLUGIN)/gmic_gimp_qt; fi
 	@if [ -f libgmic.so ]; then \
 	  cp -f gmic.h $(DESTDIR)$(PREFIX)/$(INCLUDE); \
           cp -f libgmic.so $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so.$(VERSION); \
@@ -851,7 +851,7 @@ install:
 	fi
 
 uninstall:
-	rm -f $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
+	rm -rf $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/gmic
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/zart
 	rm -f $(DESTDIR)$(PREFIX)/$(BIN)/gmic_qt
