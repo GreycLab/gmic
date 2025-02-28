@@ -7,6 +7,10 @@ $currentMonthYear = date('Y_m'); // Format: YYYY_MM
 $currentMonthFile = "downloads_$currentMonthYear";
 $allTimeFile = "downloads_all";
 
+// Backup files (to recover in case of reset)
+$currentMonthBackup = "$currentMonthFile.bak";
+$allTimeBackup = "$allTimeFile.bak";
+
 // Get the requested file from the query parameter
 $requestedFile = isset($_GET['file']) ? $_GET['file'] : null;
 
@@ -24,16 +28,23 @@ if (!file_exists($filePath)) {
     exit;
 }
 
-// Ensure the log files exist
-if (!file_exists($currentMonthFile)) {
-    file_put_contents($currentMonthFile, json_encode([]));
-}
-if (!file_exists($allTimeFile)) {
-    file_put_contents($allTimeFile, json_encode([]));
+// Ensure the log files exist or restore from backup
+function ensureLogFile($logFile, $backupFile) {
+    if (!file_exists($logFile)) {
+        if (file_exists($backupFile)) {
+            copy($backupFile, $logFile); // Restore from backup
+        } else {
+            file_put_contents($logFile, json_encode([])); // Initialize
+        }
+    }
 }
 
-// Function to update the log file safely
-function updateLogFile($logFile, $requestedFile) {
+// Ensure both logs exist
+ensureLogFile($currentMonthFile, $currentMonthBackup);
+ensureLogFile($allTimeFile, $allTimeBackup);
+
+// Function to update the log file safely with backup and track first download date
+function updateLogFile($logFile, $backupFile, $requestedFile) {
     $tempFile = "$logFile.tmp"; // Temporary file for atomic writing
 
     $handle = fopen($logFile, 'r+');
@@ -51,14 +62,22 @@ function updateLogFile($logFile, $requestedFile) {
             $counts = [];
         }
 
-        // Increment the count for the requested file
+        // Get today's date
+        $today = date('Y-m-d');
+
+        // Initialize file tracking if it doesn't exist
         if (!isset($counts[$requestedFile])) {
-            $counts[$requestedFile] = 0;
+            $counts[$requestedFile] = ["count" => 0, "first_download" => $today];
         }
-        $counts[$requestedFile]++;
+
+        // Increment the count for the requested file
+        $counts[$requestedFile]["count"]++;
 
         // Write to a temporary file first (atomic write)
         file_put_contents($tempFile, json_encode($counts));
+
+        // Backup the previous file before replacing it
+        copy($logFile, $backupFile);
 
         // Replace the original file with the new one
         rename($tempFile, $logFile);
@@ -75,8 +94,8 @@ function updateLogFile($logFile, $requestedFile) {
 }
 
 // Update both the current month log and the all-time log
-updateLogFile($currentMonthFile, $requestedFile);
-updateLogFile($allTimeFile, $requestedFile);
+updateLogFile($currentMonthFile, $currentMonthBackup, $requestedFile);
+updateLogFile($allTimeFile, $allTimeBackup, $requestedFile);
 
 // Serve the file for download
 header('Content-Description: File Transfer');
