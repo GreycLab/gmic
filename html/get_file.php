@@ -3,7 +3,7 @@
 $filesDirectory = 'files/'; // Ensure this folder exists and contains the files to download
 
 // Generate filenames for logs
-$currentMonthYear = date('Y_m'); // Format: YYYY_MM
+$currentMonthYear = date('Y_m'); // Format: YYYY-MM
 $currentMonthFile = "downloads_$currentMonthYear";
 $allTimeFile = "downloads_all";
 
@@ -43,7 +43,17 @@ function ensureLogFile($logFile, $backupFile) {
 ensureLogFile($currentMonthFile, $currentMonthBackup);
 ensureLogFile($allTimeFile, $allTimeBackup);
 
-// Function to update the log file safely with backup and track first download date
+// Function to calculate average downloads per day
+function calculateDownloadsPerDay($firstDownloadDate, $totalDownloads) {
+    $firstDownloadTimestamp = strtotime($firstDownloadDate);
+    $currentTimestamp = time();
+
+    $daysSinceFirstDownload = max(1, ($currentTimestamp - $firstDownloadTimestamp) / 86400); // Avoid division by zero
+
+    return round($totalDownloads / $daysSinceFirstDownload, 2); // Keep 2 decimal places
+}
+
+// Function to update the log file safely with backup and track download stats
 function updateLogFile($logFile, $backupFile, $requestedFile) {
     $tempFile = "$logFile.tmp"; // Temporary file for atomic writing
 
@@ -62,19 +72,29 @@ function updateLogFile($logFile, $backupFile, $requestedFile) {
             $counts = [];
         }
 
-        // Get today's date
-        $today = date('Y-m-d');
+        // Get the current date
+        $currentDate = date('Y-m-d');
 
         // Initialize file tracking if it doesn't exist
         if (!isset($counts[$requestedFile])) {
-            $counts[$requestedFile] = ["count" => 0, "first_download" => $today];
+            $counts[$requestedFile] = [
+                "count" => 0,
+                "first_download" => $currentDate,
+                "average_downloads_per_day" => 0
+            ];
         }
 
         // Increment the count for the requested file
         $counts[$requestedFile]["count"]++;
 
+        // Recalculate average downloads per day
+        $counts[$requestedFile]["average_downloads_per_day"] = calculateDownloadsPerDay(
+            $counts[$requestedFile]["first_download"],
+            $counts[$requestedFile]["count"]
+        );
+
         // Write to a temporary file first (atomic write)
-        file_put_contents($tempFile, json_encode($counts));
+        file_put_contents($tempFile, json_encode($counts, JSON_PRETTY_PRINT));
 
         // Backup the previous file before replacing it
         copy($logFile, $backupFile);
