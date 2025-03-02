@@ -33167,17 +33167,18 @@ shuffle :
   e[^-1] "Shuffle vector values of images$? with Fisher-Yates algorithm."
   f "<begin(P = whd);swap(I[v(0,--P)],I());I"
 
-#@cli spread : _dx>=0,_dy>=0,_dz>=0
+#@cli spread : _dx[%]>=0,_dy[%]>=0,_dz[%]>=0
 #@cli : Spread pixel values of selected images randomly along x,y and z.
 #@cli : Default values: 'dx=3', 'dy=dx' and 'dz=0'.
 #@cli : $ image.jpg +spread 3
-spread : skip ${1=3},${2=$1},${3=0}
+spread : check "${1=3}>=0 && ${2=$1}>=0 && ${3=0}>=0"
   e[^-1] "Spread pixel of image$? randomly, with amplitudes ($1,$2,$3)."
   foreach {
+    sx,sy,sz:=ispercentage($1)?w*$1:$1,ispercentage($2)?h*$2:$2,ispercentage($3)?d*$3:$3
     100%,100%,100%,3
-    sh. 0 rand. {-$1},$1 rm.
-    sh. 1 rand. {-$2},$2 rm.
-    sh. 2 rand. {-$3},$3 rm.
+    sh. 0 rand. {-$sx},$1 rm.
+    sh. 1 rand. {-$sy},$2 rm.
+    sh. 2 rand. {-$sz},$3 rm.
     warp.. .,1,1,1 rm.
   }
 
