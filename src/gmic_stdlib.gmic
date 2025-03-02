@@ -32531,18 +32531,26 @@ whirls : skip ${1=3},${2=6},${3=0.5},${4=1.8}
 #
 #------------------------------------
 
-#@cli deform : _amplitude>=0,_interpolation
+#@cli deform : _amplitude[%]>=0,_interpolation
 #@cli : Apply random smooth deformation on selected images.
 #@cli : 'interpolation' can be { 0:none | 1:linear | 2:bicubic }.
 #@cli : Default value: 'amplitude=10'.
 #@cli : $ image.jpg +deform[0] 10 +deform[0] 20
 deform : check "${1=10}>=0 && inrange(${2=1},0,2)"
   e[^-1] "Apply random smooth deformation on image$?, with amplitude $1."
-  foreach {
-    if d==1 2%,2%,1,2 else 2%,2%,2% fi
-    noise. $1
-    r. ..,..,..,2,5 warp.. .,1,$2,1 rm.
-  }
+  foreach { if w
+    w,h,d:=w,h,d
+    amp:=ispercentage($1)?max($w,$h,$d)*$1:$1
+    sx,sy,sz=1
+    if $w!=1 sx=2% fi
+    if $h!=1 sy=2% fi
+    if $d!=1 sz=2% fi
+    $sx,$sy,$sz,3
+    if $w!=1 sh. 0 noise. $amp rm. fi
+    if $h!=1 sh. 1 noise. $amp rm. fi
+    if $d!=1 sh. 2 noise. $amp rm. fi
+    r. ..,..,..,3,5 warp.. .,1,$2,1 rm.
+  fi }
 
 #@cli euclidean2polar : _center_x[%],_center_y[%],_stretch_factor>0,\
 # _boundary_conditions={ 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }
