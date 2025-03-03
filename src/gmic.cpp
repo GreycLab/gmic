@@ -6803,18 +6803,29 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sx = cimg::round(sepx=='%'?sx*cimg::max(img.width(),img.height(),img.depth())/100:sx);
               gmic_apply(dilate((unsigned int)sx),true);
             }
-          } else if ((cimg_sscanf(argument,"%lf,%lf%c",
-                                  &sx,&sy,&end)==2 ||
-                      cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                                  &sx,&sy,&sz,&end)==3) &&
+          } else if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                  gmic_use_argx,gmic_use_argy,&end)==2 ||
+                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                  argx,argy,gmic_use_argz,&end)==3) &&
+                     (cimg_sscanf(argx,"%lf%c",&sx,&end)==1 ||
+                      (cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end)==2 && sepx=='%')) &&
+                     (cimg_sscanf(argy,"%lf%c",&sy,&end)==1 ||
+                      (cimg_sscanf(argy,"%lf%c%c",&sy,&sepy,&end)==2 && sepy=='%')) &&
+                     (!*argz || cimg_sscanf(argz,"%lf%c",&sz,&end)==1 ||
+                      (cimg_sscanf(argz,"%lf%c%c",&sz,&sepz,&end)==2 && sepz=='%')) &&
                      sx>=0 && sy>=0 && sz>=0) {
-            sx = cimg::round(sx);
-            sy = cimg::round(sy);
-            sz = cimg::round(sz);
-            print(0,"Dilate image%s with %gx%gx%g kernel and neumann boundary conditions.",
+            print(0,"Dilate image%s with kernel of size %g%sx%g%sx%g%s and neumann boundary conditions.",
                   gmic_selection.data(),
-                  sx,sy,sz);
-            cimg_forY(selection,l) gmic_apply(dilate((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
+                  sx,sepx=='%'?"%":"",
+                  sy,sepy=='%'?"%":"",
+                  sz,sepz=='%'?"%":"");
+            cimg_forY(selection,l) {
+              CImg<T> &img = gmic_check(images[selection[l]]);
+              sx = cimg::round(sepx=='%'?sx*img.width()/100:sx);
+              sy = cimg::round(sepy=='%'?sy*img.height()/100:sy);
+              sz = cimg::round(sepz=='%'?sz*img.depth()/100:sz);
+              gmic_apply(dilate((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
+            }
           } else arg_error("dilate");
           is_change = true;
           ++position;
@@ -7341,18 +7352,29 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sx = cimg::round(sepx=='%'?sx*cimg::max(img.width(),img.height(),img.depth())/100:sx);
               gmic_apply(erode((unsigned int)sx),true);
             }
-          } else if ((cimg_sscanf(argument,"%lf,%lf%c",
-                                  &sx,&sy,&end)==2 ||
-                      cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                                  &sx,&sy,&sz,&end)==3) &&
+          } else if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                  gmic_use_argx,gmic_use_argy,&end)==2 ||
+                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                  argx,argy,gmic_use_argz,&end)==3) &&
+                     (cimg_sscanf(argx,"%lf%c",&sx,&end)==1 ||
+                      (cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end)==2 && sepx=='%')) &&
+                     (cimg_sscanf(argy,"%lf%c",&sy,&end)==1 ||
+                      (cimg_sscanf(argy,"%lf%c%c",&sy,&sepy,&end)==2 && sepy=='%')) &&
+                     (!*argz || cimg_sscanf(argz,"%lf%c",&sz,&end)==1 ||
+                      (cimg_sscanf(argz,"%lf%c%c",&sz,&sepz,&end)==2 && sepz=='%')) &&
                      sx>=0 && sy>=0 && sz>=0) {
-            sx = cimg::round(sx);
-            sy = cimg::round(sy);
-            sz = cimg::round(sz);
-            print(0,"Erode image%s with %gx%gx%g kernel and neumann boundary conditions.",
+            print(0,"Erode image%s with kernel of size %g%sx%g%sx%g%s and neumann boundary conditions.",
                   gmic_selection.data(),
-                  sx,sy,sz);
-            cimg_forY(selection,l) gmic_apply(erode((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
+                  sx,sepx=='%'?"%":"",
+                  sy,sepy=='%'?"%":"",
+                  sz,sepz=='%'?"%":"");
+            cimg_forY(selection,l) {
+              CImg<T> &img = gmic_check(images[selection[l]]);
+              sx = cimg::round(sepx=='%'?sx*img.width()/100:sx);
+              sy = cimg::round(sepy=='%'?sy*img.height()/100:sy);
+              sz = cimg::round(sepz=='%'?sz*img.depth()/100:sz);
+              gmic_apply(erode((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
+            }
           } else arg_error("erode");
           is_change = true;
           ++position;
