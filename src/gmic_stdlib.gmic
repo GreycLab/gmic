@@ -18852,24 +18852,27 @@ dilate_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
     dilate[^-1] .,$2,$3 rm.
   }
 
-#@cli dilate_oct : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli dilate_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply octagonal dilation of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate_oct 7
 dilate_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply octagonal dilation of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
-  if $1<2 return fi
-  if $1&1 ss=$1 else ss:=$1+1 fi
-  i[0] (0,1,0;1,1,1;0,1,0) i[1] (1,1,1;1,1,1;1,1,1)
-  repeat $!-2 {
-    r:=round(($ss-1)*sqrt(2)/(1+sqrt(2))/2)
-    q:=round(($ss-1)/(1+sqrt(2))/2)
-    if $r>0 repeat $r { dilate. [0],$2,$3 } fi
-    if $q>0 repeat $q { dilate. [1],$2,$3 } fi
-    mv. 2
+  foreach {
+    radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
+    if $radius<2 continue fi
+    ss:=$radius+1-($radius&1);
+    i[0] (0,1,0;1,1,1;0,1,0) i[1] (1,1,1;1,1,1;1,1,1)
+    repeat $!-2 {
+      r:=round(($ss-1)*sqrt(2)/(1+sqrt(2))/2)
+      q:=round(($ss-1)/(1+sqrt(2))/2)
+      if $r>0 repeat $r { dilate. [0],$2,$3 } fi
+      if $q>0 repeat $q { dilate. [1],$2,$3 } fi
+      mv. 2
+    }
+    rm[0,1]
   }
-  rm[0,1]
 
 _kr_circle :
   if !($1%2) 2,2,1,1,1 else 1,1,1,1,1 fi r. $1,$1,1,1,0,0,0.5,0.5
@@ -18975,24 +18978,27 @@ erode_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
     erode[^-1] .,$2,$3 rm.
   }
 
-#@cli erode_oct : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli erode_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply octagonal erosion of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode_oct 7
 erode_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
   e[^-1] "Apply octagonal erosion of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
-  if $1<2 return fi
-  if $1&1 ss=$1 else ss:=$1+1 fi
-  i[0] (0,1,0;1,1,1;0,1,0) i[1] (1,1,1;1,1,1;1,1,1)
-  repeat $!-2 {
-    r:=round(($ss-1)*sqrt(2)/(1+sqrt(2))/2)
-    q:=round(($ss-1)/(1+sqrt(2))/2)
-    if $r>0 repeat $r { erode. [0],$2,$3 } fi
-    if $q>0 repeat $q { erode. [1],$2,$3 } fi
-    mv. 2
+  foreach {
+    radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
+    if $radius<2 continue fi
+    ss:=$radius+1-($radius&1);
+    i[0] (0,1,0;1,1,1;0,1,0) i[1] (1,1,1;1,1,1;1,1,1)
+    repeat $!-2 {
+      r:=round(($ss-1)*sqrt(2)/(1+sqrt(2))/2)
+      q:=round(($ss-1)/(1+sqrt(2))/2)
+      if $r>0 repeat $r { erode. [0],$2,$3 } fi
+      if $q>0 repeat $q { erode. [1],$2,$3 } fi
+      mv. 2
+    }
+    rm[0,1]
   }
-  rm[0,1]
 
 #@cli erode_threshold : size_x>=1,size_y>=1,size_z>=1,_threshold>=0,_boundary_conditions
 #@cli : Erode selected images in the (X,Y,Z,I) space.
