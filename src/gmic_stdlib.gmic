@@ -18837,16 +18837,20 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},
 #@cli : Default values: 'size_z=1', 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate 10
 
-#@cli dilate_circ : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli dilate_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply circular dilation of selected images by specified size.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate_circ 7
 dilate_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
-  e[^-1] "Apply circular dilation of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
-  if $1<2 return fi
-  shape_circle $1 dilate[^-1] .,$2,$3 rm.
+  e[^-1] "Dilate image$? using circular kernel of size $1, with boundary conditions $2, in "${r$3}" mode."
+  foreach {
+    radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
+    if $radius<2 continue fi
+    shape_circle $radius
+    dilate[^-1] .,$2,$3 rm.
+  }
 
 #@cli dilate_oct : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply octagonal dilation of selected images by specified size.
@@ -18956,16 +18960,20 @@ edges : skip ${1=15%}
 #@cli : Default values: 'size_z=1', 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode 10
 
-#@cli erode_circ : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli erode_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply circular erosion of selected images by specified size.
 #@cli : 'boundary_conditions' can be { 0:dirichlet | 1:neumann | 2:periodic | 3:mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode_circ 7
 erode_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
-  e[^-1] "Apply circular erosion of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
-  if $1<2 return fi
-  shape_circle $1 erode[^-1] .,$2,$3 rm.
+  e[^-1] "Erode image$? using circular kernel of size $1, with boundary conditions $2, in "${r$3}" mode."
+  foreach {
+    radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
+    if $radius<2 continue fi
+    shape_circle $radius
+    erode[^-1] .,$2,$3 rm.
+  }
 
 #@cli erode_oct : _size>=0,_boundary_conditions,_is_real={ 0 | 1 }
 #@cli : Apply octagonal erosion of selected images by specified size.
