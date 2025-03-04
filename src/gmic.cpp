@@ -3037,7 +3037,7 @@ gmic& gmic::print(const CImg<unsigned int> *const callstack_selection, const cha
     message.assign(siz);
     message[message.width() - 2] = 0;
     cimg_vsnprintf(message,message.width(),format,ap);
-    if (message[message.width() - 2]) { // Buffer too short for the string: try with a larger buffer.
+    if (message[message.width() - 2]) { // Buffer too short for the string: try with a larger buffer
       siz*=2;
       if (siz>=1048576) { cimg::strellipsize(message,message.width() - 2); break; }
     } else break;
@@ -3298,7 +3298,7 @@ CImg<char> gmic::get_variable(const char *const name,
   if (ind!=~0U) { // Regular variable name
     res.assign(vars[ind],true);
     if (varlength) *varlength = varlengths[ind];
-    if (ind!=vars._width - 1) { // Modify slot position of variable to make it more accessible next time.
+    if (ind!=vars._width - 1) { // Modify slot position of variable to make it more accessible next time
       unsigned int indm = (vars._width + ind)/2;
       vars[ind].swap(vars[indm]);
       varnames[ind].swap(varnames[indm]);
@@ -3544,7 +3544,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
   char sep = 0, *ptr_body = 0;
   if (command_file) {
     CImg<char>::string(command_file).move_to(command_files);
-    CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'.
+    CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'
     CImg<unsigned char> tmp;
     (command_files>'x').move_to(tmp);
     tmp.resize(tmp.width() + 4,1,1,1,0,0,1);
@@ -5347,7 +5347,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         command[_command.width() - 2] = *s_selection = 0;
       }
       position = position_argument;
-      if (_s_selection._width!=selsiz) { // Go back to initial size for selection image.
+      if (_s_selection._width!=selsiz) { // Go back to initial size for selection image
         _s_selection.assign(selsiz);
         s_selection = _s_selection.data();
         *s_selection = 0;
@@ -5480,7 +5480,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           case 'r' : std::strcpy(command,"rotate3d"); break;
           case '-' : std::strcpy(command,"sub3d"); break;
           } else if (!is_get && !command3 && command0=='n' && command1=='m' && command2=='d') {
-          std::strcpy(command,"named"); // Shortcut 'nmd' for 'named".
+          std::strcpy(command,"named"); // Shortcut 'nmd' for 'named"
         }
         if (item!=_item.data() + (is_hyphen || is_plus?1:0)) item = _item;
         command0 = *command?*command:*item;
@@ -13138,7 +13138,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             }
 
             // Set $0 to be the command name.
-            g_list_c.assign(1); // Used to store arguments.
+            g_list_c.assign(1); // Used to store arguments
             CImg<char>::string(command).move_to(g_list_c[0]);
             unsigned int nb_arguments = 0;
 
@@ -13177,7 +13177,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             CImg<char> inbraces;
 
             for (const char *nsource = command_code; *nsource;)
-              if (*nsource!='$') { // If not starting with '$'.
+              if (*nsource!='$') { // If not starting with '$'
                 const char *const nsource0 = nsource;
                 nsource = std::strchr(nsource0,'$');
                 if (!nsource) nsource = command_code_back;
@@ -14595,7 +14595,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
           continue;
 
-        } else { // Other file types.
+        } else { // Other file types
 
           // Check if a custom command handling requested file format exists.
           gmic_use_formula;
