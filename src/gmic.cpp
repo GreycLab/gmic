@@ -1062,7 +1062,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
 
   CImg<floatT> confidences(nmask), priorities(dx,dy,1,2,-1), pC;
   CImg<unsigned int> saved_patches(4,256), is_visited(width(),height(),1,1,0);
-  CImg<ucharT> pM, pN;  // Pre-declare patch variables (avoid iterative memory alloc/dealloc)
+  CImg<ucharT> pM, pN; // Pre-declare patch variables (avoid iterative memory alloc/dealloc)
   CImg<T> pP, pbest;
   CImg<floatT> weights(patch_size,patch_size,1,1,0);
   weights.draw_gaussian((float)p1,(float)p1,patch_size/15.f,&one)/=patch_size2;
@@ -3010,7 +3010,7 @@ CImgList<char> gmic::command_line_to_CImgList(const char *const command_line) {
   }
   if (ptrd!=item.data() && !is_blank(c)) {
     *ptrd = 0;
-    if (is_subst) *(++ptrd) = 1;  // Item has to be substituted
+    if (is_subst) *(++ptrd) = 1; // Item has to be substituted
     CImg<char>(item.data(),(unsigned int)(ptrd - item.data() + 1)).move_to(items);
   }
   if (is_debug && !is_start) {
@@ -14002,7 +14002,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (l>=72) {
             std::memcpy(s_values_text.data(),s_values.data(),32);
             std::memcpy(s_values_text.data() + 32,"(...)",5);
-            std::memcpy(s_values_text.data() + 37,s_values.data() + l - 34,35);  // Last '\0' is included
+            std::memcpy(s_values_text.data() + 37,s_values.data() + l - 34,35); // Last '\0' is included
           } else std::strcpy(s_values_text,s_values);
 
           if (nb==1)
@@ -14702,7 +14702,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         if (*filename_tmp) std::remove(filename_tmp); // Clean temporary file if used
-        if (is_network_file) std::remove(_filename);  // Clean temporary file if network input
+        if (is_network_file) std::remove(_filename); // Clean temporary file if network input
       }
 
       if (is_verbose) {
