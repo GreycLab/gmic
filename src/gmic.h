@@ -87,12 +87,12 @@ namespace gmic_library {
   // Class 'gmic_image<T>'.
   //-----------------------
   template<typename T> struct gmic_image {
-    unsigned int _width;       // Number of image columns (dimension along the X-axis)
-    unsigned int _height;      // Number of image lines (dimension along the Y-axis)
-    unsigned int _depth;       // Number of image slices (dimension along the Z-axis)
-    unsigned int _spectrum;    // Number of image channels (dimension along the C-axis)
-    bool _is_shared;           // Tells if the data buffer has been allocated by another object
-    T *_data;                  // Pointer to the first pixel value
+    unsigned int _width; // Number of image columns (dimension along the X-axis)
+    unsigned int _height; // Number of image lines (dimension along the Y-axis)
+    unsigned int _depth; // Number of image slices (dimension along the Z-axis)
+    unsigned int _spectrum; // Number of image channels (dimension along the C-axis)
+    bool _is_shared; // Tells if the data buffer has been allocated by another object
+    T *_data; // Pointer to the first pixel value
 
     // Destructor.
     ~gmic_image() {
@@ -135,9 +135,9 @@ namespace gmic_library {
   // Class 'gmic_list<T>'.
   //----------------------
   template<typename T> struct gmic_list {
-    unsigned int _width;           // Number of images in the list
+    unsigned int _width; // Number of images in the list
     unsigned int _allocated_width; // Allocated items in the list (must be 2^N and >size)
-    gmic_image<T> *_data;          // Pointer to the first image of the list
+    gmic_image<T> *_data; // Pointer to the first image of the list
 
     // Destructor.
     ~gmic_list() {
