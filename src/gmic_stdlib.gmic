@@ -16820,7 +16820,7 @@ split_opacity :
   e[^-1] "Split color and opacity parts of image$?."
   foreach { s c,{s==4?-3:s==2?-1:-s} }
 
-#@cli split_vector : keep_splitting_values={ + | - },value1,_value2,...
+#@cli split_vector : keep_splitting_values={ +:Increasing | -:Decreasing },value1,_value2,...
 #@cli : Split selected images into multiple parts, where specified vector '[value1,_value2,...]' is the separator.
 split_vector :
   e[^-1] "Split image$?, according to vector [${2--1}]."
@@ -16906,7 +16906,7 @@ to_graya :
     fi
   }
 
-#@cli to_pseudogray : _max_step>=0,_is_perceptual_constraint={ 0 | 1 },_bits_depth>0
+#@cli to_pseudogray : _max_step>=0,_is_perceptual_constraint={ 0:No | 1:Yes },_bits_depth>0
 #@cli : Convert selected scalar images ([0-255]-valued) to pseudo-gray color images.
 #@cli : Default values: 'max_step=5', 'is_perceptual_constraint=1' and 'bits_depth=8'.
 #@cli : The original pseudo-gray technique has been introduced by Rich Franzen <http://r0k.us/graphics/pseudoGrey.html>.
@@ -17211,7 +17211,7 @@ autocrop : skip "${1=xyz}"
     fi
   }
 
-#@cli autocrop_components : _threshold[%],_min_area[%]>=0,_is_high_connectivity={ 0 | 1 },\
+#@cli autocrop_components : _threshold[%],_min_area[%]>=0,_is_high_connectivity={ 0:No | 1:Yes },\
 # _output_type={ 0:Crop | 1:Segmentation | 2:Coordinates }
 #@cli : Autocrop and extract connected components in selected images, according to a mask given as the last channel of
 #@cli : each of the selected image (e.g. alpha-channel).
@@ -17408,7 +17408,7 @@ downsize_aliased : check "${1=50}>=0 && $1<=100"
     r $1%,$1%,$1%,100%,2
   }
 
-#@cli elevate : _depth,_is_plain={ 0 | 1 },_is_colored={ 0 | 1 }
+#@cli elevate : _depth,_is_plain={ 0:No | 1:Yes },_is_colored={ 0:No | 1:Yes }
 #@cli : Elevate selected 2D images into 3D volumes.
 #@cli : Default values: 'depth=64', 'is_plain=1' and 'is_colored=1'.
 elevate : check "${1=64}>0" skip ${2=1},${3=1}
@@ -17447,8 +17447,8 @@ expand : check "isint(${3=0},0,3)"
     nw>0 && nh>0 && nd>0 && nd>0?resize(#x,nw,nh,nd,ns,0,$3,0.5,0.5,0.5,0.5):resize(#x,0);
   " rm.
 
-#@cli extract : "condition",_output_type={ 0:xyzc-coords | 1:xyz-coords | 2:scalar-values | 3:vector-values | \
-# 4:xyzc-coords + scalar value | 5:xyz-coords + vector-values }
+#@cli extract : "condition",_output_type={ 0:XYZC-coords | 1:XYZ-coords | 2:Scalar-values | 3:Vector-values | \
+# 4:XYZC-coords + scalar value | 5:XYZ-coords + vector-values }
 #@cli : Extract a list of coordinates or values from selected image, where
 #@cli : specified mathematical condition holds.
 #@cli : For N coordinates matching, result is a 1xNx1x4 image.
@@ -17469,7 +17469,7 @@ extract : check "isint(${2=0},0,5)"
   str.=";end(da_freeze())"
   repeat $! { nm={$>,n} eval[$>] $str => $nm rv[$>,-1] rm. }
 
-#@cli extract_region : [label_image],_extract_xyz_coordinates={ 0 | 1 },_label_1,...,_label_M
+#@cli extract_region : [label_image],_extract_xyz_coordinates={ 0:No | 1:Yes },_label_1,...,_label_M
 #@cli : Extract all pixels of selected images whose corresponding label in '[label_image]' is equal to 'label_m',
 #@cli : and output them as M column images.
 #@cli : Default value: 'extract_xyz_coordinates=0'.
@@ -17657,7 +17657,7 @@ _montage :
 rs :
   _gmic_s="$?" v + _rescale2d $*
 
-#@cli rescale2d : _width[%]={ 0:any | >0 },_height[%]={ 0:any | >0 },-1=<_interpolation<=6,\
+#@cli rescale2d : _width[%]={ 0:Any | >0 },_height[%]={ 0:Any | >0 },-1=<_interpolation<=6,\
 # _mode={ 0:Inside | 1:Padded-inside | 2:Outside | 3:Cropped-outside }
 #@cli : Resize selected 2D images while preserving aspect ratio.
 #@cli : 'interpolation' can be { -1:Status only | 0:None | 1:Nearest | 2:Average | 3:Linear | \
@@ -17697,7 +17697,7 @@ _rescale2d : check "${1=0}>=0 && ${2=0}>=0 && isin(${3=2},-1,0,1,2,3,4,5,6) && i
 rs3d :
   _gmic_s="$?" v + _rescale3d $*
 
-#@cli rescale3d : _width[%]={ 0:any | >0 },_height[%]={ 0:any | >0 },_depth[%]={ 0:any | >0 },-1=<_interpolation<=6,\
+#@cli rescale3d : _width[%]={ 0:Any | >0 },_height[%]={ 0:Any | >0 },_depth[%]={ 0:Any | >0 },-1=<_interpolation<=6,\
 # _mode={ 0:Inside | 1:Padded-inside | 2:Outside | 3: Cropped-outside }
 #@cli : Resize selected 3D images while preserving aspect ratio.
 #@cli : 'interpolation' can be { -1:Status only | 0:None | 1:Nearest | 2:Average | 3:Linear | \
@@ -17984,7 +17984,7 @@ scale3x :
             c2*(F==H&&F!=B&&H!=D?F:i))"
   }
 
-#@cli scale_dcci2x : _edge_threshold>=0,_exponent>0,_extend_1px={ 0:False | 1:True }
+#@cli scale_dcci2x : _edge_threshold>=0,_exponent>0,_extend_1px={ 0:No | 1:Yes }
 #@cli : Double XY-size of selected images, using a directional cubic convolution interpolation,
 #@cli : as described in <https://en.wikipedia.org/wiki/Directional_Cubic_Convolution_Interpolation>.
 #@cli : Default values: 'edge_threshold=1.15', 'exponent=5' and 'extend_1px=0'.
@@ -18049,7 +18049,7 @@ scale_dcci2x : check "${1=1.15}>=0 && ${2=5}>=0" skip ${3=0}
          value/=16)"
   }
 
-#@cli seamcarve : _width[%]>=0,_height[%]>=0,_is_priority_channel={ 0 | 1 },_is_antialiasing={ 0 | 1 },\
+#@cli seamcarve : _width[%]>=0,_height[%]>=0,_is_priority_channel={ 0:No | 1:Yes },_is_antialiasing={ 0:No | 1:Yes },\
 # _maximum_seams[%]>=0
 #@cli : Resize selected images with specified 2D geometry, using the seam-carving algorithm.
 #@cli : Default values: 'height=100%', 'is_priority_channel=0', 'is_antialiasing=1' and 'maximum_seams=25%'.
@@ -18067,8 +18067,8 @@ seamcarve : check "${2=100%}>=0 && ${5=25%}>=0" skip ${3=0},${4=1}
 
 # Subroutine to remove/add vertical seams/
 # $1 = desired width.
-# $2 = is_priority_channel={ 0 | 1 }
-# $3 = is_antialiasing={ 0 | 1 }
+# $2 = is_priority_channel={ 0:No | 1:Yes }
+# $3 = is_antialiasing={ 0:No | 1:Yes }
 # $4 = max number of seams added/removed at once.
 _seamcarve :
   do
@@ -18139,7 +18139,7 @@ _seamcarve :
     rprogress {a=w/$1;a<1?a*100:100/a}
   while w!=$1
 
-#@cli shift : vx[%],_vy[%],_vz[%],_vc[%],_boundary_conditions,_interpolation={ 0:nearest_neighbor | 1:linear } : (+)
+#@cli shift : vx[%],_vy[%],_vz[%],_vc[%],_boundary_conditions,_interpolation={ 0:Nearest_neighbor | 1:Linear } : (+)
 #@cli : Shift selected images by specified displacement vector.
 #@cli : Displacement vector can be non-integer in which case linear interpolation should be chosen.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
@@ -18164,7 +18164,7 @@ slices : check "isint(${3=0},0,3)" skip ${2=$1}
   e[^-1] "Keep slices $1...$2 of image$?, with "${"arg0 $3,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   z 0,0,$1,100%,100%,$2,$3
 
-#@cli sort : _ordering={ + | - },_axis={ x | y | z | c } : (+)
+#@cli sort : _ordering={ +:Increasing | -:Decreasing },_axis={ x | y | z | c } : (+)
 #@cli : Sort pixel values of selected images.
 #@cli : If 'axis' is specified, the sorting is done according to the data of the first column/row/slice/channel
 #@cli : of selected images.
@@ -18174,7 +18174,8 @@ slices : check "isint(${3=0},0,3)" skip ${2=$1}
 #@cli s : eq. to 'split'. : (+)
 
 #@cli split : { x | y | z | c }...{ x | y | z | c },_split_mode : \
-# keep_splitting_values={ + | - },_{ x | y | z | c }...{ x | y | z | c },value1,_value2,... : (no arg) : (+)
+# keep_splitting_values={ +:Increasing | -:Decreasing },\
+# _{ x | y | z | c }...{ x | y | z | c },value1,_value2,... : (no arg) : (+)
 #@cli : Split selected images along specified axes, or regarding to a sequence of scalar values
 #@cli : (optionally along specified axes too).
 #@cli : (eq. to 's').\n
@@ -18187,7 +18188,7 @@ slices : check "isint(${3=0},0,3)" skip ${2=$1}
 #@cli : $ 1,20,1,1,"1,2,3,4" +split -,2,3 append[1--1] y
 #@cli : $ (1,2,2,3,3,3,4,4,4,4) +split x,0 append[1--1] y
 
-#@cli split_tiles : M!=0,_N!=0,_is_homogeneous={ 0 | 1 }
+#@cli split_tiles : M!=0,_N!=0,_is_homogeneous={ 0:No | 1:Yes }
 #@cli : Split selected images as a MxN array of tiles.
 #@cli : If M or N is negative, it stands for the tile size instead.
 #@cli : Default values: 'N=M' and 'is_homogeneous=0'.
@@ -18330,7 +18331,7 @@ blur_angular : skip ${2=50%},${3=50%}
 
 #@cli blur_bloom : _amplitude>=0,_ratio>=0,_nb_iter>=0,_blend_operator={ + | max | min },\
 # _kernel={ 0:Deriche | 1:Gaussian | 2:Box | 3:Triangle | 4:Quadratic },\
-# _normalize_scales={ 0 | 1 },_axes
+# _normalize_scales={ 0:No | 1:Yes },_axes
 #@cli : Apply a bloom filter that blend multiple blur filters of different radii,
 #@cli : resulting in a larger but sharper glare than a simple blur.
 #@cli : When specified, argument 'axes' is a sequence of { x | y | z | c }.
@@ -18479,7 +18480,7 @@ closing : skip "${2=},${3=}"
   fi
   if $is_kernel rm. fi
 
-#@cli closing_circ : _size>=0,_is_real={ 0 | 1 }
+#@cli closing_circ : _size>=0,_is_real={ 0:No | 1:Yes }
 #@cli : Apply circular dilation of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +closing_circ 7
@@ -18496,7 +18497,7 @@ compose_freq :
   e[^-1] "Compose low and high frequency part$? into new images."
   repeat int($!/2) { +[$>,{$>+1}] }
 
-#@cli convolve : [mask],_boundary_conditions,_is_normalized={ 0 | 1 },_channel_mode,\
+#@cli convolve : [mask],_boundary_conditions,_is_normalized={ 0:No | 1:Yes },_channel_mode,\
 # _xcenter,_ycenter,_zcenter,_xstride>0,_ystride>0,_zstride>0,_xdilation,_ydilation,_zdilation,\
 # _xoffset,_yoffset,_zoffset,_xsize>=0,_ysize>=0,_zsize>=0 : (+)
 #@cli : Convolve selected images by specified mask.
@@ -18530,7 +18531,7 @@ convolve_fft : check ${is_image_arg\ $1}" && isin(${2=2},0,1,2,3)"
     fi
   }
 
-#@cli correlate : [mask],_boundary_conditions,_is_normalized={ 0 | 1 },_channel_mode,\
+#@cli correlate : [mask],_boundary_conditions,_is_normalized={ 0:No | 1:Yes },_channel_mode,\
 # _xcenter,_ycenter,_zcenter,_xstride>0,_ystride>0,_zstride>0,_xdilation,_ydilation,_zdilation,\
 # _xoffset,_yoffset,_zoffset,_xsize>=0,_ysize>=0,_zsize>=0 : (+)
 #@cli : Correlate selected images by specified mask.
@@ -18614,7 +18615,7 @@ _dct :
   -
   +z[0] 0,0 /. {sqrt(2)} j.. .,0,0,0 rm. * {sqrt(2/w)} # Make the transform orthogonal
 
-#@cli deblur : amplitude[%]>=0,_nb_iter>=0,_dt>=0,_regul>=0,_regul_type={ 0:Tikhonov | 1:meancurv. | 2:TV }
+#@cli deblur : amplitude[%]>=0,_nb_iter>=0,_dt>=0,_regul>=0,_regul_type={ 0:Tikhonov | 1:Meancurv. | 2:TV }
 #@cli : Deblur image using a regularized Jansson-Van Cittert algorithm.
 #@cli : Default values: 'nb_iter=10', 'dt=20', 'regul=0.7' and 'regul_type=1'.
 #@cli : $ image.jpg blur 3 +deblur 3,40,20,0.01
@@ -18638,7 +18639,7 @@ deblur : check "${2=10}>=0 && ${3=20}>=0 && ${4=0.7}>=0" skip ${5=1}
     rm..
   => $nm }
 
-#@cli deblur_goldmeinel : sigma>=0,_nb_iter>=0,_acceleration>=0,_kernel_type={ 0:deriche | 1:gaussian }.
+#@cli deblur_goldmeinel : sigma>=0,_nb_iter>=0,_acceleration>=0,_kernel_type={ 0:Deriche | 1:Gaussian }.
 #@cli : Deblur selected images using Gold-Meinel algorithm
 #@cli : Default values: 'nb_iter=8', 'acceleration=1' and 'kernel_type=1'.
 #@cli : $ image.jpg +blur 1 +deblur_goldmeinel[-1] 1
@@ -18652,7 +18653,7 @@ deblur_goldmeinel : check "$1>=0 && ${2=8}>=0 && ${3=1}>=0" skip ${4=1}
     } rm[0]
   }
 
-#@cli deblur_richardsonlucy : sigma>=0, nb_iter>=0, _kernel_type={ 0:deriche | 1:gaussian }.
+#@cli deblur_richardsonlucy : sigma>=0, nb_iter>=0, _kernel_type={ 0:Deriche | 1:Gaussian }.
 #@cli : Deblur selected images using Richardson-Lucy algorithm.
 #@cli : Default values: 'nb_iter=50' and 'kernel_type=1'.
 #@cli : $ image.jpg +blur 1 +deblur_richardsonlucy[-1] 1
@@ -18687,8 +18688,8 @@ deconvolve_fft : check ${is_image_arg\ $1}" && ${2=.001}>=0"
     ifft rm.
   } }
 
-#@cli deinterlace : _method={ 0 | 1 }
-#@cli : Deinterlace selected images ('method' can be { 0:Standard or 1:Motion-compensated }).
+#@cli deinterlace : _method
+#@cli : Deinterlace selected images ('method' can be { 0:Standard | 1:Motion-compensated }).
 #@cli : Default value: 'method=0'.
 #@cli : $ image.jpg +rotate 3,1,1,50%,50% resize 100%,50% resize 100%,200%,1,3,4 shift[-1] 0,1 add +deinterlace 1
 deinterlace : skip ${1=0}
@@ -18701,9 +18702,9 @@ deinterlace : skip ${1=0}
   }
 
 #@cli denoise : [guide],std_deviation_s[%]>=0,std_deviation_r[%]>=0,_patch_size>0,_lookup_size>0,_smoothness,\
-# _fast_approx={ 0 | 1 } : \
+# _fast_approx={ 0:No | 1:Yes } : \
 # std_deviation_s[%]>=0,std_deviation_r[%]>=0,_patch_size>0,_lookup_size>0,_smoothness,\
-# _fast_approx={ 0 | 1 } : (+)
+# _fast_approx={ 0:No | 1:Yes } : (+)
 #@cli : Denoise selected images by non-local patch averaging.
 #@cli : Default values: 'patch_size=5', 'lookup_size=6' and 'smoothness=1'.
 #@cli : $ image.jpg +denoise 5,5,8
@@ -18840,7 +18841,7 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},
 #@cli : Default values: 'size_z=1', 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate 10
 
-#@cli dilate_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli dilate_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0:No | 1:Yes }
 #@cli : Apply circular dilation of selected images by specified size.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
@@ -18855,7 +18856,7 @@ dilate_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
     dilate[^-1] .,$2,$3 rm.
   }
 
-#@cli dilate_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli dilate_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0:No | 1:Yes }
 #@cli : Apply octagonal dilation of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +dilate_oct 7
@@ -18915,7 +18916,7 @@ dog : check "${1=2%}>=0 && ${2=3%}>=0"
   e[^-1] "Compute difference of gaussian on image$?, with standard deviations $1 and $2."
   foreach { [0] parallel "b[0] $1","b[1] $2" - abs }
 
-#@cli diffusiontensors : _sharpness>=0,0<=_anisotropy<=1,_alpha[%],_sigma[%],is_sqrt={ 0 | 1 }
+#@cli diffusiontensors : _sharpness>=0,0<=_anisotropy<=1,_alpha[%],_sigma[%],is_sqrt={ 0:No | 1:Yes }
 #@cli : Compute the diffusion tensors of selected images for edge-preserving smoothing algorithms.
 #@cli : Default values: 'sharpness=0.7', 'anisotropy=0.3', 'alpha=0.6', 'sigma=1.1' and 'is_sqrt=0'.
 #@cli : $ image.jpg diffusiontensors 0.8 abs pow 0.2
@@ -18948,7 +18949,7 @@ edges : skip ${1=15%}
 #@cli : Default values: 'size_z=1', 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode 10
 
-#@cli erode_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli erode_circ : _size[%]>=0,_boundary_conditions,_is_real={ 0:No | 1:Yes }
 #@cli : Apply circular erosion of selected images by specified size.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
@@ -18963,7 +18964,7 @@ erode_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
     erode[^-1] .,$2,$3 rm.
   }
 
-#@cli erode_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0 | 1 }
+#@cli erode_oct : _size[%]>=0,_boundary_conditions,_is_real={ 0:No | 1:Yes }
 #@cli : Apply octagonal erosion of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +erode_oct 7
@@ -19166,7 +19167,7 @@ _haar_z : # Direct haar transform along the z-axis
   if d%2 error[0--6] "Command 'haar': Invalid image depth="{h}" (is not even)." fi
   +shift 0,0,-1 r 100%,100%,50% +-[1] [0] +[0,1] / {sqrt(2)} a z
 
-#@cli heat_flow : _nb_iter>=0,_dt,_keep_sequence={ 0 | 1 }
+#@cli heat_flow : _nb_iter>=0,_dt,_keep_sequence={ 0:No | 1:Yes }
 #@cli : Apply iterations of the heat flow on selected images.
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +heat_flow 20
@@ -19393,7 +19394,7 @@ inn :
 
 #@cli inpaint : [mask] : [mask],0,_fast_method : \
 # [mask],_patch_size>=1,_lookup_size>=1,_lookup_factor>=0,_lookup_increment!=0,_blend_size>=0,\
-# 0<=_blend_threshold<=1,_blend_decay>=0,_blend_scales>=1,_is_blend_outer={ 0 | 1 } : (+)
+# 0<=_blend_threshold<=1,_blend_decay>=0,_blend_scales>=1,_is_blend_outer={ 0:No | 1:Yes } : (+)
 #@cli : Inpaint selected images by specified mask.
 #@cli : If no patch size (or 0) is specified, inpainting is done using a fast average or median algorithm.
 #@cli : Otherwise, it used a patch-based reconstruction method, that can be very time consuming.
@@ -19405,8 +19406,8 @@ inn :
 #@cli : $ image.jpg 100%,100% circle 30%,30%,30,1,255,0,255 circle 70%,70%,50,1,255,0,255 \
 # +inpaint[0] [1],5,15,0.5,1,9,0 remove[1]
 
-#@cli inpaint_pde : [mask],_nb_scales[%],_diffusion_type={ 0:isotropic | 1:Delaunay-guided | \
-# 2:edge-guided | 3:mask-guided },_diffusion_iter>=0
+#@cli inpaint_pde : [mask],_nb_scales[%],_diffusion_type={ 0:Isotropic | 1:Delaunay-guided | \
+# 2:Edge-guided | 3:Mask-guided },_diffusion_iter>=0
 #@cli : Inpaint selected images by specified mask using a multiscale transport-diffusion algorithm.
 #@cli : Argument 'nb_scales' sets the number of scales used in the multi-scale resolution scheme.
 #@cli : - When the '%' qualifier is used for 'nb_scales', the number of used scales is relative \
@@ -19510,7 +19511,7 @@ inpaint_flow : check ${is_image_arg\ $1}" && ${2=10}>=0 && ${3=100}>=0 && ${4=5}
     rm.
   }
 
-#@cli inpaint_holes : maximal_area[%]>=0,_tolerance>=0,_is_high_connectivity={ 0 | 1 }
+#@cli inpaint_holes : maximal_area[%]>=0,_tolerance>=0,_is_high_connectivity={ 0:No | 1:Yes }
 #@cli : Inpaint all connected regions having an area less than specified value.
 #@cli : Default values: 'maximal_area=4', 'tolerance=0' and 'is_high_connectivity=0'.
 #@cli : $ image.jpg noise 5%,2 +inpaint_holes 8,40
@@ -19548,7 +19549,7 @@ inpaint_morpho : check ${is_image_arg\ $1}
   }
 
 #@cli inpaint_matchpatch : [mask],_nb_scales={ 0:Auto | >0 },_patch_size>0,_nb_iterations_per_scale>0,\
-# _blend_size>=0,_allow_outer_blending={ 0 | 1 },_is_already_initialized={ 0 | 1 }
+# _blend_size>=0,_allow_outer_blending={ 0:No | 1:Yes },_is_already_initialized={ 0:No | 1:Yes }
 #@cli : Inpaint selected images by specified binary mask, using a multi-scale matchpatch algorithm.
 #@cli : Default values: 'nb_scales=0', 'patch_size=9', 'nb_iterations_per_scale=10', 'blend_size=5',\
 # 'allow_outer_blending=1' and 'is_already_initialized=0'.
@@ -19639,7 +19640,7 @@ inpaint_matchpatch : check ${is_image_arg\ $1}"&& ${2=0}>=0 && isint(${3=9},1) &
     =>[0] $nm
   } rm[mask] }
 
-# _inpaint_matchpatch : [correspondence_map],[mask],blend_size>0,_allow_outer_blending={ 0 | 1 }
+# _inpaint_matchpatch : [correspondence_map],[mask],blend_size>0,_allow_outer_blending={ 0:No | 1:Yes }
 _inpaint_matchpatch :
   pass$1 1 pass$2 {!$3" || "!$4}
   if !$3
@@ -19793,7 +19794,7 @@ map_tones_fast : check "${1=3%}>=0 && ${2=0.3}>=0"
   }
   n 0,255
 
-#@cli meancurvature_flow : _nb_iter>=0,_dt,_keep_sequence={ 0 | 1 }
+#@cli meancurvature_flow : _nb_iter>=0,_dt,_keep_sequence={ 0:No | 1:Yes }
 #@cli : Apply iterations of the mean curvature flow on selected images.
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +meancurvature_flow 20
@@ -19891,7 +19892,7 @@ nlmeans_core : check ${is_image_arg\ $1}" && "${is_image_arg\ $2}" && $3>0 && $4
     / # Normalize
   } }
 
-#@cli normalize_local : _amplitude>=0,_radius>0,_n_smooth[%]>=0,_a_smooth[%]>=0,_is_cut={ 0 | 1 },_min=0,_max=255
+#@cli normalize_local : _amplitude>=0,_radius>0,_n_smooth[%]>=0,_a_smooth[%]>=0,_is_cut={ 0:No | 1:Yes },_min=0,_max=255
 #@cli : Normalize selected images locally.
 #@cli : Default values: 'amplitude=3', 'radius=16', 'n_smooth=4%', 'a_smooth=2%', 'is_cut=1', 'min=0' and 'max=255'.
 #@cli : $ image.jpg normalize_local 8,10
@@ -19980,7 +19981,7 @@ opening : skip "${2=},${3=}"
   fi
   if $is_kernel rm. fi
 
-#@cli opening_circ : _size>=0,_is_real={ 0 | 1 }
+#@cli opening_circ : _size>=0,_is_real={ 0:No | 1:Yes }
 #@cli : Apply circular opening of selected images by specified size.
 #@cli : Default values: 'boundary_conditions=1' and 'is_real=0'.
 #@cli : $ image.jpg +opening_circ 7
@@ -20025,7 +20026,7 @@ percentile : check ${"is_image_arg $1"}" && inrange(${2=0},0,100) && inrange(${3
     S = sort(N);
     res = 0; for (s = s0, s<=s1, ++s, res+=S[s]); res/=ds"
 
-#@cli peronamalik_flow : K_factor>0,_nb_iter>=0,_dt,_keep_sequence={ 0 | 1 }
+#@cli peronamalik_flow : K_factor>0,_nb_iter>=0,_dt,_keep_sequence={ 0:No | 1:Yes }
 #@cli : Apply iterations of the Perona-Malik flow on selected images.
 #@cli : Default values: 'K_factor=20', 'nb_iter=5', 'dt=5' and 'keep_sequence=0'.
 #@cli : $ image.jpg +heat_flow 20
@@ -20061,7 +20062,7 @@ phase_correlation : check ${"is_image_arg $1"}
     $res => "[phase correlation]" rv[$>,-1] rm.
   } rm.
 
-#@cli pde_flow : _nb_iter>=0,_dt,_velocity_command,_keep_sequence={ 0 | 1 }
+#@cli pde_flow : _nb_iter>=0,_dt,_velocity_command,_keep_sequence={ 0:No | 1:Yes }
 #@cli : Apply iterations of a generic PDE flow on selected images.
 #@cli : Default values: 'nb_iter=10', 'dt=30', 'velocity_command=laplacian' and 'keep_sequence=0'.
 #@cli : $ image.jpg +pde_flow 20
@@ -20385,9 +20386,9 @@ sharpen_alpha : check "${1=1}>=0 && isint(${2=5},1) && inrange(${3=0},0,1) && in
   }
 
 #@cli smooth : amplitude[%]>=0,_sharpness>=0,0<=_anisotropy<=1,_alpha[%],_sigma[%],_dl>0,_da>0,\
-# _precision>0,_interpolation,_fast_approx={ 0 | 1 } : \
+# _precision>0,_interpolation,_fast_approx={ 0:No | 1:Yes } : \
 # nb_iterations>=0,_sharpness>=0,_anisotropy,_alpha,_sigma,_dt>0,0 : [tensor_field],_amplitude>=0,_dl>0,_da>0,\
-# _precision>0,_interpolation,_fast_approx={ 0 | 1 } : \
+# _precision>0,_interpolation,_fast_approx={ 0:No | 1:Yes } : \
 # [tensor_field],_nb_iters>=0,_dt>0,0 : (+)
 #@cli : Smooth selected images anisotropically using diffusion PDE's, with specified field of
 #@cli : diffusion tensors.
@@ -20507,7 +20508,7 @@ split_details : check "(isint(${1=0}) || ispercentage($1)) && ${2=0}>=0 && ${3=0
     rv foreach { => ${bm}_$>$ext }
   }
 
-#@cli structuretensors : _scheme={ 0:centered | 1:forward/backward }
+#@cli structuretensors : _scheme={ 0:Centered | 1:Forward/backward }
 #@cli : Compute the structure tensor field of selected images.
 #@cli : Default value: 'scheme=0'.
 #@cli : $ image.jpg structuretensors abs pow 0.2
@@ -20534,7 +20535,7 @@ structuretensors : skip "${1=}"
     fi
   }
 
-#@cli solidify : _smoothness[%]>=0,_diffusion_type={ 0:isotropic | 1:Delaunay-guided | 2:edge-oriented },\
+#@cli solidify : _smoothness[%]>=0,_diffusion_type={ 0:Isotropic | 1:Delaunay-guided | 2:Edge-oriented },\
 # _diffusion_iter>=0
 #@cli : Solidify selected transparent images.
 #@cli : Default values: 'smoothness=75%', 'diffusion_type=1' and 'diffusion_iter=20'.
@@ -20643,7 +20644,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0},0) && 
     rm. r $width,$height,1,100%,0,0,0.5,0.5
   }
 
-#@cli tv_flow : _nb_iter>=0,_dt,_keep_sequence={ 0 | 1 }
+#@cli tv_flow : _nb_iter>=0,_dt,_keep_sequence={ 0:No | 1:Yes }
 #@cli : Apply iterations of the total variation flow on selected images.
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +tv_flow 40
@@ -20740,7 +20741,7 @@ watermark_fourier : check ${2=33}>0
   }
   rm[0]
 
-#@cli watershed : [priority_image],_is_high_connectivity={ 0 | 1 } : (+)
+#@cli watershed : [priority_image],_is_high_connectivity={ 0:No | 1:Yes } : (+)
 #@cli : Compute the watershed transform of selected images.
 #@cli : Default value: 'is_high_connectivity=1'.
 #@cli : $ 400,400 noise 0.2,2 eq 1 +distance 1 mul[-1] -1 label[-2] watershed[-2] [-1] mod[-2] 256 map[-2] 0 reverse
@@ -20751,7 +20752,7 @@ watermark_fourier : check ${2=33}>0
 #
 #---------------------------------
 
-#@cli area : tolerance>=0,is_high_connectivity={ 0 | 1 }
+#@cli area : tolerance>=0,is_high_connectivity={ 0:No | 1:Yes }
 #@cli : Compute area of connected components in selected images.
 #@cli : Default values: 'is_high_connectivity=0'.
 #@cli : $ image.jpg luminance stencil[-1] 1 +area 0
@@ -20765,7 +20766,7 @@ area : check "$1>=0" skip ${2=0}
     a c
   }
 
-#@cli area_fg : tolerance>=0,is_high_connectivity={ 0 | 1 }
+#@cli area_fg : tolerance>=0,is_high_connectivity={ 0:No | 1:Yes }
 #@cli : Compute area of connected components for non-zero values in selected images.
 #@cli : Similar to 'area' except that 0-valued pixels are not considered.
 #@cli : Default values: 'is_high_connectivity=0'.
@@ -20957,7 +20958,7 @@ canny : check "${1=1}>=0 && ${2=0.05}>=0 && ${3=0.15}>=0 && isint(${4=0},0,2)"
     rm.. => $nm
   }
 
-#@cli delaunay : _output_type={ 0:image | 1:coordinates/triangles }
+#@cli delaunay : _output_type={ 0:Image | 1:Coordinates/triangles }
 #@cli : Generate discrete 2D Delaunay triangulation of non-zero pixels in selected images.
 #@cli : Input images must be scalar.
 #@cli : Each pixel of the output image is a triplet (a,b,c) meaning the pixel belongs to
@@ -21043,8 +21044,8 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
     }
   fi
 
-#@cli displacement : [source_image],_smoothness,_precision>=0,_nb_scales>=0,_iteration_max>=0,is_backward={ 0 | 1 },\
-# _[guide] : (+)
+#@cli displacement : [source_image],_smoothness,_precision>=0,_nb_scales>=0,_iteration_max>=0,\
+# is_backward={ 0:No | 1:Yes },_[guide] : (+)
 #@cli : Estimate displacement field between specified source and selected target images.
 #@cli : If 'smoothness>=0', regularization type is set to isotropic, else to anisotropic.
 #@cli : If 'nbscales==0', the number of scales used is estimated from the image size.
@@ -21062,7 +21063,7 @@ detect_skin : check "${1=0.5}>=0 && $1<=1" skip ${2=-1},${3=-1},${4=-1}
 #@cli : $ 400,400 set 1,50%,50% +distance[0] 1,2 +distance[0] 1,1 distance[0] 1,0 mod 32 threshold 16 append c
 #@cli : $$ https://gmic.eu/oldtutorial/_distance
 
-#@cli edgels : x0,y0,_n0,_is_high_connectivity={ 0 | 1 }
+#@cli edgels : x0,y0,_n0,_is_high_connectivity={ 0:No | 1:Yes }
 #@cli : Extract one or several lists of edgels (and their normals) that defines a 2D binary silhouette.
 #@cli : When specified (i.e. '!=-1'), arguments 'x0,y0,n0' are the coordinates of the starting edgel, \
 # which must be located on an edge of the binary silhouette.
@@ -21189,7 +21190,7 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
     k. => $nm
   }
 
-#@cli histogram_cumul : _nb_levels>0,_is_normalized={ 0 | 1 },_val0[%],_val1[%]
+#@cli histogram_cumul : _nb_levels>0,_is_normalized={ 0:No | 1:Yes },_val0[%],_val1[%]
 #@cli : Compute cumulative histogram of selected images.
 #@cli : Default values: 'nb_levels=256', 'is_normalized=0', 'val0=0%' and 'val1=100%'.
 #@cli : $ image.jpg +histogram_cumul 256 histogram[0] 256 display_graph 400,300,3
@@ -21221,7 +21222,7 @@ histogram_pointwise : skip ${2=0%},${3=100%}
     r $w,$h,$d,$nb_levels,-1 => $nm
   }
 
-#@cli hough : _width>0,_height>0,gradient_norm_voting={ 0 | 1 }
+#@cli hough : _width>0,_height>0,gradient_norm_voting={ 0:No | 1:Yes }
 #@cli : Compute hough transform (theta,rho) of selected images.
 #@cli : Default values: 'width=512', 'height=width' and 'gradient_norm_voting=1'.
 #@cli : $ image.jpg +blur 1.5 hough[-1] 400,400 blur[-1] 0.5 add[-1] 1 log[-1]
@@ -21330,7 +21331,7 @@ isophotes : skip ${1=64}
     [0],[0] j3d. ..,0,0,0,1,0,0,0 rm.. *
   }
 
-#@cli label : _tolerance>=0,is_high_connectivity={ 0 | 1 },_is_L2_norm={ 0 | 1 } : (+)
+#@cli label : _tolerance>=0,is_high_connectivity={ 0:No | 1:Yes },_is_L2_norm={ 0:No | 1:Yes } : (+)
 #@cli : Label connected components in selected images.
 #@cli : If 'is_L2_norm=1', tolerances are compared against L2-norm, otherwise L1-norm is used.
 #@cli : Default values: 'tolerance=0', 'is_high_connectivity=0' and 'is_L2_norm=1'.
@@ -21338,7 +21339,7 @@ isophotes : skip ${1=64}
 #@cli : $ 400,400 set 1,50%,50% distance 1 mod 16 threshold 8 label mod 255 map 2
 #@cli : $$ https://gmic.eu/oldtutorial/_label
 
-#@cli label_fg : tolerance>=0,is_high_connectivity={ 0 | 1 },_is_L2_norm={ 0 | 1 }
+#@cli label_fg : tolerance>=0,is_high_connectivity={ 0:No | 1:Yes },_is_L2_norm={ 0:No | 1:Yes }
 #@cli : Label connected components for non-zero values (foreground) in selected images.
 #@cli : Similar to 'label' except that 0-valued pixels are not labeled.
 #@cli : If 'is_L2_norm=1', tolerances are compared against L2-norm, otherwise L1-norm is used.
@@ -21460,7 +21461,7 @@ min_patch : check "isint(${1=16},1)"
   e[^-1] "Return locations of minimal values in local patch neighborhood of size $1, in image$?."
   foreach { +erode $1 == }
 
-#@cli minimal_path : x0[%]>=0,y0[%]>=0,z0[%]>=0,x1[%]>=0,y1[%]>=0,z1[%]>=0,_is_high_connectivity={ 0 | 1 }
+#@cli minimal_path : x0[%]>=0,y0[%]>=0,z0[%]>=0,x1[%]>=0,y1[%]>=0,z1[%]>=0,_is_high_connectivity={ 0:No | 1:Yes }
 #@cli : Compute minimal path between two points on selected potential maps.
 #@cli : Default value: 'is_high_connectivity=0'.
 #@cli : $ image.jpg +gradient_norm fill[-1] 1/(1+i) minimal_path[-1] 0,0,0,100%,100%,0 pointcloud[-1] 0 *[-1] 280 \
@@ -21594,7 +21595,7 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   foreach { s y,$H s x,$W k[0-{$N-1}] }
 
 #@cli matchpatch : [patch_image],patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations>=0,\
-# _nb_randoms>=0,_occurence_penalization,_output_score={ 0 | 1 },_[guide] : (+)
+# _nb_randoms>=0,_occurence_penalization,_output_score={ 0:No | 1:Yes },_[guide] : (+)
 #@cli : Estimate correspondence map between selected images and specified patch image, using
 #@cli : a patch-matching algorithm.
 #@cli : Each pixel of the returned correspondence map gives the location (p,q) of the closest patch in
@@ -21608,7 +21609,7 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 #@cli : $ image.jpg sample colorful +matchpatch[0] [1],3 +warp[-2] [-1],0
 
 #@cli matchpatch_alt : [patch_image],_patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations>=0,\
-# _nb_randoms>=0,_occurrence_penalization>=0,_output_score={ 0 | 1 },_[guide]
+# _nb_randoms>=0,_occurrence_penalization>=0,_output_score={ 0:No | 1:Yes },_[guide]
 #@cli : Implementation of the ''matchpatch'' command as an alternative custom command (slower).
 #@cli : Default values: 'patch_height=patch_width', 'patch_depth=1', 'nb_iterations=5', 'nb_randoms=5', \
 # 'occurrence_penalization=0', 'output_score=0' and 'guide=(undefined)'.
@@ -22052,7 +22053,7 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
     label. 0,0
   }
 
-#@cli ssd_patch : [patch],_use_fourier={ 0 | 1 },_boundary_conditions
+#@cli ssd_patch : [patch],_use_fourier={ 0:No | 1:Yes },_boundary_conditions
 #@cli : Compute fields of SSD between selected images and specified patch.
 #@cli : Argument 'boundary_conditions' is valid only when 'use_fourier=0'.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
@@ -22618,7 +22619,7 @@ circle : skip ${4=1},${5=0},${6=0}
   ellipse $1,$2,$3,$3,0,${4--1}
 
 #@cli close_binary : 0<=_endpoint_rate<=100,_endpoint_connectivity>=0,_spline_distmax>=0,_segment_distmax>=0,\
-# 0<=_spline_anglemax<=180,_spline_roundness>=0,_area_min>=0,_allow_self_intersection={ 0 | 1 }
+# 0<=_spline_anglemax<=180,_spline_roundness>=0,_area_min>=0,_allow_self_intersection={ 0:No | 1:Yes }
 #@cli : Automatically close open shapes in binary images (defining white strokes on black background).
 #@cli : Default values: 'endpoint_rate=75', 'endpoint_connectivity=2', 'spline_distmax=80', 'segment_distmax=20', \
 # 'spline_anglemax=90', 'spline_roundness=1','area_min=100', 'allow_self_intersection=1'.
@@ -23157,7 +23158,7 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
 #@cli : $ image.jpg repeat 300 ellipse {u(100)}%,{u(100)}%,{u(30)},{u(30)},{u(180)},0.3,${-rgb} done \
 # ellipse 50%,50%,100,100,0,0.7,255
 
-#@cli flood : x[%],_y[%],_z[%],_tolerance>=0,_is_high_connectivity={ 0 | 1 },_opacity,_color1,... : (+)
+#@cli flood : x[%],_y[%],_z[%],_tolerance>=0,_is_high_connectivity={ 0:No | 1:Yes },_opacity,_color1,... : (+)
 #@cli : Flood-fill selected images using specified value and tolerance.
 #@cli : Default values: 'y=z=0', 'tolerance=0', 'is_high_connectivity=0', 'opacity=1' and 'color1=0'.
 #@cli : $ image.jpg repeat 1000 flood {u(100)}%,{u(100)}%,0,20,0,1,${-rgb} done
@@ -23423,7 +23424,7 @@ thickspline : skip ${9=3},${10=1},${11=0}
     eval ${-math_lib}"thickspline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,$10,[${11--1}])"
   }
 
-#@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0 | 1 },_c0r,_c0i,_opacity
+#@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0:No | 1:Yes },_c0r,_c0i,_opacity
 #@cli : Draw mandelbrot/julia fractal on selected images.
 #@cli : Default values: 'iteration_max=100', 'is_julia=0', 'c0r=c0i=0' and 'opacity=1'.
 #@cli : $ 400,400 mandelbrot -2.5,-2,2,2,1024 map 0 +blur 2 elevation3d[-1] -0.2
@@ -23582,8 +23583,8 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 
 #@cli j3d : eq. to 'object3d'. : (+)
 
-#@cli object3d : [object3d],_x[%],_y[%],_z,_opacity,_rendering_mode,_is_double_sided={ 0 | 1 },\
-# _is_zbuffer={ 0 | 1 },_focale,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess : (+)
+#@cli object3d : [object3d],_x[%],_y[%],_z,_opacity,_rendering_mode,_is_double_sided={ 0:No | 1:Yes },\
+# _is_zbuffer={ 0:No | 1:Yes },_focale,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess : (+)
 #@cli : Draw specified 3D object on selected images.
 #@cli : (eq. to 'j3d').\n
 #@cli : 'rendering_mode' can be { 0:Dots | 1:Wireframe | 2:Flat | 3:Flat-shaded | 4:Gouraud-shaded | 5:Phong-shaded }.
@@ -23828,7 +23829,7 @@ polka_dots : check $1>=0 skip ${2=20},${3=50},${4=50},${5=0},${6=10},${7=1},${8=
 # polygon 4,20%,20%,80%,30%,80%,70%,20%,80%,1,0xCCCCCCCC,255
 #@cli : $ image.jpg 2,16,1,1,'u(x?h#0:w#0)' polygon[-2] [-1],0.6,255,0,255 remove[-1]
 
-#@cli quiver : [function_image],_sampling[%]>0,_factor>=0,_is_arrow={ 0 | 1 },_opacity,_color1,...
+#@cli quiver : [function_image],_sampling[%]>0,_factor>=0,_is_arrow={ 0:No | 1:Yes },_opacity,_color1,...
 #@cli : Draw specified 2D vector/orientation field on selected images.
 #@cli : Default values: 'sampling=5%', 'factor=1', 'is_arrow=1', 'opacity=1', 'pattern=(undefined)'
 #@cli : and 'color1=0'.
@@ -23916,7 +23917,7 @@ _sierpinski :
   _sierpinski {($1+$3)/2},{($2+$4)/2},$3,$4,{($3+$5)/2},{($4+$6)/2},{$7-1}
   _sierpinski {($1+$5)/2},{($2+$6)/2},$5,$6,{($3+$5)/2},{($4+$6)/2},{$7-1}
 
-#@cli spiralbw : width>0,_height>0,_is_2dcoords={ 0 | 1 }
+#@cli spiralbw : width>0,_height>0,_is_2dcoords={ 0:No | 1:Yes }
 #@cli : Input a 2D rectangular spiral image with specified size.
 #@cli : Default values: 'height=width' and 'is_2dcoords=0'.
 #@cli : $ spiralbw 16
@@ -24075,7 +24076,7 @@ triangle_shade :
   }
   rm.
 
-#@cli truchet : _scale>0,_radius>=0,_pattern_type={ 0:straight | 1:curved }
+#@cli truchet : _scale>0,_radius>=0,_pattern_type={ 0:Straight | 1:Curved }
 #@cli : Fill selected images with random truchet patterns.
 #@cli : Default values: 'scale=32', 'radius=5' and 'pattern_type=1'.
 #@cli : $ 400,300 truchet ,
@@ -24090,7 +24091,7 @@ truchet : check "isint(${1=32},1) && ${2=3}>=0" skip ${3=1}
     warp.. . rm. >= 50% r $w,$h,1,1,0 r 100%,100%,1,$s => $nm
   }
 
-#@cli turbulence : _radius>0,_octaves={1,2,3...,12},_alpha>0,_difference={-10,10},_mode={0,1,2,3}
+#@cli turbulence : _radius>0,_octaves={ 1,2,3...,12 },_alpha>0,_difference={ -10,10 },_mode={ 0,1,2,3 }
 #@cli : Render fractal noise or turbulence on selected images.
 #@cli : Default values: 'radius=32', 'octaves=6', 'alpha=3', 'difference=0' and 'mode=0'.
 #@cli : $ 400,400,1,3 turbulence 16
@@ -24146,7 +24147,7 @@ yinyang :
 #
 #---------------------------------
 
-#@cli dijkstra : starting_vertex>=0,_ending_vertex={ -1:none | >=0 }
+#@cli dijkstra : starting_vertex>=0,_ending_vertex={ -1:None | >=0 }
 #@cli : Compute minimal distances/paths in selected graphs, from specified 'starting_vertex' to all other vertices \
 # (opt. only until 'ending_vertex' has been reached).
 #@cli : A graph of 'N' vertices is specified as a 'NxN' adjacency matrix giving the weights of all edges \
@@ -24681,7 +24682,7 @@ chainring3d : check "isint(${1=16},3) && ${2=0.5}>0 && ${3=1}>0 && ${4=1}>0"
   5,0,1,0,0,0,200,200,200,1
   => [3D\ circle]
 
-#@cli circles3d : _radius>=0,_is_outlined={ 0 | 1 }
+#@cli circles3d : _radius>=0,_is_outlined={ 0:No | 1:Yes }
 #@cli : Convert specified 3D objects to sets of 3D circles with specified radius.
 #@cli : Default values: 'radius=1' and 'is_outlined=1'.
 #@cli : $ image.jpg luminance rescale2d ,40 threshold 50% * 255 pointcloud3d color3d[-1] 255,255,255 circles3d 0.7
@@ -24724,7 +24725,7 @@ _color3d :
     k[0]
   }
 
-#@cli colorcube3d : _is_wireframe={ 0 | 1 }
+#@cli colorcube3d : _is_wireframe={ 0:No | 1:Yes }
 #@cli : Input 3D color cube.
 #@cli : Default value: 'is_wireframe=0'.
 #@cli : $ colorcube3d mode3d 2 +primitives3d 1
@@ -24869,7 +24870,7 @@ cubes3d : check ${1=1}>=0
   lathe3d. $1,2
   => [3D\ cup]
 
-#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,_is_closed_curve={ 0 | 1 }
+#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,_is_closed_curve={ 0:No | 1:Yes }
 #@cli : Input 3D curve with specified parameterization.
 #@cli : If 'r(t)==0' or 'nb_sides<3', the generated 3D object is composed of segments only.
 #@cli : Default values: 'x(t)=cos(2*pi*t)', 'y(t)=sin(2*pi*t)', 'z(t)=t', 'r(t)=0.025', 'resolution=128', \
@@ -25016,7 +25017,7 @@ db3d :
   l[] { check "isbool(${1=1})" mode=$1 onfail noarg mode=1 }
   v + _double3d $mode
 
-#@cli double3d : _is_double_sided={ 0 | 1 }
+#@cli double3d : _is_double_sided={ 0:No | 1:Yes }
 #@cli : Enable/disable double-sided mode for 3D rendering.
 #@cli : (eq. to 'db3d').
 #@cli : Default value: 'is_double_sided=1'.
@@ -25675,7 +25676,8 @@ _opacity3d :
   isosurface3d. $14
   c3d. n3d. *3d. {$xmax-$xmin},{$ymax-$ymin},{$zmax-$zmin} => [3D\ parametric]
 
-#@cli pca_patch3d : _patch_size>0,_M>0,_N>0,_normalize_input={ 0 | 1 },_normalize_output={ 0 | 1 },_lambda_xy
+#@cli pca_patch3d : _patch_size>0,_M>0,_N>0,_normalize_input={ 0:No | 1:Yes },_normalize_output={ 0:No | 1:Yes },\
+# _lambda_xy
 #@cli : Get 3D patch-pca representation of selected images.
 #@cli : The 3D patch-pca is estimated from M patches on the input image, and displayed as a cloud of N 3D points.
 #@cli : Default values: 'patch_size=7', 'M=1000', 'N=3000', 'normalize_input=1', 'normalize_output=0', \
@@ -26014,7 +26016,7 @@ _primitives3d :
     permute[2] cyzx y[2] rv[3,prims] rv[4,cols] rv[5,opacs] k[0-5] a y
   }
 
-#@cli projections3d : _x[%],_y[%],_z[%],_is_bounding_box={ 0 | 1 },nb_subdivisions>0
+#@cli projections3d : _x[%],_y[%],_z[%],_is_bounding_box={ 0:No | 1:Yes },nb_subdivisions>0
 #@cli : Generate 3D xy,xz,yz projection planes from specified volumetric images.
 #@cli : Default values: 'x=y=z=50%', 'is_bounding_box=1' and 'nb_subdividions=5'
 projections3d : skip "${1=50%},${2=50%},${3=50%}" check "isbool(${4=1}) && isint(${5=5},1)"
@@ -26195,7 +26197,7 @@ size3d :
   rm[-3--1]
 
 #@cli skeleton3d : _metric,_frame_type={ 0:Squares | 1:Diamonds | 2:Circles | 3:Auto },_skeleton_opacity,\
-# _frame_opacity,_is_frame_wireframe={ 0 | 1 }
+# _frame_opacity,_is_frame_wireframe={ 0:No | 1:Yes }
 #@cli : Build 3D skeletal structure object from 2d binary shapes located in selected images.
 #@cli : 'metric' can be { 0:Chebyshev | 1:Manhattan | 2:Euclidean }.
 #@cli : Default values: 'metric=2', 'bones_type=3', 'skeleton_opacity=1' and 'frame_opacity=0.1'.
@@ -26512,7 +26514,7 @@ sprite3d :
     a y => $nm
   }
 
-#@cli sprites3d : [sprite],_sprite_has_alpha_channel={ 0 | 1 }
+#@cli sprites3d : [sprite],_sprite_has_alpha_channel={ 0:No | 1:Yes }
 #@cli : Convert selected 3D objects as a sprite cloud.
 #@cli : Set 'sprite_has_alpha_channel' to 1 to make the last channel of the selected sprite be a transparency mask.
 #@cli : Default value: 'mask_has_alpha_channel=0'.
@@ -26560,8 +26562,9 @@ sprites3d : check ${is_image_arg\ $1} skip ${2=0}
   (3,$N,1,0;3,$N,$N,{$N-1}) r. 4,$N,1,1,3 round. =. 0,2,100%
   3,$N,1,1,200 1,$N,1,1,1 y[-6,-4--2] a[-6--1] y => [3D\ star]
 
-#@cli streamline3d : x[%],y[%],z[%],_L>=0,_dl>0,_interpolation,_is_backward={ 0 | 1 },_is_oriented={ 0 | 1 } : \
-# 'formula',x,y,z,_L>=0,_dl>0,_interpolation,_is_backward={ 0 | 1 },_is_oriented={ 0 | 1 } : (+)
+#@cli streamline3d : x[%],y[%],z[%],_L>=0,_dl>0,_interpolation,_is_backward={ 0:No | 1:Yes },\
+# _is_oriented={ 0:No | 1:Yes } : \
+# 'formula',x,y,z,_L>=0,_dl>0,_interpolation,_is_backward={ 0:No | 1:Yes },_is_oriented={ 0:No | 1:Yes } : (+)
 #@cli : Extract 3D streamlines from selected vector fields or from specified formula.
 #@cli : 'interpolation' can be { 0:Nearest integer | 1:1st-order | 2:2nd-order | 3:4th-order }.
 #@cli : Default values: 'dl=0.1', 'interpolation=2', 'is_backward=0' and 'is_oriented=0'.
@@ -26832,7 +26835,7 @@ surfels3d : check "${1=1}>0 && ${2=1}>0 && ${3=1}>0"
     => $nm
   }
 
-#@cli tensors3d : _radius_factor>=0,_shape={ 0:box | >=N:ellipsoid },_radius_min>=0
+#@cli tensors3d : _radius_factor>=0,_shape={ 0:Box | >=N:Ellipsoid },_radius_min>=0
 #@cli : Generate 3D tensor fields from selected images.
 #@cli : when 'shape'>0, it gives the ellipsoid shape precision.
 #@cli : Default values: 'radius_factor=1', 'shape=2' and 'radius_min=0.05'.
@@ -27087,7 +27090,7 @@ volume3d :
     rm[0] image6cube3d *3d $w,$h,$d
   }
 
-#@cli voxelize3d : _max_resolution>0,_fill_interior={ 0 | 1 },_preserve_colors={ 0 | 1 }
+#@cli voxelize3d : _max_resolution>0,_fill_interior={ 0:No | 1:Yes },_preserve_colors={ 0:No | 1:Yes }
 #@cli : Convert selected 3D objects as 3D volumetric images of binary voxels, using 3D mesh rasterization.
 #@cli : Default values: 'max_resolution=128', 'fill_interior=1' and 'preserve_colors=0'.
 voxelize3d : check "${1=128}>0 && isbool(${2=1}) && isbool(${3=0})" check3d
@@ -27427,7 +27430,7 @@ apply_timeout : check "${2=20}>=0"
 #@cli check : condition : (+)
 #@cli : Evaluate specified condition and display an error message if evaluated to false.
 
-#@cli check3d : _is_full_check={ 0 | 1 } : (+)
+#@cli check3d : _is_full_check={ 0:No | 1:Yes } : (+)
 #@cli : Check validity of selected 3D vector objects, and display an error message
 #@cli : if one of the selected images is not a valid 3D vector object.
 #@cli : Full 3D object check is slower but more precise.
@@ -27490,7 +27493,7 @@ check_opencv : skip "${1=check_opencv}"
 
 #@cli x : eq. to 'exec'. : (+)
 
-#@cli exec : _is_verbose={ 0 | 1 },"command" : (+)
+#@cli exec : _is_verbose={ 0:No | 1:Yes },"command" : (+)
 #@cli : Execute external command using a system call.
 #@cli : The status value is then set to the error code returned by the system call.
 #@cli : If 'is_verbose=1', the executed command is allowed to output on stdout/stderr.
@@ -29597,7 +29600,7 @@ nn_crop : check "inrange(${11=0},0,3) && min(isint([${3-11}]))"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_distance : out,in0,_in1,_metric={ 0:squared-L2 | p>0:Lp-norm }
+#@cli nn_distance : out,in0,_in1,_metric={ 0:Squared-L2 | p>0:Lp-norm }
 #@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
 #@cli : Default value: 'in=. (previous layer)',
 nn_distance : check "isvarname('$1') && ${4=0}>=0"
@@ -30681,7 +30684,7 @@ _nn_scheduler_cosine : 1
 #
 #----------------------------------
 
-#@cli array : M>0,_N>0,_expand_type={ 0:min | 1:max | 2:all }
+#@cli array : M>0,_N>0,_expand_type={ 0:Min | 1:Max | 2:All }
 #@cli : Create MxN array from selected images.
 #@cli : Default values: 'N=M' and 'expand_type=0'.
 #@cli : $ image.jpg array 3,2,2
@@ -30690,7 +30693,7 @@ array : check "isint($1,1) && isint(${2=$1},1)" skip ${3=0}
   r0:=100/max($1,$2) r1:=100/min($1,$2) r2=100
   r ${r$3}%,${r$3}%,1,100%,2 r {$1*100}%,{$2*100}%,1,100%,0,2
 
-#@cli array_fade : M>0,_N>0,0<=_fade_start<=100,0<=_fade_end<=100,_expand_type={0:min | 1:max | 2:all}
+#@cli array_fade : M>0,_N>0,0<=_fade_start<=100,0<=_fade_end<=100,_expand_type={0:Min | 1:Max | 2:All}
 #@cli : Create MxN array from selected images.
 #@cli : Default values: 'N=M', 'fade_start=60', 'fade_end=90' and 'expand_type=1'.
 #@cli : $ image.jpg array_fade 3,2
@@ -30699,7 +30702,7 @@ array_fade : skip ${2=$1},${3=60},${4=90},${5=1}
   foreach { . shift.. {round(w/2)},{round(h/2)},1,1,2 fade_diamond $3,$4 }
   array $1,$2,$5
 
-#@cli array_mirror : N>=0,_dir={ 0:x | 1:y | 2:xy | 3:tri-xy },_expand_type={ 0 | 1 }
+#@cli array_mirror : N>=0,_dir={ 0:X | 1:Y | 2:XY | 3:Tri-XY },_expand_type={ 0:No | 1:Yes }
 #@cli : Create 2^Nx2^N array from selected images.
 #@cli : Default values: 'dir=2' and 'expand_type=0'.
 #@cli : $ image.jpg array_mirror 2
@@ -30873,7 +30876,7 @@ _frame_painting : # Add color + texture to each frame part
     +[-2,-1] c. 0,255
   }
 
-#@cli frame_pattern : M>=3,_constrain_size={ 0 | 1 } : M>=3,_[frame_image],_constrain_size={ 0 | 1 }
+#@cli frame_pattern : M>=3,_constrain_size={ 0:No | 1:Yes } : M>=3,_[frame_image],_constrain_size={ 0:No | 1:Yes }
 #@cli : Insert selected pattern frame in selected images.
 #@cli : Default values: 'pattern=0' and 'constrain_size=0'.
 #@cli : $ image.jpg frame_pattern 8
@@ -31125,7 +31128,7 @@ map_sprites : check "isint($1,1) && isint(${2=0},0,2)"
   (0,{$w-1};0,{$w-1}^0,0;{$h-1},{$h-1}) r. $w,$h,1,2,3 round.
   repeat $!-2 { +r. [$>],[$>],1,2,0,2 r[$>] 100%,100%,1,2,0 +[$>,-1] +warp.. [$>],0,0,1 rv[$>,-1] rm. } rm[-2,-1]
 
-#@cli pack : is_ratio_constraint={ 0 | 1 },_sort_criterion
+#@cli pack : is_ratio_constraint={ 0:No | 1:Yes },_sort_criterion
 #@cli : Pack selected images into a single image.
 #@cli : The returned status contains the list of new (x,y) offsets for each input image.
 #@cli : Parameter 'is_ratio_constraint' tells if the resulting image must tend to a square image.
@@ -31569,12 +31572,12 @@ draw_whirl : skip ${1=100}
     sqrt. n. 0,255 equalize.
   }
 
-#@cli drop_shadow : _offset_x[%],_offset_y[%],_smoothness[%]>=0,_curvature_x,_curvature_y,_expand_size={ 0 | 1 }
+#@cli drop_shadow : _offset_x[%],_offset_y[%],_smoothness[%]>=0,_curvature_x,_curvature_y,_expand_size={ 0:No | 1:Yes }
 #@cli : Drop shadow behind selected images.
 #@cli : Default values: 'offset_x=20', 'offset_y=offset_x', 'smoothness=5', 'curvature=0' and 'expand_size=1'.
 #@cli : $ image.jpg drop_shadow 10,20,5,0.5 expand. xy,20 display_rgba
-#@cli drop_shadow : _offset_x[%],_offset_y[%],_smoothness[%]>=0,curvature_x>=0,curvature_y>=0,_expand_size={ 0 | 1 },\
-# _output_separate_layers={ 0 | 1 }
+#@cli drop_shadow : _offset_x[%],_offset_y[%],_smoothness[%]>=0,curvature_x>=0,curvature_y>=0,\
+# _expand_size={ 0:No | 1:Yes },_output_separate_layers={ 0:No | 1:Yes }
 #@cli : Drop shadow behind selected images.
 #@cli : Default values: 'offset_x=20', 'offset_y=offset_x', 'smoothness=5', 'curvature_x=curvature_y=0', \
 # 'expand_size=1' and 'output_separate_layers=0'.
@@ -31749,7 +31752,7 @@ glow : skip ${1=1%}
   e[^-1] "Add soft glow on image$?, with amplitude $1."
   foreach { split_opacity +b[0] $1 n. [0] blend_edges[0,-1] 1 a c }
 
-#@cli halftone : nb_levels>=2,_size_dark>=2,_size_bright>=2,_shape={ 0:square | 1:diamond | 2:circle | \
+#@cli halftone : nb_levels>=2,_size_dark>=2,_size_bright>=2,_shape={ 0:Square | 1:Diamond | 2:Circle | \
 # 3:inv-square | 4:inv-diamond | 5:inv-circle },_smoothness[%]>=0
 #@cli : Apply halftone dithering to selected images.
 #@cli : Default values: 'nb_levels=5', 'size_dark=8', 'size_bright=8', 'shape=5' and 'smoothnesss=0'.
@@ -31774,7 +31777,7 @@ halftone : check "${1=5}>=2 && ${2=8}>=2 && ${3=8}>=2 && ${5=0}>=0" skip ${4=5}
     a c
   }
 
-#@cli hardsketchbw : _amplitude>=0,_density>=0,_opacity,0<=_edge_threshold<=100,_is_fast={ 0 | 1 }
+#@cli hardsketchbw : _amplitude>=0,_density>=0,_opacity,0<=_edge_threshold<=100,_is_fast={ 0:No | 1:Yes }
 #@cli : Apply hard B&W sketch effect on selected images.
 #@cli : Default values: 'amplitude=1000', 'sampling=3', 'opacity=0.1', 'edge_threshold=20' and 'is_fast=0'.
 #@cli : $ image.jpg +hardsketchbw 200,70,0.1,10 median[-1] 2 +local reverse blur[-1] 3 blend[-2,-1] overlay done
@@ -31894,7 +31897,7 @@ lightrays : check "${1=50}>=0 && $1<=100 && ${4=1}>=0 && ${5=1}>=0" skip ${2=50%
   }
 
 #@cli light_relief : _ambient_light,_specular_lightness,_specular_size,_darkness,_light_smoothness,_xl,_yl,_zl,\
-# _zscale,_opacity_is_heightmap={ 0 | 1 }
+# _zscale,_opacity_is_heightmap={ 0:No | 1:Yes }
 #@cli : Apply relief light to selected images.
 #@cli : Default values(s) : 'ambient_light=0.3', 'specular_lightness=0.5', 'specular_size=0.2', 'darkness=0', \
 # 'xl=0.2', 'yl=zl=0.5',
@@ -32007,7 +32010,7 @@ pencilbw : skip ${1=0.3},${2=60}
     a c
   }
 
-#@cli pixelsort : _ordering={ + | - },_axis={ x | y | z | xy | yx },_[sorting_criterion],_[mask]
+#@cli pixelsort : _ordering={ +:Increasing | -:Decreasing },_axis={ x | y | z | xy | yx },_[sorting_criterion],_[mask]
 #@cli : Apply a 'pixel sorting' algorithm on selected images, as described in the page :
 #@cli : <http://satyarth.me/articles/pixel-sorting/>.
 #@cli : Default values: 'ordering=+', 'axis=x' and 'sorting_criterion=mask=(undefined)'.
@@ -32157,7 +32160,8 @@ rodilius : check "${1=10}>=0 && $1<=200 && ${2=10}>=0 && $2<=100 && ${3=400}>=0 
   } a c }
 
 #@cli sketchbw : _nb_angles>0,_start_angle,_angle_range>=0,_length>=0,_threshold>=0,_opacity,_bgfactor>=0,\
-# _density>0,_sharpness>=0,_anisotropy>=0,_smoothness>=0,_coherence>=0,_is_boost={ 0 | 1 },_is_curved={ 0 | 1 }
+# _density>0,_sharpness>=0,_anisotropy>=0,_smoothness>=0,_coherence>=0,_is_boost={ 0:No | 1:Yes },\
+# _is_curved={ 0:No | 1:Yes }
 #@cli : Apply sketch effect to selected images.
 #@cli : Default values: 'nb_angles=2', 'start_angle=45', 'angle_range=180', 'length=30', 'threshold=3', \
 # 'opacity=0.03', 'bgfactor=0', 'density=0.6', 'sharpness=0.1', 'anisotropy=0.6', 'smoothness=0.25', 'coherence=1', \
@@ -32259,7 +32263,7 @@ _circle :
   if !($1%2) 2,2 else 1 fi
   +. 1 r. $1,$1,1,1,0,0,0.5,0.5 distance. 1 n. 0,1 sqrt. c. 0.85,0.86 *. -1 n. 0,1
 
-#@cli stained_glass : _edges[%]>=0, shading>=0, is_thin_separators={ 0 | 1 }
+#@cli stained_glass : _edges[%]>=0, shading>=0, is_thin_separators={ 0:No | 1:Yes }
 #@cli : Generate stained glass from selected images.
 #@cli : Default values: 'edges=40%', 'shading=0.2' and 'is_precise=0'.
 #@cli : $ image.jpg stained_glass 20%,1 cut 0,20
@@ -32715,7 +32719,7 @@ raindrops : check "${2=0.1}>=0 && ${3=1}>=0 && isint(${4=0},0)" skip ${1=80}
     warp.. .,1,1,1 rm.
   }
 
-#@cli ripple : _amplitude,_bandwidth,_shape={ 0:block | 1:triangle | 2:sine | 3:sine+ | 4:random },_angle,_offset
+#@cli ripple : _amplitude,_bandwidth,_shape={ 0:Block | 1:Triangle | 2:Sine | 3:Sine+ | 4:Random },_angle,_offset
 #@cli : Apply ripple deformation on selected images.
 #@cli : Default values: 'amplitude=10', 'bandwidth=10', 'shape=2', 'angle=0' and 'offset=0'.
 #@cli : $ image.jpg +ripple ,
@@ -32787,7 +32791,7 @@ spherize : check "${1=50%}>=0 && ${3=0}>=0 && ${6=1}>0 && isint(${8=1},0,2)"
   }
 
 #@cli symmetrize : _x[%],_y[%],_angle,_boundary_conditions={ 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror },\
-# _is_antisymmetry={ 0 | 1 },_swap_sides={ 0 | 1 }
+# _is_antisymmetry={ 0:No | 1:Yes },_swap_sides={ 0:No | 1:Yes }
 #@cli : Symmetrize selected images regarding specified axis.
 #@cli : Default values: 'x=y=50%', 'angle=90', 'boundary_conditions=3', 'is_antisymmetry=0' and 'swap_sides=0'.
 #@cli : $ image.jpg +symmetrize 50%,50%,45 +symmetrize[-1] 50%,50%,-45
@@ -32846,7 +32850,7 @@ twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
 #@cli : $$ https://gmic.eu/oldtutorial/_warp
 
 #@cli warp_patch : [displacement_map],patch_width>=1,_patch_height>=1,_patch_depth>=1,_std_factor>0,\
-# _boundary_conditions,_fast_approximation={ 0 | 1 }
+# _boundary_conditions,_fast_approximation={ 0:No | 1:Yes }
 #@cli : Patch-warp selected images, with specified 2D or 3D displacement map (in backward-absolute mode).
 #@cli : Argument 'std_factor' sets the std of the gaussian weights for the patch overlap,
 #@cli : equal to 'std = std_factor*patch_size'.
@@ -33072,7 +33076,7 @@ zoom : skip ${1=2},${2=0.5},${3=0.5},${4=0.5},${5=0}
 #
 #-----------------------------
 
-#@cli cracks : 0<=_density<=100,_is_relief={ 0 | 1 },_opacity,_color1,...
+#@cli cracks : 0<=_density<=100,_is_relief={ 0:No | 1:Yes },_opacity,_color1,...
 #@cli : Draw random cracks on selected images with specified color.
 #@cli : Default values: 'density=25', 'is_relief=0', 'opacity=1' and 'color1=0'.
 #@cli : $ image.jpg +cracks ,
@@ -33130,7 +33134,7 @@ pixelize : skip ${1=20},${2=$1},${3=$1}
   e[^-1] "Pixelize image$? with scales ($1%,$2%,$3%)."
   foreach { whd={w},{h},{d} r $1%,$2%,$3%,100%,2 r $whd }
 
-#@cli scanlines : _amplitude,_bandwidth,_shape={ 0:block | 1:triangle | 2:sine | 3:sine+ | 4:random },_angle,_offset
+#@cli scanlines : _amplitude,_bandwidth,_shape={ 0:Block | 1:Triangle | 2:Sine | 3:Sine+ | 4:Random },_angle,_offset
 #@cli : Apply ripple deformation on selected images.
 #@cli : Default values: 'amplitude=60', 'bandwidth=2', 'shape=0', 'angle=0' and 'offset=0'.
 #@cli : $ image.jpg +scanlines ,
@@ -33145,7 +33149,7 @@ scanlines : skip ${1=60},${2=2},${3=0},${4=0},${5=0}
     + cut 0,255
   }
 
-#@cli shade_stripes : _frequency>=0,_direction={ 0:horizontal | 1:vertical },_darkness>=0,_lightness>=0
+#@cli shade_stripes : _frequency>=0,_direction={ 0:Horizontal | 1:Vertical },_darkness>=0,_lightness>=0
 #@cli : Add shade stripes to selected images.
 #@cli : Default values: 'frequency=5', 'direction=1', 'darkness=0.8' and 'lightness=2'.
 #@cli : $ image.jpg +shade_stripes 30
@@ -33254,7 +33258,7 @@ watermark_visible : check "inrange(${2=0.3},0,1) && ${6=0.5}>=0"
 #
 #--------------------------------------
 
-#@cli blend : [layer],blending_mode,_opacity[%],_selection_is={ 0:base-layers | 1:top-layers } : \
+#@cli blend : [layer],blending_mode,_opacity[%],_selection_is={ 0:Base-layers | 1:Top-layers } : \
 # blending_mode,_opacity[%]
 #@cli : Blend selected G,GA,RGB or RGBA images by specified layer or blend all selected images together,
 #@cli : using specified blending mode.
@@ -33287,7 +33291,7 @@ watermark_visible : check "inrange(${2=0.3},0,1) && ${6=0.5}>=0"
 #@cli : $ command "ex : $""=arg repeat $""# +blend[0,1] ${arg{$>+1}} \
 # text_outline[-1] Mode:\" \"${arg{$>+1}},2,2,23,2,1,255 done" image.jpg testimage2d {w},{h} \
 # ex softdodge,softlight,stamp,subtract,value,vividlight,xor
-#@cli nblend : [layer],blending_mode,_opacity[%],_selection_is={ 0:base-layers | 1:top-layers } : \
+#@cli nblend : [layer],blending_mode,_opacity[%],_selection_is={ 0:Base-layers | 1:Top-layers } : \
 # blending_mode,_opacity[%]
 blend : skip "${1=},${2=},${3=}" check "isbool(${4=0})"
 
@@ -33594,7 +33598,7 @@ blend_median :
     100%,100%,100%,1,"med(I(#0))" k. r $whds,-1
   fi
 
-#@cli blend_seamless : _is_mixed_mode={ 0 | 1 },_inner_fading[%]>=0,_outer_fading[%]>=0
+#@cli blend_seamless : _is_mixed_mode={ 0:No | 1:Yes },_inner_fading[%]>=0,_outer_fading[%]>=0
 #@cli : Blend selected images using a seamless blending mode (Poisson-based).
 #@cli : Default values: 'is_mixed=0', 'inner_fading=0' and 'outer_fading=100%'.
 blend_seamless : check "${2=0}>=0 && ${3=100%}>=0" skip ${1=0}
@@ -33743,7 +33747,7 @@ sub_alpha : check ${"is_image_arg $1"}" && inrange(${2=1},0,1)"
 #---------------------------------------------
 
 #@cli animate : filter_name,"param1_start,...,paramN_start","param1_end,...,paramN_end",nb_frames>=0,\
-# _output_frames={ 0 | 1 },_output_filename : delay>0,_back and forth={ 0 | 1 }
+# _output_frames={ 0:No | 1:Yes },_output_filename : delay>0,_back and forth={ 0:No | 1:Yes }
 #@cli : Animate filter from starting parameters to ending parameters or animate selected images
 #@cli : in a display window.
 #@cli : Default value: 'delay=30'.
@@ -33859,7 +33863,7 @@ apply_camera : check_opencv $0 skip "${1=},${4=}" check "${2=0}>=0 && ${3=0}>=0"
     camera $2,0
   }
 
-#@cli apply_files : "filename_pattern",_"command",_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,\
+#@cli apply_files : "filename_pattern",_"command",_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,\
 # _output_filename
 #@cli : Apply a G'MIC command on specified input image files, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
@@ -33872,7 +33876,7 @@ apply_files : check "isint(${3=0},0) && isint(${4=-1},-1) && ${5=1}>=1" skip "${
           output filename '$6'.\n"
   files 3,"$1" _N=/{narg(${})-1} arg2var _file,${} v + _apply_stream[] "${_file{$frame+1}}","$2",${3-5},"$6"
 
-#@cli apply_video : video_filename,_"command",_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,\
+#@cli apply_video : video_filename,_"command",_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,\
 # _output_filename
 #@cli : Apply a G'MIC command on all frames of the specified input video file, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
@@ -33914,7 +33918,7 @@ _apply_stream : skip "${2=},${6=}"
   while $go_on" && "($4==-1" || "$frame<=$4)
   if $is_outavi||$is_outmp4 o[] "$6",25,mp4v,0 fi
 
-#@cli average_files : "filename_pattern",_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,_output_filename
+#@cli average_files : "filename_pattern",_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,_output_filename
 #@cli : Average specified input image files, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
 #@cli : The output filename may have extension '.avi' or '.mp4' (saved as a video), or any other usual image
@@ -33925,7 +33929,7 @@ average_files : check "isint(${2=0},0) && isint(${3=-1},-1) && ${4=1}>=1" skip "
           output filename '$5'.\n"
   files 3,"$1" _N=/{narg(${})-1} arg2var _file,${} v + _average_stream[] "${_file{$frame+1}}",${2-4},"$5"
 
-#@cli average_video : video_filename,_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,_output_filename
+#@cli average_video : video_filename,_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,_output_filename
 #@cli : Average frames of specified input video file, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
 #@cli : The output filename may have extension '.avi' or '.mp4' (saved as a video), or any other usual image
@@ -33972,7 +33976,7 @@ _average_stream : skip "${5=}"
   / $N c $imM
   if $is_outavi||$is_outmp4 o[] "$5",25,mp4v,0 fi
 
-#@cli fade_files : "filename_pattern",_nb_inner_frames>0,_first_frame>=0,_last_frame={ >=0 | -1=last },\
+#@cli fade_files : "filename_pattern",_nb_inner_frames>0,_first_frame>=0,_last_frame={ >=0 | -1:Last },\
 # _frame_step>=1,_output_filename
 #@cli : Generate a temporal fading from specified input image files, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
@@ -33985,7 +33989,7 @@ fade_files : check "isint(${2=10},1) && isint(${3=0},0) && isint(${4=-1},-1) && 
           output filename '$6'.\n"
   files 3,"$1" _N=/{narg(${})-1} arg2var _file,${} v + _fade_stream[] "${_file{$frame+1}}",${2-5},"$6"
 
-#@cli fade_video : video_filename,_nb_inner_frames>0,_first_frame>=0,_last_frame={ >=0 | -1=last },\
+#@cli fade_video : video_filename,_nb_inner_frames>0,_first_frame>=0,_last_frame={ >=0 | -1:Last },\
 # _frame_step>=1,_output_filename
 #@cli : Create a temporal fading sequence from specified input video file, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
@@ -34054,8 +34058,8 @@ files2video : check "isint(${3=25},1)" skip "${2=output.mp4}",${4=mp4v}
   } }
   o $"$2",0,0,0
 
-#@cli median_files : "filename_pattern",_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,\
-# _frame_rows[%]>=1,_is_fast_approximation={ 0 | 1 }
+#@cli median_files : "filename_pattern",_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,\
+# _frame_rows[%]>=1,_is_fast_approximation={ 0:No | 1:Yes }
 #@cli : Compute the median frame of specified input image files, in a streamed way.
 #@cli : If a display window is opened, rendered frame is displayed in it during processing.
 #@cli : Default values: 'first_frame=0', 'last_frame=-1', 'frame_step=1', 'frame_rows=20%' \
@@ -34070,8 +34074,8 @@ median_files : check "isint(${2=0},0) && isint(${3=-1},-1) && ${4=1}>=1 && ${5=2
     v + _median_stream "${_file{$frame+1}}",${2-6} v -
   }
 
-#@cli median_video : video_filename,_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,\
-# _frame_rows[%]>=1,_is_fast_approximation={ 0 | 1 }
+#@cli median_video : video_filename,_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,\
+# _frame_rows[%]>=1,_is_fast_approximation={ 0:No | 1:Yes }
 #@cli : Compute the median of all frames of an input video file, in a streamed way.
 #@cli : If a display window is opened, rendered frame is displayed in it during processing.
 #@cli : This command requires features from the OpenCV library (not enabled in G'MIC by default).
@@ -34243,7 +34247,7 @@ morph : check "$1>=0.5 && ${2=0.1}>=0 && ${3=4}>=0"
   }
 
 #@cli morph_files : "filename_pattern",_nb_inner_frames>0,_smoothness>=0,_precision>=0,\
-# _first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,_output_filename
+# _first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,_output_filename
 #@cli : Generate a temporal morphing from specified input image files, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
 #@cli : The output filename may have extension '.avi' or '.mp4' (saved as a video), or any other usual image
@@ -34300,7 +34304,7 @@ morph_rbf : check "$1>=0.5"
   } }
 
 #@cli morph_video : video_filename,_nb_inner_frames>0,_smoothness>=0,_precision>=0,\
-# _first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1,_output_filename
+# _first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1,_output_filename
 #@cli : Generate a temporal morphing from specified input video file, in a streamed way.
 #@cli : If a display window is opened, rendered frames are displayed in it during processing.
 #@cli : The output filename may have extension '.avi' or '.mp4' (saved as a video), or any other usual image
@@ -34419,7 +34423,7 @@ register_rigid : check ${is_image_arg\ $1}" && ${2=0.1%}>=0 && isint(${3=0},0,3)
   fi
   um _register_rigid
 
-#@cli transition : [transition_shape],nb_added_frames>=0,100>=shading>=0,_single_frame_only={ -1=disabled | >=0 }
+#@cli transition : [transition_shape],nb_added_frames>=0,100>=shading>=0,_single_frame_only={ -1:Disabled | >=0 }
 #@cli : Generate a transition sequence between selected images.
 #@cli : Default values: 'shading=0' and 'single_frame_only=-1'.
 #@cli : $ image.jpg +mirror c 100%,100% plasma[-1] 1,1,6 transition[0,1] [2],5
@@ -34445,7 +34449,7 @@ transition : check ${is_image_arg\ $1}" && $2>=0 && ${3=0}>=0 && $3<=100" skip $
     mv[2] $!
   } } rm[0]
 
-#@cli transition3d : _nb_frames>=2,_nb_xtiles>0,_nb_ytiles>0,_axis_x,_axis_y,_axis_z,_is_antialias={ 0 | 1 }
+#@cli transition3d : _nb_frames>=2,_nb_xtiles>0,_nb_ytiles>0,_axis_x,_axis_y,_axis_z,_is_antialias={ 0:No | 1:Yes }
 #@cli : Create 3D transition sequence between selected consecutive images.
 #@cli : 'axis_x', 'axis_y' and 'axis_z' can be set as mathematical expressions, depending on 'x' and 'y'.
 #@cli : Default values: 'nb_frames=10', 'nb_xtiles=nb_ytiles=3', 'axis_x=1', 'axis_y=1', 'axis_z=0' \
@@ -34502,7 +34506,7 @@ transition3d : check "isint(${1=10},2) && isint(${2=3},1) && isint(${3=$2},1)"
     off+=$1-2
   } }
 
-#@cli video2files : input_filename,_output_filename,_first_frame>=0,_last_frame={ >=0 | -1=last },_frame_step>=1
+#@cli video2files : input_filename,_output_filename,_first_frame>=0,_last_frame={ >=0 | -1:Last },_frame_step>=1
 #@cli : Split specified input video file into image files, one for each frame.
 #@cli : First and last frames as well as step between frames can be specified.
 #@cli : Default values: 'output_filename=frame.png', 'first_frame=0', 'last_frame=-1' and 'frame_step=1'.
@@ -34742,7 +34746,7 @@ bin2dec :
     rm. a y u {[{t}]} rm
   }
 
-#@cli cat : filename,_display_line_numbers={ 0 | 1 },_line_selection,
+#@cli cat : filename,_display_line_numbers={ 0:No | 1:Yes },_line_selection,
 #@cli : Print specified line selection of given filename on stdout.
 #@cli : Default values: 'display_line_numbers=1' and 'line_selection=^'.
 cat : skip "${2=},${3=}"
@@ -35163,7 +35167,7 @@ hex2str : skip ${1=""}
   f. "v = i - (i>=97?87:48); x%2?v:v*16" r. 2,{int(w/2)},1,1,-1 cumulate. x z. 1,1
   u {t} rm.
 
-#@cli img2base64 : _encoding={ 0:base64 | 1:base64url },_store_names={ 0 | 1 }
+#@cli img2base64 : _encoding={ 0:Base64 | 1:Base64url },_store_names={ 0:No | 1:Yes }
 #@cli : Encode selected images as a base64-encoded string.
 #@cli : The images can be then decoded using command 'base642img'.
 #@cli : Default values: 'encoding=0' and 'store_names=1'.
@@ -36584,7 +36588,7 @@ toc :
   v=$^ _ticpos-=1 u {_$|-${_tic$_ticpos}}
   v 0 e[^-1] "Elapsed time: "${}" s". v $v
 
-#@cli uint82base64 : _encoding={ 0:base64 | 1:base64url }
+#@cli uint82base64 : _encoding={ 0:Base64 | 1:Base64url }
 #@cli : Encode the values of the latest of the selected images as a base64-encoded string.
 #@cli : The string can be decoded using command 'base642uint8'.
 #@cli : Selected images must have values that are integers in [0,255].
@@ -37588,7 +37592,7 @@ __x_color_curves :
   else error[0--3] "Command 'x_color_curves': Unknown specified color space '$1'."
   fi
 
-#@cli x_colorize : _is_lineart={ 0 | 1 },_max_resolution={ 0 | >=128 },_multichannels_output={ 0 | 1 },\
+#@cli x_colorize : _is_lineart={ 0:No | 1:Yes },_max_resolution={ 0 | >=128 },_multichannels_output={ 0:No | 1:Yes },\
 # _[palette1],_[palette2],_[grabber1]
 #@cli : Colorized selected B&W images, using an interactive window.
 #@cli : When >0, argument 'max_resolution' defines the maximal image resolution used in the interactive window.
@@ -39160,7 +39164,7 @@ x_light : check_display $0
   while {*}" && "!{*,ESC}" && "!{*,Q}
   w[] 0 rm[-3--1]
 
-#@cli x_mandelbrot : _julia={ 0 | 1 },_c0r,_c0i
+#@cli x_mandelbrot : _is_julia={ 0:No | 1:Yes },_c0r,_c0i
 #@cli : Launch Mandelbrot/Julia explorer.
 x_mandelbrot : skip ${1=0},${2=0.317},${3=0.03} check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
@@ -40519,7 +40523,7 @@ x_rubber3d : check_display $0
   while {*}" && "!{*,ESC}" && "!{*,Q}
   rm w 0
 
-#@cli x_segment : _max_resolution={ 0 | >=128 }
+#@cli x_segment : _max_resolution={ 0:Auto | >=128 }
 #@cli : Segment foreground from background in selected opaque RGB images, interactively.
 #@cli : Return RGBA images with binary alpha-channels.
 #@cli : Default value: 'max_resolution=1024'.
@@ -59711,7 +59715,7 @@ fx_twisted_rays :
 #@gui ____<b>Sequences</b>
 #-------------------------
 
-# fx_animate_preview : _command,_parameters1,_parameters2,_compute_half={ 0 | 1 },_width>=0,_height>=0
+# fx_animate_preview : _command,_parameters1,_parameters2,_compute_half={ 0:No | 1:Yes },_width>=0,_height>=0
 # Generate a preview with start/end rendering of an animation.
 fx_animate_preview : skip ${4=1},${5=0},${6=$5}
   repeat $! {
