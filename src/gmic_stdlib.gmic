@@ -28538,12 +28538,13 @@ nn_lib :
 
     # maxpool2d : 2D max pooling.
     #----------------------------
-    nn_maxpool2d_init_forward(OUT,IN,patch_size) = (
+    nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
       const OUT#_width = int(IN#_width/patch_size);
       const OUT#_height = int(IN#_height/patch_size);
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
+      const OUT#_is_maxabs = is_maxabs;
     );
 
     nn_maxpool2d_forward(OUT,IN) = (
@@ -28558,7 +28559,7 @@ nn_lib :
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_z,_nn_c,
                                 OUT#_patch_size,OUT#_patch_size,1,1);
-              _nn_argmax = argmax(OUT#_patch);
+              _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
             );
@@ -28589,12 +28590,13 @@ nn_lib :
 
     # maxpool3d : 3D max pooling.
     #----------------------------
-    nn_maxpool3d_init_forward(OUT,IN,patch_size) = (
+    nn_maxpool3d_init_forward(OUT,IN,patch_size,is_maxabs) = (
       const OUT#_width = int(IN#_width/patch_size);
       const OUT#_height = int(IN#_height/patch_size);
       const OUT#_depth = int(IN#_depth/patch_size);
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
+      const OUT#_is_maxabs = is_maxabs
     );
 
     nn_maxpool3d_forward(OUT,IN) = (
@@ -28610,7 +28612,7 @@ nn_lib :
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_zp,_nn_c,
                                 OUT#_patch_size,OUT#_patch_size,OUT#_patch_size,1);
-              _nn_argmax = argmax(OUT#_patch);
+              _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
             );
@@ -29952,23 +29954,24 @@ nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3') && isnu
   _${net}_backward..=${_${nout}_backward}
   _${net}_previous_layer=$out
 
-#@cli nn_maxpool2d : out,_in,_patch_size>1
+#@cli nn_maxpool2d : out,_in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
-#@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
-nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2)"
+#@cli : Default values: 'in=. (previous layer)', 'patch_size=2' and 'is_maxabs=0'.
+nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2) && isbool(${4=0})"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  patch_size=$3
+  patch_size,is_maxabs=${3-4}
+  if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
 
-  e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
-         "and patch size "${patch_size}x${patch_size}"."
+  e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "patch size "${patch_size}x${patch_size}$s_maxabs"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="${patch_size}x${patch_size}
-  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size"));"\
+  _${nout}_properties="patch_size="${patch_size}x${patch_size}", is_maxabs="$is_maxabs
+  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
                    "nn_maxpool2d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -29976,23 +29979,24 @@ nn_maxpool2d : check "isvarname('$1') && isint(${3=2},2)"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_maxpool3d : out,_in,_patch_size>1
+#@cli nn_maxpool3d : out,_in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
-#@cli : Default values: 'in=. (previous layer)' and 'patch_size=2'.
+#@cli : Default values: 'in=. (previous layer)', 'patch_size=2' and 'is_maxabs=0'.
 nn_maxpool3d : check "isvarname('$1') && isint(${3=2},2)"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  patch_size=$3
+  patch_size,is_maxabs=${3-4}
+  if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
 
-  e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
-         "and patch size "${patch_size}x${patch_size}x${patch_size}"."
+  e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "patch size "${patch_size}x${patch_size}x${patch_size}$s_maxabs"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
-  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size"));"\
+  _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}", is_maxabs="$is_maxabs
+  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
                    "nn_maxpool3d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
