@@ -51242,6 +51242,127 @@ fx_warp_interactive_preview :
     fi
   }
 
+#@gui Warp [RBF] : fx_warp_rbf,fx_warp_rbf_preview(1)
+#@gui : Displace Keypoints = bool(0)
+#@gui : note = note("\n<small><b>Note:</b> Enable <i>Displace Keypoints</i> when your keypoints have been placed on your image</small>")
+#@gui : sep = separator()
+#@gui : Previous Target Mode = value(0)
+#@gui : Boundary Conditions = choice(3,"Dirichlet","Neumann","Periodic","Mirror")
+#@gui : Lock = choice(2,"Disable","Lock Corners","Lock Edges")
+#@gui : Phi(r) = choice{2,"sqrt(r)","r","r.log(1+r)"}
+#@gui : sep = separator()
+#@gui : Point #0 = point(25,25,1,1), _ = value(25,25), _ = value(25,25)
+#@gui : Point #1 = point(75,25,1,1), _ = value(75,25), _ = value(75,25)
+#@gui : Point #2 = point(75,75,1,1), _ = value(75,75), _ = value(75,75)
+#@gui : Point #3 = point(25,75,1,1), _ = value(25,75), _ = value(25,75)
+#@gui : Point #4 = point(50,50,-1,1), _ = value(50,50), _ = value(50,50)
+#@gui : Point #5 = point(10,50,-1,1), _ = value(10,50), _ = value(10,50)
+#@gui : Point #6 = point(20,50,-1,1), _ = value(20,50), _ = value(20,50)
+#@gui : Point #7 = point(30,50,-1,1), _ = value(30,50), _ = value(30,50)
+#@gui : Point #8 = point(40,50,-1,1), _ = value(40,50), _ = value(40,50)
+#@gui : Point #9 = point(60,50,-1,1), _ = value(60,50), _ = value(60,50)
+#@gui : Point #10 = point(70,50,-1,1), _ = value(70,50), _ = value(70,50)
+#@gui : Point #11 = point(80,50,-1,1), _ = value(80,50), _ = value(80,50)
+#@gui : Point #12 = point(90,50,-1,1), _ = value(90,50), _ = value(90,50)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>
+#@gui :       Latest Update: <i>2025/03/17</i>.</small>")
+_fx_warp_rbf_process :
+  boundary_conditions,lock,phi=${1-3}
+  phi=${"arg0 "$phi",sqrt(r),r,r*log(1+r)"}
+  $=arg
+  i,j=0,4 for narg(${arg$j}) {
+    sx$i=${arg$j} j+=1
+    sy$i=${arg$j} j+=1
+    tx$i=${arg$j} j+=1
+    ty$i=${arg$j} j+=1
+    i+=1
+  }
+  nbp:=$i
+  if !$nbp return fi
+  if !$boundary_conditions to_a fi
+  foreach {
+    $nbp,1,1,4 repeat w { point $>,0,0,1,{0,[${tx$>},${ty$>},${tx$>}-${sx$>},${ty$>}-${sy$>}]} }
+    if $lock
+      {$lock>1?6:1},1,1,2x4
+      f[-4] "[ lerp(0,100,x/w),0 ]" f... "[ 100,lerp(0,100,x/w) ]"
+      f.. "[ lerp(100,0,x/w),100 ]" f. "[ 0,lerp(100,0,x/w) ]"
+      a[-4--1] x channels. 0,3 a[-2,-1] x
+    fi
+    rbf. {0,[w,h,0,0,100,100]},$phi sh. 0 *. {0,(w-1)%} rm. sh. 1 *. {0,(h-1)%} rm.
+    warp[0] .,1,1,$boundary_conditions rm.
+  }
+
+_fx_warp_rbf :
+  mode,previous_mode,boundary_conditions,lock,phi,\
+  x0,y0,sx0,sy0,tx0,ty0,\
+  x1,y1,sx1,sy1,tx1,ty1,\
+  x2,y2,sx2,sy2,tx2,ty2,\
+  x3,y3,sx3,sy3,tx3,ty3,\
+  x4,y4,sx4,sy4,tx4,ty4,\
+  x5,y5,sx5,sy5,tx5,ty5,\
+  x6,y6,sx6,sy6,tx6,ty6,\
+  x7,y7,sx7,sy7,tx7,ty7,\
+  x8,y8,sx8,sy8,tx8,ty8,\
+  x9,y9,sx9,sy9,tx9,ty9,\
+  x10,y10,sx10,sy10,tx10,ty10,\
+  x11,y11,sx11,sy11,tx11,ty11,\
+  x12,y12,sx12,sy12,tx12,ty12=${1-83}
+  nbp=13
+
+  if $_is_preview" && "!$mode
+    sh. 0,{isin(s,2,4)?s-2:s-1} *. 0.75 rm.
+  fi
+
+  repeat $nbp {
+    x,y=${x$>},${y$>}
+    if isnan($x) continue fi
+    if $mode==$previous_mode
+      if $mode tx$>,ty$>=$x,$y
+      else
+        if [$x,$y]!=[${sx$>},${sy$>}] sx$>,sy$>,tx$>,ty$>=$x,$y,$x,$y fi
+      fi
+    else
+      if $mode x$>,y$>=${tx$>},${ty$>}
+      else x$>,y$>=${sx$>},${sy$>}
+      fi
+    fi
+  }
+
+  if $mode
+    p_args,c= repeat $nbp {
+      if isnan(${x$>}) continue fi
+      p_args.=$c${sx$>},${sy$>},${tx$>},${ty$>} c=,
+    }
+
+    _fx_warp_rbf_process $boundary_conditions,$lock,$phi,$p_args
+  fi
+
+  if $_is_preview
+    u "{"$mode"}{"$mode"}{"$boundary_conditions"}{"$lock"}{"$phi"}"\
+      "{"$x0,$y0"}{"$sx0,$sy0"}{"$tx0,$ty0"}"\
+      "{"$x1,$y1"}{"$sx1,$sy1"}{"$tx1,$ty1"}"\
+      "{"$x2,$y2"}{"$sx2,$sy2"}{"$tx2,$ty2"}"\
+      "{"$x3,$y3"}{"$sx3,$sy3"}{"$tx3,$ty3"}"\
+      "{"$x4,$y4"}{"$sx4,$sy4"}{"$tx4,$ty4"}"\
+      "{"$x5,$y5"}{"$sx5,$sy5"}{"$tx5,$ty5"}"\
+      "{"$x6,$y6"}{"$sx6,$sy6"}{"$tx6,$ty6"}"\
+      "{"$x7,$y7"}{"$sx7,$sy7"}{"$tx7,$ty7"}"\
+      "{"$x8,$y8"}{"$sx8,$sy8"}{"$tx8,$ty8"}"\
+      "{"$x9,$y9"}{"$sx9,$sy9"}{"$tx9,$ty9"}"\
+      "{"$x10,$y10"}{"$sx10,$sy10"}{"$tx10,$ty10"}"\
+      "{"$x11,$y11"}{"$sx11,$sy11"}{"$tx11,$ty11"}"\
+      "{"$x12,$y12"}{"$sx12,$sy12"}{"$tx12,$ty12"}"
+  fi
+
+fx_warp_rbf :
+  _is_preview=0
+  _fx_warp_rbf $*
+
+fx_warp_rbf_preview :
+  _is_preview=1
+  _fx_warp_rbf $*
+
 #@gui Water : water, water(0)
 #@gui : Amplitude = ~float(30,0,300)
 #@gui : Smoothness = ~float(1.5,0,4)
