@@ -26,7 +26,7 @@ software suites.
 
 <a href="https://gmic.eu/img/gmic_libgmic.jpg">![interface_libgmic](https://gmic.eu/img/gmic_libgmic_thumb.jpg)</a>
 
-- **3** - **[G'MIC-Qt](https://github.com/GreycLab/gmic-qt)**, a plug-in to bring **G'MIC** capabilities to the image retouching software [GIMP](http://www.gimp.org), [Krita](https://www.krita.org), [Photoshop](https://en.wikipedia.org/wiki/Adobe_Photoshop) and [Paint.NET](https://www.getpaint.net/). More than **500 filters** are already available, sorted by category (_Artistic, Black &amp; white, Colors, Contours, Deformations, Degradations, Details, Film emulation, Frames, Layers,
+- **3** - **[G'MIC-Qt](https://github.com/GreycLab/gmic-qt)**, a plug-in to bring **G'MIC** capabilities to the image retouching software [GIMP](http://www.gimp.org), [Krita](https://www.krita.org), [Photoshop](https://en.wikipedia.org/wiki/Adobe_Photoshop) and [Paint.NET](https://www.getpaint.net/). More than **600 filters** are already available, sorted by category (_Artistic, Black &amp; white, Colors, Contours, Deformations, Degradations, Details, Film emulation, Frames, Layers,
 Light &amp; shadows, Patterns, Rendering, Repair, Sequences_, etc.).
 
 <a href="https://gmic.eu/img/gmic_gimp.jpg">![gimp_interface](https://gmic.eu/img/gmic_gimp_thumb.jpg)</a>
