@@ -8805,6 +8805,7 @@ parse_gui_update :
   path=/
   N:=$_nb_filters-1
   is_af:="date([1,2])==[4,1] && (date(4)%2)" # April fool mode ?
+
   repeat $_nb_filters { f=$>
     e "\r  >> "$_vt100_c[#$f/$N]$_vt100_n" "{`s=vector48(_'" "');copy(s,['${_f${f}_path}${_f${f}_name}']);s`}
 
@@ -8896,12 +8897,11 @@ parse_gui_update :
         ):[_'(',_',',_')'];
       "`}
       if isin(['${_f${f}_p${p}_type}'],'link','note','separator','value') name=_
+      elif $is_af straprilfool ${_f${f}_p${p}_name} name=${}
       else strcapitalize ${_f${f}_p${p}_name} name=${}
       fi
       ('"#@gui"$locale" :"{/$name}=$responsivity$randomizable\
          ${_f${f}_p${p}_type}{``$sep1}{``{/$args}}{``$sep2}$visibility\n')
-#      ('"#@gui"$locale" :"{/$name}=$responsivity\
-#         ${_f${f}_p${p}_type}{``$sep1}{``{/$args}}{``$sep2}$visibility\n')
     }
   }
   $_nongui y a y
@@ -8934,19 +8934,24 @@ parse_gui_update :
 straprilfool : skip "${1=}"
   if ['"$1"']==0 u "" return fi
   l[] {
-    ('{/"$1"}')
-    f "(i<=_' ' || i==_'_') && i!=_'\n'?_' ':i" # Replace blank characters and underscores
-    f "x%2?lowercase(i):uppercase(i)"
-    f "c = lowercase(i);
-       c==_'o'?_'0':
-       c==_'i'?_'1':
-       c==_'e'?_'3':
-       c==_'a'?_'4':
-       c==_'s'?_'5':
-       c==_'t'?_'7':
-       c==_'b'?_'8':
-       i"
-    u {t} rm
+    strcapitalize "$1"
+    if u<0.05
+      ('{/"${}"}')
+      f "u<0.25?(!(x%2)?lowercase(i):uppercase(i)):i"
+      f "u<0.25?(
+        c = lowercase(i);
+        c==_'o'?_'0':
+        c==_'i'?_'1':
+        c==_'e'?_'3':
+        c==_'a'?_'4':
+        c==_'s'?_'5':
+        c==_'t'?_'7':
+        c==_'b'?_'8':c):i"
+      u {t}" &#128031;"
+      rm
+    else
+      u ${}
+    fi
   }
 
 #
