@@ -273,6 +273,10 @@ X11_LIBS = -L/usr/X11/lib -lX11 -lpthread # $(shell pkg-config --libs xrandr || 
 endif
 endif
 
+# Enable image display, using SDL (All platforms).
+SDL_CFLAGS = -Dcimg_display=3 -I/usr/local/include
+SDL_LIBS = -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib
+
 # Enable faster X11 display, using XShm extension.
 # (ftp://www.x.org/pub/X11R7.7/doc/man/man3/XShm.3.xhtml)
 XSHM_CFLAGS = -Dcimg_use_xshm $(shell pkg-config --cflags xcb-shm)
@@ -428,7 +432,7 @@ use_libgmic : use_libgmic.cpp libgmic.so
 # CLI: Command line tool 'gmic'
 #-------------------------------
 
-# Regular builds
+# Regular builds.
 #
 cli: # Default: Without OpenCV support
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
@@ -445,7 +449,7 @@ half: # Using float16 rather than float32 to store images
 dev: # Without optimizations enabled, used for quick compile
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
-# Debug builds
+# Debug builds.
 #
 debug: # With sanitize-address enabled and symbols kept, to track bugs
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
@@ -453,7 +457,7 @@ debug: # With sanitize-address enabled and symbols kept, to track bugs
 valgrind: # With symbols kept, to track bugs with valgrind
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
-# Profiling builds
+# Profiling builds.
 #
 perf: # With optimization enabled and symbols kept, for code profiling
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
@@ -468,6 +472,11 @@ gmic$(EXE): gmic_cli.cpp gmic.o
 
 gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
+
+# Testing builds.
+#
+sdl :
+	$(MAKE) "X11_CFLAGS=" "X11_LIBS=" "CFLAGS+=$(GMIC_STD_CFLAGS) $(SDL_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(SDL_LIBS)" gmic.o _cli
 
 # CLI (shared)
 #--------------
