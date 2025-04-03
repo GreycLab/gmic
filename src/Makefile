@@ -476,7 +476,7 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 # Testing builds.
 #
 sdl :
-	$(MAKE) "X11_CFLAGS=" "X11_LIBS=" "CFLAGS+=$(GMIC_STD_CFLAGS) $(SDL_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(SDL_LIBS)" gmic.o _cli
+	$(MAKE) "X11_CFLAGS=$(SDL_CFLAGS)" "X11_LIBS=$(SDL_LIBS)" cli
 
 # CLI (shared)
 #--------------
