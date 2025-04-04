@@ -273,14 +273,14 @@ X11_LIBS = -L/usr/X11/lib -lX11 -lpthread # $(shell pkg-config --libs xrandr || 
 endif
 endif
 
-# Enable image display, using SDL (All platforms).
-SDL_CFLAGS = -Dcimg_display=3 -I/usr/local/include
-SDL_LIBS = -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib
-
 # Enable faster X11 display, using XShm extension.
 # (ftp://www.x.org/pub/X11R7.7/doc/man/man3/XShm.3.xhtml)
 XSHM_CFLAGS = -Dcimg_use_xshm $(shell pkg-config --cflags xcb-shm)
 XSHM_LIBS = $(shell pkg-config --libs xcb-shm || echo -L$(PREFIX)/X11R6/lib) -lXext
+
+# Enable image display, using SDL (All platforms).
+SDL_CFLAGS = -Dcimg_display=3 -I/usr/local/include
+SDL_LIBS = -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib
 
 # Enable image display, using GDI32 (Windows).
 GDI32_CFLAGS = -Dcimg_display=2
@@ -357,19 +357,33 @@ BOARD_LIBS = -lboard
 WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
 WEBP_LIBS = $(shell pkg-config --libs libwebp || echo -lwebp)
 
-# Define predefined sets of default used flags, depending on the architecture.
-GMIC_STD_CFLAGS = -Dgmic_community $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(TIFF_CFLAGS)
-GMIC_STD_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(TIFF_LIBS)
+# Define default display flags (depending on the target OS).
 ifeq ($(OS),Unix) # Unix
-GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) $(WEBP_CFLAGS)
-GMIC_STD_LIBS += $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS) $(WEBP_LIBS)
+DISPLAY_CFLAGS = ${X11_CFLAGS}
+DISPLAY_LIBS = ${X11_LIBS}
 else
 ifeq ($(OS),Darwin) # MacOSX
-GMIC_STD_CFLAGS += $(X11_CFLAGS) $(OPENEXR_CFLAGS)
-GMIC_STD_LIBS += $(X11_LIBS) $(OPENEXR_LIBS)
+DISPLAY_CFLAGS = ${X11_CFLAGS}
+DISPLAY_LIBS = ${X11_LIBS}
 else # Windows
-GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(GDI32_CFLAGS)
-GMIC_STD_LIBS += $(OPENMP_LIBS) $(GDI32_LIBS)
+DISPLAY_CFLAGS = ${GDI32_CFLAGS}
+DISPLAY_LIBS = ${GDI32_LIBS}
+endif
+endif
+
+# Define set of default used flags, depending on the target OS.
+GMIC_STD_CFLAGS = -Dgmic_community $(MANDATORY_CFLAGS) $(DISPLAY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(TIFF_CFLAGS)
+GMIC_STD_LIBS = $(MANDATORY_LIBS) $(DISPLAY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(TIFF_LIBS)
+ifeq ($(OS),Unix) # Unix
+GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(OPENEXR_CFLAGS) $(WEBP_CFLAGS)
+GMIC_STD_LIBS += $(OPENMP_LIBS) $(OPENEXR_LIBS) $(WEBP_LIBS)
+else
+ifeq ($(OS),Darwin) # MacOSX
+GMIC_STD_CFLAGS += $(OPENEXR_CFLAGS)
+GMIC_STD_LIBS += $(OPENEXR_LIBS)
+else # Windows
+GMIC_STD_CFLAGS += $(OPENMP_CFLAGS)
+GMIC_STD_LIBS += $(OPENMP_LIBS)
 endif
 endif
 
@@ -476,7 +490,7 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 # Testing builds.
 #
 sdl :
-	$(MAKE) "X11_CFLAGS=$(SDL_CFLAGS)" "X11_LIBS=$(SDL_LIBS)" cli
+	$(MAKE) "DISPLAY_CFLAGS=$(SDL_CFLAGS)" "DISPLAY_LIBS=$(SDL_LIBS)" cli
 
 # CLI (shared)
 #--------------
