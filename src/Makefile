@@ -489,8 +489,11 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 
 # Testing builds.
 #
-sdl :
+sdl:
 	$(MAKE) "DISPLAY_CFLAGS=$(SDL_CFLAGS)" "DISPLAY_LIBS=$(SDL_LIBS)" cli
+
+sdl_opencv:
+	$(MAKE) "DISPLAY_CFLAGS=$(SDL_CFLAGS)" "DISPLAY_LIBS=$(SDL_LIBS)" opencv
 
 # CLI (shared)
 #--------------
