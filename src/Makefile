@@ -279,8 +279,8 @@ XSHM_CFLAGS = -Dcimg_use_xshm $(shell pkg-config --cflags xcb-shm)
 XSHM_LIBS = $(shell pkg-config --libs xcb-shm || echo -L$(PREFIX)/X11R6/lib) -lXext
 
 # Enable image display, using SDL (All platforms).
-SDL_CFLAGS = -Dcimg_display=3 -I/usr/local/include
-SDL_LIBS = -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib
+SDL3_CFLAGS = -Dcimg_display=3 $(shell pkg-config --cflags sdl3 || echo -I/usr/local/include)
+SDL3_LIBS = $(shell pkg-config --libs sdl3 || echo -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib)
 
 # Enable image display, using GDI32 (Windows).
 GDI32_CFLAGS = -Dcimg_display=2
@@ -489,11 +489,11 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 
 # Testing builds.
 #
-sdl:
-	$(MAKE) "DISPLAY_CFLAGS=$(SDL_CFLAGS)" "DISPLAY_LIBS=$(SDL_LIBS)" cli
+sdl3:
+	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" cli
 
-sdl_opencv:
-	$(MAKE) "DISPLAY_CFLAGS=$(SDL_CFLAGS)" "DISPLAY_LIBS=$(SDL_LIBS)" opencv
+sdl3_opencv:
+	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
 
 # CLI (shared)
 #--------------
