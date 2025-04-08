@@ -489,10 +489,10 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 
 # Testing builds.
 #
-sdl3:
+cli_sdl3:
 	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" cli
 
-sdl3_opencv:
+opencv_sdl3:
 	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
 
 # CLI (shared)
@@ -641,12 +641,20 @@ gimp_debug:  gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=debug GMIC_PATH=$(SRC_PATH) ASAN=on PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=gimp gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
 
+gimp_sdl3: gmic_qt_files CImg.h gmic_stdlib_community.h
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=gimp gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
+
 gmic_qt: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
 gmic_qt_debug: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=debug GMIC_PATH=$(SRC_PATH) ASAN=on PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=none gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
+
+gmic_qt_sdl3: gmic_qt_files CImg.h gmic_stdlib_community.h
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
 gmic_qt_files:
