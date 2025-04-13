@@ -306,6 +306,11 @@ endif
 JPEG_CFLAGS = -Dcimg_use_jpeg $(shell pkg-config --cflags libjpeg)
 JPEG_LIBS = $(shell pkg-config --libs libjpeg || echo -ljpeg)
 
+# Enable native support of JPEG XL image files, using the JXL library.
+# (https://en.wikipedia.org/wiki/JPEG_XL)
+JXL_CFLAGS = -Dcimg_use_jxl $(shell pkg-config --cflags libjxl)
+JXL_LIBS = $(shell pkg-config --libs libjxl || echo -ljxl)
+
 # Enable native support of TIFF image files, using the TIFF library.
 # (http://www.libtiff.org/)
 TIFF_CFLAGS = -Dcimg_use_tiff $(shell pkg-config --cflags libtiff-4)
