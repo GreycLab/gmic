@@ -12674,7 +12674,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           continue;
         }
 
-        // Wait for a given delay of for user events on display window.
+        // Wait for a given delay or for user events on display window.
         if (!is_get && !std::strcmp("wait",command)) {
           gmic_substitute_args(false);
 
