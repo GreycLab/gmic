@@ -9545,21 +9545,29 @@ _plot : skip ${8=},${10=}
       if {*,r}
         w[] {*,d,e} rmn view
       fi
-      if $is_CTRL" && "{*,D}
-        nw,nh:=round(1.25*[{*,w,h}])
-        if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh,-1,0 rmn view fi
-        skip {*,-D}
+
+      if $is_CTRL
+        if {*,D} # CTRL+D : Increase window size
+          nw,nh:=round(1.25*[{*,w,h}])
+          if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh,-1,0 rmn view fi
+          skip {*,-D}
+        elif {*,C} # CTRL+C : Decrease window size
+          nw,nh:=round(0.75*[{*,w,h}])
+          if $nw>32" && "$nh>32 w[] $nw,$nh,-1,0 rmn view fi
+          skip {*,-C}
+        elif {*,F} # CTRL+F : Toggle fullscreen mode
+          if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
+          rmn view
+          skip {*,-F}
+        elif {*,O} # CTRL+O: Save copy of image
+          repeat 256 { filename=${"filename gmic.gmz,"$>} if !isfile('$filename') break fi }
+          o[0] $filename
+        elif {*,-S} # CTRL+S: Save screenshot
+          repeat 256 { filename=${"filename gmic.png,"$>} if !isfile('$filename') break fi }
+          o[view] $filename
+        fi
       fi
-      if $is_CTRL" && "{*,C}
-        nw,nh:=round(0.75*[{*,w,h}])
-        if $nw>32" && "$nh>32 w[] $nw,$nh,-1,0 rmn view fi
-        skip {*,-C}
-      fi
-      if $is_CTRL" && "{*,F}
-        if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
-        rmn view
-        skip {*,-F}
-      fi
+
       if {*,ARROWLEFT}" || "{*,ARROWRIGHT} # Left/Right shift
         step:=ceil(($Xmax-$Xmin)/8)
         if {*,ARROWLEFT} nXmin:=max(0,$Xmin-$step) Xmin,Xmax:=$nXmin,$Xmax+$nXmin-$Xmin
