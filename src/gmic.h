@@ -444,16 +444,6 @@ struct gmic {
   bool check_cond(const char *const expr, gmic_list<T>& images, const char *const command);
 
   template<typename T>
-  gmic& display_plots(gmic_list<T>& images, gmic_list<char>& image_names,
-                      const unsigned int *const variable_sizes,
-                      const gmic_image<unsigned int>& selection, const unsigned int plot_type,
-                      const unsigned int vertex_type, const double xmin, const double xmax,
-                      const double ymin, const double ymax, const bool exit_on_anykey);
-  template<typename T>
-  gmic& display_objects3d(const gmic_list<T>& images, const gmic_list<char>& image_names,
-                          const gmic_image<unsigned int>& selection, const gmic_image<unsigned char>& background3d,
-                          const bool exit_on_anykey);
-  template<typename T>
   gmic_image<T>& check_image(const gmic_list<T>& list, gmic_image<T>& img);
   template<typename T>
   const gmic_image<T>& check_image(const gmic_list<T>& list, const gmic_image<T>& img);
