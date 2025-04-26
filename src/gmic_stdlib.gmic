@@ -9430,16 +9430,27 @@ _plot : skip ${8=},${10=}
       if !{*,f} w_width,w_height={*,d,e} fi # Remember window geometry when not fullscreen
 
       # Render base view.
-      if !0$view
+      if !0$window_view
         +z[0] $Xmin,$Xmax
         frame:=min(32,round(max({*,w,h})/20))
         dg. {*,w,h},$p_type,$v_type,$xmin,$xmax,$ymax,$ymin,,,$frame
-        => view
+        => window_view
+      fi
+
+      # Generate label for notification.
+      if !0$canvas_label_notification" && "['$notification']!=0
+        font_size:=cut(round(h#$window_view/40),16,32)
+        0 t. {``$notification},0,0,{round(1.25*$font_size)},1,255
+        r. {[w,h]+20},1,1,0,0,0.5,0.5 frame. xy,2,255 r. {[w,h]+6},1,1,0,0,0.5,0.5
+        +n. 200,255 r.. 100%,100%,1,3
+        a[-2,-1] c
+        => canvas_label_notification
+        notification_opacity,notification=3,
       fi
 
       # Retrieve graph coordinates corresponding to current position of mouse pointer.
       mx,my={*,x,y}
-      X,x,y={view,"
+      X,x,y={window_view,"
         const mx = $mx; const my = $my; const frame = $frame; const frame2 = 2*frame;
         const Xmin = $Xmin; const Xmax = $Xmax;
         const xmin = $xmin; const xmax = $xmax;
@@ -9476,9 +9487,9 @@ _plot : skip ${8=},${10=}
       fi
 
       # Render view.
+      rmn view
+      [window_view]
       if $X>=0
-        [view]
-
         if !$select_mode
           label="f["$X"] = f("{_$x}") = [ "
           if s#0<=6 label.={_I[#0,$X]}
@@ -9536,72 +9547,80 @@ _plot : skip ${8=},${10=}
           );
           mx>=0?draw_cursor(mx,frame,h - 1 - frame,my,frame,w - 1 - frame); # Draw cursor
         "
-        w. -1,-1,0 rm.
-      else w[view] -1,-1,0
       fi
-      wait
+      => view
+
+      if $canvas_label_notification
+        sh[canvas_label_notification] 100%
+        j[view] [canvas_label_notification],1~,0,0,0,{min(1,$notification_opacity)},.,255
+        rm.
+        window_no_wait=1
+      else
+        window_no_wait=0
+      fi
+
+      w[view] -1,-1,0 rm[view]
+      if $window_no_wait wait 40 else wait fi
 
       # Manage user events.
       is_CTRL,is_mb,is_lmb,is_rmb:={*,CTRLLEFT}" || "{*,CTRLRIGHT},{*,b}&3,{*,b}&1,{*,b}&2
       if {*,r}
-        w[] {*,d,e} rmn view
+        w[] {*,d,e} rmn window_view
       fi
 
       if $is_CTRL
-        if {*,D} # CTRL+D : Increase window size
+        if {*,-D} # CTRL+D : Increase window size
           nw,nh:=round(1.25*[{*,w,h}])
-          if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh,-1,0 rmn view fi
-          skip {*,-D}
-        elif {*,C} # CTRL+C : Decrease window size
+          if $nw<{*,u}" && "$nh<{*,v} w[] $nw,$nh,-1,0 rmn window_view fi
+        elif {*,-C} # CTRL+C : Decrease window size
           nw,nh:=round(0.75*[{*,w,h}])
-          if $nw>32" && "$nh>32 w[] $nw,$nh,-1,0 rmn view fi
-          skip {*,-C}
-        elif {*,F} # CTRL+F : Toggle fullscreen mode
+          if $nw>32" && "$nh>32 w[] $nw,$nh,-1,0 rmn window_view fi
+        elif {*,-F} # CTRL+F : Toggle fullscreen mode
           if {*,f} w[] $w_width,$w_height,-1,0 else w[] {*,u,v},-1,1 fi
-          rmn view
-          skip {*,-F}
-        elif {*,O} # CTRL+O: Save copy of image
+          rmn window_view
+          notification="Fullscreen: "${"arg0 "{*,f},"Off,On"}
+        elif {*,-O} # CTRL+O: Save copy of image
           repeat 256 { filename=${"filename gmic.gmz,"$>} if !isfile('$filename') break fi }
           o[0] $filename
+          notification="Saved image copy: "$filename
         elif {*,-S} # CTRL+S: Save screenshot
           repeat 256 { filename=${"filename gmic.png,"$>} if !isfile('$filename') break fi }
-          o[view] $filename
+          o[window_view] $filename
+          notification="Save screenshot: "$filename
         fi
-      fi
-
-      if {*,ARROWLEFT}" || "{*,ARROWRIGHT} # Left/Right shift
-        step:=ceil(($Xmax-$Xmin)/8)
-        if {*,ARROWLEFT} nXmin:=max(0,$Xmin-$step) Xmin,Xmax:=$nXmin,$Xmax+$nXmin-$Xmin
-        else nXmax:=min(w#0-1,$Xmax+$step) Xmin,Xmax:=$Xmin+$nXmax-$Xmax,$nXmax
-        fi
-        xmin,xmax:=lerp($xmin0,$xmax0,$Xmin/(w#0-1)),lerp($xmin0,$xmax0,$Xmax/(w#0-1))
-        rmn view
-      fi
-      if {*,ARROWDOWN}" || "{*,ARROWUP} # Up/Down shift
-        step,dy:=($ymax-$ymin)/8,($ymax0-$ymin0)/20
-        if {*,ARROWDOWN} nymin:=max($ymin0-$dy,$ymin-$step) ymin,ymax:=$nymin,$ymax+$nymin-$ymin
-        else nymax:=min($ymax0+$dy,$ymax+$step) ymin,ymax:=$ymin+$nymax-$ymax,$nymax
-        fi
-        rmn view
-      fi
-      if {*,o} # Zoom in/out
-        fact:=0.9^{*,-o}
-        nXmin,nXmax:=cut(int($X+[$Xmin-$X,$Xmax-$X]*$fact),0,w#0-1)
-        if abs($nXmax-$nXmin)>10
-          fact:=($nXmax-$nXmin)/($Xmax-$Xmin) # Corresponding quantized zoom factor
-          Xmin,Xmax:=$nXmin,$nXmax
+      else
+        if {*,ARROWLEFT}" || "{*,ARROWRIGHT} # Left/Right shift
+          step:=ceil(($Xmax-$Xmin)/8)
+          if {*,ARROWLEFT} nXmin:=max(0,$Xmin-$step) Xmin,Xmax:=$nXmin,$Xmax+$nXmin-$Xmin
+          else nXmax:=min(w#0-1,$Xmax+$step) Xmin,Xmax:=$Xmin+$nXmax-$Xmax,$nXmax
+          fi
           xmin,xmax:=lerp($xmin0,$xmax0,$Xmin/(w#0-1)),lerp($xmin0,$xmax0,$Xmax/(w#0-1))
-          ymin,ymax:=$y+[$ymin-$y,$ymax-$y]*$fact
-          rmn view
+          rmn window_view
+        elif {*,ARROWDOWN}" || "{*,ARROWUP} # Up/Down shift
+          step,dy:=($ymax-$ymin)/8,($ymax0-$ymin0)/20
+          if {*,ARROWDOWN} nymin:=max($ymin0-$dy,$ymin-$step) ymin,ymax:=$nymin,$ymax+$nymin-$ymin
+          else nymax:=min($ymax0+$dy,$ymax+$step) ymin,ymax:=$ymin+$nymax-$ymax,$nymax
+          fi
+          rmn window_view
+        elif {*,o} # Zoom in/out
+          fact:=0.9^{*,-o}
+          nXmin,nXmax:=cut(int($X+[$Xmin-$X,$Xmax-$X]*$fact),0,w#0-1)
+          if abs($nXmax-$nXmin)>10
+            fact:=($nXmax-$nXmin)/($Xmax-$Xmin) # Corresponding quantized zoom factor
+            Xmin,Xmax:=$nXmin,$nXmax
+            xmin,xmax:=lerp($xmin0,$xmax0,$Xmin/(w#0-1)),lerp($xmin0,$xmax0,$Xmax/(w#0-1))
+            ymin,ymax:=$y+[$ymin-$y,$ymax-$y]*$fact
+            rmn window_view
+          fi
+        elif {*,-P} # Change plot type
+          p_type:=($p_type+1)%4
+          rmn window_view
+          notification="Plot type: "${arg0\ $p_type,None,Line,Spline,Bar}
+        elif {*,-V} # Change vertex type
+          v_type:=($v_type+1)%8
+          rmn window_view
+          notification="Vertex type: "${arg0\ $v_type,None,Points,Cross1,Cross2,Circle1,Circle2,Square1,Square2}
         fi
-      fi
-      if {*,P} # Change plot type
-        p_type:=($p_type+1)%4
-        rmn view
-      fi
-      if {*,V} # Change vertex type
-        v_type:=($v_type+1)%8
-        rmn view
       fi
 
       # Manage user selection.
@@ -9623,7 +9642,7 @@ _plot : skip ${8=},${10=}
           else
             Xmin,Xmax,xmin,xmax,ymin,ymax=0,{0,w-1},$xmin0,$xmax0,$ymin0,$ymax0
           fi
-          rmn view
+          rmn window_view
         else
           X0,x0,y0,select_mode=$X,$x,$y,0
         fi
@@ -9631,6 +9650,11 @@ _plot : skip ${8=},${10=}
 
       continue:={*}" && "!{*,-ESC}
       if $7" && "!$is_CTRL" && "{*,k} continue=0 fi
+
+      if $canvas_label_notification
+        notification_opacity-=0.1
+        if $notification_opacity<=0 rm[canvas_label_notification] notification_opacity=0 fi
+      fi
 
     while $continue
     k[0] r $w0,$h0,$d0,$s0,-1
