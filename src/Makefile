@@ -465,11 +465,11 @@ half: # Using float16 rather than float32 to store images
 	$(MAKE) "CFLAGS+=$(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) -Dcimg_use_half -I/usr/include/OpenEXR -Dgmic_pixel_type=half" \
 	        "LIBS+=gmic.o $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS)" gmic.o _cli
 
+# Debug builds.
+#
 dev: # Without optimizations enabled, used for quick compile
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
-# Debug builds.
-#
 debug: # With sanitize-address enabled and symbols kept, to track bugs
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
@@ -499,6 +499,9 @@ cli_sdl3:
 
 opencv_sdl3:
 	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
+
+displayless:
+	$(MAKE) "DISPLAY_CFLAGS=-Dcimg_display=0" "DISPLAY_LIBS=" "OPT_CFLAGS=" cli
 
 # CLI (shared)
 #--------------
