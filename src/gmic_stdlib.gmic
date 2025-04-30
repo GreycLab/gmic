@@ -23458,6 +23458,29 @@ thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
     polygon 4,$coords,${6--1}
   } fi
 
+#@cli thickcircle : x[%],y[%],R[%],_thickness>=0,_opacity,_color1,...
+#@cli : Draw specified colored thick outlined circle on selected images.
+#@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
+#@cli : $ 400,400 repeat 15 { R:=lerp(10,190,$>/($>+$<)) thickcircle 200,200,$R,2,1,$R } n 0,255 map 7
+thickcircle : check "${4=3}>=0" skip ${5=1},${6=0}
+  e[0--3] "Draw outlined thick circle at ($1,$2) with radius $3 on image$?, with thickness $4, opacity $5 "\
+    "and color (${6--1})."
+  if !$4 return fi
+  foreach {
+    4,1,1,4,"begin(
+        const xc = ispercentage($1)?w*$1:$1;
+        const yc = ispercentage($2)?h*$2:$2;
+        const R = ispercentage($3)?hypot(w#0,h#0)*$3:$3;
+        const R1667 = 1.667*R;
+      );
+      U = cexp([0,lerp(0,360,x/w)°]); [ xc + R*U[0], yc + R*U[1], -R1667*U[1], R1667*U[0] ]"
+    thickspline.. {[I[0],I[1]]},${4--1}
+    thickspline.. {[I[1],I[2]]},${4--1}
+    thickspline.. {[I[2],I[3]]},${4--1}
+    thickspline.. {[I[3],I[0]]},${4--1}
+    k[0]
+  }
+
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
 #@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
