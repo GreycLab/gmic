@@ -3595,8 +3595,9 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
     if (is_plus) *s_name = '+';
     *ns_name = sep = 0;
 
-    const unsigned int prev_hash = hash, prev_pos = pos;
     const char *const prev_ptr_body = ptr_body;
+    const unsigned int prev_hash = hash;
+    unsigned int prev_pos = pos;
 
     if ((!is_last_slash && std::strchr(lines,':') && // Check for a command definition (or implicit '_main_')
          cimg_sscanf(nlines,"%255[a-zA-Z0-9_] %c%262143[^\n]",ns_name,&sep,s_body.data())>=2 &&
@@ -3622,10 +3623,13 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
         std::memcpy(nbody.data() + l_debug_info + 2,body.data(),body._width);
         nbody.move_to(body);
       }
+
       if (!search_sorted(s_name,command_names[hash],command_names[hash].size(),pos)) {
         command_names[hash].insert(1,pos);
         commands[hash].insert(1,pos);
         command_has_arguments[hash].insert(1,pos);
+        if (prev_hash==hash && prev_pos!=~0U && prev_pos>=pos)
+          ++prev_pos; // Make sure 'prev_pos' still links to the desired command
         if (count_new) ++*count_new;
       } else if (count_replaced) ++*count_replaced;
 
@@ -3637,7 +3641,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
       body.append_string_to(commands[hash][pos],ptr_body);
 
       if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
-        if (true || commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
+        if (commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
           commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
         else
           commands[prev_hash][prev_pos]._width = prev_ptr_body - commands[prev_hash][prev_pos].data() + 1;
@@ -3668,20 +3672,6 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
       commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
   }
   cimg::mutex(23,0);
-
-/*  if (commands[953].size()>=7) {
-    std::fprintf(stderr,"\nCRASH or NOT CRASH ?\n");
-    CImg<char> &body = commands[953][6];
-    std::fprintf(stderr,"BODY = (%u,%u,%u,%u) -> %lu : %p\n",
-                 body._width,body._height,body._depth,body._spectrum,body.size(),(void*)body._data);
-    CImg<char> body256(body._data,16,1,1,1);
-    body256.back() = 0;
-    body256.print("BODY256");
-    std::fprintf(stderr,"BODY256 : %s",body256._data);
-    body.print("DEBUG");
-  }
-*/
-
   return *this;
 }
 
