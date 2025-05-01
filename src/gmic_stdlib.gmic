@@ -23481,6 +23481,39 @@ thickcircle : check "${4=3}>=0" skip ${5=1},${6=0}
     k[0]
   }
 
+#@cli thickpolygon : N>=1,x1[%],y1[%],...,xN[%],yN[%],_thickness>=0,_opacity,_color1,... : \
+# [coords],_thickness>=0,_opacity,_color1,...
+#@cli : Draw specified colored thick outlined N-vertices polygon on selected images.
+#@cli : If 'thickness<0', the command draws an open polygon rather than a closed polygon.
+#@cli : Default values: 'thickness=3', 'opacity=1', and 'color1=0'.
+#@cli : $ image.jpg thickpolygon 4,20%,20%,80%,30%,80%,70%,20%,80%,3,1,0,255,0
+#@cli : $ image.jpg 2,16,1,1,'u(x?h#0:w#0)' thickpolygon[-2] [-1],3,1,255,0,255 remove[-1]
+thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
+  $=arg
+  if isnum($1) # Coordinates explicitely set in arguments
+    N=$1 vertices=${2,3} ind=4 repeat $1-1 { vertices.=,${arg$ind},${arg{$ind+1}} ind+=2 }
+  else # Coordinates specified as an image
+    pass$1 N:=whds/2 vertices={^} rm. ind=2
+  fi
+  thickness,is_open,opacity,color=3,0,1,0
+  if $ind<=$#
+    thickness=${arg$ind} ind+=1
+    if $thickness<0 thickness*=-1 is_open=1 fi
+    if $ind<=$#
+      opacity=${arg$ind} ind+=1
+      if $ind<=$#
+        color=${arg$ind} repeat $#-$ind { ind+=1 color.=,${arg$ind} }
+      fi
+    fi
+  fi
+  e[^-1] "Draw "$N"-vertices thick outlined polygon on image [0], with thickness "$thickness", opacity "$opacity" and "\
+    "color "($color)"."
+  if !$thickness||!$opacity return fi
+
+  foreach {
+    polygon $N,$vertices,$opacity,0xFFFFFFFF,$color
+  }
+
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
 #@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
