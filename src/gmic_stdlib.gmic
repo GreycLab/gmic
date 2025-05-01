@@ -23489,6 +23489,8 @@ thickcircle : check "${4=3}>=0" skip ${5=1},${6=0}
 #@cli : $ image.jpg thickpolygon 4,20%,20%,80%,30%,80%,70%,20%,80%,3,1,0,255,0
 #@cli : $ image.jpg 2,16,1,1,'u(x?h#0:w#0)' thickpolygon[-2] [-1],3,1,255,0,255 remove[-1]
 thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
+
+  # Parse argument list.
   $=arg
   if isnum($1) # Coordinates explicitely set in arguments
     N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 }
@@ -23510,17 +23512,21 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
     "color "($color)"."
   if !$thickness||!$opacity return fi
 
+  # Draw thick polygon.
   foreach {
-    vertices,c=
+
+    # Determine polygon coordinates and vertex normals.
+    $N,1,1,2
     repeat $N {
       x,y=${x$>},${y$>}
-      x,y:=ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y
-      vertices.=$c$x,$y c=,
+      x,y={0,[ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y]}
+      point. $>,0,0,1,$x,$y
     }
+    permute. cxyz
 
-    +f 0 100%,100%
-    polygon.. $N,$vertices,1,0xFFFFFFFF,$color
-    polygon. $N,$vertices,1,0xFFFFFFFF,1
+    +f.. 0 100%,100%
+    polygon.. ...,1,0xFFFFFFFF,$color
+    polygon. ...,1,0xFFFFFFFF,1
     dilate[-2,-1] $thickness
     j[0] ..,0,0,0,0,$opacity,.
     k[0]
