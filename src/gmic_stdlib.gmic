@@ -23512,24 +23512,30 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
     "color "($color)"."
   if !$thickness||!$opacity return fi
 
-  # Draw thick polygon.
+  # Draw polygon.
   foreach {
 
-    # Determine polygon coordinates and vertex normals.
+    # Determine polygon coordinates.
     $N,1,1,2
     repeat $N {
       x,y=${x$>},${y$>}
-      x,y={0,[ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y]}
+      x,y={0,round([ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y])}
       point. $>,0,0,1,$x,$y
     }
-    permute. cxyz
 
-    +f.. 0 100%,100%
-    polygon.. ...,1,0xFFFFFFFF,$color
-    polygon. ...,1,0xFFFFFFFF,1
-    dilate[-2,-1] $thickness
-    j[0] ..,0,0,0,0,$opacity,.
-    k[0]
+    # Determine vertex normals.
+    +f. "T = J[1,2] - J[-1,2]; unitnorm([-T[1],T[0]])"
+
+    # Draw thick polygon segments.
+    [0],[0]
+    $N,1,1,1,"
+      const T = $thickness/2;
+      P = J[#-3,0]; nP = J[#-3,1,2];
+      U = floor(T*J[#-2,0]); nU = floor(T*J[#-2,1,2]);
+      polygon(#-1,4,P - U,P + U,nP + nU,nP - nU,1,1);
+    " rm[-4,-3,-1]
+    100%,100%,1,{0,s} fc. $color
+    j[0] .,0,0,0,0,$opacity,.. k[0]
   }
 
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
