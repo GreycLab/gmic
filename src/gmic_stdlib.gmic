@@ -23512,12 +23512,12 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   e[^-1] "Draw "$N"-vertices thick outlined polygon on image [0], with thickness "$thickness", opacity "$opacity" and "\
     "color "($color)"."
   if !$thickness||!$opacity return fi
-  t0,t1:="t2=int($thickness/2);[t2,$thickness-t2-1]"
+  thickness2:="int($thickness/2)"
 
   # Draw polygon.
   foreach {
 
-    # Determine polygon coordinates.
+    # Determine polygon coordinates and bounding box.
     if narg($vertices)
       $vertices
     else
@@ -23528,39 +23528,18 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
         point. $>,0,0,1,$x,$y
       }
     fi
-    if $thickness<=1
-      permute. cxyz
-      polygon[0] .,$opacity,${"if $is_open u - else u \"\" fi"}0xFFFFFFFF,$color
-      rm. continue
-    fi
+    s. c
+    xm,xM={-2,[im-$thickness2,iM+$thickness2]}
+    ym,yM:=im-$thickness2,iM+$thickness2
+    -.. $xm -. $ym
+    y[-2,-1] a[-2,-1] x
 
-    # Determine side normals.
-    +f. "T = J[1,2] - I; unitnorm([-T[1],T[0]])"
-
-    # Draw thick polygon segments.
-    if $opacity!=1 # Transparency -> Draw first in intermediate image
-      sh.. 0 xm,xM:=cut([im-$t0,iM+$t0],0,w#0) rm.
-      sh.. 1 ym,yM:=cut([im-$t0,iM+$t0],0,h#0) rm.
-      dx,dy:=$xM-$xm+1,$yM-$ym+1
-      $dx,$dy
-      {$N-$is_open},1,1,1,"
-        const t0 = $t0; const t1 = $t1; const xm = $xm; const ym = $ym;
-        P = J[#-3,0] - [ xm,ym ]; Q = J[#-3,1,2] - [ xm,ym ]; U = J[#-2,0]; V = J[#-2,1,2];
-        Qmt0U = round(Q - t0*U); Qpt1U = round(Q + t1*U);
-        polygon(#-1,4,round(P - t0*U),round(P + t1*U),Qpt1U,Qmt0U,1,1);
-        polygon(#-1,4,Qmt0U,Qpt1U,round(Q + t1*V),round(Q - t0*V),1,1);
-      "
-      {-2,[w,h]},1,{0,s} fc. $color
-      j[0] .,$xm,$ym,0,0,$opacity,...
-    else
-      {$N-$is_open},1,1,1,"begin(color = ["$color"]);
-        const t0 = $t0; const t1 = $t1;
-        P = J[#-2,0]; Q = J[#-2,1,2]; U = J[#-1,0]; V = J[#-1,1,2];
-        Qmt0U = round(Q - t0*U); Qpt1U = round(Q + t1*U);
-        polygon(#0,4,round(P - t0*U),round(P + t1*U),Qpt1U,Qmt0U,1,color);
-        polygon(#0,4,Qmt0U,Qpt1U,round(Q + t1*V),round(Q - t0*V),1,color);
-      "
-    fi
+    # Draw dilated polygon.
+    {[$xM-$xm,$yM-$ym]+1}
+    polygon. ..,1,${"if $is_open u - else u \"\" fi"}0xFFFFFFFF,1
+    dilate. $thickness
+    100%,100%,1,{0,s} fc. $color
+    j[0] .,$xm,$ym,0,0,$opacity,..
     k[0]
   }
 
