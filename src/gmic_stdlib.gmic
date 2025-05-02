@@ -23461,6 +23461,35 @@ thickcircle : check "${4=3}>=0 && isnum(${5=1}) && isnum(${6=0})"
     k[0]
   } fi
 
+#@cli thickellipse : x[%],y[%],R[%],r[%],_angle,_thickness>=0,_opacity,_color1,...
+#@cli : Draw specified colored thick outlined ellipse on selected images.
+#@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
+#@cli : $ 400,400 repeat 15 { R:=lerp(10,190,$>/($>+$<)) thickcircle 200,200,$R,2,1,$R } n 0,255 map 7
+thickellipse : check "${4=3}>=0" skip ${5=1},${6=0}
+  e[0--3] "Draw thick outlined circle at ($1,$2) with radii ($3,$4) on image$?, with orientation $5 deg., thickness $6, "\
+    "opacity $7 and color (${8--1})."
+  if $6<1||!$7 return elif $6<2 ellipse ${1-5},${7--1} fi
+  foreach {
+    4,1,1,4,"begin(
+        const xc = ispercentage($1)?w#0*$1:$1;
+        const yc = ispercentage($2)?h#0*$2:$2;
+        const R = ispercentage($3)?hypot(w#0,h#0)*$3:$3;
+        const r = ispercentage($4)?hypot(w#0,h#0)*$4:$4;
+        const R1667 = 1.667*R;
+        const r1667 = 1.667*r;
+      );
+      cR = x%2?r:R;
+      fR = x%2?R1667:r1667;
+      U = cexp([0,(lerp(0,360,x/w) + $5)°]); [ xc + cR*U[0], yc + cR*U[1], -fR*U[1], fR*U[0] ]"
+    if $7==1 # Opaque drawing -> Fast version
+      repeat 4 { thickspline.. {[I[$>],I[$>+1,2]]},${6--1} }
+    else # Transparent drawing -> Use temporary image
+      [0],[0] repeat 4 { thickspline. {-2,[I[$>],I[$>+1,2]]},$6,1,1 }
+      100%,100%,1,{0,s} fc. ${8--1} j[0] .,0,0,0,0,$7,..
+    fi
+    k[0]
+  }
+
 #@cli thickline : x0[%],y0[%],x1[%],y1[%],_thickness,_opacity,_color1
 #@cli : Draw specified colored thick line on selected images.
 #@cli : Default values: 'thickness=2', 'opacity=1' and 'color1=0'.
