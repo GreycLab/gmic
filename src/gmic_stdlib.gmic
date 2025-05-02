@@ -23435,38 +23435,15 @@ spline : skip ${9=1},${10=0}
     eval ${-math_lib}"spline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,[${10--1}])"
   }
 
-#@cli thickline : x0[%],y0[%],x1[%],y1[%],_thickness,_opacity,_color1
-#@cli : Draw specified colored thick line on selected images.
-#@cli : Default values: 'thickness=2', 'opacity=1' and 'color1=0'.
-#@cli : $ 400,400,1,3 repeat 100 thickline {u([w,h,w,h,5])},0.5,${-rgb} done
-thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
-  e[^-1] "Draw thick line ($1,$2) - ($3,$4) on image$?, with thickness $5, opacity $6 and color (${7--1})."
-  if !$5 line ${1-4},${6--1}
-  else foreach {
-    x0:=ispercentage($1)?(w-1)*$1:$1
-    y0:=ispercentage($2)?(h-1)*$2:$2
-    x1:=ispercentage($3)?(w-1)*$3:$3
-    y1:=ispercentage($4)?(h-1)*$4:$4
-    coords:="
-      const th = "$5";
-      P0 = [ "$x0","$y0" ];
-      P1 = [ "$x1","$y1" ];
-      dP = P1 - P0;
-      n = [ -dP[1],dP[0] ]/max(1e-8,norm(dP))*th/2;
-      round([ P0 - n, P0 + n, P1 + n, P1 - n ]);
-    "
-    polygon 4,$coords,${6--1}
-  } fi
-
 #@cli thickcircle : x[%],y[%],R[%],_thickness>=0,_opacity,_color1,...
 #@cli : Draw specified colored thick outlined circle on selected images.
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
 #@cli : $ 400,400 repeat 15 { R:=lerp(10,190,$>/($>+$<)) thickcircle 200,200,$R,2,1,$R } n 0,255 map 7
-thickcircle : check "${4=3}>=0" skip ${5=1},${6=0}
+thickcircle : check "${4=3}>=0 && isnum(${5=1}) && isnum(${6=0})"
   e[0--3] "Draw thick outlined circle at ($1,$2) with radius $3 on image$?, with thickness $4, opacity $5 "\
     "and color (${6--1})."
-  if !$4 return fi
-  foreach {
+  if $4<1||!$5 return elif $4<2 circle ${1-3},$5,0xFFFFFFFF,${6--1}
+  else foreach {
     4,1,1,4,"begin(
         const xc = ispercentage($1)?w#0*$1:$1;
         const yc = ispercentage($2)?h#0*$2:$2;
@@ -23479,7 +23456,30 @@ thickcircle : check "${4=3}>=0" skip ${5=1},${6=0}
     thickspline.. {[I[2],I[3]]},${4--1}
     thickspline.. {[I[3],I[0]]},${4--1}
     k[0]
-  }
+  } fi
+
+#@cli thickline : x0[%],y0[%],x1[%],y1[%],_thickness,_opacity,_color1
+#@cli : Draw specified colored thick line on selected images.
+#@cli : Default values: 'thickness=2', 'opacity=1' and 'color1=0'.
+#@cli : $ 400,400,1,3 repeat 100 thickline {u([w,h,w,h,5])},0.5,${-rgb} done
+thickline : check "${5=2}>=0 && isnum(${6=1}) && isnum(${7=0})"
+  e[^-1] "Draw thick line ($1,$2) - ($3,$4) on image$?, with thickness $5, opacity $6 and color (${7--1})."
+  if $5<1||!$6 return elif $5<2 line ${1-4},${6--1}
+  else foreach {
+    x0:=ispercentage($1)?(w-1)*$1:$1
+    y0:=ispercentage($2)?(h-1)*$2:$2
+    x1:=ispercentage($3)?(w-1)*$3:$3
+    y1:=ispercentage($4)?(h-1)*$4:$4
+    coords:="
+      const th = "$5";
+      P0 = [ "$x0","$y0" ];
+      P1 = [ "$x1","$y1" ];
+      dP = P1 - P0;
+      n = th/2*unitnorm([-dP[1],dP[0] ]);
+      round([ P0 - n, P0 + n, P1 + n, P1 - n ]);
+    "
+    polygon 4,$coords,${6--1}
+  } fi
 
 #@cli thickpolygon : N>=1,x1[%],y1[%],...,xN[%],yN[%],_thickness>=0,_opacity,_color1,... : \
 # [coords],_thickness>=0,_opacity,_color1,...
@@ -23511,7 +23511,7 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   fi
   e[^-1] "Draw "$N"-vertices thick outlined polygon on image [0], with thickness "$thickness", opacity "$opacity" and "\
     "color "($color)"."
-  if !$thickness||!$opacity return fi
+  if $thickness<1||!$opacity return fi
   thickness2:="int($thickness/2)"
 
   # Draw polygon.
@@ -23546,10 +23546,11 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
 #@cli : $ image.jpg repeat 30 { thickspline {u(100)}%,{u(100)}%,{u(-600,600)},{u(-600,600)},{u(100)}%,{u(100)}%,\
 # {u(-600,600)},{u(-600,600)},3,1,${-rgb} }
-thickspline : skip ${9=3},${10=1},${11=0}
+thickspline : check "${9=3}>=0 && isnum(${10=1}) && isnum(${11=0})"
   e[^-1] "Draw spline from ($1,$2) [$3,$4] to ($5,$6) [$7,$8] on image$?, "\
    "with thickness $9, opacity $10 and color (${11--1})."
-  foreach {
+  if $9<1||!$10 return elif $9<2 spline ${1-8},${10--1}
+  else foreach {
     x0:=ispercentage($1)?$1*(w-1):$1
     y0:=ispercentage($2)?$2*(h-1):$2
     u0:=ispercentage($3)?$3*(w-1):$3
@@ -23566,7 +23567,7 @@ thickspline : skip ${9=3},${10=1},${11=0}
       100%,100%,1,{0,s} fc. ${11--1}
       j... .,0,0,0,0,$10,.. k[0]
     fi
-  }
+  } fi
 
 #@cli mandelbrot : z0r,z0i,z1r,z1i,_iteration_max>=0,_is_julia={ 0:No | 1:Yes },_c0r,_c0i,_opacity
 #@cli : Draw mandelbrot/julia fractal on selected images.
