@@ -23495,12 +23495,13 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   if isnum($1) # Coordinates explicitely set in arguments
     N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 } vertices=
   else # Coordinates specified as an image
-    pass$1 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx store. vertices ind=2
+    pass$1 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx round. store. vertices ind=2
   fi
   thickness,is_open,opacity,color=3,0,1,0
   if $ind<=$#
-    thickness=${arg$ind} ind+=1
+    thickness:=${arg$ind} ind+=1
     if $thickness<0 thickness*=-1 is_open=1 fi
+    thickness:=round($thickness)
     if $ind<=$#
       opacity=${arg$ind} ind+=1
       if $ind<=$#
@@ -23511,6 +23512,7 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   e[^-1] "Draw "$N"-vertices thick outlined polygon on image [0], with thickness "$thickness", opacity "$opacity" and "\
     "color "($color)"."
   if !$thickness||!$opacity return fi
+  t0,t1:="t2=int($thickness/2);[t2,$thickness-t2-1]"
 
   # Draw polygon.
   foreach {
@@ -23537,26 +23539,26 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
 
     # Draw thick polygon segments.
     if $opacity!=1 # Transparency -> Draw first in intermediate image
-      sh.. 0 xm,xM:=cut(round([im-$thickness/2,iM+$thickness/2]),0,w#0) rm.
-      sh.. 1 ym,yM:=cut(round([im-$thickness/2,iM+$thickness/2]),0,h#0) rm.
+      sh.. 0 xm,xM:=cut([im-$t0,iM+$t0],0,w#0) rm.
+      sh.. 1 ym,yM:=cut([im-$t0,iM+$t0],0,h#0) rm.
       dx,dy:=$xM-$xm+1,$yM-$ym+1
       $dx,$dy
       {$N-$is_open},1,1,1,"
-        const T = $thickness/2;
-        const xm = $xm; const ym = $ym;
-        P = J[#-3,0] - [ xm,ym ]; Q = J[#-3,1,2] - [ xm,ym ]; U = T*J[#-2,0]; V = T*J[#-2,1,2];
-        QmU = round(Q - U); QpU = round(Q + U);
-        polygon(#-1,4,round(P - U),round(P + U),QpU,QmU,1,1);
-        polygon(#-1,4,QmU,QpU,round(Q + V),round(Q - V),1,1);
+        const t0 = $t0; const t1 = $t1; const xm = $xm; const ym = $ym;
+        P = J[#-3,0] - [ xm,ym ]; Q = J[#-3,1,2] - [ xm,ym ]; U = J[#-2,0]; V = J[#-2,1,2];
+        Qmt0U = round(Q - t0*U); Qpt1U = round(Q + t1*U);
+        polygon(#-1,4,round(P - t0*U),round(P + t1*U),Qpt1U,Qmt0U,1,1);
+        polygon(#-1,4,Qmt0U,Qpt1U,round(Q + t1*V),round(Q - t0*V),1,1);
       "
       {-2,[w,h]},1,{0,s} fc. $color
       j[0] .,$xm,$ym,0,0,$opacity,...
     else
-      {$N-$is_open},1,1,1,"begin(color = ["$color"]; const T = $thickness/2);
-        P = J[#-2,0]; Q = J[#-2,1,2]; U = T*J[#-1,0]; V = T*J[#-1,1,2];
-        QmU = round(Q - U); QpU = round(Q + U);
-        polygon(#0,4,round(P - U),round(P + U),QpU,QmU,1,color);
-        polygon(#0,4,QmU,QpU,round(Q + V),round(Q - V),1,color);
+      {$N-$is_open},1,1,1,"begin(color = ["$color"]);
+        const t0 = $t0; const t1 = $t1;
+        P = J[#-2,0]; Q = J[#-2,1,2]; U = J[#-1,0]; V = J[#-1,1,2];
+        Qmt0U = round(Q - t0*U); Qpt1U = round(Q + t1*U);
+        polygon(#0,4,round(P - t0*U),round(P + t1*U),Qpt1U,Qmt0U,1,color);
+        polygon(#0,4,Qmt0U,Qpt1U,round(Q + t1*V),round(Q - t0*V),1,color);
       "
     fi
     k[0]
