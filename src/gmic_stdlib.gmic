@@ -23493,9 +23493,9 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   # Parse argument list.
   $=arg
   if isnum($1) # Coordinates explicitely set in arguments
-    N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 }
+    N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 } vertices=
   else # Coordinates specified as an image
-    pass$1 N:=whds/2 repeat $N { x$>,y$>:=i[2*$>],i[2*$>+1] } rm. ind=2
+    pass$1 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx store. vertices ind=2
   fi
   thickness,is_open,opacity,color=3,0,1,0
   if $ind<=$#
@@ -23513,15 +23513,19 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   if !$thickness||!$opacity return fi
 
   # Draw polygon.
-  foreach {
+     foreach {
 
     # Determine polygon coordinates.
-    $N,1,1,2
-    repeat $N {
-      x,y=${x$>},${y$>}
-      x,y={0,round([ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y])}
-      point. $>,0,0,1,$x,$y
-    }
+    if narg($vertices)
+      $vertices
+    else
+      $N,1,1,2
+      repeat $N {
+        x,y=${x$>},${y$>}
+        x,y={0,round([ispercentage($x)?w*$x:$x,ispercentage($y)?h*$y:$y])}
+        point. $>,0,0,1,$x,$y
+      }
+    fi
 
     # Determine side normals.
     +f. "T = J[1,2] - I; unitnorm([-T[1],T[0]])"
