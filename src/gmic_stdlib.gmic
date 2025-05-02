@@ -23455,8 +23455,14 @@ thickcircle : check "${4=3}>=0 && isnum(${5=1}) && isnum(${6=0})"
     if $5==1 # Opaque drawing -> Fast version
       repeat 4 { thickspline.. {[I[$>],I[$>+1,2]]},${4--1} }
     else # Transparent drawing -> Use temporary image
-      [0],[0] repeat 4 { thickspline. {-2,[I[$>],I[$>+1,2]]},$4,1,1 }
-      100%,100%,1,{0,s} fc. ${6--1} j[0] .,0,0,0,0,$5,..
+      sh. 0 xm,xM:="cut([floor(im - $4/2),ceil(iM + $4/2)],0,w#0 - 1)" rm.
+      sh. 1 ym,yM:="cut([floor(im - $4/2),ceil(iM + $4/2)],0,h#0 - 1)" rm.
+      {[$xM-$xm,$yM-$ym]+1}
+      repeat 4 {
+        x0,y0,u0,v0,x1,y1,u1,v1={-2,[I[$>],I[$>+1,2]]}
+        thickspline. {[$x0-$xm,$y0-$ym,$u0,$v0,$x1-$xm,$y1-$ym,$u1,$v1]},$4,1,1
+      }
+      100%,100%,1,{0,s} fc. ${6--1} j[0] .,$xm,$ym,0,0,$5,..
     fi
     k[0]
   } fi
@@ -23464,7 +23470,7 @@ thickcircle : check "${4=3}>=0 && isnum(${5=1}) && isnum(${6=0})"
 #@cli thickellipse : x[%],y[%],R[%],r[%],_angle,_thickness>=0,_opacity,_color1,...
 #@cli : Draw specified colored thick outlined ellipse on selected images.
 #@cli : Default values: 'thickness=3', 'opacity=1' and 'color1=0'.
-#@cli : $ image.jpg repeat 300 thickellipse {u(100)}%,{u(100)}%,{u(30)},{u(30)},{u(180)},3,0.6,${-rgb} done \
+#@cli : $ image.jpg repeat 300 thickellipse {u(100)}%,{u(100)}%,{u(50)},{u(50)},{u(180)},3,0.6,${-rgb} done \
 # thickellipse 50%,50%,200,100,0,5,0.7,255
 thickellipse : check "${6=3}>=0 && isnum(${7=1}) && isnum(${8=0})"
   e[^-1] "Draw thick outlined circle at ($1,$2) with radii ($3,$4) on image$?, with orientation $5 deg., "\
@@ -23485,8 +23491,14 @@ thickellipse : check "${6=3}>=0 && isnum(${7=1}) && isnum(${8=0})"
     if $7==1 # Opaque drawing -> Fast version
       repeat 4 { thickspline.. {[I[$>],I[$>+1,2]]},${6--1} }
     else # Transparent drawing -> Use temporary image
-      [0],[0] repeat 4 { thickspline. {-2,[I[$>],I[$>+1,2]]},$6,1,1 }
-      100%,100%,1,{0,s} fc. ${8--1} j[0] .,0,0,0,0,$7,..
+      sh. 0 xm,xM:="const M = max(${3,4}); cut([ floor(ia - M - $6/2),ceil(ia + M + $6/2) ],0,w#0 - 1)" rm.
+      sh. 1 ym,yM:="const M = max(${3,4}); cut([ floor(ia - M - $6/2),ceil(ia + M + $6/2) ],0,h#0 - 1)" rm.
+      {[$xM-$xm,$yM-$ym]+1}
+      repeat 4 {
+        x0,y0,u0,v0,x1,y1,u1,v1={-2,[I[$>],I[$>+1,2]]}
+        thickspline. {[$x0-$xm,$y0-$ym,$u0,$v0,$x1-$xm,$y1-$ym,$u1,$v1]},$6,1,1
+      }
+      100%,100%,1,{0,s} fc. ${8--1} j[0] .,$xm,$ym,0,0,$7,..
     fi
     k[0]
   }
