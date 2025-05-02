@@ -23451,10 +23451,13 @@ thickcircle : check "${4=3}>=0 && isnum(${5=1}) && isnum(${6=0})"
         const R1667 = 1.667*R;
       );
       U = cexp([0,lerp(0,360,x/w)°]); [ xc + R*U[0], yc + R*U[1], -R1667*U[1], R1667*U[0] ]"
-    thickspline.. {[I[0],I[1]]},${4--1}
-    thickspline.. {[I[1],I[2]]},${4--1}
-    thickspline.. {[I[2],I[3]]},${4--1}
-    thickspline.. {[I[3],I[0]]},${4--1}
+
+    if $5==1 # Opaque drawing -> Fast version
+      repeat 4 { thickspline.. {[I[$>],I[$>+1,2]]},${4--1} }
+    else # Transparent drawing -> Use temporary image
+      [0],[0] repeat 4 { thickspline. {-2,[I[$>],I[$>+1,2]]},$4,1,1 }
+      100%,100%,1,{0,s} fc. ${6--1} j[0] .,0,0,0,0,$5,..
+    fi
     k[0]
   } fi
 
@@ -23562,8 +23565,7 @@ thickspline : check "${9=3}>=0 && isnum(${10=1}) && isnum(${11=0})"
     if $10==1 # Opaque drawing -> Fast version
       eval ${-math_lib}"thickspline(#0,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,$10,[${11--1}])"
     else # Transparent drawing -> Use temporary image
-      100%,100%
-      eval ${-math_lib}"thickspline(#-1,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,1,1)"
+      100%,100% eval ${-math_lib}"thickspline(#-1,["$x0","$y0"],["$u0","$v0"],["$x1","$y1"],["$u1","$v1"],$9,1,1)"
       100%,100%,1,{0,s} fc. ${11--1}
       j... .,0,0,0,0,$10,.. k[0]
     fi
