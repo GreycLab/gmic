@@ -3666,7 +3666,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
   }
 
   if (hash!=~0U && pos!=~0U && ptr_body) { // Freeze body of latest processed command
-    if (true || commands[hash][pos].end() - ptr_body>256)
+    if (commands[hash][pos].end() - ptr_body>256)
       commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
     else
       commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
