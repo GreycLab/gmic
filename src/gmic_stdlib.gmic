@@ -58162,6 +58162,140 @@ _fx_random3d2 : ($1) /. 2 cylinder3d {^},$1 rm..
 _fx_random3d3 : sphere3d $1,2
 _fx_random3d4 : ($1) /. 3 torus3d $1,{^} rm..
 
+#@gui Algorithm A : fx_memoakten_algorithm_a,fx_memoakten_algorithm_a_preview(1)*
+#@gui : Random Seed = ~int(0,0,65535)
+#@gui : Density of Initial Points (%) = ~float(20,0,100)
+#@gui : Rate of Primary Segments (%) = ~float(60,0,100)
+#@gui : Rate of Secondary Segments (%) = ~float(30,0,100)
+#@gui : Max Secondary Segments Occurrences = ~int(2,1,16)
+#@gui : Secondary Segments Centering Constraint (%) = ~float(50,0,100)
+#@gui : Min Segment Length (%) = ~float(10,0,100)
+#@gui : Max Segment Length (%) = ~float(50,0,100)
+#@gui : Angle Constraint (%) = ~float(40,0,100)
+#@gui : Line Thickness (px) = ~int(3,1,16)
+#@gui : Density of Color Fill (%) = ~float(60,0,100)
+#@gui : Anti-aliasing = choice(1,"None","x1.5","x2")
+#@gui : sep = separator()
+#@gui : Foreground Color = ~color(0,0,0)
+#@gui : Background Color = ~color(255,255,255)
+#@gui : Fill Color 1 = ~color(255,0,0)
+#@gui : Fill Color 2 = ~color(255,128,0)
+#@gui : Fill Color 3 = ~color(255,255,0)
+#@gui : Fill Color 4 = ~color(0,0,0)
+#@gui : sep = separator()
+#@gui : note = note{"<b>Note:</b> This filter has been implemented after reading the following tweet from Memo Akten:"}
+#@gui : url = link("https://twitter.com/memotv/status/1556619064491102209")
+#@gui : note = note{"I (David) found the idea really nice so I tried to convert the algorithm into a G'MIC script. \
+# The code is not optimized and probably very perfectible, but at least it works :)}"
+#@gui : sep = separator()
+#@gui : note = note{"<small>Authors: <i><a href="https://www.memo.tv/">Memo Akten</a></i> (algorithm) and \
+# <i><a href="https://tschumperle.users.greyc.fr/">David Tschumperlé</a></i> (G'MIC conversion)
+#@gui :       Latest Update: <i>2022/08/09</i>.</small>"}
+fx_memoakten_algorithm_a_preview :
+  fx_memoakten_algorithm_a $*
+  gui_crop_resize_preview
+
+fx_memoakten_algorithm_a :
+  seed,point_density,rate_ps,rate_ss,max_occ,centering,msl,Msl,angt,thickness,color_density,antialias,\
+  Rf,Gf,Bf,Rb,Gb,Bb,R0,G0,B0,R1,G1,B1,R2,G2,B2,R3,G3,B3=${1-30}
+  fa:=arg0($antialias,1,1.5,2)
+  foreach {
+    nm={n} W,H={w},{h} rm srand $seed
+
+    # Extract non-overlapping points.
+    $W,$H noise_poissondisk. {max(8,min(w,h)/max(2,$point_density))}
+    1,1,1,2 eval.. "begin(da_push(#1,[0,0],[$W - 1,0],[$W - 1,$H - 1],[0,$H - 1])); i?da_push(#1,[x,y])" rm..
+
+    # Draw random non-intersecting segments.
+    1,1,1,2
+    1,{"max(1,round($rate_ps*da_size(#0)%))"},1,1,">"${-math_lib}"
+      begin(
+        const mwh = min($W,$H);
+        da_push(#1,[0,1],[1,2],[2,3],[3,0]);
+        nb_pts = da_size(#0)
+      );
+      do (
+        do (p0 = v(nb_pts - 1); p1 = v(nb_pts - 1), p0==p1);
+        P0 = I[#0,p0]; P1 = I[#0,p1],
+        !inrange(norm(P0 - P1),mwh*$msl%,mwh*$Msl%)
+      );
+      is_valid = 1;
+      repeat (da_size(#1),k,
+        S = I[#1,k]; q0 = S[0]; q1 = S[1];
+        Q0 = I[#0,q0]; Q1 = I[#0,q1];
+        is_valid&=!do_intersect(P0[0],P0[1],P1[0],P1[1],Q0[0],Q0[1],Q1[0],Q1[1]);
+        !is_valid?break();
+      );
+      is_valid?(da_push(#1,[p0,p1]));
+    " rm.
+    channels. 0,2
+
+    # Link segments together.
+    1,{"max(1,round($rate_ss*da_size(#1)))*100"},1,1,">"${-math_lib}"
+      const cmin = lerp(0,0.5,$centering%);
+      const cmax = lerp(1,0.5,$centering%);
+      const mwh = min($W,$H);
+      const angt = 1 - $angt%;
+      nb_seg = da_size(#1);
+      do (s0 = v(nb_seg - 1); s1 = v(nb_seg - 1),
+          s0==s1 || i(#1,0,s0,0,2)>$max_occ || i(#1,0,s1,0,2)>$max_occ);
+      S0 = I[#1,s0]; S1 = I[#1,s1];
+      P0 = I[#0,S0[0]]; P1 = I[#0,S0[1]]; dP = P1 - P0; nP = norm(dP); ndP = dP/nP;
+      Q0 = I[#0,S1[0]]; Q1 = I[#0,S1[1]]; dQ = Q1 - Q0; nQ = norm(dQ); ndQ = dQ/nQ;
+      R0 = round(lerp(P0,P1,u(cmin,cmax)));
+      R1 = round(lerp(Q0,Q1,u(cmin,cmax)));
+      dR = R1 - R0; nR = norm(dR); ndR = dR/nR;
+      inrange(nR,mwh*$msl%,mwh*$Msl%) && abs(dot(ndR,ndP))<angt && abs(dot(ndR,ndQ))<angt?(
+        is_valid = 1;
+        repeat (da_size(#1),s,!isin(s,s0,s1)?(
+          S = I[#1,s]; q0 = S[0]; q1 = S[1];
+          Q0 = I[#0,q0]; Q1 = I[#0,q1];
+          is_valid&=!do_intersect(R0[0],R0[1],R1[0],R1[1],Q0[0],Q0[1],Q1[0],Q1[1]);
+          !is_valid?break();
+        ));
+        is_valid?(
+          nb_pts = da_size(#0);
+          da_push(#0,R0,R1);
+          da_push(#1,[nb_pts,nb_pts + 1,0]);
+          ++i(#1,0,s0,0,2);
+          ++i(#1,0,s1,0,2);
+        );
+      );
+      end(resize(#1,1,da_size(#1),1,s#1,0));
+     " rm.
+    channels. 0,1
+
+    # Draw segments on canvas.
+    {round($fa*[$W,$H])},1,1,1
+    eval[1] ">y>=4?(S = I; polygon(#-1,2,$fa*I[#0,S[0]],$fa*I[#0,S[1]],1,0))"
+    k.
+
+    # Fill regions with random colors.
+    srand $seed
+    +label_fg. 0,0
+    1,{iM+1},1,6,[0,0,y,0,0,0] eval.. ">++i[#-1,i]" sh. 0 area_max:=iM rm.
+    f. "[ i0*u(0.25,1),i0,y,0,0,0 ]" sort. +,y channels. 1,100%
+    f. "begin(N = max(1,h*$color_density%));
+        y>N || i0<8 || i0>=$area_max?[i0,i1,$Rb,$Gb,$Bb]:(
+          rand = u;
+          rand<0.25?[i0,i1,$R0,$G0,$B0]:
+          rand<0.5?[i0,i1,$R1,$G1,$B1]:
+          rand<0.75?[i0,i1,$R2,$G2,$B2]:
+                    [i0,i1,$R3,$G3,$B3]
+        )"
+    channels. 1,100% sort. +,y channels. 1,100%
+    point. 0,0,0,1,$Rf,$Gf,$Bf
+    map.. . rm.
+
+    # Draw thick segments.
+    ==.. 0
+    if $thickness<=3 dilate[0] $thickness else dilate_circ[0] $thickness fi
+    f. "i(#0)?[$Rf,$Gf,$Bf]:I" rm..
+
+    # Anti-aliased rendering.
+    r $W,$H,1,3,2 => $nm
+  }
+
 #@gui Ball : fx_ball, fx_ball_preview(0)
 #@gui : Radius = ~int(200,1,1024)
 #@gui : Color = ~color(255,0,255)
@@ -58816,140 +58950,6 @@ fx_mandelbrot_preview :
   rectangle $x0r,$y0r,$x1r,$y1r,0.7,0x0F0F0F0F,0,0,0,255
   if $18 to "Z0 = ( "{_$x0}" , "{_$y0}" )\nZ1 = ( "{_$x1}" , "{_$y1}" )",2,2,16 fi
   u $status
-
-#@gui Algorithm A : fx_memoakten_algorithm_a,fx_memoakten_algorithm_a_preview(1)*
-#@gui : Random Seed = ~int(0,0,65535)
-#@gui : Density of Initial Points (%) = ~float(20,0,100)
-#@gui : Rate of Primary Segments (%) = ~float(60,0,100)
-#@gui : Rate of Secondary Segments (%) = ~float(30,0,100)
-#@gui : Max Secondary Segments Occurrences = ~int(2,1,16)
-#@gui : Secondary Segments Centering Constraint (%) = ~float(50,0,100)
-#@gui : Min Segment Length (%) = ~float(10,0,100)
-#@gui : Max Segment Length (%) = ~float(50,0,100)
-#@gui : Angle Constraint (%) = ~float(40,0,100)
-#@gui : Line Thickness (px) = ~int(3,1,16)
-#@gui : Density of Color Fill (%) = ~float(60,0,100)
-#@gui : Anti-aliasing = choice(1,"None","x1.5","x2")
-#@gui : sep = separator()
-#@gui : Foreground Color = ~color(0,0,0)
-#@gui : Background Color = ~color(255,255,255)
-#@gui : Fill Color 1 = ~color(255,0,0)
-#@gui : Fill Color 2 = ~color(255,128,0)
-#@gui : Fill Color 3 = ~color(255,255,0)
-#@gui : Fill Color 4 = ~color(0,0,0)
-#@gui : sep = separator()
-#@gui : note = note{"<b>Note:</b> This filter has been implemented after reading the following tweet from Memo Akten:"}
-#@gui : url = link("https://twitter.com/memotv/status/1556619064491102209")
-#@gui : note = note{"I (David) found the idea really nice so I tried to convert the algorithm into a G'MIC script. \
-# The code is not optimized and probably very perfectible, but at least it works :)}"
-#@gui : sep = separator()
-#@gui : note = note{"<small>Authors: <i><a href="https://www.memo.tv/">Memo Akten</a></i> (algorithm) and \
-# <i><a href="https://tschumperle.users.greyc.fr/">David Tschumperlé</a></i> (G'MIC conversion)
-#@gui :       Latest Update: <i>2022/08/09</i>.</small>"}
-fx_memoakten_algorithm_a_preview :
-  fx_memoakten_algorithm_a $*
-  gui_crop_resize_preview
-
-fx_memoakten_algorithm_a :
-  seed,point_density,rate_ps,rate_ss,max_occ,centering,msl,Msl,angt,thickness,color_density,antialias,\
-  Rf,Gf,Bf,Rb,Gb,Bb,R0,G0,B0,R1,G1,B1,R2,G2,B2,R3,G3,B3=${1-30}
-  fa:=arg0($antialias,1,1.5,2)
-  foreach {
-    nm={n} W,H={w},{h} rm srand $seed
-
-    # Extract non-overlapping points.
-    $W,$H noise_poissondisk. {max(8,min(w,h)/max(2,$point_density))}
-    1,1,1,2 eval.. "begin(da_push(#1,[0,0],[$W - 1,0],[$W - 1,$H - 1],[0,$H - 1])); i?da_push(#1,[x,y])" rm..
-
-    # Draw random non-intersecting segments.
-    1,1,1,2
-    1,{"max(1,round($rate_ps*da_size(#0)%))"},1,1,">"${-math_lib}"
-      begin(
-        const mwh = min($W,$H);
-        da_push(#1,[0,1],[1,2],[2,3],[3,0]);
-        nb_pts = da_size(#0)
-      );
-      do (
-        do (p0 = v(nb_pts - 1); p1 = v(nb_pts - 1), p0==p1);
-        P0 = I[#0,p0]; P1 = I[#0,p1],
-        !inrange(norm(P0 - P1),mwh*$msl%,mwh*$Msl%)
-      );
-      is_valid = 1;
-      repeat (da_size(#1),k,
-        S = I[#1,k]; q0 = S[0]; q1 = S[1];
-        Q0 = I[#0,q0]; Q1 = I[#0,q1];
-        is_valid&=!do_intersect(P0[0],P0[1],P1[0],P1[1],Q0[0],Q0[1],Q1[0],Q1[1]);
-        !is_valid?break();
-      );
-      is_valid?(da_push(#1,[p0,p1]));
-    " rm.
-    channels. 0,2
-
-    # Link segments together.
-    1,{"max(1,round($rate_ss*da_size(#1)))*100"},1,1,">"${-math_lib}"
-      const cmin = lerp(0,0.5,$centering%);
-      const cmax = lerp(1,0.5,$centering%);
-      const mwh = min($W,$H);
-      const angt = 1 - $angt%;
-      nb_seg = da_size(#1);
-      do (s0 = v(nb_seg - 1); s1 = v(nb_seg - 1),
-          s0==s1 || i(#1,0,s0,0,2)>$max_occ || i(#1,0,s1,0,2)>$max_occ);
-      S0 = I[#1,s0]; S1 = I[#1,s1];
-      P0 = I[#0,S0[0]]; P1 = I[#0,S0[1]]; dP = P1 - P0; nP = norm(dP); ndP = dP/nP;
-      Q0 = I[#0,S1[0]]; Q1 = I[#0,S1[1]]; dQ = Q1 - Q0; nQ = norm(dQ); ndQ = dQ/nQ;
-      R0 = round(lerp(P0,P1,u(cmin,cmax)));
-      R1 = round(lerp(Q0,Q1,u(cmin,cmax)));
-      dR = R1 - R0; nR = norm(dR); ndR = dR/nR;
-      inrange(nR,mwh*$msl%,mwh*$Msl%) && abs(dot(ndR,ndP))<angt && abs(dot(ndR,ndQ))<angt?(
-        is_valid = 1;
-        repeat (da_size(#1),s,!isin(s,s0,s1)?(
-          S = I[#1,s]; q0 = S[0]; q1 = S[1];
-          Q0 = I[#0,q0]; Q1 = I[#0,q1];
-          is_valid&=!do_intersect(R0[0],R0[1],R1[0],R1[1],Q0[0],Q0[1],Q1[0],Q1[1]);
-          !is_valid?break();
-        ));
-        is_valid?(
-          nb_pts = da_size(#0);
-          da_push(#0,R0,R1);
-          da_push(#1,[nb_pts,nb_pts + 1,0]);
-          ++i(#1,0,s0,0,2);
-          ++i(#1,0,s1,0,2);
-        );
-      );
-      end(resize(#1,1,da_size(#1),1,s#1,0));
-     " rm.
-    channels. 0,1
-
-    # Draw segments on canvas.
-    {round($fa*[$W,$H])},1,1,1
-    eval[1] ">y>=4?(S = I; polygon(#-1,2,$fa*I[#0,S[0]],$fa*I[#0,S[1]],1,0))"
-    k.
-
-    # Fill regions with random colors.
-    srand $seed
-    +label_fg. 0,0
-    1,{iM+1},1,6,[0,0,y,0,0,0] eval.. ">++i[#-1,i]" sh. 0 area_max:=iM rm.
-    f. "[ i0*u(0.25,1),i0,y,0,0,0 ]" sort. +,y channels. 1,100%
-    f. "begin(N = max(1,h*$color_density%));
-        y>N || i0<8 || i0>=$area_max?[i0,i1,$Rb,$Gb,$Bb]:(
-          rand = u;
-          rand<0.25?[i0,i1,$R0,$G0,$B0]:
-          rand<0.5?[i0,i1,$R1,$G1,$B1]:
-          rand<0.75?[i0,i1,$R2,$G2,$B2]:
-                    [i0,i1,$R3,$G3,$B3]
-        )"
-    channels. 1,100% sort. +,y channels. 1,100%
-    point. 0,0,0,1,$Rf,$Gf,$Bf
-    map.. . rm.
-
-    # Draw thick segments.
-    ==.. 0
-    if $thickness<=3 dilate[0] $thickness else dilate_circ[0] $thickness fi
-    f. "i(#0)?[$Rf,$Gf,$Bf]:I" rm..
-
-    # Anti-aliased rendering.
-    r $W,$H,1,3,2 => $nm
-  }
 
 #@gui Neon Lightning : fx_neon_lightning, fx_neon_lightning(1)
 #@gui : Source (%) = ~point(50,50)
@@ -59669,6 +59669,140 @@ fx_sine_curve_preview :
   _is_preview=1
   fx_sine_curve $*
   k[0]
+
+#@gui Speech Bubble : fx_speech_bubble, fx_speech_bubble(1)
+#@gui : PrevP0 = value(50,50)
+#@gui : P0 = point(50,50,0,1,255,255,0,255)_0
+#@gui : P1 = point(80,50,0,1,255,128,0,255)_0
+#@gui : P2 = point(50,30,0,1,255,128,0,255)_0
+#@gui : PrevP3 = value(30,70)
+#@gui : P3 = point(30,70,0,1,255,255,255,255,0.6%)_0
+#@gui : PrevP4 = value(38,70)
+#@gui : P4 = point(38,70,0,1,255,255,255,255,0.6%)_0
+#@gui : P5 = point(45,80,0,1,255,0,0,255)_0
+#@gui : P6 = point(30,75,0,1,255,0,255,255,0.6%)_0
+#@gui : P7 = point(38,75,0,1,255,0,255,255,0.6%)_0
+#@gui : Roundness (%) = float(25,0,100)
+#@gui : Anti-aliasing = bool(1)
+#@gui : sep = separator()
+#@gui : Tail Type = choice(1,"Straight","Curved")
+#@gui : Tail Waveform = choice("Flat","Square","Triangle","Ascending Sawtooth","Descending Sawtooth","Sine")
+#@gui : Tail Amplitude (%) = float(1.5,0,10)
+#@gui : Tail Frequency = float(3,1,20)
+#@gui : sep = separator()
+#@gui : Outline (px) = int(2,0,32)
+#@gui : Fill Color = color(255,255,255)
+#@gui : Outline Color = color(0,0,0)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>
+#@gui :       Latest Update: <i>2025/05/13</i>.</small>")
+fx_speech_bubble :
+  if !$! return fi
+  pX0,pY0,X0,Y0,X1,Y1,X2,Y2,pX3,pY3,X3,Y3,pX4,pY4,X4,Y4,X5,Y5,X6,Y6,X7,Y7,roundness,antialiasing,\
+    t_type,t_waveform,t_amplitude,t_frequency,outline,Rf,Gf,Bf,Ro,Go,Bo=$*
+  is_preview:=!!0$_preview_width
+  X1,X2,pX3,X3,pX4,X4,X5,X6,X7+=$X0-$pX0
+  Y1,Y2,pY3,Y3,pY4,Y4,Y5,Y6,Y7+=$Y0-$pY0
+  X2,Y1=$X0,$Y0
+
+  l[0] {
+    nm=${-gui_layer_name}
+    x0,x1,x2,px3,x3,px4,x4,x5,x6,x7:=[$X0,$X1,$X2,$pX3,$X3,$pX4,$X4,$X5,$X6,$X7]*w%
+    y0,y1,y2,py3,y3,py4,y4,y5,y6,y7:=[$Y0,$Y1,$Y2,$pY3,$Y3,$pY4,$Y4,$Y5,$Y6,$Y7]*h%
+    R,r:=abs($x1-$x0),abs($y2-$y0)
+    alpha:=$roundness%
+    alpha1:=max(0.1,$alpha);
+
+    # Compute projections of P3 and P4 on the edge of the super-ellipse.
+    x3,y3,x4,y4:="
+    const alpha = max(0.1,$alpha);
+    proj(P) = (
+      sl = (P[1] - $y0)/(P[0] - $x0);
+      absxp = 1/(1/$R^(2/alpha) + abs(sl/$r)^(2/alpha))^(alpha/2);
+      xp = $x0 + (P[0]>=$x0?absxp:-absxp);
+      yp = $y0 + sl*(xp - $x0);
+      [ xp,yp ];
+    );
+    P3 = [ $x3,$y3 ];
+    P4 = [ $x4,$y4 ];
+    [ proj(P3), proj(P4) ]"
+
+    x6,y6+=$x3-$px3,$y3-$py3
+    x7,y7+=$x4-$px4,$y4-$py4
+
+    # Draw speech bubble.
+    if $antialiasing 150%,150% x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7,R,r,outline,t_amplitude*=1.5 else 100%,100% fi
+    {round(2*[$R,$r]+4)}
+    512,1,1,2,"
+      t = lerp(0,2*pi,x/w); cost = cos(t); sint = sin(t);
+      X = w#-1/2 + $R*sign(cost)*abs(cost)^$alpha;
+      Y = h#-1/2 + $r*sign(sint)*abs(sint)^$alpha;
+      [ X,Y ]"
+    permute. cxyz polygon.. .,1,0xFFFFFFFF,1 rm.
+    flood. 50%,50%,0,0,0,1,1
+    j.. .,{[$x0-w/2,$y0-h/2]},0,0 rm.
+
+    if !$t_type # Straight tail
+      u3,v3,u4,v4:=0
+    else # Curved tail
+      u3,v3,u4,v4:=3*[$x6-$x3,$y6-$y3,$x7-$x4,$y7-$y4]
+    fi
+    (0,0,0,1;0,0,1,0;1,1,1,1;3,2,1,0)
+    ($x3;$u3;$x5;0) ($y3;$v3;$y5;0)
+    ($x4;$u4;$x5;0) ($y4;$v4;$y5;0)
+    solve[-4--1] [-5] rm[-5]
+
+    64,1,1,4,"
+      begin(
+        C = crop(#-4); D = crop(#-3); E = crop(#-2); F = crop(#-1);
+        dC = [ 3*C[0],2*C[1],C[2] ]; dD = [ 3*D[0],2*D[1],D[2] ];
+        dE = [ 3*E[0],2*E[1],E[2] ]; dF = [ 3*F[0],2*F[1],F[2] ];
+        const t_amplitude = max(w#0,h#0)*$t_amplitude%;
+      );
+      t = x/w;
+      T = [ t^3,t^2,t,1 ];
+      dT = [ t^2,t,1 ];
+
+      $t_waveform?(amp = lerp(t_amplitude,0,t)*wave($t_frequency*t,$t_waveform - 1)):(const amp = 1);
+      P3 = [ dot(C,T),dot(D,T) ];
+      P4 = [ dot(E,T),dot(F,T) ];
+
+      dP3 = unitnorm([ dot(dC,dT),dot(dD,dT) ]);
+      dP4 = unitnorm([ dot(dE,dT),dot(dF,dT) ]);
+
+      P3+=amp*[ -dP3[1],dP3[0] ];
+      P4+=amp*[ -dP4[1],dP4[0] ];
+
+      [ P3,P4 ]"
+    s. c,2 mirror. x a[-2,-1] x permute. cxyz
+    polygon[1] .,1,1 rm[-5--1]
+
+    100%,100%,1,3,"i(#-1)?[ $Rf,$Gf,$Bf ]:[ $Ro,$Go,$Bo ]" rv[-2,-1]
+    if $outline distance. 1 le. $outline fi
+    if $antialiasing r[-2,-1] [0],[0],1,100%,2 x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7,R,r,outline,t_amplitude/=1.5 fi
+
+    if $is_preview
+      *. 255 a[-2,-1] c rv
+      gui_merge_layers
+      line $x3,$y3,$x6,$y6,1,0xF0F0F0F0,0,0,0,255
+      line $x3,$y3,$x6,$y6,1,0x0F0F0F0F,255,255,255,255
+      line $x4,$y4,$x7,$y7,1,0xF0F0F0F0,0,0,0,255
+      line $x4,$y4,$x7,$y7,1,0x0F0F0F0F,255,255,255,255
+    else
+      xpp,ypp,xnn,ynn=${"autocrop_coords. xy"}
+      *. 255 a[-2,-1] c
+      z. $xpp,$ypp,$xnn,$ynn
+      =>. name($nm" [Speech Bubble]")\,pos($xpp\,$ypp)
+      rv
+    fi
+
+    X3,X4,X6,X7:=[$x3,$x4,$x6,$x7]*100/w
+    Y3,Y4,Y6,Y7:=[$y3,$y4,$y6,$y7]*100/h
+    u "{"$X0,$Y0"}{"$X0,$Y0"}{"$X1,$Y1"}{"$X2,$Y2"}{"$X3,$Y3"}{"$X3,$Y3"}{"$X4,$Y4"}{"$X4,$Y4"}"\
+      "{"$X5,$Y5"}{"$X6,$Y6"}{"$X7,$Y7"}{"$roundness"}{"$antialiasing"}"\
+      "{"$t_type"}{"$t_waveform"}{"$t_amplitude"}{"$t_frequency"}"\
+      "{"$outline"}{"$Rf,$Gf,$Bf"}{"$Ro,$Go,$Bo"}"
+  }
 
 #@gui Spline Spirograph : fx_spline_spirograph, fx_spline_spirograph_preview
 #@gui : Seed = ~int(0,0,65535)
