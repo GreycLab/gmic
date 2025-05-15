@@ -5178,8 +5178,8 @@ _input_csv_val :
 
 #@cli input_cube : "filename",_convert_1d_cluts_to_3d={ 0:No | 1:Yes }.
 #@cli : Insert CLUT data from a .cube filename (Adobe CLUT file format).
-#@cli : Default value: 'convert_1d_cluts_to_3d=1'.
-+input_cube : skip ${2=1}
+#@cli : Default value: 'convert_1d_cluts_to_3d=0'.
++input_cube : skip ${2=0}
   e[^-1] "Input CLUT from file '"{/"$1"}"'"
   l[] {
     it[] "$1" f "i<_' ' && i!=10?_' ':i" s -,10
@@ -15562,7 +15562,9 @@ map_clut :
   e[^-1] "Map color LUT $1 on image$?."
   if !$! return fi
   to_color
-  if ${"is_image_arg $1"} pass$1 0 to_rgb. else clut "$1" fi
+  if ${"is_image_arg $1"} pass$1 0 else clut "$1" fi
+  to_rgb.
+  if w>1" && "max(h,d)==1 f.. "[ i(#-1,R,0,0,0),i(#-1,G,0,0,1),i(#-1,B,0,0,2) ]" rm. return fi
   l:=round((w*h*d)^(1/3))
   if w*h*d!=$l^3 error "Command '$0': Specified CLUT $1 has invalid dimensions "({w},{h},{d},{s}). fi
   r. $l,$l,$l,3,-1
