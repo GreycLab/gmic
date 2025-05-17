@@ -13552,8 +13552,9 @@ compress_clut :
   foreach {
     nm={b}
     if iM>1024 / 257 fi # When input is 16bits
-    rs3d 33 round
     if d==1 S:=round(cbrt(wh)) r $S,$S,$S,100%,-1 fi # When input is a 2D haldclut image
+    if max(w,h,d)>33 rs3d 33,33,33 fi
+    round
     e "* Process CLUT '"$nm"' ("{w}"x"{h}"x"{d}").\n"
 
     # Detect B&W cluts.
@@ -13617,7 +13618,7 @@ compress_cluts :
     if $need_compression
       0 o. $cclut rm. # Lock current file
       if lowercase(['$ext'])=='cube' input_cube $filename c. 0,255
-      elif lowercase(['$ext'])=='png' i $filename S:=round(cbrt(wh)) r $S,$S,$S,100%,-1
+      elif lowercase(['$ext'])=='png' i $filename hald2clut.
       else e "* Skip file '"$filename"' (unknown CLUT format)." continue
       fi
 
