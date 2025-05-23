@@ -2858,7 +2858,7 @@ bool gmic::init_rc(const char *const custom_path) {
       DeleteFileW(wpath);
       return (bool)CreateDirectoryW(wpath,0);
     }
-#else
+#elif cimg_OS==1
     std::remove(dirname); // In case 'dirname' is already a file
     return !(bool)mkdir(dirname,0777);
 #endif
