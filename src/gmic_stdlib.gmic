@@ -17320,6 +17320,11 @@ autocrop_components : skip ${1=0%} check "${2=0.1%}>=0 && isbool(${3=0}) && isin
 #@cli : If input image is constant and equal to the crop value, -1 is returned for all output coordinates.
 #@cli : Default values: 'axes=xyz'.
 #@cli : See also: ''autocrop''.
+autocrop_coords : skip "${1=xyz},${2=}"
+  __$0_ ${1--1} if ${} noarg fi
+  e[^-1] "Return autocrop coordinates for image$?, for axe"$s" '"$axes"' and value '"$value"'."
+  _autocrop_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
+
 __autocrop_coords_ : skip "${1=xyz},${2=}"
   is_noarg=0
   if isin(['$1'],'x','y','z','c','xy','xz','xc','yz','yc','zc','xyz','xyc','xzc','yzc','xyzc')
@@ -17333,11 +17338,6 @@ __autocrop_coords_ : skip "${1=xyz},${2=}"
   is_x,is_y,is_z,is_c:=s='$axes';[find(s,_'x')>=0,find(s,_'y')>=0,find(s,_'z')>=0,find(s,_'c')>=0]
   is_auto:=['$value']=='auto'
   u $is_noarg
-
-autocrop_coords : skip "${1=xyz},${2=}"
-  __$0_ ${1--1} if ${} noarg fi
-  e[^-1] "Return autocrop coordinates for image$?, for axe"$s" '"$axes"' and value '"$value"'."
-  _autocrop_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
 
 # _autocrop_coords : axes,is_x,is_y,is_z,is_c,is_auto,value1,...
 _autocrop_coords :
@@ -46613,6 +46613,7 @@ fx_color_abstraction :
 #@gui : note = note("<small><b>Note:</b> Do not forget to set the <i>Input layers</i> option if you select
 #@gui : <i>Top layer</i> or <i>Bottom layer</i>.</small>")
 #@gui : HaldCLUT Filename = filein()
+#@gui : Pre-Normalize CLUT = bool()
 #@gui : sep = separator()
 #@gui : Strength (%) = float(100,0,100)
 #@gui : Brightness (%) = float(0,-100,100)
@@ -46622,11 +46623,11 @@ fx_color_abstraction :
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Normalize Colors = choice("None","Pre-Normalize","Post-Normalize","Both")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/08/02</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/05/28</i>.</small>")
 fx_apply_haldclut : skip "${2=}"
   mode=$1
   filename="$2"
-  strength,brightness,contrast,gamma,hue,saturation,normalize=${3-9}
+  normalize_clut,strength,brightness,contrast,gamma,hue,saturation,normalize=${3-10}
 
   if $mode<2 # CLUT as a layer
     if $!<2 gui_warning_preview "Input layer with HaldCLUT is missing" return fi
@@ -46634,19 +46635,27 @@ fx_apply_haldclut : skip "${2=}"
   else # CLUT as a file
     l {
       0 => "$2" ext={x} rm.
-      if lowercase(['$ext'])=='cube' input_cube "$2"
-      else i "$2"
+      if lowercase(['$ext'])=='cube'
+        input_cube "$2"
+      else
+        i "$2" if iM>512 /. 255 fi # Possibly a 16bits HaldCLUT
       fi
       ind_clut:=$!-1
       onfail gui_warning_preview "Specified HaldCLUT filename not found" return
     }
   fi
-  if {$ind_clut,iM>512} /[$ind_clut] 255 fi # Possibly a 16bits HaldCLUT
 
-  if $normalize==1" || "$normalize==3 # Pre-normalization
+  if $normalize_clut l[$ind_clut] { c 0,255 n 0,255 } fi
+
+  if $normalize==1" || "$normalize==3 # Pre-normalization of image
     foreach { if $>!=$ind_clut split_opacity balance_gamma[0] , a c fi }
   fi
-  repeat $! { if $>!=$ind_clut +map_clut[$>] [$ind_clut] j[$>] .,0,0,0,0,{$strength%} rm. fi } rm[$ind_clut]
+  repeat $! {
+    if $>!=$ind_clut
+      +map_clut[$>] [$ind_clut] j[$>] .,0,0,0,0,{$strength%} rm.
+    fi
+  }
+  rm[$ind_clut]
   adjust_colors $brightness,$contrast,$gamma,$hue,$saturation,0,255
   if $normalize==2" || "$normalize==3 # Post-normalization
     foreach { split_opacity n[0] 0,255 a c }
