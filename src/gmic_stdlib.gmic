@@ -17258,14 +17258,26 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : See also: ''autocrop_coords''.
 #@cli : $ 400,400,1,3 fill_color 64,128,255 ellipse 50%,50%,120,120,0,1,255 +autocrop
 autocrop : skip "${1=xyz}"
-  __$0_coords_ ${1--1} if ${} noarg fi
-  e[^-1] "Autocrop image$?, for axe"$s" '"$axes"' and value '"$value"'."
-  foreach {
-    _autocrop_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
-    if narg(${})
-      if max(${})==-1 rm 0 else z ${} fi
+  if $#==1" && "isnum($1)" && "$!==1" && "med(w,h,d,s)==1 # Fast version
+    e[0--3] "Autocrop image$?, with value $1."
+    if i[0]==$1" || "i[whds-1]==$1
+      axis:=w!=1?0:h!=1?1:d!=1?2:3
+      y x
+      p,q:="for (p = 0, i[p]==$1 && p<w, ++p); for (q = w - 1, i[q]==$1 && q>=0, --q); [ p,q ]"
+      if $p<=$q z $p,$q r {arg0($axis,[w,1,1,1],[1,w,1,1],[1,1,w,1],[1,1,1,w])},-1
+      else rm 0
+      fi
     fi
-  }
+  else
+    __$0_coords_ ${1--1} if ${} noarg fi
+    e[0--3] "Autocrop image$?, for axe"$s" '"$axes"' and value '"$value"'."
+    foreach {
+      _$0_coords $axes,$is_x,$is_y,$is_z,$is_c,$is_auto,$value
+      if narg(${})
+        if max(${})==-1 rm 0 else z ${} fi
+      fi
+    }
+  fi
 
 #@cli autocrop_components : _threshold[%],_min_area[%]>=0,_is_high_connectivity={ 0:No | 1:Yes },\
 # _output_type={ 0:Crop | 1:Segmentation | 2:Coordinates }
