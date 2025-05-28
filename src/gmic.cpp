@@ -2090,7 +2090,8 @@ const CImg<void*> gmic::current_run(const char *const func_name, void *const p_l
     }
     else return CImg<void*>::empty(); // Empty instance can be returned, only when called from 'gmic_current_is_abort()'
   }
-  return grl[p].get_shared(); // Return shared image
+  grl.back().swap(grl[p]); // Make same search faster next time
+  return grl.back().get_shared();
 }
 
 // Return 'is_abort' value related to current G'MIC instance.
