@@ -1065,17 +1065,21 @@ reference : skip "${2=}"
 "`foo(4,5)` returns `41`.\n"\
 \
 "## Multi-threaded and in-place evaluation:"\n\
-"* If your image data are large enough and you have several CPUs available, it is likely that the math expression "\
-"passed to a 'fill', 'eval' or 'input' commands is evaluated in parallel, using multiple computation threads."\n\
-"* Starting an expression with ':' or '*' forces the evaluations required for an image to be run in parallel, "\
-"even if the amount of data to process is small (beware, it may be slower to evaluate in this case!). "\
-"Specify ':' (rather than '*') to avoid possible image copy done before evaluating the expression "\
-"(this saves memory, but do this only if you are sure this step is not required!)"\n\
-"* Expression starting with '+' are evaluated in a single-threaded way, with possible image copy."\n\
-"* If the specified expression starts with '>' or '<', the pixel access operators 'i()', 'i[]', 'j()' and 'j[]' "\
-"return values of the image being currently modified, in forward ('>') or backward ('<') order. "\
-"The multi-threading evaluation of the expression is disabled in this case."\n\
-"* Function 'critical(expr)' forces the execution of the given expression in a single thread at a time."\n\
+"* If your images are large enough and you have several CPU cores available, it is possible that the math "\
+"expression passed to a 'fill', 'eval' or 'input' commands can be evaluated in *parallel*, using multiple "\
+"computation threads."\n\
+"* G'MIC tries to auto-detect if an expression can be *parallelized*, and if it can be evaluated *in-place* "\
+"(otherwise, a temporary copy of the image is allocated). However, this auto-detection can be overriden, by starting "\
+"the mathematical expression for the `fill` or `eval` commands, with a single character, that can be:"\n\
+"  - '*': Evaluate expression in *parallel*, eventually using a temporary image copy."\n\
+"  - ':': Evaluate expression in *parallel*, but *in-place*."\n\
+"  - '+': Evaluate expression in a *single thread*, eventually using a temporary image copy (in *scanline* order)."\n\
+"  - '>': Evaluate expression in a *single thread*, but *in-place* (in *scanline* order)."\n\
+"  - '<': Evaluate expression in a *single thread*, but *in-place* (in *reverse scanline* order)."\n\
+"* Beware, depending on the amount of data to process, parallel evaluations may be slower "\
+"than using single-thread evaluations (e.g. for small images)."\n\
+"* For parallel evaluations, function 'critical(expr)' forces the execution of the given sub-expression 'expr' in a "\
+"single thread at a time."\n\
 "* 'begin_t(expr)' and 'end_t(expr)' evaluates the specified expression once for each running thread "\
 "(so possibly several times) at the beginning and the end of the evaluation procedure."\n\
 "* 'merge(variable,operator)' tells to merge the local variable value computed by threads, with the specified "\
