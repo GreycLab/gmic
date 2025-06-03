@@ -9674,7 +9674,7 @@ _plot : skip ${8=},${10=}
 #@cli : Return a 3-channels image of a poincare disk. Output channels are '[x,y,it]'.
 #@cli : Default values: 'size=1024', 'p=5', 'q=3', 'angle=0', 'tiling=0', 'nb_max_iter=20', \
 # 'xmin=ymin=-1' and 'xmax=ymax=1'.
-#@cli : repeat 4 { poincare_disk 1024,{3+$>} channels[-1] 2 mod[-1] 3 neq[-1] 2 } rescale2d 50%
+#@cli : $ repeat 4 { poincare_disk 1024,{3+$>} channels[-1] 2 mod[-1] 3 neq[-1] 2 } rescale2d 50%
 +poincare_disk : check "isint(${1=1024},1) && isint(${2=5},3) && isint(${3=4},3) && "\
                        "isbool(${5=0}) && isint(${6=20},0)" skip "${4=0},${7=-1},${8=-1},${9=1},${10=1}"
   s0,s1=triangular,polygon
@@ -13247,6 +13247,26 @@ deg2rad :
 #@cli : $ image.jpg gt {ia}
 #@cli : $ image.jpg +mirror x gt
 
+#@cli inrange : min[%],max[%],_include_min_boundary={ 0:No | 1:Yes },_include_max_boundary={ 0:No | 1:Yes }
+#@cli : Detect pixels whose values are in specified range `[min,max]`, in selected images.
+#@cli : (eq. to 'ir').
+#@cli : Default value: 'include_min_boundary=include_max_boundary=1'.
+#@cli : $ image.jpg +inrange 25%,75%
+inrange : check "isbool(${3=1}) && isbool(${4=$3})"
+  _gmic_s="$?" v + _$0 $*
+
+_inrange : skip "${3=1},${4=$3}"
+  v:=$3+2*$4
+  s=${"arg0 "$v",out,\" min\",\" max\",\" min and max\""}
+  if $v%3 b="y" else b="ies" fi
+  e[0--3] "Extract pixel values in range [$1,$2] in image"$_gmic_s", with"$s" boundar"$b" included."
+  foreach {
+    m=$1 M=$2
+    if ispercentage($1) m:=im+(iM-im)*$1 fi
+    if ispercentage($2) M:=im+(iM-im)*$2 fi
+    f. inrange(i,$m,$M,$3)
+  }
+
 #@cli isinf
 #@cli : Select 'inf' values in selected images.
 isinf :
@@ -13953,26 +13973,6 @@ index : check "${2=0}>=0 && $2<=1 && isbool(${3=0})"
 #@cli ir : eq. to 'inrange'.
 ir : check "isbool(${3=1}) && isbool(${4=$3})"
   _gmic_s="$?" v + _inrange $*
-
-#@cli inrange : min[%],max[%],_include_min_boundary={ 0:No | 1:Yes },_include_max_boundary={ 0:No | 1:Yes }
-#@cli : Detect pixels whose values are in specified range `[min,max]`, in selected images.
-#@cli : (eq. to 'ir').
-#@cli : Default value: 'include_min_boundary=include_max_boundary=1'.
-#@cli : $ image.jpg +inrange 25%,75%
-inrange : check "isbool(${3=1}) && isbool(${4=$3})"
-  _gmic_s="$?" v + _$0 $*
-
-_inrange : skip "${3=1},${4=$3}"
-  v:=$3+2*$4
-  s=${"arg0 "$v",out,\" min\",\" max\",\" min and max\""}
-  if $v%3 b="y" else b="ies" fi
-  e[0--3] "Extract pixel values in range [$1,$2] in image"$_gmic_s", with"$s" boundar"$b" included."
-  foreach {
-    m=$1 M=$2
-    if ispercentage($1) m:=im+(iM-im)*$1 fi
-    if ispercentage($2) M:=im+(iM-im)*$2 fi
-    f. inrange(i,$m,$M,$3)
-  }
 
 #@cli map : [palette],_boundary_conditions : palette_name,_boundary_conditions : (+)
 #@cli : Map specified vector-valued palette to selected indexed images.
