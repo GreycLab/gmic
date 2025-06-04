@@ -7446,22 +7446,23 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 g_list_c.assign(image_names[uind]);
               } else {
                 cimg::mutex(27);
-                if (images[uind].is_shared()) g_list.assign(images[uind]);
-                else
-                  if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
-                    selection2string(selection,image_names,1,name);
-                    cimg::mutex(27,0);
-                    error(true,0,0,
-                          "Command 'foreach': Invalid selection%s "
-                          "(image [%u] is already used in another thread).",
-                          name.data() + (*name=='s'?1:0),uind);
-                  }
-                images[uind].move_to(g_list);
+                if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
+                  selection2string(selection,image_names,1,name);
+                  cimg::mutex(27,0);
+                  error(true,0,0,
+                        "Command 'foreach': Invalid selection%s "
+                        "(image [%u] is already used in another thread).",
+                        name.data() + (*name=='s'?1:0),uind);
+                }
                 g_list_c.assign(image_names[uind]);
 
-                // Small hack to be able to track images of the selection passed to the new environment.
-                std::memcpy(&images[uind]._width,&g_list[0]._data,sizeof(void*));
-                images[uind]._spectrum = 0;
+                if (images[uind].is_shared()) g_list.assign(images[uind]);
+                else {
+                  images[uind].move_to(g_list);
+                  // Small hack to be able to track images of the selection passed to the new environment.
+                  std::memcpy(&images[uind]._width,&g_list[0]._data,sizeof(void*));
+                  images[uind]._spectrum = 0;
+                }
                 cimg::mutex(27,0);
               }
 
@@ -8313,23 +8314,22 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg::mutex(27);
             cimg_forY(selection,l) {
               uind = selection[l];
-              if (images[uind].is_shared())
-                g_list[l].assign(images[uind],false);
+              if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
+                selection2string(selection,image_names,1,name);
+                cimg::mutex(27,0);
+                error(true,0,0,
+                      "Command 'local': Invalid selection%s "
+                      "(image [%u] is already used in another thread).",
+                      name.data() + (*name=='s'?1:0),uind);
+              }
+              g_list_c[l] = image_names[uind]; // Make a copy to be still able to recognize 'pass[label]'
+              if (images[uind].is_shared()) g_list[l].assign(images[uind],false);
               else {
-                if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
-                  selection2string(selection,image_names,1,name);
-                  cimg::mutex(27,0);
-                  error(true,0,0,
-                        "Command 'local': Invalid selection%s "
-                        "(image [%u] is already used in another thread).",
-                        name.data() + (*name=='s'?1:0),uind);
-                }
                 g_list[l].swap(images[uind]);
                 // Small hack to be able to track images of the selection passed to the new environment.
                 std::memcpy(&images[uind]._width,&g_list[l]._data,sizeof(void*));
                 images[uind]._spectrum = 0;
               }
-              g_list_c[l] = image_names[uind]; // Make a copy to be still able to recognize 'pass[label]'
             }
             cimg::mutex(27,0);
           }
@@ -13377,15 +13377,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                         "(image [%u] is already used in another thread).",
                         command_name,name.data() + (*name=='s'?1:0),uind);
                 }
-                if (images[uind].is_shared())
-                  g_list[l].assign(images[uind],false);
+                g_list_c[l] = image_names[uind]; // Make a copy to be still able to recognize 'pass[label]'
+                if (images[uind].is_shared()) g_list[l].assign(images[uind],false);
                 else {
                   g_list[l].swap(images[uind]);
                   // Small hack to be able to track images of the selection passed to the new environment.
                   std::memcpy(&images[uind]._width,&g_list[l]._data,sizeof(void*));
                   images[uind]._spectrum = 0;
                 }
-                g_list_c[l] = image_names[uind]; // Make a copy to be still able to recognize 'pass[label]'
               }
               cimg::mutex(27,0);
 
