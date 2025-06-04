@@ -7450,6 +7450,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else
                   if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
                     selection2string(selection,image_names,1,name);
+                    cimg::mutex(27,0);
                     error(true,0,0,
                           "Command 'foreach': Invalid selection%s "
                           "(image [%u] is already used in another thread).",
@@ -8317,6 +8318,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               else {
                 if ((images[uind].width() || images[uind].height()) && !images[uind]._spectrum) {
                   selection2string(selection,image_names,1,name);
+                  cimg::mutex(27,0);
                   error(true,0,0,
                         "Command 'local': Invalid selection%s "
                         "(image [%u] is already used in another thread).",
@@ -13369,6 +13371,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 uind = selection[l];
                 if ((images[uind].width() || images[uind].height()) && !images[uind].spectrum()) {
                   selection2string(selection,image_names,1,name);
+                  cimg::mutex(27,0);
                   error(true,0,0,
                         "Command '%s': Invalid selection%s "
                         "(image [%u] is already used in another thread).",
