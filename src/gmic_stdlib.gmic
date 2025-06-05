@@ -23805,6 +23805,87 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 #@cli : from the 3D environment variables.
 #@cli : $ image.jpg torus3d 100,10 cone3d 30,-120 add3d[-2,-1] rotate3d. 1,1,0,60 object3d[0] [-1],50%,50% keep[0]
 
+#@cli new_pack_sprites : [sprite_set],_nb_scales>=1,0<_min_scale<=100,\
+# _allow_rotation={ 0:None | 1:180 deg. | 2:90 deg. | 3:Any },_spacing,_max_attempts>0
+#@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
+#@cli : Sprites can be eventually rotated and scaled during the packing process.
+#@cli : Selected image is the canvas that will be filled with the sprites.
+#@cli : The zero values of its alpha channel defines the potential locations for drawing the sprites.
+#@cli : '[sprite_set]' defines the set of sprites considered for filling the canvas.
+#@cli : The zero values of their alpha channels defines the sprite shape.
+#@cli : Sprite packing is done on random locations and iteratively with decreasing scales.
+#@cli : 'nb_scales' sets the number of decreasing scales considered for all specified sprites to be packed.
+#@cli : 'min_scale' (in %) sets the minimal size considered for packing (specified as a percentage of the
+#@cli : original sprite size).
+#@cli : 'spacing' can be positive or negative.
+#@cli : 'max_attempts' defines the maximum number of attempts to pack a sprite for each scale.
+#@cli : Default values: 'nb_scales=1', 'min_scale=25', 'allow_rotation=0', 'spacing=0' and 'max_attempts=512'.
+new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4=0},0,3) && isint(${5=0}) && "\
+                     "isint(${6=512},1)"
+  e[^-1] "Randomly pack sprite$? with $2 scales, minimum scale $3%, "${"arg0 $4,no,180\ deg.,90\ deg.,any"}" "\
+         "rotation, spacing $5, and $6 maximum attempts for each scale."
+  nb_scales,min_scale,allow_rotation,spacing,max_attempts=${2--1}
+  nb_imgs=$! pass$1 nb_sprites:=$!-$nb_imgs
+
+  foreach[^$nb_imgs--1] {
+    pass[$nb_imgs--1] 0 to_colormode[1--1] {0,s} # Pass sprites and make them fit canvas colormode
+    +channels[0] 100% !=. 0 mv. 1 # [1]: Binary mask of canvas
+
+    # Retrieve list of admissible locations.
+    1,1,1,2 eval[1] "!i?da_push([x,y])" da_freeze. mv. 2 # [2]: Admissible locations
+
+    # Perform packing iterations for each scale.
+    repeat $nb_scales {
+      rprogress {100*$>/max(1,$>+$<)}
+
+      # Compute scaled versions of sprites and corresponding binary masks.
+      fact:=lerp(100,$min_scale,$>/max(1,$>+$<))
+      if $fact<100 +r[3-{2+$nb_sprites}] $fact%,$fact%,1,100%,2 fi
+      repeat $nb_sprites { +channels[-$nb_sprites] 100% !=. 0 } # Compute binary mask of sprites
+
+      if $spacing>0
+        foreach[-{2*$nb_sprites}--1] { r {[w,h]+2*$spacing},1,100%,0,0,0.5,0.5 }
+        dilate[-$nb_sprites--1] {2*$spacing+1}
+      elif $spacing<0
+        erode[-$nb_sprites--1] {-2*$spacing+1}
+      fi
+
+      # Perform packing iterations.
+      nb_attempts=0
+      do
+
+        # Pick one random sprite and rotate it.
+        if !0$sprite
+          ind:=v(1,$nb_sprites)
+          sel=-{$ind+$nb_sprites},-$ind
+          if $allow_rotation==3 +rotate[$sel] {u(360)},1,0 round. !=. 0
+          elif inrange($allow_rotation,1,2) +rotate[$sel] {$allow_rotation==1?180*v:90*v(3)},0
+          else sh[$sel]
+          fi
+          => sprite,mask
+        fi
+
+        # Try to find an empty location for this sprite.
+        do x,y:=I[#2,v(h#2-1)] while $x>=w#0-w" || "$y>=h#0-h
+        +z[1] $x,$y,{[$x+w-1,$y+h-1]} *. ..
+        if is
+          nb_attempts+=1
+          if !($nb_attempts%10) rm[sprite,mask] fi
+        else
+          j[0] [sprite],$x,$y,0,0,1,[mask]
+          j[1] [mask],$x,$y,0,0,1,[mask]
+          rm[sprite,mask] nb_attempts=0
+        fi
+        rm.
+
+      while $nb_attempts<$max_attempts
+      if 0$sprite rm[sprite,mask] fi
+      if $fact<100 rm[-{2*$nb_sprites}--1] fi
+    }
+    k[0]
+  }
+  rm[$nb_imgs--1]
+
 #@cli pack_sprites : _nb_scales>=0,0<=_min_scale<=100,_allow_rotation={ 0:0 deg. | 1:180 deg. | 2:90 deg. | 3:any },\
 # _spacing,_precision>=0,max_iterations>=0
 #@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
