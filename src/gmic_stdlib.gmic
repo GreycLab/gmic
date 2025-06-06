@@ -23829,7 +23829,7 @@ new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint
 
   foreach[^$nb_imgs--1] {
     pass[$nb_imgs--1] 0
-    s0={0,s} foreach[1--1] { # Make sprite colormode fits canvas
+    s0={0,s} foreach[1--1] { # Ensure the number of sprite channels matches that of the canvas
       if s!=$s0 s c,-{s-1} if $s0>1 r[0] 100%,100%,1,{$s0-1} a c else k. fi fi
     }
     +channels[0] 100% !=. 0 mv. 1 # [1]: Binary mask of canvas
@@ -23846,26 +23846,31 @@ new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint
       if $fact<100 +r[3-{2+$nb_sprites}] $fact%,$fact%,1,100%,2 fi
       repeat $nb_sprites { +channels[-$nb_sprites] 100% !=. 0 } # Compute binary mask of sprites
 
+      # Compute eroded/dilated versions of binary masks.
       if $spacing>0
         foreach[-{2*$nb_sprites}--1] { r {[w,h]+2*$spacing},1,100%,0,0,0.5,0.5 }
-        dilate[-$nb_sprites--1] {2*$spacing+1}
+        +dilate[-$nb_sprites--1] {2*$spacing+1}
       elif $spacing<0
-        l[-$nb_sprites--1] { r {[w,h]+2},1,100%,0,0,0.5,0.5 erode {-2*$spacing+1} r {[w,h]-2},1,100%,0,0,0.5,0.5 }
+        +l[-$nb_sprites--1] { r {[w,h]+2},1,100%,0,0,0.5,0.5 erode {-2*$spacing+1} r {[w,h]-2},1,100%,0,0,0.5,0.5 }
+      else
+        sh[-$nb_sprites--1]
       fi
 
       # Perform packing iterations.
+      # Here : [0]: Canvas, [1]: Canvas binary mask, [2]: Admissible locations,
+      # Followed by: All sprites, All sprite masks (for drawing), All sprite masks (for collision testing).
       nb_attempts=0
       do
 
         # Pick one random sprite and rotate it.
         if !0$sprite
           ind:=v(1,$nb_sprites)
-          sel=-{$ind+$nb_sprites},-$ind
-          if $allow_rotation==3 +rotate[$sel] {u(360)},1,0 round. !=. 0
+          sel={-$ind-$nb_sprites*[2,1,0]}
+          if $allow_rotation==3 +rotate[$sel] {u(360)},1,0 round[-2,-1] !=[-2,-1] 0
           elif inrange($allow_rotation,1,2) +rotate[$sel] {$allow_rotation==1?180*v:90*v(3)},0
           else sh[$sel]
           fi
-          => sprite,mask
+          => sprite,mask_draw,mask_test
         fi
 
         # Try to find an empty location for this sprite.
@@ -23879,18 +23884,18 @@ new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint
         if $x>=0
           +z[1] $x,$y,{[$x+w-1,$y+h-1]} *. ..
           if is
-            if !($nb_attempts%10) rm[sprite,mask] fi
+            if !($nb_attempts%10) rm[sprite,mask_draw,mask_test] fi
           else
-            j[0] [sprite],$x,$y,0,0,1,[mask]
-            j[1] [mask],$x,$y,0,0,1,[mask]
-            rm[sprite,mask] nb_attempts=0
+            j[0] [sprite],$x,$y,0,0,1,[mask_draw]
+            j[1] [mask_draw],$x,$y,0,0,1,[mask_draw]
+            rm[sprite,mask_draw,mask_test] nb_attempts=0
           fi
           rm.
         fi
 
       while $nb_attempts<$max_attempts
-      if 0$sprite rm[sprite,mask] fi
-      if $fact<100 rm[-{2*$nb_sprites}--1] fi
+      if 0$sprite rm[sprite,mask_draw,mask_test] fi
+      if $fact<100 rm[-{3*$nb_sprites}--1] fi
     }
 
     k[0]
