@@ -23805,7 +23805,7 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 #@cli : from the 3D environment variables.
 #@cli : $ image.jpg torus3d 100,10 cone3d 30,-120 add3d[-2,-1] rotate3d. 1,1,0,60 object3d[0] [-1],50%,50% keep[0]
 
-#@cli new_pack_sprites : [sprite_set],_nb_scales>=1,0<_min_scale<=100,\
+#@cli pack_sprites : [sprite_set],_nb_scales>=1,0<_min_scale<=100,\
 # _allow_rotation={ 0:None | 1:180 deg. | 2:90 deg. | 3:Any },_spacing,_max_attempts>0
 #@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
 #@cli : Sprites can be eventually rotated and scaled during the packing process.
@@ -23820,7 +23820,7 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 #@cli : 'spacing' can be positive or negative.
 #@cli : 'max_attempts' defines the maximum number of attempts to pack a sprite for each scale.
 #@cli : Default values: 'nb_scales=1', 'min_scale=25', 'allow_rotation=0', 'spacing=1' and 'max_attempts=512'.
-new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4=0},0,3) && isint(${5=1}) && "\
+pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4=0},0,3) && isint(${5=1}) && "\
                      "isint(${6=512},1)"
   e[^-1] "Randomly pack sprite$? with $2 scales, minimum scale $3%, "${"arg0 $4,no,180\ deg.,90\ deg.,any"}" "\
          "rotation, spacing $5, and $6 maximum attempts for each scale."
@@ -23901,127 +23901,6 @@ new_pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint
     k[0]
   }
   rm[$nb_imgs--1]
-
-#@cli pack_sprites : _nb_scales>=0,0<=_min_scale<=100,_allow_rotation={ 0:0 deg. | 1:180 deg. | 2:90 deg. | 3:any },\
-# _spacing,_precision>=0,max_iterations>=0
-#@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
-#@cli : Sprites can be eventually rotated and scaled during the packing process.
-#@cli : First selected image is the canvas that will be filled with the sprites.
-#@cli : Its last channel must be a binary mask whose zero values represent potential locations for drawing the sprites.
-#@cli : All other selected images represent the sprites considered for packing.
-#@cli : Their last channel must be a binary mask that represents the sprite shape (i.e. a 8-connected component).
-#@cli : The order of sprite packing follows the order of specified sprites in the image list.
-#@cli : Sprite packing is done on random locations and iteratively with decreasing scales.
-#@cli : 'nb_scales' sets the number of decreasing scales considered for all specified sprites to be packed.
-#@cli : 'min_scale' (in %) sets the minimal size considered for packing (specified as a percentage of the
-#@cli : original sprite size).
-#@cli : 'spacing' can be positive or negative.
-#@cli : 'precision' tells about the desired number of failed trials before ending the filling process.
-#@cli : Default values: 'nb_scales=5', 'min_scale=25', 'allow_rotation=3', 'spacing=1', 'precision=7' \
-# and 'max_iterations=256'.
-#@cli : $ 512,512,1,3,"min(255,y*c/2)" 100%,100% circle 50%,50%,100,1,255 append c image.jpg rescale2d[-1] ,48 \
-# to_rgba pack_sprites 5,25 to_rgb
-pack_sprites : check "isint(${1=5},0) && ${2=25}>=0 && $2<=100 && isint(${3=3},0,3) &&
-                      isint(${4=1}) && isint(${5=7},0) && isint(${6=256},0)"
-  e[^-1] "Randomly pack image$? with $1 scales, minimum scale $2%, "${arg0\ $3,no,180\"\ \"deg.,90\"\ \"deg.,any}\
-         " rotation, spacing $4, precision $5 and $6 maximum iterations."
-  N:=$!-1 is_first_time=1
-  foreach { r 100%,100%,1,{max(2,s)} } # Ensure all images have a binary shape mask channel
-
-  # Start iterations over scales.
-  repeat $1 {
-    rprogress {$>*100/$1}
-    nb_attempts=0
-
-    # Generate all sprites for current scale.
-    ratio={$1>1?$2+(100-$2)*$</($1-1):100}%
-    repeat $N { +l[{1+$>}] {
-      w,h:=[w,h]*$ratio
-      if $w<1||$h<1 rm
-      else r $w,$h,1,100%,2 sh. 100% !=. 0 area{1+$>}:=is rm.
-      fi
-    } }
-
-    # Pack rescaled sprites together.
-    l[0,{$N+1}--1] { repeat $6 {
-
-      # Compute reference sprite.
-      ind:=1+($>%$N) area=${area$ind}
-      if !$3 [$ind]
-      elif $3==1 +rotate[$ind] {v()*180}
-      elif $3==2 +rotate[$ind] {v(3)*90}
-      else +rotate[$ind] {u*360} sh. 100% !=. 0 area:=is rm.
-      fi
-
-      # Get binary map of possible locations.
-      +channels[0] 100% ==. 0
-      if $4>1 erode. {2*$4-1}
-      elif $4<1 dilate. {-2*$4+3}
-      fi
-
-      # Generate random skeleton-oriented point cloud.
-      +rectangle. 0,0,100%,100%,1,0xFFFFFFFF,0
-      if $is_first_time noise. 0.1,2 ==. 1 fi
-      distance. 0 noise. 1,1
-      max_patch. {$ind,round(1.5*max(w,h))}
-      *. .. pointcloud3d.
-
-      # Subdivide point cloud if multiple sprites.
-      if $N>1 l. {
-        s3d /[1] $N round[1] max[1] 1 n={1,@0}
-        r[2] 3,{{2,h}/3},1,1,-1
-        i[2] 1,{2,h} rand[2] 0,1 a[2,3] x sort[2] +,y z[2] 1,3 r[2] 3,$n,1,1 y[2]
-        r[3] 1,{2*$n},1,1,0 r[4] 1,{3*$n},1,1,0 r[5] 1,$n,1,1,0 a y
-      } fi
-
-      # Create 3D cloud of sprites.
-      n={@7}
-      if $n
-        s3d. rm[-2,-1]
-        if !$3 # No rotation allowed
-          [-6] i.. (-128;{w};{h};{s})
-          if $n>1 4,{$n-1},1,1,-128,0,0,0 fi
-          +channels.. 100% i.. (-128;{w};{h};{s})
-          if $n>1 ... fi
-        elif $3==1 # 180 deg. rotation allowed
-          +rotate[-6] {v()*180} i.. (-128;{w};{h};{s})
-          if $n>1 +rotate. 180 i.. (-128;{w};{h};{s}) fi
-          if $n>2 4,{$n-2},1,1,-128,0,0,0 1,100% rand. 0,1 round. 1 j.. .,1 rm. fi
-          +channels[-4] 100% i.. (-128;{w};{h};{s})
-          if $n>1 +channels[-4] 100% i.. (-128;{w};{h};{s}) fi
-          if $n>2 [-5] fi
-        else # 90 deg. rotation (or more) allowed
-          +rotate[-6] {v(3)*90} i.. (-128;{w};{h};{s})
-          if $n>1 +rotate. 90 i.. (-128;{w};{h};{s}) fi
-          if $n>2 +rotate. 90 i.. (-128;{w};{h};{s}) fi
-          if $n>3 +rotate. 90 i.. (-128;{w};{h};{s}) fi
-          if $n>4 4,{$n-4},1,1,-128,0,0,0 1,100% rand. 0,3 round. 1 j.. .,1 rm. fi
-          +channels[-8] 100% i.. (-128;{w};{h};{s})
-          if $n>1 +channels[-8] 100% i.. (-128;{w};{h};{s}) fi
-          if $n>2 +channels[-8] 100% i.. (-128;{w};{h};{s}) fi
-          if $n>3 +channels[-8] 100% i.. (-128;{w};{h};{s}) fi
-          if $n>4 [-9] fi
-        fi
-        y[{$N+3}--1] a[{$N+3}--1] y
-      fi
-      rm... # Delete reference sprite
-
-      # Draw cloud and detect non-intersecting sprites.
-      [0] sh. 100% f. 1 -. [-4]
-      j3d.. ...,0,0,0,1,2,0,0 rm[-3,-1]
-      sh. 100% area_fg. 0,1 ==. $area
-      *. ... rm... sh.. 0,{-2,s-2} *. .. rm.
-
-      # Draw selected sprites on rendering image.
-      if iM j[0] ..,0,0,0,0,1,. rm[-2,-1]
-      else
-        rm[-2,-1]
-        nb_attempts+=1
-        if $nb_attempts>$5 break else continue fi
-      fi
-
-    } k[0] }
-  } k[0]
 
 #@cli piechart : label_height>=0,label_R,label_G,label_B,"label1",value1,R1,G1,B1,...,"labelN",valueN,RN,GN,BN
 #@cli : Draw pie chart on selected (RGB) images.
@@ -45426,7 +45305,7 @@ fx_rodilius :
 #@gui : url = link("Click here for a detailed description of this filter.",\
 # "http://gimpchat.com/viewtopic.php?f=28&t=7500&sid=5b483979826903b8f8fc8fdaf1767dae")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/06/11</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/06/06</i>.</small>")
 fx_shapeism :
   foreach {
     to_rgb
@@ -45448,7 +45327,7 @@ fx_shapeism :
       . a[-3--1] c
 
       # Pack sprites for given scale
-      rprogress "new_pack_sprites.. .,1,100,$9,$10,{2^(5+$11)}",{$>*100/$6},{($>+1)*100/$6} rm.
+      rprogress "pack_sprites.. .,1,100,$9,$10,{2^(5+$11)}",{$>*100/$6},{($>+1)*100/$6} rm.
       channels. 0,1
     }
 
@@ -56196,12 +56075,12 @@ fx_pack_ellipses :
 fx_pack_ellipses_preview :
   gui_split_preview "fx_pack_ellipses ${1-12},1,0"
 
-#@gui Pack Sprites : fx_pack_sprites, gui_no_preview
+#@gui Pack Sprites : fx_pack_sprites, gui_no_preview : *
 #@gui : Number of Scales = int(5,1,16)
 #@gui : Minimal Scale (%) = float(25,1,100)
 #@gui : Allow Angle = choice(3,"0 deg.","180 deg.","90 deg.","Any")
 #@gui : Spacing = int(1,-16,16)
-#@gui : Precision = int(7,1,32)
+#@gui : Precision = int(5,1,10)
 #@gui : sep = separator()
 #@gui : Masking = choice("No Masking","Mask as Bottom Layer")
 #@gui : Width = int(512,32,2048)
@@ -56211,19 +56090,18 @@ fx_pack_ellipses_preview :
 #@gui : - Set different sprites on different layers to pack multiple sprites at the same time.</small>")
 #@gui : url = link("Click here for a video tutorial","http://www.youtube.com/watch?v=bpg7CGH7vCM")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/06/24</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/06/06</i>.</small>")
 fx_pack_sprites :
   if $6 # With mask
     if $!<2 error[] "Command '$0': Masking requires at least two input layers !
                      (please check that 'Input Layers' is correctly set)." fi
-    foreach[^-1] { to_rgba split_opacity +!=[1] 0 *[0] . a c autocrop 0 }
-    remove_empty[0--2] +channels. 100% channels. -4,0 mv. 0
-    pack_sprites[0--2] ${1-5}
+    foreach[^-1] { to_rgba split_opacity autocrop_seq 0 a c }
+    remove_empty[^-1] to_a.
   else # No masking
-    foreach { to_rgba split_opacity +!=[1] 0 *[0] . a c autocrop 0 }
-    remove_empty i[0] $7,$8,1,5 pack_sprites ${1-5}
+    foreach { to_rgba split_opacity autocrop_seq 0 a c }
+    remove_empty $7,$8,1,4
   fi
-  channels[0] 0,{0,s-2}
+  pack_sprites. [^-1],${1-4},{2^(5+$5)}
 
 #@gui Paper Texture : fx_paper, fx_paper(0)
 #@gui : Channel(s) = choice("All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
