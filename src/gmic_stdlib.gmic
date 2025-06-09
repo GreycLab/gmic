@@ -23833,10 +23833,8 @@ pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4
       if s!=$s0 s c,-{s-1} if $s0>1 r[0] 100%,100%,1,{$s0-1} a c else k. fi fi
     }
     +channels[0] 100% !=. 0 mv. 1 # [1]: Binary mask of canvas
-
-    # Retrieve list of admissible locations.
     1,1,1,2 eval[1] "!i?da_push([x,y])" da_freeze. mv. 2 # [2]: Admissible locations
-    0 mv. 3 # [3]: Set of last locations to check before ending each scale iteration
+    0 mv. 3 # [3]: Will contain a set of locations to check just before ending each scale iteration
 
     # Perform packing iterations for each scale.
     repeat $nb_scales {
@@ -23874,22 +23872,22 @@ pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4
           => sprite,mask_draw,mask_test
         fi
 
-        # Pick random location in admissible locations.
+        # Pick location in one of the admissible locations.
         x,y:="found = 0;
-          const ind = $step?3:2;
+          const ind = $step?3:2; # All locations (step=0) or restricted locations (step=1)
           repeat (ceil(h#ind/8),
             p = v(h#ind - 1); P = I[#ind,p];
-            ind==3?(P[0]-=int(w/2); P[1]-=int(h/2));
+            P[0]-=int(w/2); P[1]-=int(h/2);
             inrange(P[0],0,w#0 - w) && inrange(P[1],0,h#0 - h)?(found = 1; break())
           );
           found?(I[#ind,p] = -1; P):[-1,-1]"
 
         nb_attempts+=1
         if $x>=0
-          +z[1] $x,$y,{[$x+w-1,$y+h-1]} *. ..
-          if is
+          +z[1] $x,$y,{[$x+w-1,$y+h-1]} *. .. # Mask intersection
+          if is # Non empty intersection -> failed
             if !($nb_attempts%10) rm[sprite,mask_draw,mask_test] fi
-          else
+          else # Empty intersection -> success
             j[0] [sprite],$x,$y,0,0,1,[mask_draw]
             j[1] [mask_draw],$x,$y,0,0,1,[mask_draw]
             rm[sprite,mask_draw,mask_test]
