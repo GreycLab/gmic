@@ -23841,6 +23841,7 @@ pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4
     # Perform packing iterations for each scale.
     repeat $nb_scales {
       rprogress {100*$>/max(1,$>+$<)}
+      l[3] { rm 0 }
 
       # Compute scaled versions of sprites and corresponding binary masks.
       fact:=lerp(100,$min_scale,$>/max(1,$>+$<))
@@ -23876,7 +23877,10 @@ pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4
 
         # Try to find an empty location for this sprite.
         if da_size(#3) # Pick one of the last locations to check
-          x,y:="P = da_pop(#3)"
+         x,y:="P = da_pop(#3);
+            P[0] = cut(P[0],0,w#0 - w - 1);
+            P[1] = cut(P[1],0,h#0 - h - 1);
+            P"
         else # Pick random location
           x,y:="found = 0;
             repeat (ceil(h#2/8),
@@ -23894,19 +23898,20 @@ pack_sprites : check "isint(${2=1},1) && inrange(${3=25},0,100,0,1) && isint(${4
           else
             j[0] [sprite],$x,$y,0,0,1,[mask_draw]
             j[1] [mask_draw],$x,$y,0,0,1,[mask_draw]
-            rm[sprite,mask_draw,mask_test] nb_attempts=0
+            rm[sprite,mask_draw,mask_test]
+            if $nb_attempts<$max_attempts nb_attempts=0 fi
           fi
           rm.
         fi
 
         # Determine a set of last locations to check before ending the scale iterations.
         if $nb_attempts==$max_attempts
-          eval "da_push(#3,[0,0])"
+          +distance[1] 1 +dilate. 3 ==[-2,-1] -. [1] eval. "i?da_push(#3,[x,y])" rm.
         fi
 
       while $nb_attempts<$max_attempts" || "da_size(#3)
       if 0$sprite rm[sprite,mask_draw,mask_test] fi
-      rm[-{3*$nb_sprites}--1]
+      if $fact<100 rm[-{3*$nb_sprites}--1] fi
     }
 
     k[0]
