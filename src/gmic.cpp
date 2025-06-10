@@ -4699,8 +4699,8 @@ CImg<char> gmic::substitute_item(const char *const source,
         }
         nsource+=2;
 
-        // Substitute '$>' and '$<' -> Forward/backward index of current loop.
-      } else if (nsource[1]=='>' || nsource[1]=='<') {
+        // Substitute '$>', '$<' and '$%' -> Forward/backward index and fractional part of current loop.
+      } else if (nsource[1]=='>' || nsource[1]=='<' || nsource[1]=='%') {
         if (!nb_repeatdones && !nb_dowhiles && !nb_fordones && !nb_foreachdones)
           std::strcpy(substr,"nan");
         else {
@@ -4713,26 +4713,40 @@ CImg<char> gmic::substitute_item(const char *const source,
               else if (s[1]=='f') { loop_type = s[4]!='e'?2:3; break; }
             }
           }
-          switch (loop_type) {
+
+          unsigned int fwd = 0, bwd = 0;
+          switch (loop_type) { // Retrieve forward and backward loop indices
           case 0 : { // repeat...done
             const unsigned int *const rd = repeatdones.data(0,nb_repeatdones - 1);
-            if (rd[2]==~0U && nsource[1]=='<') cimg_snprintf(substr,substr.width(),"inf");
-            else cimg_snprintf(substr,substr.width(),"%u",nsource[1]=='>'?rd[1]:rd[2] - 1);
+            fwd = rd[1];
+            bwd = rd[2]==~0U?~0U:rd[2] - 1;
           } break;
           case 1 : { // do...while
             const unsigned int *const dw = dowhiles.data(0,nb_dowhiles - 1);
-            if (nsource[1]=='>') cimg_snprintf(substr,substr.width(),"%d",dw[1]);
-            else std::strcpy(substr,"nan");
+            fwd = dw[1];
+            bwd = ~0U;
           } break;
           case 2 : { // for...done
             const unsigned int *const fd = fordones.data(0,nb_fordones - 1);
-            if (nsource[1]=='>') cimg_snprintf(substr,substr.width(),"%d",fd[1]);
-            else std::strcpy(substr,"nan");
+            fwd = fd[1];
+            bwd = ~0U;
           } break;
           case 3 : { // foreach...done
             const unsigned int *const fed = foreachdones.data(0,nb_foreachdones - 1);
-            cimg_snprintf(substr,substr.width(),"%d",nsource[1]=='>'?fed[0]:fed[1] - 1);
+            fwd = fed[0];
+            bwd = fed[1] - 1;
           } break;
+          }
+
+          if (nsource[1]=='>') cimg_snprintf(substr,substr.width(),"%u",fwd);
+          else if (nsource[1]=='<') {
+            if (loop_type==1 || loop_type==2) std::strcpy(substr,"nan");
+            else if (bwd==~0U) std::strcpy(substr,"inf");
+            else cimg_snprintf(substr,substr.width(),"%u",bwd);
+          } else if (nsource[1]=='%') {
+            if (loop_type==1 || loop_type==2) std::strcpy(substr,"nan");
+            else if (bwd==~0U) std::strcpy(substr,"0");
+            else cimg_snprintf(substr,substr.width(),"%.17g",(double)fwd/(fwd + bwd));
           }
         }
         CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
