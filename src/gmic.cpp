@@ -4745,7 +4745,7 @@ CImg<char> gmic::substitute_item(const char *const source,
             else cimg_snprintf(substr,substr.width(),"%u",bwd);
           } else if (nsource[1]=='%') {
             if (loop_type==1 || loop_type==2) std::strcpy(substr,"nan");
-            else if (bwd==~0U) std::strcpy(substr,"0");
+            else if (bwd==~0U || !fwd) std::strcpy(substr,"0");
             else cimg_snprintf(substr,substr.width(),"%.17g",(double)fwd/(fwd + bwd));
           }
         }
