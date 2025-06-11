@@ -4938,7 +4938,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
     *color = &_c0,
     *const command = _command.data(1),
     *s_selection = _s_selection.data();
-  const char *it = 0;
+  const char *it = 0, *csb = 0;
   *_command = '+';
 
 // Macros below allows to allocate memory for string variables only when necessary.
@@ -4961,7 +4961,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     (!std::strncmp("foreach",it,7) && (!it[7] || it[7]=='.' || it[7]=='[')))))
 
 #define gmic_elif_flr \
-  else if (!_is_get && ((*it=='}' && !it[1]) || !std::strcmp("done",it)))
+  else if (!_is_get && ((*it=='}' && !it[1] && std::strcmp("*do",csb)) || !std::strcmp("done",it)))
 
   unsigned int next_debug_line = ~0U, next_debug_filename = ~0U, is_high_connectivity, uind = 0,
     boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0;
@@ -6499,6 +6499,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Done.
         if (!is_get && !std::strcmp("done",item)) {
           const CImg<char> &s = callstack.back();
+          if (s[0]=='*' && s[1]=='d') continue;
           if (s[0]!='*' || (s[1]!='f' && s[1]!='l' && s[1]!='r'))
             error(true,0,0,
                   "Command 'done': Not associated to a 'for', 'foreach', 'local' or 'repeat' command "
@@ -6550,6 +6551,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           dw[0] = position_item;
           dw[1] = 0;
           dw[2] = debug_line;
+          is_lbrace_command = true;
           continue;
         }
 
@@ -7384,6 +7386,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
           if (!is_cond) {
             int nb_levels = 0;
+            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -7420,6 +7423,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!selection) {
             if (is_very_verbose) print(0,"Skip 'foreach...done' block.");
             int nb_levels = 0;
+            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -7490,6 +7494,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               } catch (gmic_exception &e) {
                 check_elif = false;
                 int nb_levels = 0;
+                csb = callstack.back();
                 for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
                   it = command_line[position];
                   if (*it==1)
@@ -8359,6 +8364,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } catch (gmic_exception &e) {
             check_elif = false;
             int nb_levels = 1 + nb_remaining_fr;
+            csb = callstack.back();
             for (; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -9216,8 +9222,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Exception handling in local environments.
         if (!is_get && !std::strcmp("onfail",item)) {
-          const CImg<char> &s = callstack.back();
-          if (s[0]!='*' || s[1]!='l')
+          csb = callstack.back();
+          if (csb[0]!='*' || csb[1]!='l')
             error(true,0,0,
                   "Command 'onfail': Not associated to a 'local' command within the same scope.");
           for (int nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
@@ -10508,6 +10514,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!nb) {
             if (is_very_verbose) print(0,"Skip 'repeat...done' block (0 iterations).");
             int nb_levels = 0;
+            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -12333,6 +12340,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             position = dw[0] + 1;
             next_debug_line = dw[2];
             next_debug_filename = debug_filename;
+            is_lbrace_command = true;
             continue;
           } else {
             if (is_very_verbose) print(0,"End 'do...while' block.");
@@ -12816,6 +12824,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const char *stb = 0, *ste = 0;
             unsigned int callstack_ind = 0;
             int nb_levels = 0;
+            csb = callstack.back();
             if (callstack_repeat) {
               print(0,"%s %scurrent 'repeat...done' block.",
                     Com,is_continue?"to next iteration of ":"");
