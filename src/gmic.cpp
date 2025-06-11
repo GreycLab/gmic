@@ -9297,6 +9297,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               (_double3d==~0U || _double3d<=1)) {
 
             // Get default rendering options.
+            if (!*argx) { x = 50; sepx = '%'; }
+            if (!*argy) { y = 50; sepy = '%'; }
             if (_render3d==~0U) { // Rendering mode
               _render3d = 4;
               const CImg<char> s_mode3d = get_variable("_mode3d",variable_sizes,0,0);
