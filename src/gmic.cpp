@@ -9601,7 +9601,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const char *const _options = options.data() + (stype!=argx?0:l_stype + (end==','?1:0));
             float _is_multipage = 0;
             *argy = 0; opacity = 1;
-            if (cimg_sscanf(_options,"%255[a-z],%f,%f",gmic_use_argy,&_is_multipage,&opacity)<1)
+            if (cimg_sscanf(_options,"%255[a-z0-9],%f,%f",gmic_use_argy,&_is_multipage,&opacity)<1)
               cimg_sscanf(_options,"%f,%f",&_is_multipage,&opacity);
             const unsigned int compression_type =
               !cimg::strcasecmp(argy,"jpeg") ||
