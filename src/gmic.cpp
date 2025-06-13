@@ -9601,12 +9601,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const char *const _options = options.data() + (stype!=argx?0:l_stype + (end==','?1:0));
             float _is_multipage = 0;
             *argy = 0; opacity = 1;
-            if (cimg_sscanf(_options,"%255[a-z0-9],%f,%f",gmic_use_argy,&_is_multipage,&opacity)<1)
+            if (cimg_sscanf(_options,"%255[a-zA-Z0-9],%f,%f",gmic_use_argy,&_is_multipage,&opacity)<1)
               cimg_sscanf(_options,"%f,%f",&_is_multipage,&opacity);
             const unsigned int compression_type =
-              !cimg::strcasecmp(argy,"jpeg") ||
-              !cimg::strcasecmp(argy,"jpg")?2:
-              !cimg::strcasecmp(argy,"lzw")?1U:0U;
+              !cimg::strcasecmp(argy,"jbig")?1U:
+              !cimg::strcasecmp(argy,"jpeg") || !cimg::strcasecmp(argy,"jpg")?2U:
+              !cimg::strcasecmp(argy,"lzma")?3U:
+              !cimg::strcasecmp(argy,"lzw")?4U:
+              !cimg::strcasecmp(argy,"webp")?5U:
+              !cimg::strcasecmp(argy,"zstd")?6U:0U;
             const bool is_multipage = (bool)cimg::round(_is_multipage);
             const bool use_bigtiff = (bool)cimg::round(opacity);
 
