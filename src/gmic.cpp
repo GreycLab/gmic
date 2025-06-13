@@ -9610,8 +9610,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               !cimg::strcasecmp(argy,"lzw")?4U:
               !cimg::strcasecmp(argy,"webp")?5U:
               !cimg::strcasecmp(argy,"zstd")?6U:0U;
-            const bool is_multipage = (bool)cimg::round(_is_multipage);
-            const bool use_bigtiff = (bool)cimg::round(opacity);
+            const char *const s_compression_type =
+              compression_type==1?"JBIG":
+              compression_type==2?"JPEG":
+              compression_type==3?"LZMA":
+              compression_type==4?"LZW":
+              compression_type==5?"WEBP":
+              compression_type==6?"ZSTD":
+              "no";
+            const bool
+              is_multipage = (bool)cimg::round(_is_multipage),
+              use_bigtiff = (bool)cimg::round(opacity);
 
             g_list.assign(selection.height());
             cimg_forY(selection,l) if (!gmic_check(images[selection(l)]))
@@ -9628,7 +9637,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     "and %sbigtiff support (1 image %dx%dx%dx%d).",
                     gmic_selection.data(),
                     uext.data(),_filename.data(),stype,
-                    compression_type==2?"JPEG":compression_type==1?"LZW":"no",
+                    s_compression_type,
                     use_bigtiff?"":"no ",
                     g_list[0].width(),g_list[0].height(),
                     g_list[0].depth(),g_list[0].spectrum());
@@ -9636,7 +9645,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                        "%s compression, %s-page mode and %sbigtiff support.",
                        gmic_selection.data(),
                        uext.data(),_filename.data(),stype,
-                       compression_type==2?"JPEG":compression_type==1?"LZW":"no",
+                       s_compression_type,
                        is_multipage?"multi":"single",
                        use_bigtiff?"":"no ");
             if (!g_list)
