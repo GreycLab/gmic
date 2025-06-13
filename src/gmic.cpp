@@ -4108,9 +4108,6 @@ gmic& gmic::_gmic(const char *const command_line,
 #endif // #ifdef gmic_prerelease
 
   const char *const s_flags =
-#ifdef cimg_use_board
-    ",board"
-#endif
 #ifdef cimg_use_curl
     ",curl"
 #endif

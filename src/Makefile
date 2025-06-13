@@ -352,11 +352,6 @@ FFTW_CFLAGS = -Dcimg_use_fftw3 $(shell pkg-config --cflags fftw3)
 FFTW_LIBS = $(shell pkg-config --libs fftw3 || echo -lfftw3)
 FFTW_LIBS += -lfftw3_threads
 
-# Enable native support of the BOARD library.
-# (https://github.com/GreycLab/libboard)
-BOARD_CFLAGS = -Dcimg_use_board
-BOARD_LIBS = -lboard
-
 # Enable native support of WebP image files, using the WebP library.
 # (https://chromium.googlesource.com/webm/libwebp/)
 WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
