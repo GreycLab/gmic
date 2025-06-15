@@ -9303,7 +9303,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (!*argx) { x = 50; sepx = '%'; }
             if (!*argy) { y = 50; sepy = '%'; }
             if (_render3d==~0U) { // Rendering mode
-              _render3d = 4;
+              _render3d = 3;
               const CImg<char> s_mode3d = get_variable("_mode3d",variable_sizes,0,0);
               if (s_mode3d && *s_mode3d) {
                 if (*s_mode3d>='0' && *s_mode3d<='5' && !s_mode3d[1]) _render3d = (unsigned int)(*s_mode3d - '0');
