@@ -20,17 +20,19 @@ if ($debugMode) debug_print("Script started");
 $relativePath = $_GET['file'] ?? '';
 if ($debugMode) debug_print("Relative path from GET: " . $relativePath);
 
+// Resolve base directory
 $baseDir = realpath(__DIR__ . '/files');
 if ($debugMode) debug_print("Base directory: " . $baseDir);
 
+// Resolve full file path
 $targetPath = realpath($baseDir . '/' . $relativePath);
 if ($debugMode) debug_print("Resolved target path: " . ($targetPath ?: 'NULL'));
 
-// NEW: stats file at root (same directory as this script)
+// Path to stats file (at root of website)
 $statsFile = __DIR__ . '/downloads.json';
 if ($debugMode) debug_print("Stats file path: " . $statsFile);
 
-// Validate the target file path
+// Validate path
 if (!$targetPath) {
     if ($debugMode) debug_print("Invalid path: realpath failed");
     http_response_code(400);
@@ -52,11 +54,10 @@ if (!is_file($targetPath)) {
     exit;
 }
 
-// Stats calculation
+// Prepare stats key
 $today = date('Y-m-d');
 $todayTimestamp = strtotime($today);
 $key = ltrim($relativePath, '/');
-
 if ($debugMode) debug_print("Stats key: " . $key);
 
 // Open or create stats file
@@ -69,11 +70,14 @@ if (!$fp) {
 }
 if ($debugMode) debug_print("Stats file opened successfully");
 
-// Lock the file exclusively
+// Lock file exclusively
 flock($fp, LOCK_EX);
 if ($debugMode) debug_print("File lock acquired");
 
-// Read existing stats data
+// ✅ Critical fix: move cursor to beginning before reading
+rewind($fp);
+
+// Read current stats
 $statsContent = stream_get_contents($fp);
 $stats = $statsContent ? json_decode($statsContent, true) : [];
 
@@ -94,7 +98,7 @@ $stats[$key]['daily_average'] = round($stats[$key]['total_downloads'] / $daysEla
 
 if ($debugMode) debug_print("Stats updated: total_downloads={$stats[$key]['total_downloads']}, daysElapsed=$daysElapsed, daily_average={$stats[$key]['daily_average']}");
 
-// Write updated stats back to the file
+// Write updated stats
 rewind($fp);
 ftruncate($fp, 0);
 $written = fwrite($fp, json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -108,9 +112,6 @@ if ($debugMode) {
     } else {
         debug_print("Stats successfully written to file");
     }
-}
-
-if ($debugMode) {
     debug_print("Debug mode: download skipped.");
     ob_end_flush();
     exit;
