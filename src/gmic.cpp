@@ -9600,21 +9600,32 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             *argy = 0; opacity = 1;
             if (cimg_sscanf(_options,"%255[a-zA-Z0-9],%f,%f",gmic_use_argy,&_is_multipage,&opacity)<1)
               cimg_sscanf(_options,"%f,%f",&_is_multipage,&opacity);
-            const unsigned int compression_type =
-              !cimg::strcasecmp(argy,"jbig")?1U:
-              !cimg::strcasecmp(argy,"jpeg") || !cimg::strcasecmp(argy,"jpg")?2U:
-              !cimg::strcasecmp(argy,"lzma")?3U:
-              !cimg::strcasecmp(argy,"lzw")?4U:
-              !cimg::strcasecmp(argy,"webp")?5U:
-              !cimg::strcasecmp(argy,"zstd")?6U:0U;
-            const char *const s_compression_type =
-              compression_type==1?"JBIG":
-              compression_type==2?"JPEG":
-              compression_type==3?"LZMA":
-              compression_type==4?"LZW":
-              compression_type==5?"WEBP":
-              compression_type==6?"ZSTD":
-              "no";
+
+            const char *compression_codes[] = {
+              "NONE", "ADOBE_DEFLATE", "CCITT_T4", "CCITT_T6", "CCITTFAX3", "CCITTFAX4", "CCITTRLE", "CCITTRLEW", "DCS",
+              "DEFLATE", "IT8BL", "IT8CTPAD", "IT8LW", "IT8MP", "JBIG", "JP2000", "JPEG", "JXL", "LERC", "LZMA", "LZW",
+              "NEXT", "OJPEG", "PACKBITS", "PIXARFILM", "PIXARLOG", "SGILOG", "SGILOG24", "T43", "T85", "THUNDERSCAN",
+              "WEBP", "ZSTD" };
+            const unsigned nb_compression_codes = sizeof(compression_codes)/sizeof(char*);
+            unsigned int compression_type = ~0U;
+            if (!*argy) compression_type = 0;
+            else if (std::sscanf(argy,"%u%c",&compression_type,&end)==1) {
+              if (compression_type>=nb_compression_codes) compression_type = ~0U;
+            } else {
+              for (unsigned int k = 0; k<nb_compression_codes; ++k)
+                if (!cimg::strcasecmp(compression_codes[k],argy)) {
+                  compression_type = k; break;
+                }
+              if (compression_type==~0U && !cimg::strcasecmp(argy,"JPG"))
+                compression_type = 16; // Make 'JPG' equivalent to 'JPEG'
+            }
+            if (compression_type==~0U) {
+              warn(0,"Command 'output': Specified TIFF compression type '%s' is invalid. Fallback to 'none'.",
+                   argy);
+              compression_type = 0;
+            }
+            const char *const s_compression_type = compression_type?compression_codes[compression_type]:"no";
+
             const bool
               is_multipage = (bool)cimg::round(_is_multipage),
               use_bigtiff = (bool)cimg::round(opacity);
