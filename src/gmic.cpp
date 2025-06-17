@@ -9618,6 +9618,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 }
               if (compression_type==~0U && !cimg::strcasecmp(argy,"JPG"))
                 compression_type = 16; // Make 'JPG' equivalent to 'JPEG'
+              if (compression_type==~0U && !cimg::strcasecmp(argy,"ZIP"))
+                compression_type = 1; // Make 'ZIP' equivalent to 'ADOBE_DEFLATE'
             }
             if (compression_type==~0U) {
               warn(0,"Command 'output': Specified TIFF compression type '%s' is invalid. Fallback to 'none'.",
