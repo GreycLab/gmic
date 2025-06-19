@@ -9331,12 +9331,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (cimg::type<float>::is_nan(_specl3d)) { // Specular lightness
               const CImg<char> s_specl3d = get_variable("_specl3d",variable_sizes,0,0);
               if (!s_specl3d || cimg_sscanf(s_specl3d,"%f%c",&_specl3d,&end)!=1 || _specl3d<0)
-                _specl3d = 0.15f;
+                _specl3d = 0.25f;
             }
             if (cimg::type<float>::is_nan(_specs3d)) { // Specular shininess
               const CImg<char> s_specs3d = get_variable("_specs3d",variable_sizes,0,0);
               if (!s_specs3d || cimg_sscanf(s_specs3d,"%f%c",&_specs3d,&end)!=1 || _specs3d<0)
-                _specs3d = 0.15f;
+                _specs3d = 0.1f;
             }
             if (_multithreaded3d==~0U) { // Parallelized rendering?
               _multithreaded3d = 0;
