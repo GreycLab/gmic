@@ -3,9 +3,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Check if debug mode is activated via URL param
+// Debug mode via URL: ?debug=1
 $debugMode = isset($_GET['debug']) && $_GET['debug'] == '1';
-
 if ($debugMode) {
     ob_start();
 }
@@ -14,91 +13,88 @@ function debug_print($message) {
     echo '<p>' . htmlspecialchars($message) . '</p>';
 }
 
-if ($debugMode) debug_print("Script started");
-
-// Get relative file path from GET parameter
+// --- Step 1: Get the requested file path ---
 $relativePath = $_GET['file'] ?? '';
-if ($debugMode) debug_print("Relative path from GET: " . $relativePath);
+if ($debugMode) debug_print("Requested file: " . $relativePath);
 
-// Resolve base directory
 $baseDir = realpath(__DIR__ . '/files');
-if ($debugMode) debug_print("Base directory: " . $baseDir);
-
-// Resolve full file path
 $targetPath = realpath($baseDir . '/' . $relativePath);
-if ($debugMode) debug_print("Resolved target path: " . ($targetPath ?: 'NULL'));
-
-// Path to stats file (at root of website)
-$statsFile = __DIR__ . '/downloads.json';
-if ($debugMode) debug_print("Stats file path: " . $statsFile);
-
-// Validate path
-if (!$targetPath) {
-    if ($debugMode) debug_print("Invalid path: realpath failed");
-    http_response_code(400);
-    if ($debugMode) { ob_end_flush(); }
-    exit;
+if ($debugMode) {
+    debug_print("Base dir: " . $baseDir);
+    debug_print("Resolved target path: " . ($targetPath ?: 'NULL'));
 }
 
-if (substr($targetPath, 0, strlen($baseDir)) !== $baseDir) {
-    if ($debugMode) debug_print("Access denied: file outside base directory");
-    http_response_code(403);
-    if ($debugMode) { ob_end_flush(); }
-    exit;
-}
-
-if (!is_file($targetPath)) {
-    if ($debugMode) debug_print("File not found: " . $targetPath);
+// --- Step 2: Validate file path (safe even without str_starts_with) ---
+if (
+    !$targetPath ||
+    substr($targetPath, 0, strlen($baseDir)) !== $baseDir ||
+    !is_file($targetPath)
+) {
     http_response_code(404);
-    if ($debugMode) { ob_end_flush(); }
+    if ($debugMode) {
+        debug_print("Invalid or unauthorized file path.");
+        ob_end_flush();
+    }
     exit;
 }
 
-// Prepare stats key
+// --- Step 3: Prepare stats file path and key ---
+$statsFile = __DIR__ . '/downloads.json';
+$key = ltrim($relativePath, '/'); // e.g., "windows/myfile.exe"
 $today = date('Y-m-d');
 $todayTimestamp = strtotime($today);
-$key = ltrim($relativePath, '/');
-if ($debugMode) debug_print("Stats key: " . $key);
 
-// Open or create stats file
+// --- Step 4: Open and lock stats file ---
 $fp = fopen($statsFile, 'c+');
 if (!$fp) {
-    if ($debugMode) debug_print("Failed to open stats file");
+    if ($debugMode) debug_print("Failed to open stats file.");
     http_response_code(500);
-    if ($debugMode) { ob_end_flush(); }
+    if ($debugMode) ob_end_flush();
     exit;
 }
-if ($debugMode) debug_print("Stats file opened successfully");
+if (!flock($fp, LOCK_EX)) {
+    if ($debugMode) debug_print("Failed to acquire file lock.");
+    http_response_code(500);
+    fclose($fp);
+    if ($debugMode) ob_end_flush();
+    exit;
+}
+if ($debugMode) debug_print("Stats file locked.");
 
-// Lock file exclusively
-flock($fp, LOCK_EX);
-if ($debugMode) debug_print("File lock acquired");
-
-// ✅ Critical fix: move cursor to beginning before reading
+// --- Step 5: Read and decode JSON safely ---
 rewind($fp);
-
-// Read current stats
 $statsContent = stream_get_contents($fp);
 $stats = $statsContent ? json_decode($statsContent, true) : [];
 
+if (!is_array($stats)) {
+    $stats = [];
+    if ($debugMode) debug_print("Invalid or empty JSON, starting fresh.");
+}
+
+// --- Step 6: Update stats for this file ---
 if (!isset($stats[$key])) {
     $stats[$key] = [
         'total_downloads' => 0,
         'start_date' => $today,
         'daily_average' => 0.0
     ];
-    if ($debugMode) debug_print("New stats entry created for key: " . $key);
+    if ($debugMode) debug_print("New entry created for $key");
 }
 
-// Update stats
 $stats[$key]['total_downloads'] += 1;
 $startDate = $stats[$key]['start_date'];
 $daysElapsed = max(1, floor(($todayTimestamp - strtotime($startDate)) / 86400) + 1);
 $stats[$key]['daily_average'] = round($stats[$key]['total_downloads'] / $daysElapsed, 2);
 
-if ($debugMode) debug_print("Stats updated: total_downloads={$stats[$key]['total_downloads']}, daysElapsed=$daysElapsed, daily_average={$stats[$key]['daily_average']}");
+if ($debugMode) {
+    debug_print("Updated stats:");
+    debug_print("- total_downloads: " . $stats[$key]['total_downloads']);
+    debug_print("- start_date: " . $startDate);
+    debug_print("- days_elapsed: " . $daysElapsed);
+    debug_print("- daily_average: " . $stats[$key]['daily_average']);
+}
 
-// Write updated stats
+// --- Step 7: Write back JSON atomically ---
 rewind($fp);
 ftruncate($fp, 0);
 $written = fwrite($fp, json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
@@ -106,18 +102,20 @@ fflush($fp);
 flock($fp, LOCK_UN);
 fclose($fp);
 
+if ($written === false && $debugMode) {
+    debug_print("Failed to write stats.");
+} elseif ($debugMode) {
+    debug_print("Stats successfully written.");
+}
+
+// --- Step 8: Either show debug output or download the file ---
 if ($debugMode) {
-    if ($written === false) {
-        debug_print("Failed to write stats to file");
-    } else {
-        debug_print("Stats successfully written to file");
-    }
-    debug_print("Debug mode: download skipped.");
+    debug_print("Debug mode: file not downloaded.");
     ob_end_flush();
     exit;
 }
 
-// Send the file to browser for actual download
+// --- Step 9: Send file to browser ---
 header('Content-Description: File Transfer');
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . basename($targetPath) . '"');
