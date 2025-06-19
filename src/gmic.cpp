@@ -315,14 +315,15 @@ template<typename tp, typename tf, typename tc, typename to>
 CImg<T> get_draw_object3d(const float x0, const float y0, const float z0,
                           const CImg<tp>& vertices, const CImgList<tf>& primitives,
                           const CImgList<tc>& colors, const CImgList<to>& opacities,
-                          const unsigned int render_mode, const bool double_sided,
+                          const unsigned int render_mode, const bool is_double_sided,
                           const float focale,
                           const float light_x, const float light_y,const float light_z,
                           const float specular_lightness, const float specular_shininess,
-                          const float g_opacity, CImg<floatT>& zbuffer) const {
+                          const float g_opacity, CImg<floatT>& zbuffer,
+                          const bool is_multithreaded_rendering=false) const {
   return (+*this).draw_object3d(x0,y0,z0,vertices,primitives,colors,opacities,render_mode,
-                                double_sided,focale,light_x,light_y,light_z,specular_lightness,
-                                specular_shininess,g_opacity,zbuffer);
+                                is_double_sided,focale,light_x,light_y,light_z,specular_lightness,
+                                specular_shininess,g_opacity,zbuffer,is_multithreaded_rendering);
 }
 
 CImg<T> get_draw_point(const int x, const int y, const int z, const T *const col,
@@ -9239,7 +9240,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Draw 3D object.
         if (!std::strcmp("object3d",command)) {
           gmic_substitute_args(true);
-          unsigned int is_zbuffer = 1, _double3d = ~0U, _render3d = ~0U;
+          unsigned int is_zbuffer = 1, _double3d = ~0U, _render3d = ~0U, _multithreaded3d = ~0U;
           float x = 0, y = 0, z = 0,
             _focale3d = cimg::type<float>::nan(),
             _specl3d = cimg::type<float>::nan(),
@@ -9288,7 +9289,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                            "%f,%f,%u,%u,%u,%f,%f,%f,%f,%f,%f%c",
                            indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
                            &_focale3d,&_light3d_x,&_light3d_y,&_light3d_z,
-                           &_specl3d,&_specs3d,&end)==14) &&
+                           &_specl3d,&_specs3d,&end)==14 ||
+               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+                           "%f,%f,%u,%u,%u,%f,%f,%f,%f,%f,%f,%u%c",
+                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
+                           &_focale3d,&_light3d_x,&_light3d_y,&_light3d_z,
+                           &_specl3d,&_specs3d,&_multithreaded3d,&end)==15) &&
               (ind=selection2cimg(indices,images.size(),image_names,"object3d")).height()==1 &&
               (!*argx ||
                cimg_sscanf(argx,"%f%c",&x,&end)==1 ||
@@ -9297,7 +9303,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                cimg_sscanf(argy,"%f%c",&y,&end)==1 ||
                (cimg_sscanf(argy,"%f%c%c",&y,&sepy,&end)==2 && sepy=='%')) &&
               (_render3d==~0U || _render3d<=5) && is_zbuffer<=1 &&
-              (_double3d==~0U || _double3d<=1)) {
+              (_double3d==~0U || _double3d<=1) &&
+              (_multithreaded3d==~0U || _multithreaded3d<=1)) {
 
             // Get default rendering options.
             if (!*argx) { x = 50; sepx = '%'; }
@@ -9330,6 +9337,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               const CImg<char> s_specs3d = get_variable("_specs3d",variable_sizes,0,0);
               if (!s_specs3d || cimg_sscanf(s_specs3d,"%f%c",&_specs3d,&end)!=1 || _specs3d<0)
                 _specs3d = 0.15f;
+            }
+            if (_multithreaded3d==~0U) { // Parallelized rendering?
+              _multithreaded3d = 0;
+              const CImg<char> s_multithreaded3d = get_variable("_multithreaded3d",variable_sizes,0,0);
+              if (s_multithreaded3d && *s_multithreaded3d>='0' && *s_multithreaded3d<='1' && !s_multithreaded3d[1])
+                _multithreaded3d = (unsigned int)(*s_multithreaded3d - '0');
             }
 
             print(0,"Draw 3D object [%u] at (%g%s,%g%s,%g) on image%s, with opacity %g, "
@@ -9377,14 +9390,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                          _render3d,_double3d,_focale3d,
                                          _light3d_x,_light3d_y,_light3d_z,
                                          _specl3d,_specs3d,
-                                         opacity,zbuffer),true);
+                                         opacity,zbuffer,_multithreaded3d),true);
 
               } else {
                 gmic_apply(draw_object3d(nx,ny,z,vertices,primitives,g_list_uc,opacities,
                                          _render3d,_double3d,_focale3d,
                                          _light3d_x,_light3d_y,_light3d_z,
                                          _specl3d,_specs3d,
-                                         opacity,zbuffer),true);
+                                         opacity,zbuffer,_multithreaded3d),true);
               }
             }
           } else arg_error("object3d");
