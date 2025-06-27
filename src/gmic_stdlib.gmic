@@ -1198,7 +1198,7 @@ reference : skip "${2=}"
 "elevation3d[-1] \"'X=(x-64)/6;Y=(y-64)/6;100*exp(-(X^2+Y^2)/30)*abs(cos(X)*sin(Y))'\"\n~~~"\n\n\
 "===\n![3D Elevation](../img/example_elevation3d.png)\n==="\n\n\
 "### Plot the isosurface of a 3D volume: "\n\
-"\n~~~\n$ gmic mode3d 5 moded3d 5 double3d 0 isosurface3d \"'x^2+y^2+abs(z)^abs(4*cos(x*y*z*3))'\",3\n~~~"\n\
+"\n~~~\n$ gmic mode3d 5 moded3d 5 isosurface3d \"'x^2+y^2+abs(z)^abs(4*cos(x*y*z*3))'\",3\n~~~"\n\
 "===\n![3D Isosurface](../img/example_isosurface3d.png)\n==="\n\n\
 "### Render a G'MIC 3D logo: "\n\
 "\n~~~\n$ gmic 0 text G\\\47MIC,0,0,53,1,1,1,1 expand xy,10 blur 1 normalize 0,100 +plasma 0.4 add blur 1 "\
@@ -1206,7 +1206,7 @@ reference : skip "${2=}"
 "===\n![3D G'MIC Logo](../img/example_logo.png)\n==="\n\n\
 "### Generate a 3D ring of torii: "\n\
 "\n~~~\n$ gmic repeat 20 torus3d 15,2 color3d[-1] \"{u(60,255)},{u(60,255)},{u(60,255)}\" *3d[-1] 0.5,1 if \"{$>%2}\" "\
-"rotate3d[-1] 0,1,0,90 fi add3d[-1] 70 add3d rotate3d 0,0,1,18 done moded3d 3 mode3d 5 double3d 0\n~~~"\n\
+"rotate3d[-1] 0,1,0,90 fi add3d[-1] 70 add3d rotate3d 0,0,1,18 done moded3d 3 mode3d 5\n~~~"\n\
 "===\n![3D Ring](../img/example_torii.png)\n==="\n\n\
 "### Create a vase from a 3D isosurface: "\n\
 "\n~~~\n$ gmic moded3d 4 isosurface3d \"'x^2+2*abs(y/2)*sin(2*y)^2+z^2-3',0\" sphere3d 1.5 sub3d[-1] 0,5 "\
@@ -2066,7 +2066,7 @@ _display : skip ${1=},${3=}
                                     cut(int(0$_display_3d_motion_rendering_mode),-1,5):\
                                     narg($_moded3d)?cut(int(0$_moded3d),-1,5):3
   setting_3d_motion_time_limit:=narg($_display_3d_motion_time_limit)?max(0$_display_3d_motion_time_limit,0):300
-  setting_3d_side_mode:=narg($_display_3d_side_mode)?cut(int(0$_display_3d_side_mode),0,2):1
+  setting_3d_side_mode:=narg($_display_3d_side_mode)?cut(int(0$_display_3d_side_mode),0,2):0
   setting_3d_is_zbuffer:=narg($_display_3d_is_zbuffer)?cut(int(0$_display_3d_is_zbuffer),0,1):1
   setting_3d_focale:=narg($_display_3d_focale)?0$_display_3d_focale:1.5
   setting_3d_is_axes:=narg($_display_3d_is_axes)?cut(int(0$_display_3d_is_axes),0,1):1
@@ -24659,7 +24659,7 @@ trisolve : check ${"is_image_arg $1"}
 #@cli : Default values: 'ty=tz=0'.
 #@cli : $ sphere3d 10 repeat 5 { +add3d[-1] 10,{u(-10,10)},0 color3d[-1] ${-rgb} } add3d
 #@cli : $ repeat 20 { torus3d 15,2 color3d[-1] ${-rgb} mul3d[-1] 0.5,1 if $>%2 rotate3d[-1] 0,1,0,90 fi add3d[-1] 70 \
-# add3d rotate3d[-1] 0,0,1,18 } double3d 0
+# add3d rotate3d[-1] 0,0,1,18 }
 
 #@cli animate3d : nb_frames>0,_step_angle_x,_step_angle_y,_step_angle_z,_zoom_factor,0<=_fake_shadow_level<=100,\
 # _[background]
@@ -24714,7 +24714,7 @@ _cross3d :
 
 #@cli apply_matrix3d : a11,a12,a13,...,a31,a32,a33
 #@cli : Apply specified 3D rotation matrix to selected 3D objects.
-#@cli : $ torus3d 10,1 +apply_matrix3d {mul(rot(1,0,1,-15°),[1,0,0,0,2,0,0,0,8],3)} double3d 0
+#@cli : $ torus3d 10,1 +apply_matrix3d {mul(rot(1,0,1,-15°),[1,0,0,0,2,0,0,0,8],3)}
 apply_matrix3d :
   e[^-1] "Apply 3x3 matrix (${1-3};${4-6};${7-9}) to 3D object$?."
   foreach { nbp:=i[6] sh 8,{8+3*$nbp-1},0,0 r. 3,$nbp,1,1,-1 3,3,1,1,$* transpose. m*[-2,-1] rm. }
@@ -24930,7 +24930,7 @@ col3d :
 #@cli : Set color (and optionally opacity) of selected 3D objects.
 #@cli : (eq. to 'col3d').
 #@cli : Default value: 'B=G=R' and 'opacity=(undefined)'.
-#@cli : $ torus3d 100,10 double3d 0 repeat 7 { +rotate3d[-1] 1,0,0,20 color3d[-1] ${-rgb} } add3d
+#@cli : $ torus3d 100,10 repeat 7 { +rotate3d[-1] 1,0,0,20 color3d[-1] ${-rgb} } add3d
 color3d :
   _gmic_s="$?" v + _$0 $*
 
@@ -25238,16 +25238,16 @@ distribution3d :
 
 #@cli db3d : eq. to 'double3d'.
 db3d :
-  l[] { check "isbool(${1=1})" mode=$1 onfail noarg mode=1 }
+  l[] { check "isbool(${1=1})" mode=$1 onfail noarg mode=0 }
   v + _double3d $mode
 
 #@cli double3d : _is_double_sided={ 0:No | 1:Yes }
 #@cli : Enable/disable double-sided mode for 3D rendering.
 #@cli : (eq. to 'db3d').
-#@cli : Default value: 'is_double_sided=1'.
+#@cli : Default value: 'is_double_sided=0'.
 #@cli : $ mode3d 1 repeat 2 { torus3d 100,30 rotate3d[-1] 1,1,0,60 double3d $> snapshot3d[-1] 400 }
 double3d :
-  l[] { check "isbool(${1=1})" mode=$1 onfail noarg mode=1 }
+  l[] { check "isbool(${1=1})" mode=$1 onfail noarg mode=0 }
   v + _$0 $mode
 
 _double3d :
@@ -25743,7 +25743,7 @@ lathe3d : check "${1=128}>0 && ${2=0.5%}>=0 && ${3=361}>=0"
 #@cli : Set the light coordinates or the light texture for 3D rendering.
 #@cli : (eq. to 'l3d').\n
 #@cli : (no arg) resets the 3D light to default.
-#@cli : $ torus3d 100,30 double3d 0 specs3d 1.2 repeat 5 { light3d {$>*100},0,-300 +snapshot3d[0] 400 } remove[0]
+#@cli : $ torus3d 100,30 specs3d 1.2 repeat 5 { light3d {$>*100},0,-300 +snapshot3d[0] 400 } remove[0]
 
 #@cli line3d : x0,y0,z0,x1,y1,z1
 #@cli : Input 3D line at specified coordinates.
@@ -25789,7 +25789,7 @@ m3d :
 # 5:Phong-shaded }.
 #@cli : Bounding-box mode ('mode==-1') is active only for the interactive 3D viewer.
 #@cli : Default value: 'mode=4'.
-#@cli : $ (0,1,2,3,4,5) double3d 0 repeat w { torus3d 100,30 rotate3d[-1] 1,1,0,60 mode3d {0,@$>} \
+#@cli : $ (0,1,2,3,4,5) repeat w { torus3d 100,30 rotate3d[-1] 1,1,0,60 mode3d {0,@$>} \
 # snapshot3d[-1] 300 } remove[0]
 mode3d :
   l[] { check "isint(${1=3},-1,5)" mode=$1 onfail noarg mode=3 }
@@ -25961,7 +25961,7 @@ o3d :
 #@cli opacity3d : opacity
 #@cli : Set opacity of selected 3D objects.
 #@cli : (eq. to 'o3d').
-#@cli : $ torus3d 100,10 double3d 0 repeat 7 { +rotate3d[-1] 1,0,0,20 opacity3d[-1] {u} } add3d
+#@cli : $ torus3d 100,10 repeat 7 { +rotate3d[-1] 1,0,0,20 opacity3d[-1] {u} } add3d
 opacity3d :
   _gmic_s="$?" v + _$0 $*
 
@@ -26420,7 +26420,7 @@ rv3d :
 #@cli reverse3d
 #@cli : Reverse primitive orientations of selected 3D objects.
 #@cli : (eq. to 'rv3d').
-#@cli : $ torus3d 100,40 double3d 0 +reverse3d
+#@cli : $ torus3d 100,40 +reverse3d
 reverse3d :
   _gmic_s="$?" v + _$0
 
@@ -26444,7 +26444,7 @@ _reverse3d :
 #@cli rotate3d : u,v,w,angle : (+)
 #@cli : Rotate selected 3D objects around specified axis with specified angle (in deg.).
 #@cli : (eq. to 'r3d').
-#@cli : $ torus3d 100,10 double3d 0 repeat 7 { +rotate3d[-1] 1,0,0,20 } add3d
+#@cli : $ torus3d 100,10 repeat 7 { +rotate3d[-1] 1,0,0,20 } add3d
 
 #@cli rotation3d : u,v,w,angle
 #@cli : Input 3x3 rotation matrix with specified axis and angle (in deg).
@@ -61691,7 +61691,7 @@ fx_solve_maze_preview :
 # _label="3D~text~pointcloud"
 #@cli : $ sphere3d 10 repeat 5 { +add3d[-1] 10,{u(-10,10)},0 color3d[-1] ${-rgb} } add3d _fps=10 _label="3D~Spheres"
 #@cli : $ repeat 20 { torus3d 15,2 color3d[-1] ${-rgb} mul3d[-1] 0.5,1 if $>%2 rotate3d[-1] 0,1,0,90 fi add3d[-1] 70 \
-# add3d rotate3d[-1] 0,0,1,18 } double3d 0 _fps=10 _label="3D~Ring"
+# add3d rotate3d[-1] 0,0,1,18 } _fps=10 _label="3D~Ring"
 #@cli : $ image.jpg distribution3d circles3d 5 o3d 0.5 colorcube3d primitives3d[-1] 1 add3d _fps=10 \
 # _label="RGB~Color~Distribution"
 #@cli : $ image.jpg blur 5 elevation3d. 0.75 _fps=10 _label="3D~Elevation"
