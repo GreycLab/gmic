@@ -11045,45 +11045,40 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           int max_parts = cimg::type<int>::max();
           double nb = -1;
           char pm = 0;
-          *argx = *argy = sep = 0;
+          sep = 0;
           if ((cimg_sscanf(argument,"%255[xyzc]%c",gmic_use_argx,&end)==1 ||
                cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",argx,gmic_use_argy,&end)==2 ||
                cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]:%d%c",argx,argy,&max_parts,&end)==3) &&
               (!*argy ||
                (cimg_sscanf(argy,"%lf%c%c",&nb,&sep,&end)==2 && nb<0 && sep=='%') ||
                (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 && nb==(int)nb)) &&
-              max_parts>=0) {
+              max_parts>0) {
 
             // Split along axes.
+            gmic_use_argz;
+            if (max_parts!=cimg::type<int>::max())
+              cimg_snprintf(gmic_use_argz,_argz.width()," (%d part%s max)",max_parts,max_parts!=1?"s":"");
+
             if (!*argy || (nb==-1 && sep!='%'))
-              print(0,"Split image%s along the '%s'-ax%cs.",
+              print(0,"Split image%s along the '%s'-ax%cs%s.",
                     gmic_selection.data(),
-                    argx,
-                    std::strlen(argx)>1?'e':'i');
+                    argx,std::strlen(argx)>1?'e':'i',argz);
             else if (!nb)
-              print(0,"Split image%s along the '%s'-ax%cs, according to consecutive constant values.",
+              print(0,"Split image%s along the '%s'-ax%cs, according to consecutive constant values%s.",
                     gmic_selection.data(),
-                    argx,
-                    std::strlen(argx)>1?'e':'i');
+                    argx,std::strlen(argx)>1?'e':'i',argz);
             else if (nb>0)
-              print(0,"Split image%s along the '%s'-ax%cs, into %g parts.",
+              print(0,"Split image%s along the '%s'-ax%cs, into %g parts%s.",
                     gmic_selection.data(),
-                    argx,
-                    std::strlen(argx)>1?'e':'i',
-                    nb);
-            else if (max_parts>0)
-              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels (%d part%s max).",
+                    argx,std::strlen(argx)>1?'e':'i',nb,argz);
+            else if (max_parts!=cimg::type<int>::max())
+              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels%s.",
                     gmic_selection.data(),
-                    argx,
-                    std::strlen(argx)>1?'e':'i',
-                    -nb,sep=='%'?"%":"",
-                    max_parts,max_parts!=1?"s":"");
+                    argx,std::strlen(argx)>1?'e':'i',-nb,sep=='%'?"%":"",argz);
             else
-              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels.",
+              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels%s.",
                     gmic_selection.data(),
-                    argx,
-                    std::strlen(argx)>1?'e':'i',
-                    -nb,sep=='%'?"%":"");
+                    argx,std::strlen(argx)>1?'e':'i',-nb,sep=='%'?"%":"",argz);
 
             int off = 0;
             cimg_forY(selection,l) {
