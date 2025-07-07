@@ -11045,7 +11045,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           int max_parts = cimg::type<int>::max();
           double nb = -1;
           char pm = 0;
-          sep = 0;
+          *argx = *argy = sep = 0;
           if ((cimg_sscanf(argument,"%255[xyzc]%c",gmic_use_argx,&end)==1 ||
                cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",argx,gmic_use_argy,&end)==2 ||
                cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]:%d%c",argx,argy,&max_parts,&end)==3) &&
