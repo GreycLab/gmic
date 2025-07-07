@@ -11051,17 +11051,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 (cimg_sscanf(argy,"%lf%c%c",&nb,&(sep=0),&end)==2 && sep=='%')) &&
                (nb<0 || sep!='%')) ||
               (nb = -1,sep = 0, cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
+            int inb = nb>=0?cimg::uiround(nb):-cimg::uiround(-nb);
 
             // Split along axes.
-            nb = cimg::round(nb);
             if (nb>0)
-              print(0,"Split image%s along the '%s'-ax%cs, into %g parts.",
+              print(0,"Split image%s along the '%s'-ax%cs, into %d parts.",
                     gmic_selection.data(),
                     argx,
                     std::strlen(argx)>1?'e':'i',
-                    nb);
+                    inb);
             else if (nb<0) {
-              if (nb==-1 && !sep)
+              if (inb==-1 && !sep)
                 print(0,"Split image%s along the '%s'-ax%cs.",
                       gmic_selection.data(),
                       argx,
@@ -11071,7 +11071,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                       gmic_selection.data(),
                       argx,
                       std::strlen(argx)>1?'e':'i',
-                      -nb,sep=='%'?"%":"");
+                      sep=='%'?-nb:-(float)inb,
+                      sep=='%'?"%":"");
             } else
               print(0,"Split image%s along the '%s'-ax%cs, according to consecutive constant values.",
                     gmic_selection.data(),
@@ -11094,12 +11095,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   const unsigned int N = g_list.size();
                   axis = *p_axis;
                   for (unsigned int q = 0; q<N; ++q) {
-                    const int _nb = nb>0?cimg::uiround(nb):
-                      -cimg::uiround(sep!='%'?-nb:(axis=='x'?-nb*img.width()/100:
-                                                   axis=='y'?-nb*img.height()/100:
-                                                   axis=='z'?-nb*img.depth()/100:
-                                                   -nb*img.spectrum()/100));
-                    g_list[0].get_split(*p_axis,_nb).move_to(g_list,~0U);
+                    inb = nb>=0?cimg::uiround(nb):
+                      -std::max(1,cimg::uiround(sep!='%'?-nb:(axis=='x'?-nb*img.width()/100:
+                                                              axis=='y'?-nb*img.height()/100:
+                                                              axis=='z'?-nb*img.depth()/100:
+                                                              -nb*img.spectrum()/100)));
+                    g_list[0].get_split(*p_axis,inb).move_to(g_list,~0U);
                     g_list.remove(0);
                   }
                 }
