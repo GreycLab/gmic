@@ -11044,13 +11044,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           gmic_substitute_args(false);
           double nb = -1;
           char pm = 0;
-          *argx = 0;
-
+          bool is_split2 = false;
+          *argx = *argy = 0;
           if ((cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",gmic_use_argx,gmic_use_argy,&end)==2 &&
+               (argy+=*argy=='-' && argy[1]=='-'?(is_split2 = true),1:0),1 &&
                (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 ||
                 (cimg_sscanf(argy,"%lf%c%c",&nb,&(sep=0),&end)==2 && sep=='%')) &&
                (nb<0 || sep!='%')) ||
-              (nb = -1,sep = 0, cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
+              (nb = -1, sep = 0, cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
             int inb = nb>=0?cimg::uiround(nb):-cimg::uiround(-nb);
 
             // Split along axes.
@@ -11100,7 +11101,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                               axis=='y'?-nb*img.height()/100:
                                                               axis=='z'?-nb*img.depth()/100:
                                                               -nb*img.spectrum()/100)));
-                    g_list[0].get_split(*p_axis,inb).move_to(g_list,~0U);
+                    g_list[0].get_split(*p_axis,inb,is_split2).move_to(g_list,~0U);
                     g_list.remove(0);
                   }
                 }
