@@ -4940,7 +4940,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   *_command = '+';
 
 // Macros below allows to allocate memory for string variables only when necessary.
-#define gmic_use_var(name,siz) (name = (name!=&_c0?name:&(*_##name.assign(siz).data() = 0)))
+#define gmic_use_var(name,siz) (name = name==&_c0?&(_##name.assign(siz).front() = 0):&(_##name.front() = 0))
 #define gmic_use_argument_text gmic_use_var(argument_text,81)
 #define gmic_use_argx gmic_use_var(argx,256)
 #define gmic_use_argy gmic_use_var(argy,256)
