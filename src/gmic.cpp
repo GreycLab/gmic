@@ -11045,8 +11045,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           double nb = -1;
           char pm = 0;
           *argx = 0;
-          if (cimg_sscanf(argument,"%255[xyzc],%lf%c",gmic_use_argx,&nb,&end)==2 ||
-              (nb = -1,cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
+
+          if ((cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",gmic_use_argx,gmic_use_argy,&end)==2 &&
+               (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 ||
+                (cimg_sscanf(argy,"%lf%c%c",&nb,&(sep=0),&end)==2 && sep=='%')) &&
+               (nb<0 || sep!='%')) ||
+              (nb = -1,sep = 0, cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
 
             // Split along axes.
             nb = cimg::round(nb);
@@ -11057,19 +11061,19 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     std::strlen(argx)>1?'e':'i',
                     nb);
             else if (nb<0) {
-              if (nb==-1)
+              if (nb==-1 && !sep)
                 print(0,"Split image%s along the '%s'-ax%cs.",
                       gmic_selection.data(),
                       argx,
                       std::strlen(argx)>1?'e':'i');
               else
-                print(0,"Split image%s along the '%s'-ax%cs, into blocs of %g pixels.",
+                print(0,"Split image%s along the '%s'-ax%cs, into blocs of %g%s pixels.",
                       gmic_selection.data(),
                       argx,
                       std::strlen(argx)>1?'e':'i',
-                      -nb);
+                      -nb,sep=='%'?"%":"");
             } else
-              print(0,"Split image%s along the '%s'-ax%cs, according to constant values.",
+              print(0,"Split image%s along the '%s'-ax%cs, according to consecutive constant values.",
                     gmic_selection.data(),
                     argx,
                     std::strlen(argx)>1?'e':'i');
@@ -11088,8 +11092,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 g_list.assign(img,true);
                 for (const char *p_axis = argx; *p_axis; ++p_axis) {
                   const unsigned int N = g_list.size();
+                  axis = *p_axis;
                   for (unsigned int q = 0; q<N; ++q) {
-                    g_list[0].get_split(*p_axis,(int)nb).move_to(g_list,~0U);
+                    const int _nb = nb>0?cimg::uiround(nb):
+                      -cimg::uiround(sep!='%'?-nb:(axis=='x'?-nb*img.width()/100:
+                                                   axis=='y'?-nb*img.height()/100:
+                                                   axis=='z'?-nb*img.depth()/100:
+                                                   -nb*img.spectrum()/100));
+                    g_list[0].get_split(*p_axis,_nb).move_to(g_list,~0U);
                     g_list.remove(0);
                   }
                 }
