@@ -11042,43 +11042,48 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Split.
         if (!std::strcmp("split",command)) {
           gmic_substitute_args(false);
+          int max_parts = cimg::type<int>::max();
           double nb = -1;
           char pm = 0;
-          bool is_split2 = false;
-          *argx = *argy = 0;
-          if ((cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",gmic_use_argx,gmic_use_argy,&end)==2 &&
-               (argy+=*argy=='-' && argy[1]=='-'?(is_split2 = true),1:0),1 &&
-               (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 ||
-                (cimg_sscanf(argy,"%lf%c%c",&nb,&(sep=0),&end)==2 && sep=='%')) &&
-               (nb<0 || sep!='%')) ||
-              (nb = -1, sep = 0, cimg_sscanf(argument,"%255[xyzc]%c",argx,&end))==1) {
-            int inb = nb>=0?cimg::uiround(nb):-cimg::uiround(-nb);
+          *argx = *argy = sep = 0;
+          if ((cimg_sscanf(argument,"%255[xyzc]%c",gmic_use_argx,&end)==1 ||
+               cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]%c",argx,gmic_use_argy,&end)==2 ||
+               cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-]:%d%c",argx,argy,&max_parts,&end)==3) &&
+              (!*argy ||
+               (cimg_sscanf(argy,"%lf%c%c",&nb,&sep,&end)==2 && nb<0 && sep=='%') ||
+               (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 && nb==(int)nb)) &&
+              max_parts>=0) {
 
             // Split along axes.
-            if (nb>0)
-              print(0,"Split image%s along the '%s'-ax%cs, into %d parts.",
+            if (!*argy || (nb==-1 && sep!='%'))
+              print(0,"Split image%s along the '%s'-ax%cs.",
                     gmic_selection.data(),
                     argx,
-                    std::strlen(argx)>1?'e':'i',
-                    inb);
-            else if (nb<0) {
-              if (inb==-1 && !sep)
-                print(0,"Split image%s along the '%s'-ax%cs.",
-                      gmic_selection.data(),
-                      argx,
-                      std::strlen(argx)>1?'e':'i');
-              else
-                print(0,"Split image%s along the '%s'-ax%cs, into blocs of %g%s pixels.",
-                      gmic_selection.data(),
-                      argx,
-                      std::strlen(argx)>1?'e':'i',
-                      sep=='%'?-nb:-(float)inb,
-                      sep=='%'?"%":"");
-            } else
+                    std::strlen(argx)>1?'e':'i');
+            else if (!nb)
               print(0,"Split image%s along the '%s'-ax%cs, according to consecutive constant values.",
                     gmic_selection.data(),
                     argx,
                     std::strlen(argx)>1?'e':'i');
+            else if (nb>0)
+              print(0,"Split image%s along the '%s'-ax%cs, into %g parts.",
+                    gmic_selection.data(),
+                    argx,
+                    std::strlen(argx)>1?'e':'i',
+                    nb);
+            else if (max_parts>0)
+              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels (%d part%s max).",
+                    gmic_selection.data(),
+                    argx,
+                    std::strlen(argx)>1?'e':'i',
+                    -nb,sep=='%'?"%":"",
+                    max_parts,max_parts!=1?"s":"");
+            else
+              print(0,"Split image%s along the '%s'-ax%cs, into blocks of %g%s pixels.",
+                    gmic_selection.data(),
+                    argx,
+                    std::strlen(argx)>1?'e':'i',
+                    -nb,sep=='%'?"%":"");
 
             int off = 0;
             cimg_forY(selection,l) {
@@ -11096,12 +11101,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   const unsigned int N = g_list.size();
                   axis = *p_axis;
                   for (unsigned int q = 0; q<N; ++q) {
-                    inb = nb>=0?cimg::uiround(nb):
-                      -std::max(1,cimg::uiround(sep!='%'?-nb:(axis=='x'?-nb*img.width()/100:
-                                                              axis=='y'?-nb*img.height()/100:
-                                                              axis=='z'?-nb*img.depth()/100:
-                                                              -nb*img.spectrum()/100)));
-                    g_list[0].get_split(*p_axis,inb,is_split2).move_to(g_list,~0U);
+                    const int inb = sep=='%'?-std::max(1,cimg::uiround(axis=='x'?-nb*img.width()/100:
+                                                                       axis=='y'?-nb*img.height()/100:
+                                                                       axis=='z'?-nb*img.depth()/100:
+                                                                       -nb*img.spectrum()/100)):(int)nb;
+                    g_list[0].get_split(*p_axis,inb,(unsigned int)max_parts).move_to(g_list,~0U);
                     g_list.remove(0);
                   }
                 }
