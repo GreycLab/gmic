@@ -4205,7 +4205,7 @@ _display_camera :
   wc,hc:=w,h
 
   # Open interactive window.
-  w ${"fitscreen "$wc,$hc},0,"G'MIC Camera Stream Viewer"
+  w ${"fitscreen[] "$wc,$hc},0,"G'MIC Camera Stream Viewer"
   wnfs,hnfs={*,w,h}
   angle,fullscreen,brightness,contrast=0
   do
@@ -9426,7 +9426,7 @@ _plot : skip ${8=},${10=}
     rm.
 
     basename ${image_name$>} title="[G'MIC] "${} => img
-    w_width,w_height=${"fitscreen 1024,600"}
+    w_width,w_height=${"fitscreen[] 1024,600"}
     if !{*} w[] $w_width,$w_height,0,$title fi
 
     if $3==$4 xmin0,xmax0={0,[0,w-1]} else xmin0,xmax0:=min(${3,4}),max(${3,4}) fi
@@ -32714,7 +32714,7 @@ stylize :
   repeat $!-1 { l[$>,-1] {
     to_colormode.. {s}
     nb_scales:=1+round(log(min(w#0,h#0,w#1,h#1)/$init_resolution)/log($scale_factor),1,-1)
-    if {*} wsiz=${"fitscreen "{0,[w,h]}} w[0] $wsiz,0,"[G'MIC Stylize]" fi
+    if {*} wsiz=${"fitscreen[] "{0,[w,h]}} w[0] $wsiz,0,"[G'MIC Stylize]" fi
 
     repeat $nb_scales { scale=$>
       size_factor:=100/($scale_factor^$<)
@@ -34324,7 +34324,7 @@ _fade_stream : skip "${6=}"
   l { $1 onfail go_on=0 } # Load first image
   if !$go_on return fi
   w,h,s={w},{h},{s}
-  if {*} w. ${fitscreen\ $w,$h},0,"[G'MIC]" fi
+  if {*} w. ${fitscreen[]\ $w,$h},0,"[G'MIC]" fi
   pframe=$frame frame+=$5
   do
     l[] { $1 onfail go_on=0 }
@@ -34641,7 +34641,7 @@ _morph_stream : skip "${8=}"
   l { $1 onfail go_on=0 } # Load first image
   if !$go_on return fi
   w,h,s={w},{h},{s}
-  if {*} w. ${fitscreen\ $w,$h},0,"[G'MIC]" fi
+  if {*} w. ${fitscreen[]\ $w,$h},0,"[G'MIC]" fi
   pframe=$frame frame+=$7
   do
     l[] { $1 onfail go_on=0 }
@@ -37027,7 +37027,8 @@ demos : check "isint(${1=2},0,2)" check_display $0
   (0.1;0.3^0.1;0.2^0.5;0.3) ri. ..,3 *[-2,-1]
   (0;1) r. ..,..,1,1,3 ^. 1.5 n. 0.2,1.15 *[-2,-1] n. 0,128
   => background
-  w. -1,-1,0,"[G'MIC - "$strver"]" cursor 0 w[] -1,-1,0,0,{([{*,u,v}]-[{*,w,h}])/2}
+  w. ${"fitscreen[] "{1.25*[w,h]}},0,"[G'MIC - "$strver"]"
+  cursor 0 w[] -1,-1,0,0,{([{*,u,v}]-[{*,w,h}])/2}
 
   # Enter event loop.
   omb,ind_clicked,cfx,cfy,cfz,alpha=0
@@ -37062,7 +37063,7 @@ demos : check "isint(${1=2},0,2)" check_display $0
     fi
 
     w. -1,-1,0
-    if {*,CTRLLEFT}" && "{*,D} w. 150%,150% elif {*,CTRLLEFT}" && "{*,C} w. 100%,100% fi
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
     rm.
 
     # Manage user selection.
@@ -37605,7 +37606,7 @@ x_blobs : check_display $0
 
   # Create background image [0].
   (0;0^0;128^0;255) r. 450,450,1,3,3 flower. 30,8,0,0,50%,50%,1 water. 20
-  w ${"fitscreen "{2*[w,h]}},0,0,"[G"{`39`}"MIC] Blobs Editor"
+  w. ${"fitscreen[] "{2*[w,h]}},0,0,"[G"{`39`}"MIC] Blobs Editor"
 
   # Start event loop.
   moving=-1
@@ -37639,7 +37640,7 @@ x_blobs : check_display $0
            50,180,18,1,1,255
     fi
     w. rm.
-    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
     wait 20
 
     # Manage blob insertion, removal or move.
@@ -37683,7 +37684,7 @@ x_bouncing : check_display $0
     t$>:=u(200) x$>:=u(10,w#0-10) h$>:=u(150,300) vx$>:=(u<0.5?1:-1)*u(1,8)
   }
   mv[0] $!
-  w. ${"fitscreen "{2*[w,h]}},0,0,"[G"{`39`}"MIC] Bouncing Balls"
+  w. ${"fitscreen[] "{2*[w,h]}},0,0,"[G"{`39`}"MIC] Bouncing Balls"
   (0;0.7;1) r. {-2,w},70,1,1,3
 
   do
@@ -37710,7 +37711,7 @@ x_bouncing : check_display $0
     +rows. {h-2*70},{h-1-70} mirror. y *. [{$N+1}]
     j.. .,0,{-2,h-71},0,0,0.5 rm.
     fps=${-fps} if $fps>0 to. $fps" fps",5,{h-29},24,2,0.2 fi
-    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
     w. rm. wait 20
   while {*}" && "!{*,ESC}" && "!{*,Q}
   w 0 rm }
@@ -38423,7 +38424,7 @@ x_crop :
 _x_crop :
   e[0--3] "Crop image"$_gmic_s" interactively."
   if $!<1 return fi
-  w[0] ${"fitscreen "{0,[w,h,d]}},1,"[G'MIC] "{n}" - Interactive crop"
+  w[0] ${"fitscreen[] "{0,[w,h,d]}},1,"[G'MIC] "{n}" - Interactive crop"
   +select[0] 2,{0,round([w,h,d]/2)},0,1 coords={^} rm.
   z $coords
   u $coords
@@ -39614,7 +39615,7 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       if {*,r} is_resized=1
       elif $is_ctrl" && "{*,-D} w[] {1,1.25*[w,h]} is_resized=1
       elif $is_ctrl" && "{*,-C} w[] {1,0.8*[w,h]} is_resized=1
-      elif $is_ctrl" && "{*,R} w[] ${fitscreen\ {0,[w,h,1]},128,1024} is_resized=1
+      elif $is_ctrl" && "{*,R} w[] ${fitscreen[]\ {0,[w,h,1]},128,1024} is_resized=1
       fi
       if $is_resized rm[1,2] +r {*,d},{*,e},1,3,2 +_ac_forward. channels. $_s refresh=1 fi
 
@@ -39719,7 +39720,7 @@ x_metaballs3d : check_display $0
   72,72,72 M=8 mode=3
   s0,s1,s2,s3,s4,s5=Dots,Wireframe,Flat,Flat-shaded,Gouraud-shaded,Phong-shaded
   repeat $M { fx$>,fy$>,fz$>:=2*[g,g,g] }
-  w[0] ${"fitscreen "{0,2*[w,h]}},0,"[G"{`39`}"MIC] 3D Metaballs"
+  w[0] ${"fitscreen[] "{0,1.5*[w,h]}},0,"[G"{`39`}"MIC] 3D Metaballs"
   do
     repeat $M {
       x$>:=w/2+0.5*(w-{2,w}-4)*cos(${fx$>}*$|)
@@ -39739,7 +39740,7 @@ x_metaballs3d : check_display $0
     +j3d[1] ..,50%,50%,0,1,{!$mode?3:$mode},0,0,300,0,0,-500,1,0.1
     fps=${-fps} if $fps>0 to. $fps" fps",5,{h-22},16,2,0.2 fi
     w.
-    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D}) w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}} fi
     rm[-3--1] wait 20
     if {*,b}" || "{*,SPACE} mode:=($mode+({*,b}&2?-1:1))%6 wait -1 rm[1] i[1] 0 fi
   while {*}" && "!{*,ESC}" && "!{*,Q}
@@ -39962,8 +39963,8 @@ x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
 
       # Generate base images.
       if !narg($imgb0)" || "!narg($imgb1)
-        if {*} wdims=${"fitscreen "{*,d},{img0,{*,d}*h/w}}
-        else wdims=${"fitscreen "{img0,[w,h,1]},128,50%}
+        if {*} wdims=${"fitscreen[] "{*,d},{img0,{*,d}*h/w}}
+        else wdims=${"fitscreen[] "{img0,[w,h,1]},128,50%}
         fi
         w[] $wdims,0,"[G'MIC] Interactive Morph"
         repeat 2 { +to_color[img$>] r. $wdims,1,100%,2 n. 0,255 => imgb$> }
@@ -40779,7 +40780,7 @@ x_reflection3d : check_display $0
 
   # Start animation loop.
   xb,xl,anim=0
-  w[] ${"fitscreen 400,400,1,35%"},0,"[G"{`39`}"MIC] 3D Reflection"
+  w[] ${"fitscreen[] 400,400,1,35%"},0,"[G"{`39`}"MIC] 3D Reflection"
   do
 
     tic=$|
@@ -40834,7 +40835,7 @@ x_rubber3d : check_display $0
   400,400,64,3
   {w},{h},1,3,'!c?x:c==1?y:y*{1,d}/h'
   {w},{h},1,3
-  w[] ${"fitscreen .,35%"},0,"[G"{`39`}"MIC] 3D Rubber Object"
+  w[] ${"fitscreen[] .,35%"},0,"[G"{`39`}"MIC] 3D Rubber Object"
   frame=0
   do
     fps=${-fps}
@@ -41469,7 +41470,7 @@ x_shadebobs : check_display $0
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------------"
-  rm t=100 w ${"fitscreen 512,512,1,35%"},0,"[G"{`39`}"MIC] Shade Bobs"
+  rm t=100 w ${"fitscreen[] 512,512,1,35%"},0,"[G"{`39`}"MIC] Shade Bobs"
 
   # Start animation loop.
   do
@@ -41645,7 +41646,7 @@ x_starfield3d : check_display $0
     0 t. "Version "${-strver},0,0,48,1,1 rs. ,18 +f. 255 to_rgb.
     random3d 2500 col3d. 255 *3d. 320,200,1000 -3d. 160,100
     l3d 0,0,-600
-    w[] ${"fitscreen 640,400,1,35%"},0,"[G"{`39`}"MIC] 3D Starfield"
+    w[] ${"fitscreen[] 640,400,1,35%"},0,"[G"{`39`}"MIC] 3D Starfield"
     t0=0 t=0
 
     do
@@ -42031,7 +42032,7 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
 ---- Keys '"${c}"CTRL+R"$n"' reset window size.\n
 ---- Keys '"${c}"ESC"$n"', '"${c}"Q"$n"' or '"${c}"RETURN"$n"' close the current window.\n
 ------------------------------------------------------------------------------------------------"
-  w[] ${"fitscreen 800,800"},0,"[G'MIC] tixy: "$expr
+  w[] ${"fitscreen[] 800,800"},0,"[G'MIC] tixy: "$expr
   t0=$| is_recording=0 is_antialias=1 is_screenshot=0 is_formula=0 nb_frames=0
   360,1,1,3,[x,abs(cos(x/w*pi))^0.5,1] hsv2rgb. shift. -180,0,0,0,2 => cmap
   strvar $expr basename=${}
@@ -42126,8 +42127,8 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
 
       # Generate base image.
       if !narg($imgb)
-        if {*} wdims=${"fitscreen "{*,d},{img,{*,d}*h/w}}
-        else wdims=${"fitscreen "{img,[w,h,1]},128,60%}
+        if {*} wdims=${"fitscreen[] "{*,d},{img,{*,d}*h/w}}
+        else wdims=${"fitscreen[] "{img,[w,h,1]},128,60%}
         fi
         w[] $wdims,0,"[G'MIC] Interactive Warp"
         +to_color[img] r. $wdims,1,100%,2 n. 0,255 => imgb
@@ -42367,7 +42368,7 @@ x_whirl : check "${1=0.2}>=0" check_display $0
 ----\n
 --------------------------------------------------"
 
-  5,5,1,3 256,256,1,3 [-1] w. ${"fitscreen 384,384,1,35%"},0,"[G"{`39`}"MIC] Fractal Whirls"
+  5,5,1,3 256,256,1,3 [-1] w. ${"fitscreen[] 384,384,1,35%"},0,"[G"{`39`}"MIC] Fractal Whirls"
   tangle=0 tzoom=0 xc,yc:=(w-{-3,w})/2,(h-{-3,h})/2
   do
     rand... 0,255 j.. [-3],$xc,$yc,0,0
@@ -42605,7 +42606,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   drgba
   siz:=0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:\
        0$_preview_width?[0$_preview_width,0$_preview_height]:\
-       [${fitscreen\ {[max(w,1),max(h,1),1]},400,800}]
+       [${fitscreen[]\ {[max(w,1),max(h,1),1]},400,800}]
   sizw:=arg(1,$siz)-8
   if $! rs $siz,3,1 drgba else $siz,1,3,128 fi
   (1;0.5^1;0.5^0;1)
@@ -44868,7 +44869,7 @@ fx_kuwahara :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2017/11/21</i>.</small>")
 fx_linify :
   foreach {
-    if $7 _debug=1 w ${-fitscreen\ {[w,h]}},0,"[Preview] G'MIC: Linify" fi
+    if $7 _debug=1 w ${-fitscreen[]\ {[w,h]}},0,"[Preview] G'MIC: Linify" fi
     linify $1,$2,$3%,$4,$5,$6
   }
 
@@ -45758,7 +45759,7 @@ fx_stylize :
     elif $3==2 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 3 { +rotate[0] {90*$>},1,3,50%,50% } a z }
     elif $3==3 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 7 { +rotate[0] {45*$>},1,3,50%,50% } a z }
     fi
-    if $4 wsiz=${"fitscreen "{0,[w,h]}} w[0] $wsiz is_window={*} fi
+    if $4 wsiz=${"fitscreen[] "{0,[w,h]}} w[0] $wsiz is_window={*} fi
     stylize[0] .,${5-9},$15,$init_resolution,${17-22},$patch_penalization,${24-26},$match_colors
     k[0,1] =>[0] $nm
     if $is_window" && "!{*} break fi
@@ -55180,8 +55181,8 @@ fx_illuminate_shape2d_preview_interactive :
     to_rgba
     +__fx_illuminate_shape2d[0] $1,2,${3-6},0,1,""$9,0,${11-15},""${16-29},""0,0
     if $!>2 rm[0] elif $input_type>=2 sh[0] 0,2 f. 128 rm. fi
-    siz=${fitscreen\ {[w,h,1]},256,640}
-    wsiz0=${fitscreen\ $siz,1,30%,100%}
+    siz=${fitscreen[]\ {[w,h,1]},256,640}
+    wsiz0=${fitscreen[]\ $siz,1,30%,100%}
     wsiz=$wsiz0
     r $siz,1,100%,3
     s. c,-3 !=. 0 l.. { - 128 / 127 s c,-2 / } a[-2,-1] c # Gradient map
