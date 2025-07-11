@@ -3479,7 +3479,7 @@ const char *gmic::set_variable(const char *const name, const char operation,
       CImg<char>::string(s_value).move_to(vars[ind]);
     }
 #if cimg_use_openmp!=0
-    omp_set_num_threads(nb_cpus);
+    if (!gmic_getenv("OMP_NUM_THREADS")) omp_set_num_threads(nb_cpus);
 #endif
   }
 
