@@ -35340,7 +35340,7 @@ fitratio_wh :
 #@cli fitscreen : width,height,_minimal_size[%]>0,_maximal_size[%]>0 : [image],_minimal_size[%]>0,_maximal_size[%]>0
 #@cli : Return the 'ideal' size WxH for a window intended to display an image of specified size on screen.
 #@cli : Default values: 'depth=1', 'minimal_size=128' and 'maximal_size=85%'.
-fitscreen : skip "${1=}" check "${3=128}>0 && ${4=85%}>0"
+fitscreen : skip "${1=},${2=}" check "${3=128}>0 && ${4=85%}>0"
   if ${"is_image_arg $1"}
     pass$1 1 w,h:="a = d>1?d:0; [ w + a,h + a ]" rm.
     n:=narg($*) if $n==1 m,M=${3,4} elif $n==2 m,M=${2,4} else m,M=${2,3} fi
@@ -39879,7 +39879,7 @@ x_minimal_path : check_display $0
   if !$! sp ? fi
   n 0,200 round 1
   foreach {
-    w[0] -1,-1,0,"[G'MIC] Select Starting Point P0"
+    w[0] ${"fitscreen [0],50%"},0,"[G'MIC] Select Starting Point P0"
 
     if !narg($first_time)
       parallel 0,"+l[0] { rs ,128 frame xy,1,0 \
@@ -39919,6 +39919,9 @@ x_minimal_path : check_display $0
             pointcloud. 0 *. 255 r. 100%,100%,1,[0],0,0,0,0,0,0.5 ri. [0],0 -|[0,-1]
             P0=$P1 p+=1
           fi
+        fi
+        if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
+          w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
         fi
       while {*}" && "!{*,ESC}" && "!{*,Q}
     fi
