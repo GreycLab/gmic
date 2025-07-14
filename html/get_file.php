@@ -13,7 +13,7 @@ function debug_print($message) {
     echo '<p>' . htmlspecialchars($message) . '</p>';
 }
 
-// --- Step 1: Get the requested file path ---
+// Step 1: Get requested file
 $relativePath = $_GET['file'] ?? '';
 if ($debugMode) debug_print("Requested file: " . $relativePath);
 
@@ -24,7 +24,7 @@ if ($debugMode) {
     debug_print("Resolved target path: " . ($targetPath ?: 'NULL'));
 }
 
-// --- Step 2: Validate file path (safe even without str_starts_with) ---
+// Step 2: Validate file path
 if (
     !$targetPath ||
     substr($targetPath, 0, strlen($baseDir)) !== $baseDir ||
@@ -38,52 +38,37 @@ if (
     exit;
 }
 
-// --- Step 3: Prepare stats file path and key ---
+// Step 3: Stats file path and key
 $statsFile = __DIR__ . '/downloads.json';
-$key = ltrim($relativePath, '/'); // e.g., "windows/myfile.exe"
-$today = date('Y-m-d');
-$todayTimestamp = strtotime($today);
+$key       = ltrim($relativePath, '/');
+$today     = date('Y-m-d');
+$todayTs   = strtotime($today);
 
-// --- Step 4: Open and lock stats file ---
-$fp = fopen($statsFile, 'c+');
-if (!$fp) {
-    if ($debugMode) debug_print("Failed to open stats file.");
-    http_response_code(500);
-    if ($debugMode) ob_end_flush();
-    exit;
-}
-if (!flock($fp, LOCK_EX)) {
-    if ($debugMode) debug_print("Failed to acquire file lock.");
-    http_response_code(500);
-    fclose($fp);
-    if ($debugMode) ob_end_flush();
-    exit;
-}
-if ($debugMode) debug_print("Stats file locked.");
-
-// --- Step 5: Read and decode JSON safely ---
-rewind($fp);
-$statsContent = stream_get_contents($fp);
-$stats = $statsContent ? json_decode($statsContent, true) : [];
-
-if (!is_array($stats)) {
-    $stats = [];
-    if ($debugMode) debug_print("Invalid or empty JSON, starting fresh.");
+// Step 4: Load stats from existing file
+$stats = [];
+if (file_exists($statsFile)) {
+    $raw = file_get_contents($statsFile);
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded)) {
+        $stats = $decoded;
+    } elseif ($debugMode) {
+        debug_print("Stats file is invalid JSON. Starting fresh.");
+    }
 }
 
-// --- Step 6: Update stats for this file ---
+// Step 5: Update stats
 if (!isset($stats[$key])) {
     $stats[$key] = [
         'total_downloads' => 0,
         'start_date' => $today,
         'daily_average' => 0.0
     ];
-    if ($debugMode) debug_print("New entry created for $key");
+    if ($debugMode) debug_print("New entry for $key");
 }
 
 $stats[$key]['total_downloads'] += 1;
 $startDate = $stats[$key]['start_date'];
-$daysElapsed = max(1, floor(($todayTimestamp - strtotime($startDate)) / 86400) + 1);
+$daysElapsed = max(1, floor(($todayTs - strtotime($startDate)) / 86400) + 1);
 $stats[$key]['daily_average'] = round($stats[$key]['total_downloads'] / $daysElapsed, 2);
 
 if ($debugMode) {
@@ -94,28 +79,36 @@ if ($debugMode) {
     debug_print("- daily_average: " . $stats[$key]['daily_average']);
 }
 
-// --- Step 7: Write back JSON atomically ---
-rewind($fp);
-ftruncate($fp, 0);
-$written = fwrite($fp, json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-fflush($fp);
-flock($fp, LOCK_UN);
-fclose($fp);
+// Step 6: Write to temporary file with atomic rename
+$jsonData = json_encode($stats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+if ($jsonData !== false) {
+    $tmpFile = __DIR__ . '/downloads_' . uniqid('', true) . '.tmp';
 
-if ($written === false && $debugMode) {
-    debug_print("Failed to write stats.");
-} elseif ($debugMode) {
-    debug_print("Stats successfully written.");
+    if ($debugMode) debug_print("Temporary file used: " . $tmpFile);
+
+    if (file_put_contents($tmpFile, $jsonData, LOCK_EX) !== false) {
+        if (rename($tmpFile, $statsFile)) {
+            if ($debugMode) debug_print("Stats successfully saved via atomic rename.");
+            if (file_exists($tmpFile)) unlink($tmpFile); // cleanup
+        } else {
+            if ($debugMode) debug_print("Rename failed. Attempting cleanup.");
+            unlink($tmpFile);
+        }
+    } else {
+        if ($debugMode) debug_print("Failed to write temporary stats file.");
+    }
+} else {
+    if ($debugMode) debug_print("Failed to encode stats as JSON.");
 }
 
-// --- Step 8: Either show debug output or download the file ---
+// Step 7: Output in debug mode or send file
 if ($debugMode) {
-    debug_print("Debug mode: file not downloaded.");
+    debug_print("Debug mode: no file sent.");
     ob_end_flush();
     exit;
 }
 
-// --- Step 9: Send file to browser ---
+// Step 8: Send file to browser
 header('Content-Description: File Transfer');
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . basename($targetPath) . '"');
