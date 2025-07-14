@@ -56188,6 +56188,124 @@ _fx_shapes16 :
 _fx_shapes17 :
   _fx_shapes9 $* expand xy,1 +erode 3 -
 
+#@gui Organic Fibers : fx_organic_fibers, fx_organic_fibers(0)
+#@gui : note = note("<span color="#EE5500"><small><b>Global Parameters:</b></small></span>")
+#@gui : Agent Density (%) = ~float(20,0,50)
+#@gui : Iterations = int(20,1,256)
+#@gui : Orientations = ~int(3,2,16)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Sensor Parameters:</b></small></span>")
+#@gui : Sensor Distance (px) = ~int(15,0,400)
+#@gui : Sensor Angle (deg.) = ~float(15,0,180)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Motion Parameters:</b></small></span>")
+#@gui : Motion Distance (px) = ~int(3,0,400)
+#@gui : Motion Angle (deg.) = ~float(15,0,180)
+#@gui : Moment (%) = ~float(30,0,100)
+#@gui : Trail Blur (px) = ~float(1,0,20)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Rendering Parameters:</b></small></span>")
+#@gui : Particle Size (px) = ~int(19,1,128)
+#@gui : Particle Thickness (%) = ~float(10,0,100)
+#@gui : Quantize Orientations = ~int(24,1,32)
+#@gui : Opacity (%) = ~float(50,0,100)
+#@gui : Sharpening (%) = ~float(0,0,100)
+#@gui : Palette = choice(33,"Default","HSV","Lines","Hot","Cool","Jet","Flag","Cube","Rainbow","Parula","Spring",\
+# "Summer","Autumn","Winter","Bone","Copper","Pink","Vga","Algae","Amp","Balance","Curl","Deep","Delta","Dense",\
+# "Diff","Gray","Haline","Ice","Matter","Oxy","Phase","Rain","Solar","Speed","Tarn","Tempo","Thermal","Topo",\
+# "Turbid","Aurora","Hocuspocus","SRB2","Uzebox","Amiga7800","Amiga7800mess","Fornaxvoid1")
+#@gui : sep = separator()
+#@gui : note = note{"<small>This filter has been inspired by the following web page, written by Etienne Jacob (aka <i>Bleuje</i>):</small>"}
+#@gui : link = link("https://bleuje.com/physarum-explanation/")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/07/14</i>.</small>")
+fx_organic_fibers :
+  agent_density,nb_iterations,nb_orientations,\
+  sensor_distance,sensor_angle,\
+  motion_distance,motion_angle,motion_moment,trail_blur,\
+  particle_size,particle_thickness,quantize_orientations,opacity,sharpening,palette=${1-15}
+  arg0 $palette,default,hsv,lines,hot,cool,jet,flag,cube,rainbow,parula,spring,summer,autumn,winter,bone,copper,pink,\
+                vga,algae,amp,balance,curl,deep,delta,dense,diff,gray,haline,ice,matter,oxy,phase,rain,solar,speed,\
+                tarn,tempo,thermal,topo,turbid,aurora,hocuspocus,srb2,uzebox,amiga7800,amiga7800mess,fornaxvoid1
+  palette=${}
+
+  # Define header for math expression.
+  header="
+    const no = $nb_orientations;
+    const sd = $sensor_distance;
+    const sa = $sensor_angle;
+    const md = $motion_distance;
+    const ma = $motion_angle;
+    const mm = $motion_moment%;
+    const opacity = $opacity%;"
+
+  # Pre-compute rotation matrices.
+  eval ${header}"
+    sRs = mRs = vector(#4*no);
+    off = 0; repeat (no,k, ang = lerp(-sa,sa,k/(no - 1)); copy(sRs[off],rot(ang°)); off+=4);
+    off = 0; repeat (no,k, ang = lerp(-ma,ma,k/(no - 1)); copy(mRs[off],rot(ang°)); off+=4);
+    store('sRs',sRs); store('mRs',mRs)"
+
+  # Pre-compute oriented sprites for agents.
+  $particle_size,$particle_size,$quantize_orientations
+  repeat d { 100%,100% gaussian. 25%,{25*$particle_thickness%}%,{-2,180*$>/d} j.. .,0,0,$> rm. } => masks
+
+  # Render images.
+  foreach[^-1] {
+    nm={n}
+    100%,100%x2 rm[0] => canvas,trail
+    $agent_density%,$agent_density%,1,4,"[ u(w#$trail - 1),u(h#$trail - 1),unitnorm([g,g]) ]" => agents
+    pass. 1
+
+    # Generate frames.
+    repeat $nb_iterations {
+      progress {$>*100/$nb_iterations}
+      f[canvas] 0
+      f[agents] :${header}"begin(
+          sRs = get('sRs',4*no);
+          mRs = get('mRs',4*no);
+          one = vector(#wh#$masks,1);
+          const sm = w#$masks;
+          const sm2 = int(sm/2);
+        );
+        A = I; X = A[0,2]; U = A[2,2];
+
+        # Get sensor information.
+        max_orientation = max_value = -inf;
+        repeat (no,k,
+          R = sRs[4*k,4];
+          sX = round(X + sd*mul(R,U));
+          value = i(#$trail,sX,1,2);
+          value>max_value?(max_value = value; max_orientation = k);
+        );
+
+        # Turn agent according to sensor measure.
+        R = mRs[4*max_orientation,4];
+        U = lerp(mul(R,U),U,mm);
+
+        # Move agent along new orientation.
+        X+=md*U;
+        X[0]%=w#$canvas;
+        X[1]%=h#$canvas;
+        iX = round(X);
+
+        ++i(#$trail,iX);
+        ang = rad2deg(atan2(U[1],U[0]));
+        z = round(ang*d#$masks/180)%d#$masks;
+        mask = crop(#$masks,0,0,z,sm,sm,1);
+
+        draw(#$canvas,one,iX[0] - sm2,iX[1] - sm2,sm,sm,opacity,mask);
+        [ X,unitnorm(U) ]"
+
+      b[trail] $trail_blur,2
+      n[trail] 0,1
+    }
+    progress 100
+    k[canvas] n 0,255 sharpen {5*$sharpening} map $palette
+    => $nm
+  }
+  rm.
+
 #@gui Pack Ellipses : fx_pack_ellipses, fx_pack_ellipses_preview(0)
 #@gui : Min Radius (px) = float(3,1,256)
 #@gui : Max Radius (px) = float(20,1,256)
