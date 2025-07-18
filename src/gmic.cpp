@@ -6910,7 +6910,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (nb_scales) cimg_snprintf(argx,_argx.width(),"%g ",nb_scales); else std::strcpy(argx,"auto-");
             if (ind0) { gmic_use_argy; cimg_snprintf(argy,_argy.width()," with guide [%u]",*ind0); } else *argy = 0;
 
-            print(0,"Estimate displacement field from source [%u] to image%s, with "
+            print(0,"Estimate displacement field from reference image [%u] to image%s, with "
                   "%s smoothness %g, precision %g, %sscales, %g iteration%s, in %s direction%s.",
                   *ind,
                   gmic_selection.data(),
@@ -6920,9 +6920,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   nb_iterations,nb_iterations!=1?"s":"",
                   is_forward?"forward":"backward",
                   argy);
-            const CImg<T> source = gmic_image_arg(*ind);
+            const CImg<T> reference = gmic_image_arg(*ind);
             const CImg<T> constraints = ind0?gmic_image_arg(*ind0):CImg<T>::empty();
-            cimg_forY(selection,l) gmic_apply(displacement(source,smoothness,precision,(unsigned int)nb_scales,
+            cimg_forY(selection,l) gmic_apply(displacement(reference,smoothness,precision,(unsigned int)nb_scales,
                                                            (unsigned int)nb_iterations,(bool)is_forward,
                                                            constraints),false);
           } else arg_error("displacement");
