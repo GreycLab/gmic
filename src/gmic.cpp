@@ -6882,7 +6882,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (!std::strcmp("displacement",command)) {
           gmic_substitute_args(true);
           double nb_scales = 0, nb_iterations = 1000;
-          float smoothness = 0.1f, precision = 6.f;
+          float smoothness = 0.1f, precision = 5.f;
           unsigned int is_forward = 0;
           sep = *argx = 0;
           ind0.assign();
