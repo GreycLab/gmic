@@ -39433,7 +39433,7 @@ x_life : check_display $0
   score=0 # Current score
   bestscore=0 # Best score
   stock=500 # Remaining cells
-  w[0] 400,400,0,"[G'MIC] The Game of Life" # Initialize display window
+  w[0] ${"fitscreen [2],40%,70%"},0,"[G'MIC] The Game of Life" # Initialize display window
   cursor[0] 0
 
   # Start user-event loop.
@@ -39444,8 +39444,7 @@ x_life : check_display $0
     if {*,x}>0" && "{*,b}==1" && "$stock>0 # Add random cells to the game if mouse button pressed
       nb:=u*7
       repeat $nb {
-        x:={*,x}/{*,w}*{0,w}+u(-4,4)
-        y:={*,y}/{*,h}*{0,h}+u(-3,3)
+        x,y={0,[{*,x,y}]*[w,h]/[{*,w,h}]+u(-4,4)}
         =[0] 1,$x,$y
         =[1] $iteration,$x,$y
         point[2] {$x*{2,w}/{0,w}},{$y*{2,h}/{0,h}},0,0.8,255
@@ -39473,14 +39472,15 @@ x_life : check_display $0
     n. 0,{3,w} map. [3] *. 0.1 +[2,-1] /[2] 1.1
     [2] if {*,x}>0 # Add a small target icon at the mouse position
       opac:=0.7*min(1,$stock/500) r:=min(500,$stock)*cos($iteration)/100
-      ellipse. {*,x},{*,y},{15+$r},{15+$r},0,$opac,0,196,0
-      ellipse. {*,x},{*,y},{10+$r},{10+$r},0,$opac,32,64,16
-      ellipse. {*,x},{*,y},{5+$r},{5+$r},0,$opac,255,230,0
+      vx,vy:=round([{*,x,y}]*[w,h]/[{*,w,h}])
+      ellipse. $vx,$vy,{15+$r},{15+$r},0,$opac,0,196,0
+      ellipse. $vx,$vy,{10+$r},{10+$r},0,$opac,32,64,16
+      ellipse. $vx,$vy,{5+$r},{5+$r},0,$opac,255,230,0
     fi
     t. "Living cells : "$score"\n"\ # Add score description
        "Stock : "$stock"\n"\
        "Score : "$bestscore,5,3,22,0.7,255
-    w. {*,w},{*,h}
+    w.
     if {*,S} o. gmic_life.png fi # Save snapshot if requested
     rm.
 
@@ -39488,6 +39488,9 @@ x_life : check_display $0
       score={0,is} bestscore:=max($score,$bestscore)
     fi
     wait 60
+    if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
     iteration+=1
   while {*}" && "!{*,ESC}" && "!{*,Q}
 
