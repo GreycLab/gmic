@@ -5183,7 +5183,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (item1=='=') { id_builtin_command = id_eq; break; }
           if (item1=='>') id_builtin_command = id_name;
           break;
-        case '>' : // '>=' and '>>'
+        case '>' : // '>>' and '>='
           if (item1=='>') { id_builtin_command = id_bsr; break; }
           if (item1=='=') id_builtin_command = id_ge;
           break;
@@ -11440,7 +11440,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Shared input.
-        if (id_builtin_command==id_shared) {
+        if (!is_get && id_builtin_command==id_shared) {
           gmic_substitute_args(false);
           CImg<char> st0(256), st1(256), st2(256), st3(256), st4(256);
           char sep2 = 0, sep3 = 0, sep4 = 0;
