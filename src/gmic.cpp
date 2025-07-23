@@ -5211,35 +5211,65 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           break;
         }
       } else if (!is_builtin_command && item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
-        is_builtin_command|= item1=='3' && item2=='d' && // '*3d','+3d','-3d', '/3d', 'j3d', 'l3d' and 'r3d'
-          (item0=='*' || item0=='+' || item0=='-' || item0=='/' || item0=='j' || item0=='l' || item0=='r');
-        if (!is_builtin_command) switch (item0) {
-          case 'a' : is_builtin_command = (item1=='b' && item2=='s') || // 'abs', 'add' and 'and'
-                                     (item2=='d' && (item1=='d' || item1=='n')); break;
-          case 'b' : is_builtin_command = item1=='s' && (item2=='l' || item2=='r'); break; // 'bsl' and 'bsr'
-          case 'c' : is_builtin_command = (item1=='o' && item2=='s') || // 'cos'
-              (item1=='u' && item2=='t'); break; // 'cut'
-          case 'd' : is_builtin_command = item1=='i' && item2=='v'; break; // 'div'
-          case 'e' : is_builtin_command = (item1=='r' && item2=='f') || // 'erf'
-              (item1=='x' && item2=='p'); break; // 'exp'
-          case 'f' : is_builtin_command = (item1=='f' && item2=='t') || // 'fft'
-              (item1=='o' && item2=='r'); break; // 'for'
-          case 'l' : is_builtin_command = item1=='o' && item2=='g'; break; // 'log'
-          case 'm' : is_builtin_command = (item1=='a' && (item2=='p' || item2=='x')) || // 'map' and 'max'
-              (item1=='i' && item2=='n') || // 'min'
-              (item1=='o' && item2=='d') || // 'mod'
-              (item1=='u' && item2=='l'); break; // 'mul'
-          case 'n' : is_builtin_command = (item1=='e' && item2=='q') || // 'neq'
-              (item1=='m' && item2=='d'); break; // 'nmd'
-          case 'p' : is_builtin_command = item1=='o' && item2=='w'; break; // 'pow'
-          case 'r' : is_builtin_command = item1=='o' && (item2=='l' || item2=='r'); break; // 'rol' and 'ror'
-          case 's' : is_builtin_command = (item1=='e' && item2=='t') || // 'set'
-              (item1=='i' && item2=='n') || // 'sin'
-              (item1=='q' && item2=='r') || // 'sqr'
-              (item1=='u' && item2=='b') || // 'sub'
-              (item1=='v' && item2=='d'); break; // 'svd'
-          case 't' : is_builtin_command = item1=='a' && item2=='n'; break; // 'tan'
-          case 'x' : is_builtin_command = item1=='o' && item2=='r'; break; // 'xor'
+        if (item1=='3' && item2=='d') switch (item0) {
+          case '*' : is_builtin_command = true; ind_builtin_command = id_mul3d; break;
+          case '+' : is_builtin_command = true; ind_builtin_command = id_add3d; break;
+          case '-' : is_builtin_command = true; ind_builtin_command = id_sub3d; break;
+          case '/' : is_builtin_command = true; ind_builtin_command = id_div3d; break;
+          case 'j' : is_builtin_command = true; ind_builtin_command = id_object3d; break;
+          case 'l' : is_builtin_command = true; ind_builtin_command = id_light3d; break;
+          case 'r' : is_builtin_command = true; ind_builtin_command = id_rotate3d; break;
+          } else switch (item0) {
+          case 'a' : // 'abs', 'add' and 'and'
+            if (item1=='b' && item2=='s') { is_builtin_command = true; ind_builtin_command = id_abs; break; }
+            if (item1=='d' && item2=='d') { is_builtin_command = true; ind_builtin_command = id_add; break; }
+            if (item1=='n' && item2=='d') { is_builtin_command = true; ind_builtin_command = id_and; } break;
+          case 'b' : // 'bsl' and 'bsr'
+            if (item1=='s') {
+              if (item2=='l') { is_builtin_command = true; ind_builtin_command = id_bsl; break; }
+              if (item2=='r') { is_builtin_command = true; ind_builtin_command = id_bsr; break; }
+            } break;
+          case 'c' : // 'cos' and 'cut'
+            if (item1=='o' && item2=='s') { is_builtin_command = true; ind_builtin_command = id_cos; break; }
+            if (item1=='u' && item2=='t') { is_builtin_command = true; ind_builtin_command = id_cut; } break;
+          case 'd' : // 'div'
+            if (item1=='i' && item2=='v') { is_builtin_command = true; ind_builtin_command = id_div; } break;
+          case 'e' : // 'erf' and 'exp'
+            if (item1=='r' && item2=='f') { is_builtin_command = true; ind_builtin_command = id_erf; break; }
+            if (item1=='x' && item2=='p') { is_builtin_command = true; ind_builtin_command = id_exp; } break;
+          case 'f' : // 'fft' and 'for'
+            if (item1=='f' && item2=='t') { is_builtin_command = true; ind_builtin_command = id_fft; break; }
+            if (item1=='o' && item2=='r') { is_builtin_command = true; ind_builtin_command = id_for; } break;
+          case 'l' : // 'log'
+            if (item1=='o' && item2=='g') { is_builtin_command = true; ind_builtin_command = id_log; } break;
+          case 'm' : // 'map', 'max', 'min', 'mod' and 'mul'.
+            if (item1=='a') {
+              if (item2=='p') { is_builtin_command = true; ind_builtin_command = id_map; break; }
+              if (item2=='x') { is_builtin_command = true; ind_builtin_command = id_max; break; }
+            }
+            if (item1=='i' && item2=='m') { is_builtin_command = true; ind_builtin_command = id_min; break; }
+            if (item1=='o' && item2=='d') { is_builtin_command = true; ind_builtin_command = id_mod; break; }
+            if (item1=='u' && item2=='l') { is_builtin_command = true; ind_builtin_command = id_mul; } break;
+          case 'n' : // 'neq' and 'nmd'
+            if (item1=='e' && item2=='q') { is_builtin_command = true; ind_builtin_command = id_neq; break; }
+            if (item1=='m' && item2=='d') { is_builtin_command = true; ind_builtin_command = id_named; } break;
+          case 'p' : // 'pow'
+            if (item1=='o' && item2=='w') { is_builtin_command = true; ind_builtin_command = id_pow; } break;
+          case 'r' : // 'rol' and 'ror'
+            if (item1=='o') {
+              if (item2=='l') { is_builtin_command = true; ind_builtin_command = id_rol; break; }
+              if (item2=='r') { is_builtin_command = true; ind_builtin_command = id_ror; break; }
+            } break;
+          case 's' : // 'set', 'sin', 'sqr', 'sub' and 'svd'
+            if (item1=='e' && item2=='t') { is_builtin_command = true; ind_builtin_command = id_set; break; }
+            if (item1=='i' && item2=='n') { is_builtin_command = true; ind_builtin_command = id_sin; break; }
+            if (item1=='q' && item2=='r') { is_builtin_command = true; ind_builtin_command = id_sqr; break; }
+            if (item1=='u' && item2=='b') { is_builtin_command = true; ind_builtin_command = id_sub; break; }
+            if (item1=='v' && item2=='d') { is_builtin_command = true; ind_builtin_command = id_svd; } break;
+          case 't' : // 'tan'
+            if (item1=='a' && item2=='n') { is_builtin_command = true; ind_builtin_command = id_tan; } break;
+          case 'x' : // 'xor'
+            if (item1=='o' && item2=='r') { is_builtin_command = true; ind_builtin_command = id_xor; } break;
           }
       }
 
