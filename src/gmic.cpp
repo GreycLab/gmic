@@ -5236,8 +5236,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
         }
 
-        const unsigned int l_command = err==1?(unsigned int)std::strlen(command):0;
-        if (err==1 && l_command>=2 && command[l_command - 1]=='.') { // Selection shortcut
+        unsigned int l_command;
+        if (err==1 && (l_command = (unsigned int)std::strlen(command))>=2 &&
+            command[l_command - 1]=='.') { // Selection shortcut
           err = 4; sep0 = '['; sep1 = ']';
           if (command[l_command - 2]!='.') {
             *s_selection = '-'; s_selection[1] = '1'; s_selection[2] = 0; command[l_command - 1] = 0;
