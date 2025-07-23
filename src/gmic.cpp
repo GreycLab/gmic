@@ -5859,7 +5859,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'b...'
         //-----------------------------
       gmic_commands_b :
-        if (id_builtin_command==id_break && no_get_selection) goto gmic_commands_others; // Redirect 'break'
+        if (id_builtin_command==id_break) goto gmic_commands_others; // Redirect 'break'
 
         // Blur.
         if (id_builtin_command==id_blur) {
@@ -7129,7 +7129,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'e...'
         //-----------------------------
       gmic_commands_e :
-        if (no_get_selection && check_elif && id_builtin_command==id_elif) // Redirect 'elif'
+        if (check_elif && id_builtin_command==id_elif) // Redirect 'elif'
           goto gmic_commands_others;
 
         // Else and eluded elif.
@@ -8759,7 +8759,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_mul3d) goto gmic_commands_others; // Redirect 'mul3d'
 
         // Move images.
-        if (id_builtin_command==id_move) {
+        if (id_builtin_command==id_move && no_get) {
           gmic_substitute_args(false);
           double pos = 0;
           sep = 0;
@@ -10669,7 +10669,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       gmic_commands_r :
 
         // Remove images.
-        if (id_builtin_command==id_remove) {
+        if (id_builtin_command==id_remove && no_get) {
           print(0,"Remove image%s",
                 gmic_selection.data());
           if (is_get) {
@@ -11432,7 +11432,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Shared input.
-        if (!is_get && id_builtin_command==id_shared) {
+        if (id_builtin_command==id_shared && no_get) {
           gmic_substitute_args(false);
           CImg<char> st0(256), st1(256), st2(256), st3(256), st4(256);
           char sep2 = 0, sep3 = 0, sep4 = 0;
@@ -13131,8 +13131,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
 
           // Compute direct or inverse FFT.
-          const bool inv_fft = id_builtin_command==id_ifft;
-          if (id_builtin_command==id_fft || inv_fft) {
+          const bool is_ifft = id_builtin_command==id_ifft;
+          if (id_builtin_command==id_fft || is_ifft) {
             gmic_substitute_args(false);
             bool is_valid_argument = *argument!=0;
             if (is_valid_argument) for (const char *s = argument; *s; ++s) {
@@ -13141,7 +13141,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
             if (is_valid_argument) {
               print(0,"Compute %sfourier transform of image%s along the '%s'-ax%cs with complex pair%s",
-                    inv_fft?"inverse ":"",
+                    is_ifft?"inverse ":"",
                     gmic_selection.data(),
                     gmic_argument_text_printed(),
                     std::strlen(argument)>1?'e':'i',
@@ -13149,7 +13149,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               ++position;
             } else
               print(0,"Compute %sfourier transform of image%s with complex pair%s",
-                    inv_fft?"inverse ":"",
+                    is_ifft?"inverse ":"",
                     gmic_selection.data(),
                     selection.height()>2?"s":selection.height()>=1?"":" ().");
             cimg_forY(selection,l) {
@@ -13168,8 +13168,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 }
                 if (is_get) {
                   g_list.assign(img0,img1);
-                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,inv_fft);
-                  else g_list.FFT(inv_fft);
+                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,is_ifft);
+                  else g_list.FFT(is_ifft);
                   g_list.move_to(images,~0U);
                   image_names[uind0].get_copymark().move_to(image_names);
                   image_names.back().get_copymark().move_to(image_names);
@@ -13177,8 +13177,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   g_list.assign(2);
                   g_list[0].swap(img0);
                   g_list[1].swap(img1);
-                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,inv_fft);
-                  else g_list.FFT(inv_fft);
+                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,is_ifft);
+                  else g_list.FFT(is_ifft);
                   g_list[0].swap(img0);
                   g_list[1].swap(img1);
                   image_names[uind0].get_copymark().move_to(image_names[uind1]);
@@ -13196,8 +13196,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   g_list.assign(img0);
                   CImg<T>(g_list[0].width(),g_list[0].height(),g_list[0].depth(),g_list[0].spectrum(),(T)0).
                     move_to(g_list);
-                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,inv_fft);
-                  else g_list.FFT(inv_fft);
+                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,is_ifft);
+                  else g_list.FFT(is_ifft);
                   g_list.move_to(images,~0U);
                   image_names[uind0].get_copymark().move_to(image_names);
                   image_names.back().get_copymark().move_to(image_names);
@@ -13206,8 +13206,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   g_list[0].swap(img0);
                   CImg<T>(g_list[0].width(),g_list[0].height(),g_list[0].depth(),g_list[0].spectrum(),(T)0).
                     move_to(g_list);
-                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,inv_fft);
-                  else g_list.FFT(inv_fft);
+                  if (is_valid_argument) for (const char *s = argument; *s; ++s) g_list.FFT(*s,is_ifft);
+                  else g_list.FFT(is_ifft);
                   g_list[0].swap(img0);
                   g_list[1].move_to(images,uind0 + 1);
                   image_names[uind0].get_copymark().move_to(image_names,uind0 + 1);
@@ -13220,8 +13220,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
 
           // Rescale a 3D object (* or /).
-          const bool divide3d = id_builtin_command==id_div3d;
-          if (id_builtin_command==id_mul3d || divide3d) {
+          const bool is_div3d = id_builtin_command==id_div3d;
+          if (id_builtin_command==id_mul3d || is_div3d) {
             gmic_substitute_args(false);
             float sx = 0, sy = 1, sz = 1;
             if ((cimg_sscanf(argument,"%f%c",
@@ -13230,7 +13230,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                             &sx,&sy,&end)==2 ||
                 cimg_sscanf(argument,"%f,%f,%f%c",
                             &sx,&sy,&sz,&end)==3) {
-              if (divide3d)
+              if (is_div3d)
                 print(0,"Scale 3D object%s with factors (1/%g,1/%g,1/%g).",
                       gmic_selection.data(),
                       sx,sy,sz);
@@ -13242,22 +13242,22 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 uind = selection[l];
                 CImg<T>& img = images[uind];
                 try {
-                  if (divide3d) { gmic_apply(scale_CImg3d(1/sx,1/sy,1/sz),true); }
+                  if (is_div3d) { gmic_apply(scale_CImg3d(1/sx,1/sy,1/sz),true); }
                   else gmic_apply(scale_CImg3d(sx,sy,sz),true);
                 } catch (CImgException&) {
                   if (!img.is_CImg3d(true,&(*gmic_use_message=0)))
                     error(true,0,0,
                           "Command '%s3d': Invalid 3D object [%d], in image%s (%s).",
-                          divide3d?"div":"mul",uind,gmic_selection_err.data(),message);
+                          is_div3d?"div":"mul",uind,gmic_selection_err.data(),message);
                   else throw;
                 }
               }
-            } else { if (divide3d) arg_error("div3d"); else arg_error("mul3d"); }
+            } else { if (is_div3d) arg_error("div3d"); else arg_error("mul3d"); }
             is_change = true;
             ++position;
             continue;
           }
-        } // if (id_builtin_command)
+        }
 
         // Execute custom command.
         if (!is_command_input && is_command) {
