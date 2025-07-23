@@ -1873,10 +1873,10 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
   }
 
 // Macro for simple commands that has no arguments and act on images.
-#define gmic_simple_command(command_name,function,description) \
-  if (id_builtin_command==id_##function) { \
+#define gmic_simple_command(command_name,description) \
+  if (id_builtin_command==id_##command_name) { \
     print(0,description,gmic_selection.data()); \
-    cimg_forY(selection,l) gmic_apply(function(),true); \
+    cimg_forY(selection,l) gmic_apply(command_name(),true); \
     is_change = true; \
     continue; \
 }
@@ -1887,7 +1887,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
                                 function2,description2,arg2_1,arg2_2, \
                                 function3,description3,arg3_1,arg3_2, \
                                 description4) \
- if (!std::strcmp(command_name,command)) { \
+ if (id_builtin_command==id_##command_name) { \
    gmic_substitute_args(true); \
    sep = 0; value = 0; \
    if (cimg_sscanf(argument,"%lf%c",&value,&end)==1 || \
@@ -1908,7 +1908,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
      } \
      ++position; \
    } else if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' && \
-              (ind=selection2cimg(indices,images.size(),image_names,command_name)).height()==1) { \
+              (ind=selection2cimg(indices,images.size(),image_names,#command_name)).height()==1) { \
      print(0,description2 ".",arg2_1,arg2_2); \
      const CImg<T> img0 = gmic_image_arg(*ind); \
      cimg_forY(selection,l) { \
@@ -5176,7 +5176,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         case '!' : if (item1=='=') { is_builtin_command = true; id_builtin_command = id_neq; } break; // '!='
         case '<' :  // '<<' and '<='
           if (item1=='<') { is_builtin_command = true; id_builtin_command = id_bsl; break; }
-          if (item1=='=') { is_builtin_command = true; id_builtin_command = id_neq;} break;
+          if (item1=='=') { is_builtin_command = true; id_builtin_command = id_le;} break;
         case '=' : // '==' and '=>'
           if (item1=='=') { is_builtin_command = true; id_builtin_command = id_eq; break; }
           if (item1=='>') { is_builtin_command = true; id_builtin_command = id_name; } break;
@@ -5647,7 +5647,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Add.
         if (id_builtin_command==id_add)
-          gmic_arithmetic_command("add",
+          gmic_arithmetic_command(add,
                                   operator+=,
                                   "Add %g%s to image%s",
                                   value,ssep,gmic_selection.data(),Tfloat,
@@ -5752,7 +5752,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Absolute value.
-        gmic_simple_command("abs",abs,"Compute pointwise absolute value of image%s.");
+        gmic_simple_command(abs,"Compute pointwise absolute value of image%s.");
 
         // Absolute value cut.
         if (!std::strcmp("abscut",command)) {
@@ -5777,7 +5777,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Bitwise and.
-        gmic_arithmetic_command("and",
+        gmic_arithmetic_command(and,
                                 operator&=,
                                 "Compute bitwise AND of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tlong,
@@ -5809,22 +5809,22 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Arccosine.
-        gmic_simple_command("acos",acos,"Compute pointwise arccosine of image%s.");
+        gmic_simple_command(acos,"Compute pointwise arccosine of image%s.");
 
         // Arcsine.
-        gmic_simple_command("asin",asin,"Compute pointwise arcsine of image%s.");
+        gmic_simple_command(asin,"Compute pointwise arcsine of image%s.");
 
         // Arctangent.
-        gmic_simple_command("atan",atan,"Compute pointwise arctangent of image%s.");
+        gmic_simple_command(atan,"Compute pointwise arctangent of image%s.");
 
         // Hyperbolic arccosine.
-        gmic_simple_command("acosh",acosh,"Compute pointwise hyperbolic arccosine of image%s.");
+        gmic_simple_command(acosh,"Compute pointwise hyperbolic arccosine of image%s.");
 
         // Hyperbolic arcsine.
-        gmic_simple_command("asinh",asinh,"Compute pointwise hyperbolic arcsine of image%s.");
+        gmic_simple_command(asinh,"Compute pointwise hyperbolic arcsine of image%s.");
 
         // Hyperbolic arctangent.
-        gmic_simple_command("atanh",atanh,"Compute pointwise hyperbolic arctangent of image%s.");
+        gmic_simple_command(atanh,"Compute pointwise hyperbolic arctangent of image%s.");
 
         goto gmic_commands_others;
 
@@ -5939,7 +5939,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Bitwise right shift.
-        gmic_arithmetic_command("bsr",
+        gmic_arithmetic_command(bsr,
                                 operator>>=,
                                 "Compute bitwise right shift of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tlong,
@@ -5952,7 +5952,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute sequential bitwise right shift of image%s");
 
         // Bitwise left shift.
-        gmic_arithmetic_command("bsl",
+        gmic_arithmetic_command(bsl,
                                 operator<<=,
                                 "Compute bitwise left shift of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tlong,
@@ -6404,7 +6404,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Cosine.
-        gmic_simple_command("cos",cos,"Compute pointwise cosine of image%s.");
+        gmic_simple_command(cos,"Compute pointwise cosine of image%s.");
 
         // Convolve & Correlate.
         if (id_builtin_command==id_convolve || id_builtin_command==id_correlate) {
@@ -6540,7 +6540,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Hyperbolic cosine.
-        gmic_simple_command("cosh",cosh,"Compute pointwise hyperbolic cosine of image%s.");
+        gmic_simple_command(cosh,"Compute pointwise hyperbolic cosine of image%s.");
 
         // Camera input.
         if (!std::strcmp("camera",item)) {
@@ -6757,7 +6757,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Divide.
-        gmic_arithmetic_command("div",
+        gmic_arithmetic_command(div,
                                 operator/=,
                                 "Divide image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
@@ -7248,15 +7248,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Exponential.
-        gmic_simple_command("exp",exp,"Compute pointwise exponential of image%s.");
+        gmic_simple_command(exp,"Compute pointwise exponential of image%s.");
 
         // Error function.
 #if cimg_use_cpp11==1
-        gmic_simple_command("erf",erf,"Compute pointwise error function of image%s.");
+        gmic_simple_command(erf,"Compute pointwise error function of image%s.");
 #endif
 
         // Test equality.
-        gmic_arithmetic_command("eq",
+        gmic_arithmetic_command(eq,
                                 operator_eq,
                                 "Compute boolean equality between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -7828,7 +7828,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       gmic_commands_g :
 
         // Greater or equal.
-        gmic_arithmetic_command("ge",
+        gmic_arithmetic_command(ge,
                                 operator_ge,
                                 "Compute boolean 'greater or equal than' between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -7843,7 +7843,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute boolean 'greater or equal than' between image%s");
 
         // Greater than.
-        gmic_arithmetic_command("gt",
+        gmic_arithmetic_command(gt,
                                 operator_gt,
                                 "Compute boolean 'greater than' between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8584,7 +8584,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Less or equal.
-        gmic_arithmetic_command("le",
+        gmic_arithmetic_command(le,
                                 operator_le,
                                 "Compute boolean 'less or equal than' between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8598,7 +8598,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute boolean 'less or equal than' between image%s");
 
         // Less than.
-        gmic_arithmetic_command("lt",
+        gmic_arithmetic_command(lt,
                                 operator_lt,
                                 "Compute boolean 'less than' between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8611,13 +8611,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute boolean 'less than' between image%s");
 
         // Logarithm, base-e.
-        gmic_simple_command("log",log,"Compute pointwise base-e logarithm of image%s.");
+        gmic_simple_command(log,"Compute pointwise base-e logarithm of image%s.");
 
         // Logarithm, base-2.
-        gmic_simple_command("log2",log2,"Compute pointwise base-2 logarithm of image%s.");
+        gmic_simple_command(log2,"Compute pointwise base-2 logarithm of image%s.");
 
         // Logarithm, base-10.
-        gmic_simple_command("log10",log10,"Compute pointwise base-10 logarithm of image%s.");
+        gmic_simple_command(log10,"Compute pointwise base-10 logarithm of image%s.");
 
         // Draw line.
         if (id_builtin_command==id_line) {
@@ -8793,7 +8793,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Multiplication.
-        gmic_arithmetic_command("mul",
+        gmic_arithmetic_command(mul,
                                 operator*=,
                                 "Multiply image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
@@ -8805,7 +8805,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 gmic_selection.data(),gmic_argument_text_printed(),
                                 "Multiply image%s");
         // Modulo.
-        gmic_arithmetic_command("mod",
+        gmic_arithmetic_command(mod,
                                 operator%=,
                                 "Compute pointwise modulo of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8818,7 +8818,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute sequential pointwise modulo of image%s");
 
         // Max.
-        gmic_arithmetic_command("max",
+        gmic_arithmetic_command(max,
                                 max,
                                 "Compute pointwise maximum between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8831,7 +8831,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute pointwise maximum of all image%s together");
 
         // Maxabs.
-        gmic_arithmetic_command("maxabs",
+        gmic_arithmetic_command(maxabs,
                                 maxabs,
                                 "Compute pointwise maxabs between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8844,7 +8844,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute pointwise maxabs of all image%s together");
 
         // Min.
-        gmic_arithmetic_command("min",
+        gmic_arithmetic_command(min,
                                 min,
                                 "Compute pointwise minimum between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8857,7 +8857,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute pointwise minimum of image%s");
 
         // Minabs.
-        gmic_arithmetic_command("minabs",
+        gmic_arithmetic_command(minabs,
                                 minabs,
                                 "Compute pointwise minabs between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -8870,7 +8870,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute pointwise minabs of image%s");
 
         // Matrix multiplication.
-        gmic_arithmetic_command("mmul",
+        gmic_arithmetic_command(mmul,
                                 operator*=,
                                 "Multiply matrix/vector%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
@@ -9058,7 +9058,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Matrix division.
-        gmic_arithmetic_command("mdiv",
+        gmic_arithmetic_command(mdiv,
                                 operator/=,
                                 "Divide matrix/vector%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
@@ -9288,7 +9288,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Test difference.
-        gmic_arithmetic_command("neq",
+        gmic_arithmetic_command(neq,
                                 operator_neq,
                                 "Compute boolean inequality between image%s and %g%s",
                                 gmic_selection.data(),value,ssep,T,
@@ -9554,7 +9554,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Bitwise or.
-        gmic_arithmetic_command("or",
+        gmic_arithmetic_command(or,
                                 operator|=,
                                 "Compute bitwise OR of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tlong,
@@ -10430,7 +10430,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Power.
-        gmic_arithmetic_command("pow",
+        gmic_arithmetic_command(pow,
                                 pow,
                                 "Compute image%s to the power of %g%s",
                                 gmic_selection.data(),value,ssep,Tfloat,
@@ -11080,7 +11080,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Bitwise left rotation.
-        gmic_arithmetic_command("rol",
+        gmic_arithmetic_command(rol,
                                 rol,
                                 "Compute bitwise left rotation of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,unsigned int,
@@ -11093,7 +11093,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 "Compute sequential bitwise left rotation of image%s");
 
         // Bitwise right rotation.
-        gmic_arithmetic_command("ror",
+        gmic_arithmetic_command(ror,
                                 ror,
                                 "Compute bitwise right rotation of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,unsigned int,
@@ -11693,7 +11693,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Sub.
-        gmic_arithmetic_command("sub",
+        gmic_arithmetic_command(sub,
                                 operator-=,
                                 "Subtract %g%s to image%s",
                                 value,ssep,gmic_selection.data(),Tfloat,
@@ -11705,16 +11705,16 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 gmic_argument_text_printed(),gmic_selection.data(),
                                 "Subtract image%s");
         // Square root.
-        gmic_simple_command("sqrt",sqrt,"Compute pointwise square root of image%s.");
+        gmic_simple_command(sqrt,"Compute pointwise square root of image%s.");
 
         // Square.
-        gmic_simple_command("sqr",sqr,"Compute pointwise square function of image%s.");
+        gmic_simple_command(sqr,"Compute pointwise square function of image%s.");
 
         // Sign.
-        gmic_simple_command("sign",sign,"Compute pointwise sign of image%s.");
+        gmic_simple_command(sign,"Compute pointwise sign of image%s.");
 
         // Sine.
-        gmic_simple_command("sin",sin,"Compute pointwise sine of image%s.");
+        gmic_simple_command(sin,"Compute pointwise sine of image%s.");
 
         // Sort.
         if (id_builtin_command==id_sort) {
@@ -11984,10 +11984,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Sine-cardinal.
-        gmic_simple_command("sinc",sinc,"Compute pointwise sinc function of image%s.");
+        gmic_simple_command(sinc,"Compute pointwise sinc function of image%s.");
 
         // Hyperbolic sine.
-        gmic_simple_command("sinh",sinh,"Compute pointwise hyperpolic sine of image%s.");
+        gmic_simple_command(sinh,"Compute pointwise hyperpolic sine of image%s.");
 
         // Extract 3D streamline.
         if (id_builtin_command==id_streamline3d) {
@@ -12183,7 +12183,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       gmic_commands_t :
 
         // Tangent.
-        gmic_simple_command("tan",tan,"Compute pointwise tangent of image%s.");
+        gmic_simple_command(tan,"Compute pointwise tangent of image%s.");
 
         // Draw text.
         if (id_builtin_command==id_text) {
@@ -12318,7 +12318,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Hyperbolic tangent.
-        gmic_simple_command("tanh",tanh,"Compute pointwise hyperbolic tangent of image%s.");
+        gmic_simple_command(tanh,"Compute pointwise hyperbolic tangent of image%s.");
 
         goto gmic_commands_others;
 
@@ -12927,7 +12927,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       gmic_commands_x :
 
         // Bitwise xor.
-        gmic_arithmetic_command("xor",
+        gmic_arithmetic_command(xor,
                                 operator^=,
                                 "Compute bitwise XOR of image%s by %g%s",
                                 gmic_selection.data(),value,ssep,Tlong,
