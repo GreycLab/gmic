@@ -5336,42 +5336,35 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
         }
 
-        is_command =
-          (err==1 || (err==2 && sep0=='.') || (err>=3 && (sep0=='[' || (sep0=='.' && sep1=='.' && sep!='=')))) &&
-          (*item<'0' || *item>'9');
-
-        if (is_command) {
+        if ((err==1 || (err==2 && sep0=='.') || (err>=3 && (sep0=='[' || (sep0=='.' && sep1=='.' && sep!='=')))) &&
+            (*item<'0' || *item>'9')) { // Is probably a command
           if (!id_builtin_command) { // Search for known built-in command name
             const int
               bi0 = builtin_commands_bounds[(unsigned int)*command],
               bi1 = builtin_commands_bounds((unsigned int)*command,1U);
-            if (bi0>=0 && search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind))
+            if (bi0>=0 && search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind)) {
               id_builtin_command = builtin_command_ids[bi0 + uind];
+              is_command = true;
+            }
           }
-          if (!id_builtin_command) { // Search for a custom command name
-            bool found_command = false;
-
-            if (is_get) { // Search for specialization '+command' that has priority over 'command'
-              hash_custom = hashcode(_command,false);
-              found_command = search_sorted(_command,command_names[hash_custom],
-                                            command_names[hash_custom].size(),ind_custom);
-              if (found_command) { is_get = false; is_specialized_get = true; }
+          if (!is_command && is_get) { // Search for specialization '+command' that has priority over 'command'
+            hash_custom = hashcode(_command,false);
+            if (search_sorted(_command,command_names[hash_custom],command_names[hash_custom].size(),ind_custom)) {
+              is_get = false; is_specialized_get = is_command = true;
             }
-            if (!found_command) { // Search for regular command
-              hash_custom = hashcode(command,false);
-              found_command = search_sorted(command,command_names[hash_custom],
-                                            command_names[hash_custom].size(),ind_custom);
-            }
-            if (!found_command && !is_get) { // Finally, search for specialization '+command' invoked as 'command'
-              hash_custom = hashcode(_command,false);
-              found_command = search_sorted(_command,command_names[hash_custom],
-                                            command_names[hash_custom].size(),ind_custom);
-              if (found_command) is_specialized_get = true;
-            }
-            if (!found_command) hash_custom = ind_custom = ~0U;
           }
+          if (!is_command) { // Search for a regular custom command
+            hash_custom = hashcode(command,false);
+            if (search_sorted(command,command_names[hash_custom],command_names[hash_custom].size(),ind_custom))
+              is_command = true;
+          }
+          if (!is_command && !is_get) { // Finally, search for specialization '+command' invoked as 'command'
+            hash_custom = hashcode(_command,false);
+            if (search_sorted(_command,command_names[hash_custom],command_names[hash_custom].size(),ind_custom))
+              is_specialized_get = is_command = true;
+          }
+          if (!is_command) hash_custom = ind_custom = ~0U;
         }
-        is_command|=(id_builtin_command?true:false);
       }
 
       // Split command/selection, if necessary.
