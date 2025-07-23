@@ -2421,7 +2421,40 @@ static void *gmic_parallel(void *arg) {
   return 0;
 }
 
-// Array of G'MIC built-in commands (must be sorted in lexicographic order!).
+// Define identification numbers for all builtin commands.
+typedef enum {
+  id_abs=1,id_abscut,id_acos,id_acosh,id_add,id_add3d,id_and,id_append,id_asin,id_asinh,id_atan,id_atan2,
+    id_atanh,
+  id_bilateral,id_blur,id_boxfilter,id_break,id_bsl,id_bsr,
+  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cos,id_cosh,id_crop,id_cumulate,
+    id_cursor,id_cut,
+  id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div,id_div3d,id_do,
+    id_done,
+  id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_eq,id_equalize,id_erf,id_erode,id_error,id_eval,id_exec,
+    id_exp,
+  id_fft,id_fi,id_files,id_fill,id_flood,id_for,id_foreach,
+  id_ge,id_guided,id_gt,
+  id_histogram,
+  id_if,id_ifft,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
+  id_keep,
+  id_label,id_le,id_light3d,id_line,id_local,id_log,id_log10,id_log2,id_lt,
+  id_map,id_matchpatch,id_max,id_maxabs,id_mdiv,id_median,id_min,id_minabs,id_mirror,id_mmul,id_mod,id_move,id_mproj,
+    id_mul,id_mul3d,
+  id_name,id_named,id_neq,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d,id_onfail,id_or,id_output,
+  id_parallel,id_pass,id_permute,id_point,id_polygon,id_pow,id_progress,
+  id_quit,
+  id_rand,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rol,id_ror,id_rotate,id_rotate3d,id_round,
+  id_screen,id_serialize,id_set,id_shared,id_shift,id_sign,id_sin,id_sinc,id_sinh,id_skip,
+  id_smooth,id_solve,id_sort,id_split,id_sqr,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub,id_sub3d,id_svd,
+  id_tan,id_tanh,id_text,
+  id_uncommand,id_unroll,id_unserialize,
+  id_vanvliet,id_verbose,
+  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_xor
+} builtin_command_id;
+
+// Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
 const char *gmic::builtin_command_names[] = {
 
   // Commands of length>3.
@@ -2462,8 +2495,76 @@ const char *gmic::builtin_command_names[] = {
   // Commands of length 1.
   "%","&","*","+","-","/","<","=",">",
   "a","b","c","e","f","i","j","k","l","m","n","o","q","r","s","t","u","v","w","x","y","z",
-  "y","z","^","{","|","}"
+  "^","{","|","}"
 };
+
+const int gmic::builtin_command_ids[] = {
+
+  // Commands of length>3.
+  id_abscut,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
+  id_bilateral,id_blur,id_boxfilter,id_break,
+  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_crop,id_cumulate,id_cursor,
+  id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
+  id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
+  id_files,id_fill,id_flood,id_foreach,
+  id_guided,
+  id_histogram,
+  id_ifft,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
+  id_keep,
+  id_label,id_light3d,id_line,id_local,id_log10,id_log2,
+  id_matchpatch,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d,id_onfail,id_output,
+  id_parallel,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_quit,
+  id_rand,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+    id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
+  id_tanh,id_text,
+  id_uncommand,id_unroll,id_unserialize,
+  id_vanvliet,id_verbose,
+  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
+  0,
+
+  // Commands of length 3.
+  id_mul3d,id_add3d,id_sub3d,id_div3d,id_abs,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,
+    id_for,id_object3d,id_light3d,id_log,
+  id_map,id_max,id_min,id_mod,id_mul,id_neq,id_named,id_pow,id_rotate3d,id_rol,id_ror,id_set,id_sin,id_sqr,id_sub,
+    id_svd,id_tan,id_xor,
+
+  // Commands of length 2.
+  id_neq,id_bsl,id_le,id_eq,id_name,id_ge,id_bsr,
+  id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_remove,id_reverse,id_shared,
+    id_uncommand,
+  id_window,
+
+  // Commands of length 1.
+  id_mod,id_and,id_mul,id_add,id_sub,id_div,id_lt,id_eq,id_gt,
+  id_append,id_blur,id_cut,id_echo,id_fill,id_input,id_image,id_keep,id_local,id_command,id_normalize,id_output,id_quit,
+    id_resize,id_split,id_text,id_status,id_verbose,id_window,id_exec,id_unroll,id_crop,
+  id_pow,0,id_or,id_done
+};
+
+ static const char* onechar_shortcuts[] = {
+   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 0-31
+   0,0,0,0,0,"mod","and",0,0,0,"mul","add",0,"sub",0,"div",0,0,0,0,0,0,0,0,0,0,0,0, // 32-59
+   "lt","set","gt",0, // 60-63
+   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,"pow",0, // 64-95
+   0,"append","blur","cut",0,"echo","fill",0,0,"input","image","keep", // 96-107
+   "local","command","normalize","output",0,"quit","resize","split","text","status", // 108-117
+   "verbose","window","exec","unroll","crop",0,"or","done",0,0 // 118-127
+ };
+
+ static int onechar_shortcuts_ids[] = {
+   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 0-31
+   -1,-1,-1,-1,-1,id_mod,id_and,-1,-1,-1,id_mul,id_add,-1,id_sub,-1,id_div, // 32-47
+   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 48-59
+   id_lt,id_set,id_gt,-1, // 60-63
+   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,id_pow,-1, // 64-95
+   -1,id_append,id_blur,id_cut,-1,id_echo,id_fill,-1,-1,id_input,id_image,id_keep, // 96-107
+   id_local,id_command,id_normalize,id_output,-1,id_quit,id_resize,id_split,id_text,id_status, // 108-117
+   id_verbose,id_window,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
+ };
 
 CImg<int> gmic::builtin_command_inds = CImg<int>::empty();
 
@@ -5054,10 +5155,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       bool is_get = is_plus, is_specialized_get = false;
 
 #define _gmic_eok(i) (!item[i] || item[i]=='[' || (item[i]=='.' && (!item[i + 1] || item[i + 1]=='.')))
-      unsigned int hash_custom = ~0U, ind_custom = ~0U;
+      unsigned int hash_custom = ~0U, ind_custom = ~0U, ind_window = ~0U;
       const char item0 = *item, item1 = item0?item[1]:0, item2 = item1?item[2]:0;
 
       // Determine if specified command is a 'built-in' command (fast check when command length is 1,2 or 3).
+      int ind_builtin_command = -1;
       bool is_builtin_command = false;
       if (!item1 && (item0=='{' || item0=='}')) // Left/right braces
         is_builtin_command = true;
@@ -5066,26 +5168,47 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
         case '-': case '/' : case '<' : case '=' : case '>' : case '^' : case '|' :
-          is_builtin_command = true; break;
+          is_builtin_command = true;
+          ind_builtin_command = onechar_shortcuts_ids[(int)item0];
+          break;
         }
       } else if (!is_builtin_command && item0 && item1 && _gmic_eok(2)) { switch(item0) { // Command has length 2
-        case '!' : is_builtin_command = item1=='='; break; // '!='
-        case '<' : is_builtin_command = item1=='<' || item1=='='; break; // '<<' and '<='
-        case '=' : is_builtin_command = item1=='=' || item1=='>'; break; // '==' and '=>'
-        case '>' : is_builtin_command = item1=='=' || item1=='>'; break; // '>=' and '>>'
-        case 'd' : is_builtin_command = item1=='o'; break; // 'do'
-        case 'e' : is_builtin_command = item1=='q'; break; // 'eq'
-        case 'f' : is_builtin_command = item1=='i'; break; // 'fi'
-        case 'g' : is_builtin_command = item1=='e' || item1=='t'; break; // 'ge' and 'gt'
-        case 'i' : is_builtin_command = item1=='f'; break; // 'if'
-        case 'l' : is_builtin_command = item1=='e' || item1=='t'; break; // 'le' and 'lt'
-        case 'm' : is_builtin_command = item1=='*' || item1=='/' || item1=='v'; break; // 'm*', 'm/' and 'mv'
-        case 'n' : is_builtin_command = item1=='m'; break; // 'nm'
-        case 'o' : is_builtin_command = item1=='r'; break; // 'or'
-        case 'r' : is_builtin_command = item1=='m' || item1=='v'; break; // 'rm' and 'rv'
-        case 's' : is_builtin_command = item1=='h'; break; // 'sh'
-        case 'u' : is_builtin_command = item1=='m'; break; // 'um'
-        case 'w' : is_builtin_command = item1>='0' && item1<='9'; break; // 'w0'..'w9'
+        case '!' : if (item1=='=') { is_builtin_command = true; ind_builtin_command = id_neq; } break; // '!='
+        case '<' :  // '<<' and '<='
+          if (item1=='<') { is_builtin_command = true; ind_builtin_command = id_bsl; break; }
+          if (item1=='=') { is_builtin_command = true; ind_builtin_command = id_neq;} break;
+        case '=' : // '==' and '=>'
+          if (item1=='=') { is_builtin_command = true; ind_builtin_command = id_eq; break; }
+          if (item1=='>') { is_builtin_command = true; ind_builtin_command = id_name; } break;
+        case '>' : // '>=' and '>>'
+          if (item1=='>') { is_builtin_command = true; ind_builtin_command = id_bsl; break; }
+          if (item1=='=') { is_builtin_command = true; ind_builtin_command = id_ge; } break;
+        case 'd' : if (item1=='o') { is_builtin_command = true; ind_builtin_command = id_do; } break; // 'do'
+        case 'e' : if (item1=='q') { is_builtin_command = true; ind_builtin_command = id_eq; } break; // 'eq'
+        case 'f' : if (item1=='i') { is_builtin_command = true; ind_builtin_command = id_fi; } break; // 'fi'
+        case 'g' : // 'ge' and 'gt'
+          if (item1=='e') { is_builtin_command = true; ind_builtin_command = id_ge; break; }
+          if (item1=='t') { is_builtin_command = true; ind_builtin_command = id_gt; } break;
+        case 'i' : if (item1=='f') { is_builtin_command = true; ind_builtin_command = id_if; } break; // 'if'
+        case 'l' : // 'le' and 'lt'
+          if (item1=='e') { is_builtin_command = true; ind_builtin_command = id_le; break; }
+          if (item1=='t') { is_builtin_command = true; ind_builtin_command = id_lt; } break;
+        case 'm' : // 'm*', 'm/' and 'mv'
+          if (item1=='*') { is_builtin_command = true; ind_builtin_command = id_mmul; break; }
+          if (item1=='/') { is_builtin_command = true; ind_builtin_command = id_mdiv; break; }
+          if (item1=='v') { is_builtin_command = true; ind_builtin_command = id_move; } break;
+        case 'n' : if (item1=='m') { is_builtin_command = true; ind_builtin_command = id_name; } break; // 'nm'
+        case 'o' : if (item1=='r') { is_builtin_command = true; ind_builtin_command = id_or; } break; // 'or'
+        case 'r' : // 'rm' and 'rv'
+          if (item1=='m') { is_builtin_command = true; ind_builtin_command = id_remove; break; }
+          if (item1=='v') { is_builtin_command = true; ind_builtin_command = id_reverse; } break;
+        case 's' : if (item1=='h') { is_builtin_command = true; ind_builtin_command = id_shared; } break; // 'sh'
+        case 'u' : if (item1=='m') { is_builtin_command = true; ind_builtin_command = id_uncommand; } break; // 'um'
+        case 'w' : // 'w0'..'w9'
+          if (item1>='0' && item1<='9') {
+            is_builtin_command = true; ind_builtin_command = id_window;
+            ind_window = item1 - '0'; }
+          break;
         }
       } else if (!is_builtin_command && item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
         is_builtin_command|= item1=='3' && item2=='d' && // '*3d','+3d','-3d', '/3d', 'j3d', 'l3d' and 'r3d'
@@ -5369,17 +5492,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         char command0 = *command;
         const char
           command1 = command0?command[1]:0, command2 = command1?command[2]:0, command3 = command2?command[3]:0;
-
-        static const char* onechar_shortcuts[] = {
-          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 0-31
-          0,0,0,0,0,"mod","and",0,0,0,"mul","add",0,"sub",0,"div",0,0,0,0,0,0,0,0,0,0,0,0, // 32-59
-          "lt","set","gt",0, // 60-63
-          0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,"pow",0, // 64-95
-          0,"append","blur","cut",0,"echo","fill",0,0,"input","image","keep", // 96-107
-          "local","command","normalize","output",0,"quit","resize","split","text","status", // 108-117
-          "verbose","window","exec","unroll","crop",0,"or","done",0,0 // 118-127
-        };
-
         if (!command1) { // Single-char shortcut
           const bool
             is_mquvx = command0=='m' || command0=='q' || command0=='u' || command0=='v' || command0=='x' ||
