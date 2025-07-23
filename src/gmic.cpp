@@ -2450,7 +2450,8 @@ typedef enum {
   id_tan,id_tanh,id_text,
   id_uncommand,id_unroll,id_unserialize,
   id_vanvliet,id_verbose,
-  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_wait,id_warn,id_warp,id_watershed,id_while,
+  id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
   id_xor
 } builtin_command_id;
 
@@ -2523,7 +2524,7 @@ const int gmic::builtin_command_ids[] = {
   id_tanh,id_text,
   id_uncommand,id_unroll,id_unserialize,
   id_vanvliet,id_verbose,
-  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_wait,id_warn,id_warp,id_watershed,id_while,id_window0,
   0,
 
   // Commands of length 3.
@@ -2536,12 +2537,12 @@ const int gmic::builtin_command_ids[] = {
   id_neq,id_bsl,id_le,id_eq,id_name,id_ge,id_bsr,
   id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_remove,id_reverse,id_shared,
     id_uncommand,
-  id_window,
+  id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 1.
   id_mod,id_and,id_mul,id_add,id_sub,id_div,id_lt,id_eq,id_gt,
   id_append,id_blur,id_cut,id_echo,id_fill,id_input,id_image,id_keep,id_local,id_command,id_normalize,id_output,id_quit,
-    id_resize,id_split,id_text,id_status,id_verbose,id_window,id_exec,id_unroll,id_crop,
+    id_resize,id_split,id_text,id_status,id_verbose,id_window0,id_exec,id_unroll,id_crop,
   id_pow,0,id_or,id_done
 };
 
@@ -2563,7 +2564,7 @@ const int gmic::builtin_command_ids[] = {
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,id_pow,-1, // 64-95
    -1,id_append,id_blur,id_cut,-1,id_echo,id_fill,-1,-1,id_input,id_image,id_keep, // 96-107
    id_local,id_command,id_normalize,id_output,-1,id_quit,id_resize,id_split,id_text,id_status, // 108-117
-   id_verbose,id_window,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
+   id_verbose,id_window0,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
  };
 
 CImg<int> gmic::builtin_commands_bounds = CImg<int>::empty();
@@ -5155,7 +5156,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       bool is_get = is_plus, is_specialized_get = false;
 
 #define _gmic_eok(i) (!item[i] || item[i]=='[' || (item[i]=='.' && (!item[i + 1] || item[i + 1]=='.')))
-      unsigned int hash_custom = ~0U, ind_custom = ~0U, ind_window = ~0U;
+      unsigned int hash_custom = ~0U, ind_custom = ~0U;
       const char item0 = *item, item1 = item0?item[1]:0, item2 = item1?item[2]:0;
 
       // Determine if specified command is a 'built-in' command (first quick check when command length is 1,2 or 3).
@@ -5205,9 +5206,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         case 's' : if (item1=='h') { is_builtin_command = true; id_builtin_command = id_shared; } break; // 'sh'
         case 'u' : if (item1=='m') { is_builtin_command = true; id_builtin_command = id_uncommand; } break; // 'um'
         case 'w' : // 'w0'..'w9'
-          if (item1>='0' && item1<='9') {
-            is_builtin_command = true; id_builtin_command = id_window;
-            ind_window = item1 - '0'; }
+          if (item1>='0' && item1<='9') { is_builtin_command = true; id_builtin_command = id_window0 + item1 - '0'; }
           break;
         }
       } else if (!is_builtin_command && item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
@@ -12557,12 +12556,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Display images in display window.
         sep = '0';
-        if (!is_get &&
-            (!std::strcmp("window",command) ||
-             cimg_sscanf(command,"window%c%c",&sep,&end)==1 ||
-             cimg_sscanf(command,"w%c%c",&sep,&end)==1) &&
-            sep>='0' && sep<='9') {
-          wind = (unsigned int)(sep - '0');
+        if (!is_get && id_builtin_command>=id_window0 && id_builtin_command<=id_window9) {
+          wind = (unsigned int)(id_builtin_command - id_window0);
           gmic_substitute_args(false);
           int norm = -1, fullscreen = -1;
           float dimw = -1, dimh = -1, posx = cimg::type<float>::inf(), posy = cimg::type<float>::inf();
