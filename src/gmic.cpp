@@ -5162,10 +5162,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       // Determine if specified command is a 'built-in' command (first quick check when command length is 1,2 or 3).
       int id_builtin_command = -1;
       bool is_builtin_command = false;
-      if (!item1 && (item0=='{' || item0=='}')) { // Left/right braces
+      if (item0=='}' && !item1) { // Right braces
         is_builtin_command = true;
-        if (item0=='}') id_builtin_command = id_done;
-      } else if (!is_builtin_command && item0 && _gmic_eok(1)) { switch (item0) { // Command has length 1
+        id_builtin_command = id_done; }
+      else if (item0 && _gmic_eok(1)) { switch (item0) { // Command has length 1
         case 'a': case 'b' : case 'c' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
@@ -5174,7 +5174,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           id_builtin_command = onechar_shortcuts_ids[(int)item0];
           break;
         }
-      } else if (!is_builtin_command && item0 && item1 && _gmic_eok(2)) { switch(item0) { // Command has length 2
+      } else if (item0 && item1 && _gmic_eok(2)) { switch(item0) { // Command has length 2
         case '!' : if (item1=='=') { is_builtin_command = true; id_builtin_command = id_neq; } break; // '!='
         case '<' :  // '<<' and '<='
           if (item1=='<') { is_builtin_command = true; id_builtin_command = id_bsl; break; }
@@ -5210,7 +5210,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (item1>='0' && item1<='9') { is_builtin_command = true; id_builtin_command = id_window0 + item1 - '0'; }
           break;
         }
-      } else if (!is_builtin_command && item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
+      } else if (item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
         if (item1=='3' && item2=='d') switch (item0) {
           case '*' : is_builtin_command = true; id_builtin_command = id_mul3d; break;
           case '+' : is_builtin_command = true; id_builtin_command = id_add3d; break;
