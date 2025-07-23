@@ -6432,7 +6432,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Cosine.
         gmic_simple_command(cos,"Compute pointwise cosine of image%s.");
 
-        // Convolve & Correlate.
+        // Convolve & correlate.
         if (id_builtin_command==id_convolve || id_builtin_command==id_correlate) {
           gmic_substitute_args(true);
           unsigned int
@@ -6661,8 +6661,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'd...'
         //-----------------------------
       gmic_commands_d :
-        if (command[1]=='i' && command[2]=='v' && command[3]=='3' && command[4]=='d' && !command[5]) // Redirect 'div3d'
-          goto gmic_commands_others;
+        if (id_builtin_command==id_div3d) goto gmic_commands_others; // Redirect 'div3d'
 
         // Done.
         if (id_builtin_command==id_done && no_get_selection) {
@@ -6944,7 +6943,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           continue;
         }
 
-        // Patch-based smoothing.
+        // Patch-based denoising.
         if (id_builtin_command==id_denoise) {
           gmic_substitute_args(true);
           float sigma_s = 10, sigma_r = 10, smoothness = 1;
@@ -7130,7 +7129,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'e...'
         //-----------------------------
       gmic_commands_e :
-        if (check_elif && no_selection && id_builtin_command==id_elif) // Redirect 'elif'
+        if (no_get_selection && check_elif && id_builtin_command==id_elif) // Redirect 'elif'
           goto gmic_commands_others;
 
         // Else and eluded elif.
@@ -7524,7 +7523,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'f...'
         //-----------------------------
       gmic_commands_f :
-        if (id_builtin_command==id_fft) goto gmic_commands_e; // Redirect 'fft'
+        if (id_builtin_command==id_fft) goto gmic_commands_others; // Redirect 'fft'
 
         // Fi.
         if (id_builtin_command==id_fi && no_get_selection) {
