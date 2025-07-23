@@ -5182,7 +5182,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (item1=='=') { is_builtin_command = true; id_builtin_command = id_eq; break; }
           if (item1=='>') { is_builtin_command = true; id_builtin_command = id_name; } break;
         case '>' : // '>=' and '>>'
-          if (item1=='>') { is_builtin_command = true; id_builtin_command = id_bsl; break; }
+          if (item1=='>') { is_builtin_command = true; id_builtin_command = id_bsr; break; }
           if (item1=='=') { is_builtin_command = true; id_builtin_command = id_ge; } break;
         case 'd' : if (item1=='o') { is_builtin_command = true; id_builtin_command = id_do; } break; // 'do'
         case 'e' : if (item1=='q') { is_builtin_command = true; id_builtin_command = id_eq; } break; // 'eq'
