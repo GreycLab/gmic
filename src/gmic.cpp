@@ -5246,7 +5246,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               if (item2=='p') { is_builtin_command = true; id_builtin_command = id_map; break; }
               if (item2=='x') { is_builtin_command = true; id_builtin_command = id_max; break; }
             }
-            if (item1=='i' && item2=='m') { is_builtin_command = true; id_builtin_command = id_min; break; }
+            if (item1=='i' && item2=='n') { is_builtin_command = true; id_builtin_command = id_min; break; }
             if (item1=='o' && item2=='d') { is_builtin_command = true; id_builtin_command = id_mod; break; }
             if (item1=='u' && item2=='l') { is_builtin_command = true; id_builtin_command = id_mul; } break;
           case 'n' : // 'neq' and 'nmd'
