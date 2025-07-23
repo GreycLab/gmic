@@ -5159,9 +5159,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       unsigned int hash_custom = ~0U, ind_custom = ~0U;
       const char item0 = *item, item1 = item0?item[1]:0, item2 = item1?item[2]:0;
 
-      // Determine if specified command is a 'built-in' command (first quick check when command length is 1,2 or 3).
+      // First optimized pass to determine if specified command is a 'built-in' command
+      // (optimized for command length that are 1,2 or 3).
       int id_builtin_command = 0;
-      if (item0=='}' && !item1) id_builtin_command = id_done;// Right braces
+      if (item0=='}' && !item1) id_builtin_command = id_done; // Right braces (aka 'done')
       else if (item0 && _gmic_eok(1)) switch (item0) { // Command has length 1
         case 'a': case 'b' : case 'c' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
