@@ -5474,23 +5474,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       }
 
       const bool
-        is_command_verbose = is_get?false:
-          is_command && *item=='v' && (!item[1] || !std::strcmp(item,"verbose")),
-        is_command_echo = is_command_verbose?false:
-          is_command && *command=='e' && (!command[1] || !std::strcmp(command,"echo")),
-        is_command_error = is_get || is_command_verbose || is_command_echo?false:
-          is_command && *command=='e' && !std::strcmp(command,"error"),
-        is_command_warn = is_command_verbose || is_command_echo || is_command_error?false:
-          is_command && *command=='w' && !std::strcmp(command,"warn"),
-        is_command_input = is_command_verbose || is_command_echo || is_command_error ||
-          is_command_warn?false:
-          is_command && *command=='i' && (!command[1] || !std::strcmp(command,"input")),
-        is_command_check = is_get || is_command_verbose || is_command_echo || is_command_error ||
-          is_command_warn || is_command_input?false:
-          is_command && *command=='c' && !std::strcmp(item,"check"),
-        is_command_skip = is_get || is_command_verbose || is_command_echo || is_command_error ||
-          is_command_warn || is_command_input || is_command_check?false:
-        is_command && *command=='s' && !std::strcmp(item,"skip");
+        no_get = !is_get,
+        no_selection = !is_selection,
+        no_get_selection = no_get && no_selection,
+        is_command_verbose = id_builtin_command==id_verbose && no_get,
+        is_command_echo = id_builtin_command==id_echo,
+        is_command_error = id_builtin_command==id_error,
+        is_command_warn = id_builtin_command==id_warn,
+        is_command_input = id_builtin_command==id_input && no_get,
+        is_command_check = id_builtin_command==id_check && no_get,
+        is_command_skip = id_builtin_command==id_skip && no_get_selection;
+
       bool is_subst_arg = position_argument<command_line.size()?(bool)command_line[position_argument].back():false;
 
       // Check for verbosity command, prior to the first output of a log message.
@@ -5543,7 +5537,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         throw CImgAbortException();
 
       // Begin command interpretation.
-      const bool no_get = !is_get, no_selection = !is_selection, no_get_selection = no_get && no_selection;
       if (is_command) {
 
         // Convert command shortcuts to full names.
@@ -7191,7 +7184,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Echo.
-        if (id_builtin_command==id_echo) {
+        if (is_command_echo) {
           if (verbosity>=0 || is_debug || is_get || no_selection) {
             gmic_substitute_args(false);
             name.assign(argument,(unsigned int)std::strlen(argument) + 1);
@@ -7245,7 +7238,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Error.
-        if (id_builtin_command==id_error) {
+        if (is_command_error) {
           gmic_substitute_args(false);
           name.assign(argument,(unsigned int)std::strlen(argument) + 1);
           cimg::strunescape(name);
@@ -7999,7 +7992,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       gmic_commands_i :
 
         // Redirect 'input', 'if' and 'ifft'.
-        if (id_builtin_command==id_input || id_builtin_command==id_if || id_builtin_command==id_ifft)
+        if (is_command_input || id_builtin_command==id_if || id_builtin_command==id_ifft)
           goto gmic_commands_others;
 
         // Draw image.
@@ -12563,7 +12556,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
         // Warning.
-        if (id_builtin_command==id_warn) {
+        if (is_command_warn) {
           if (verbosity>=0 || is_debug || is_get || no_selection) {
             gmic_substitute_args(false);
             name.assign(argument,(unsigned int)std::strlen(argument) + 1);
