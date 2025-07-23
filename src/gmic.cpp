@@ -5160,122 +5160,155 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const char item0 = *item, item1 = item0?item[1]:0, item2 = item1?item[2]:0;
 
       // Determine if specified command is a 'built-in' command (first quick check when command length is 1,2 or 3).
-      int id_builtin_command = -1;
-      bool is_builtin_command = false;
-      if (item0=='}' && !item1) { // Right braces
-        is_builtin_command = true;
-        id_builtin_command = id_done; }
-      else if (item0 && _gmic_eok(1)) { switch (item0) { // Command has length 1
+      int id_builtin_command = 0;
+      if (item0=='}' && !item1) id_builtin_command = id_done;// Right braces
+      else if (item0 && _gmic_eok(1)) switch (item0) { // Command has length 1
         case 'a': case 'b' : case 'c' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
         case '-': case '/' : case '<' : case '=' : case '>' : case '^' : case '|' :
-          is_builtin_command = true;
           id_builtin_command = onechar_shortcuts_ids[(int)item0];
           break;
         }
-      } else if (item0 && item1 && _gmic_eok(2)) { switch(item0) { // Command has length 2
-        case '!' : if (item1=='=') { is_builtin_command = true; id_builtin_command = id_neq; } break; // '!='
-        case '<' :  // '<<' and '<='
-          if (item1=='<') { is_builtin_command = true; id_builtin_command = id_bsl; break; }
-          if (item1=='=') { is_builtin_command = true; id_builtin_command = id_le;} break;
+      else if (item0 && item1 && _gmic_eok(2)) switch(item0) { // Command has length 2
+        case '!' : // '!='
+          if (item1=='=') { id_builtin_command = id_neq; }
+          break;
+        case '<' : // '<<' and '<='
+          if (item1=='<') { id_builtin_command = id_bsl; break; }
+          if (item1=='=') id_builtin_command = id_le;
+          break;
         case '=' : // '==' and '=>'
-          if (item1=='=') { is_builtin_command = true; id_builtin_command = id_eq; break; }
-          if (item1=='>') { is_builtin_command = true; id_builtin_command = id_name; } break;
+          if (item1=='=') { id_builtin_command = id_eq; break; }
+          if (item1=='>') id_builtin_command = id_name;
+          break;
         case '>' : // '>=' and '>>'
-          if (item1=='>') { is_builtin_command = true; id_builtin_command = id_bsr; break; }
-          if (item1=='=') { is_builtin_command = true; id_builtin_command = id_ge; } break;
-        case 'd' : if (item1=='o') { is_builtin_command = true; id_builtin_command = id_do; } break; // 'do'
-        case 'e' : if (item1=='q') { is_builtin_command = true; id_builtin_command = id_eq; } break; // 'eq'
-        case 'f' : if (item1=='i') { is_builtin_command = true; id_builtin_command = id_fi; } break; // 'fi'
+          if (item1=='>') { id_builtin_command = id_bsr; break; }
+          if (item1=='=') id_builtin_command = id_ge;
+          break;
+        case 'd' : // 'do'
+          if (item1=='o') id_builtin_command = id_do;
+          break;
+        case 'e' : // 'eq'
+          if (item1=='q') id_builtin_command = id_eq;
+          break;
+        case 'f' : // 'fi'
+          if (item1=='i') id_builtin_command = id_fi;
+          break;
         case 'g' : // 'ge' and 'gt'
-          if (item1=='e') { is_builtin_command = true; id_builtin_command = id_ge; break; }
-          if (item1=='t') { is_builtin_command = true; id_builtin_command = id_gt; } break;
-        case 'i' : if (item1=='f') { is_builtin_command = true; id_builtin_command = id_if; } break; // 'if'
+          if (item1=='e') { id_builtin_command = id_ge; break; }
+          if (item1=='t') id_builtin_command = id_gt;
+          break;
+        case 'i' : // 'if'
+          if (item1=='f') id_builtin_command = id_if;
+          break;
         case 'l' : // 'le' and 'lt'
-          if (item1=='e') { is_builtin_command = true; id_builtin_command = id_le; break; }
-          if (item1=='t') { is_builtin_command = true; id_builtin_command = id_lt; } break;
+          if (item1=='e') { id_builtin_command = id_le; break; }
+          if (item1=='t') id_builtin_command = id_lt;
+          break;
         case 'm' : // 'm*', 'm/' and 'mv'
-          if (item1=='*') { is_builtin_command = true; id_builtin_command = id_mmul; break; }
-          if (item1=='/') { is_builtin_command = true; id_builtin_command = id_mdiv; break; }
-          if (item1=='v') { is_builtin_command = true; id_builtin_command = id_move; } break;
-        case 'n' : if (item1=='m') { is_builtin_command = true; id_builtin_command = id_name; } break; // 'nm'
-        case 'o' : if (item1=='r') { is_builtin_command = true; id_builtin_command = id_or; } break; // 'or'
+          if (item1=='*') { id_builtin_command = id_mmul; break; }
+          if (item1=='/') { id_builtin_command = id_mdiv; break; }
+          if (item1=='v') id_builtin_command = id_move;
+          break;
+        case 'n' : // 'nm'
+          if (item1=='m') id_builtin_command = id_name;
+          break;
+        case 'o' : // 'or'
+          if (item1=='r') id_builtin_command = id_or;
+          break;
         case 'r' : // 'rm' and 'rv'
-          if (item1=='m') { is_builtin_command = true; id_builtin_command = id_remove; break; }
-          if (item1=='v') { is_builtin_command = true; id_builtin_command = id_reverse; } break;
-        case 's' : if (item1=='h') { is_builtin_command = true; id_builtin_command = id_shared; } break; // 'sh'
-        case 'u' : if (item1=='m') { is_builtin_command = true; id_builtin_command = id_uncommand; } break; // 'um'
+          if (item1=='m') { id_builtin_command = id_remove; break; }
+          if (item1=='v') id_builtin_command = id_reverse;
+          break;
+        case 's' : // 'sh'
+          if (item1=='h') id_builtin_command = id_shared;
+          break;
+        case 'u' : // 'um'
+          if (item1=='m') id_builtin_command = id_uncommand;
+          break;
         case 'w' : // 'w0'..'w9'
-          if (item1>='0' && item1<='9') { is_builtin_command = true; id_builtin_command = id_window0 + item1 - '0'; }
+          if (item1>='0' && item1<='9') id_builtin_command = id_window0 + item1 - '0';
           break;
         }
-      } else if (item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
+      else if (item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
         if (item1=='3' && item2=='d') switch (item0) {
-          case '*' : is_builtin_command = true; id_builtin_command = id_mul3d; break;
-          case '+' : is_builtin_command = true; id_builtin_command = id_add3d; break;
-          case '-' : is_builtin_command = true; id_builtin_command = id_sub3d; break;
-          case '/' : is_builtin_command = true; id_builtin_command = id_div3d; break;
-          case 'j' : is_builtin_command = true; id_builtin_command = id_object3d; break;
-          case 'l' : is_builtin_command = true; id_builtin_command = id_light3d; break;
-          case 'r' : is_builtin_command = true; id_builtin_command = id_rotate3d; break;
+          case '*' : id_builtin_command = id_mul3d; break;
+          case '+' : id_builtin_command = id_add3d; break;
+          case '-' : id_builtin_command = id_sub3d; break;
+          case '/' : id_builtin_command = id_div3d; break;
+          case 'j' : id_builtin_command = id_object3d; break;
+          case 'l' : id_builtin_command = id_light3d; break;
+          case 'r' : id_builtin_command = id_rotate3d; break;
           } else switch (item0) {
           case 'a' : // 'abs', 'add' and 'and'
-            if (item1=='b' && item2=='s') { is_builtin_command = true; id_builtin_command = id_abs; break; }
-            if (item1=='d' && item2=='d') { is_builtin_command = true; id_builtin_command = id_add; break; }
-            if (item1=='n' && item2=='d') { is_builtin_command = true; id_builtin_command = id_and; } break;
+            if (item1=='b' && item2=='s') { id_builtin_command = id_abs; break; }
+            if (item1=='d' && item2=='d') { id_builtin_command = id_add; break; }
+            if (item1=='n' && item2=='d') id_builtin_command = id_and;
+            break;
           case 'b' : // 'bsl' and 'bsr'
             if (item1=='s') {
-              if (item2=='l') { is_builtin_command = true; id_builtin_command = id_bsl; break; }
-              if (item2=='r') { is_builtin_command = true; id_builtin_command = id_bsr; break; }
+              if (item2=='l') { id_builtin_command = id_bsl; break; }
+              if (item2=='r') { id_builtin_command = id_bsr; break; }
             } break;
           case 'c' : // 'cos' and 'cut'
-            if (item1=='o' && item2=='s') { is_builtin_command = true; id_builtin_command = id_cos; break; }
-            if (item1=='u' && item2=='t') { is_builtin_command = true; id_builtin_command = id_cut; } break;
+            if (item1=='o' && item2=='s') { id_builtin_command = id_cos; break; }
+            if (item1=='u' && item2=='t') id_builtin_command = id_cut;
+            break;
           case 'd' : // 'div'
-            if (item1=='i' && item2=='v') { is_builtin_command = true; id_builtin_command = id_div; } break;
+            if (item1=='i' && item2=='v') id_builtin_command = id_div;
+            break;
           case 'e' : // 'erf' and 'exp'
-            if (item1=='r' && item2=='f') { is_builtin_command = true; id_builtin_command = id_erf; break; }
-            if (item1=='x' && item2=='p') { is_builtin_command = true; id_builtin_command = id_exp; } break;
+            if (item1=='r' && item2=='f') { id_builtin_command = id_erf; break; }
+            if (item1=='x' && item2=='p') id_builtin_command = id_exp;
+            break;
           case 'f' : // 'fft' and 'for'
-            if (item1=='f' && item2=='t') { is_builtin_command = true; id_builtin_command = id_fft; break; }
-            if (item1=='o' && item2=='r') { is_builtin_command = true; id_builtin_command = id_for; } break;
+            if (item1=='f' && item2=='t') { id_builtin_command = id_fft; break; }
+            if (item1=='o' && item2=='r') id_builtin_command = id_for;
+            break;
           case 'l' : // 'log'
-            if (item1=='o' && item2=='g') { is_builtin_command = true; id_builtin_command = id_log; } break;
+            if (item1=='o' && item2=='g') id_builtin_command = id_log;
+            break;
           case 'm' : // 'map', 'max', 'min', 'mod' and 'mul'.
             if (item1=='a') {
-              if (item2=='p') { is_builtin_command = true; id_builtin_command = id_map; break; }
-              if (item2=='x') { is_builtin_command = true; id_builtin_command = id_max; break; }
+              if (item2=='p') { id_builtin_command = id_map; break; }
+              if (item2=='x') { id_builtin_command = id_max; break; }
             }
-            if (item1=='i' && item2=='n') { is_builtin_command = true; id_builtin_command = id_min; break; }
-            if (item1=='o' && item2=='d') { is_builtin_command = true; id_builtin_command = id_mod; break; }
-            if (item1=='u' && item2=='l') { is_builtin_command = true; id_builtin_command = id_mul; } break;
+            if (item1=='i' && item2=='n') { id_builtin_command = id_min; break; }
+            if (item1=='o' && item2=='d') { id_builtin_command = id_mod; break; }
+            if (item1=='u' && item2=='l') id_builtin_command = id_mul;
+            break;
           case 'n' : // 'neq' and 'nmd'
-            if (item1=='e' && item2=='q') { is_builtin_command = true; id_builtin_command = id_neq; break; }
-            if (item1=='m' && item2=='d') { is_builtin_command = true; id_builtin_command = id_named; } break;
+            if (item1=='e' && item2=='q') { id_builtin_command = id_neq; break; }
+            if (item1=='m' && item2=='d') id_builtin_command = id_named;
+            break;
           case 'p' : // 'pow'
-            if (item1=='o' && item2=='w') { is_builtin_command = true; id_builtin_command = id_pow; } break;
+            if (item1=='o' && item2=='w') id_builtin_command = id_pow;
+            break;
           case 'r' : // 'rol' and 'ror'
             if (item1=='o') {
-              if (item2=='l') { is_builtin_command = true; id_builtin_command = id_rol; break; }
-              if (item2=='r') { is_builtin_command = true; id_builtin_command = id_ror; break; }
+              if (item2=='l') { id_builtin_command = id_rol; break; }
+              if (item2=='r') { id_builtin_command = id_ror; break; }
             } break;
           case 's' : // 'set', 'sin', 'sqr', 'sub' and 'svd'
-            if (item1=='e' && item2=='t') { is_builtin_command = true; id_builtin_command = id_set; break; }
-            if (item1=='i' && item2=='n') { is_builtin_command = true; id_builtin_command = id_sin; break; }
-            if (item1=='q' && item2=='r') { is_builtin_command = true; id_builtin_command = id_sqr; break; }
-            if (item1=='u' && item2=='b') { is_builtin_command = true; id_builtin_command = id_sub; break; }
-            if (item1=='v' && item2=='d') { is_builtin_command = true; id_builtin_command = id_svd; } break;
+            if (item1=='e' && item2=='t') { id_builtin_command = id_set; break; }
+            if (item1=='i' && item2=='n') { id_builtin_command = id_sin; break; }
+            if (item1=='q' && item2=='r') { id_builtin_command = id_sqr; break; }
+            if (item1=='u' && item2=='b') { id_builtin_command = id_sub; break; }
+            if (item1=='v' && item2=='d') id_builtin_command = id_svd;
+            break;
           case 't' : // 'tan'
-            if (item1=='a' && item2=='n') { is_builtin_command = true; id_builtin_command = id_tan; } break;
+            if (item1=='a' && item2=='n') id_builtin_command = id_tan;
+            break;
           case 'x' : // 'xor'
-            if (item1=='o' && item2=='r') { is_builtin_command = true; id_builtin_command = id_xor; } break;
+            if (item1=='o' && item2=='r') id_builtin_command = id_xor;
+            break;
           }
       }
 
-      bool is_command = is_builtin_command;
+      bool is_command = (bool)id_builtin_command;
 
-      if (!is_builtin_command) {
+      if (!is_command) {
         *command = sep0 = sep1 = sep = 0;
 
         // Extract command name.
@@ -5307,16 +5340,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           (*item<'0' || *item>'9');
 
         if (is_command) {
-          if (!is_builtin_command) { // Search for known built-in command name
+          if (!id_builtin_command) { // Search for known built-in command name
             const int
               bi0 = builtin_commands_bounds[(unsigned int)*command],
               bi1 = builtin_commands_bounds((unsigned int)*command,1U);
-            if (bi0>=0 &&
-                (is_builtin_command = search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind))) {
+            if (bi0>=0 && search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind))
               id_builtin_command = builtin_command_ids[bi0 + uind];
-            }
           }
-          if (!is_builtin_command) { // Search for a custom command name
+          if (!id_builtin_command) { // Search for a custom command name
             bool found_command = false;
 
             if (is_get) { // Search for specialization '+command' that has priority over 'command'
@@ -5339,7 +5370,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (!found_command) hash_custom = ind_custom = ~0U;
           }
         }
-        is_command|=is_builtin_command;
+        is_command|=(id_builtin_command?true:false);
       }
 
       // Split command/selection, if necessary.
@@ -5572,7 +5603,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Dispatch to dedicated parsing code, regarding the first character of the command.
         // We rely on the compiler to optimize this using an associative array (verified with g++).
-        if (!is_builtin_command) goto gmic_commands_others;
+        if (!id_builtin_command) goto gmic_commands_others;
         switch (command0) {
         case 'a' : goto gmic_commands_a;
         case 'b' : goto gmic_commands_b;
@@ -8090,7 +8121,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
           // When command 'index' is invoked with different arguments, custom version in stdlib
           // is used rather than the built-in version.
-          is_builtin_command = false; id_builtin_command = 0;
+          id_builtin_command = 0;
           goto gmic_commands_others;
         }
 
@@ -8904,7 +8935,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
           // If command 'map' is invoked with different arguments, custom version in stdlib
           // is used rather than the built-in version.
-          is_builtin_command = false; id_builtin_command = 0;
+          id_builtin_command = 0;
           goto gmic_commands_others;
         }
 
@@ -12943,7 +12974,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         //----------------------------
       gmic_commands_others :
 
-        if (is_builtin_command) {
+        if (id_builtin_command) {
 
           // If...[elif]...[else]...endif.
           if (no_get_selection && (id_builtin_command==id_if || (check_elif && id_builtin_command==id_elif))) {
@@ -13233,7 +13264,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             ++position;
             continue;
           }
-        } // if (is_builtin_command)
+        } // if (id_builtin_command)
 
         // Execute custom command.
         if (!is_command_input && is_command) {
