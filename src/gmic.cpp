@@ -5156,11 +5156,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (is_command) {
           if (!is_builtin_command) { // Search for known built-in command name
             const int
-              _ind0 = builtin_command_inds[(unsigned int)*command],
-              _ind1 = builtin_command_inds((unsigned int)*command,1U);
-            if (_ind0>=0)
-              is_builtin_command = search_sorted(command,builtin_command_names + _ind0,
-                                                 _ind1 - _ind0 + 1U,uind);
+              bi0 = builtin_command_inds[(unsigned int)*command],
+              bi1 = builtin_command_inds((unsigned int)*command,1U);
+            if (bi0>=0)
+              is_builtin_command = search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind);
           }
           if (!is_builtin_command) { // Search for a custom command name
             bool found_command = false;
