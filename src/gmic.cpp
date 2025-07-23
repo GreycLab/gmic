@@ -5310,7 +5310,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const int
               bi0 = builtin_commands_bounds[(unsigned int)*command],
               bi1 = builtin_commands_bounds((unsigned int)*command,1U);
-            if (bi0>=0 && (is_builtin_command = search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind))) {
+            if (bi0>=0 &&
+                (is_builtin_command = search_sorted(command,builtin_command_names + bi0,bi1 - bi0 + 1U,uind))) {
               id_builtin_command = builtin_command_ids[bi0 + uind];
             }
           }
