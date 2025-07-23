@@ -5485,10 +5485,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         is_command_check = id_builtin_command==id_check && no_get,
         is_command_skip = id_builtin_command==id_skip && no_get_selection;
 
-      bool is_subst_arg = position_argument<command_line.size()?(bool)command_line[position_argument].back():false;
-
       // Check for verbosity command, prior to the first output of a log message.
-      bool is_verbose = verbosity>=1 || is_debug, is_verbose_argument = false;
+      bool
+        is_subst_arg = position_argument<command_line.size()?(bool)command_line[position_argument].back():false,
+        is_verbose = verbosity>=1 || is_debug,
+        is_verbose_argument = false;
       const int prev_verbosity = verbosity;
       if (is_command_verbose) {
         // Do a first fast check.
