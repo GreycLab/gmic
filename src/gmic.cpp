@@ -2450,7 +2450,7 @@ typedef enum {
   id_tan,id_tanh,id_text,
   id_uncommand,id_unroll,id_unserialize,
   id_vanvliet,id_verbose,
-  id_wait,id_warn,id_warp,id_watershed,id_while,
+  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
   id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
   id_xor
 } builtin_command_id;
@@ -2482,6 +2482,7 @@ const char *gmic::builtin_command_names[] = {
   "uncommand","unroll","unserialize",
   "vanvliet","verbose",
   "wait","warn","warp","watershed","while","window",
+  "window0","window1","window2","window3","window4","window5","window6","window7","window8","window9",
   0,
 
   // Commands of length 3.
@@ -2524,7 +2525,8 @@ const int gmic::builtin_command_ids[] = {
   id_tanh,id_text,
   id_uncommand,id_unroll,id_unserialize,
   id_vanvliet,id_verbose,
-  id_wait,id_warn,id_warp,id_watershed,id_while,id_window0,
+  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
   0,
 
   // Commands of length 3.
@@ -2542,7 +2544,7 @@ const int gmic::builtin_command_ids[] = {
   // Commands of length 1.
   id_mod,id_and,id_mul,id_add,id_sub,id_div,id_lt,id_eq,id_gt,
   id_append,id_blur,id_cut,id_echo,id_fill,id_input,id_image,id_keep,id_local,id_command,id_normalize,id_output,id_quit,
-    id_resize,id_split,id_text,id_status,id_verbose,id_window0,id_exec,id_unroll,id_crop,
+    id_resize,id_split,id_text,id_status,id_verbose,id_window,id_exec,id_unroll,id_crop,
   id_pow,0,id_or,id_done
 };
 
@@ -2564,7 +2566,7 @@ const int gmic::builtin_command_ids[] = {
    -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,id_pow,-1, // 64-95
    -1,id_append,id_blur,id_cut,-1,id_echo,id_fill,-1,-1,id_input,id_image,id_keep, // 96-107
    id_local,id_command,id_normalize,id_output,-1,id_quit,id_resize,id_split,id_text,id_status, // 108-117
-   id_verbose,id_window0,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
+   id_verbose,id_window,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
  };
 
 CImg<int> gmic::builtin_commands_bounds = CImg<int>::empty();
@@ -12576,8 +12578,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // Display images in display window.
         sep = '0';
-        if (id_builtin_command>=id_window0 && id_builtin_command<=id_window9 && no_get) {
-          wind = (unsigned int)(id_builtin_command - id_window0);
+        if (id_builtin_command>=id_window && id_builtin_command<=id_window9 && no_get) {
+          wind = (unsigned int)std::max(0,id_builtin_command - id_window0);
           gmic_substitute_args(false);
           int norm = -1, fullscreen = -1;
           float dimw = -1, dimh = -1, posx = cimg::type<float>::inf(), posy = cimg::type<float>::inf();
