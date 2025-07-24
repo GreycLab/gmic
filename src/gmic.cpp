@@ -13894,7 +13894,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       // Input.
       if (is_command_input) ++position;
       else {
-        std::strcpy(command,"input");
+        std::strcpy(command,"input"); full_command = command;
         argument = item - (is_hyphen || is_plus?1:0);
         is_subst_arg = is_subst_item;
         *s_selection = 0;
@@ -13982,7 +13982,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             for (l = 0; l<255 &&
                    (((c=*nargument)>='0' && c<='9') || c=='.' || c=='e' || c=='E' || c=='i' || c=='n'
                     || c=='f' || c=='a' || c=='+' || c=='-'); ++l) *(pd++) = *(nargument++);
-            if (l<255) *pd = 0; else arg_error("input");
+            if (l<255) *pd = 0; else arg_error(full_command);
             if (*nargument) sep = *(nargument++);
             if ((sep=='^' || sep=='/' || sep==';' || sep==',' || sep==')' || sep==':') &&
                 cimg_sscanf(s_value,"%lf%c",&value,&end)==1) {
@@ -14020,12 +14020,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   std::memcpy(permute_axes,nargument,4);
                   nargument+=5;
                 }
-                else arg_error("input");
+                else arg_error(full_command);
               } break;
               case ')' : break;
-              default : arg_error("input");
+              default : arg_error(full_command);
               }
-            } else arg_error("input");
+            } else arg_error(full_command);
           }
           img.resize(++width,++height,++depth,++spectrum,0);
           if (unroll_axis) img.unroll(unroll_axis=='x' || unroll_axis==','?'x':
@@ -14158,7 +14158,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         else idz = (int)cimg::round(dz);
         if (sepc=='%') { idc = (int)cimg::round(dc*img.spectrum()/100); if (!idc) ++idc; }
         else idc = (int)cimg::round(dc);
-        if (idx<=0 || idy<=0 || idz<=0 || idc<=0) arg_error("input");
+        if (idx<=0 || idy<=0 || idz<=0 || idc<=0) arg_error(full_command);
         CImg<char> s_values;
         if (sep) {
           const char *_s_values = arg_input.data() + std::strlen(argx) + std::strlen(argy) +
