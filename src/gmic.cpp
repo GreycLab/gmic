@@ -5372,6 +5372,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const bool no_get = !is_get;
 
       // Retrieve command selection.
+      if (_s_selection.width()>512) { // Go back to a reasonnable size for selection string
+        _s_selection.assign(256);
+        s_selection = _s_selection.data();
+        *s_selection = 0;
+      }
+
       const unsigned int selsiz = _s_selection._width;
       CImg<unsigned int> selection;
       bool is_selection = false;
@@ -5434,11 +5440,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       } else { *command = *s_selection = 0; hash_custom = ind_custom = ~0U; }
 
       position = position_argument;
-      if (_s_selection._width!=selsiz) { // Go back to initial size for selection image
-        _s_selection.assign(selsiz);
-        s_selection = _s_selection.data();
-        *s_selection = 0;
-      }
 
       const bool
         no_selection = !is_selection,
