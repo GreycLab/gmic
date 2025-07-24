@@ -5161,16 +5161,19 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       // First optimized pass to determine if specified command is a 'built-in' command
       // (optimized for command length that are 1,2 or 3).
       int id_builtin_command = 0;
-      if (item0=='}' && !item1) id_builtin_command = id_done; // Right braces (aka 'done')
-      else if (item0 && _gmic_eok(1)) switch (item0) { // Command has length 1
+      if (item0=='}' && !item1) { // Right braces (aka 'done')
+        id_builtin_command = id_done; *command='}'; command[1] = 0;
+      } else if (item0 && _gmic_eok(1)) switch (item0) { // Command has length 1
         case 'a': case 'b' : case 'c' : case 'e' : case 'f' : case 'g' : case 'h' : case 'i' : case 'j' :
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
         case '-': case '/' : case '<' : case '=' : case '>' : case '^' : case '|' :
           id_builtin_command = onechar_command_ids[(int)item0];
+          *command = item0; command[1] = 0;
           break;
         }
-      else if (item0 && item1 && _gmic_eok(2)) switch(item0) { // Command has length 2
+      else if (item0 && item1 && _gmic_eok(2)) {
+        switch(item0) { // Command has length 2
         case '!' : // '!='
           if (item1=='=') { id_builtin_command = id_neq; }
           break;
@@ -5231,7 +5234,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (item1>='0' && item1<='9') id_builtin_command = id_window0 + item1 - '0';
           break;
         }
-      else if (item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
+        if (id_builtin_command) { *command = item0; command[1] = item1; command[2] = 0; }
+      } else if (item0 && item1 && item2 && _gmic_eok(3)) { // Command has length 3
         if (item1=='3' && item2=='d') switch (item0) {
           case '*' : id_builtin_command = id_mul3d; break;
           case '+' : id_builtin_command = id_add3d; break;
@@ -5304,6 +5308,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (item1=='o' && item2=='r') id_builtin_command = id_xor;
             break;
           }
+        if (id_builtin_command) { *command = item0; command[1] = item1; command[2] = item2; command[3] = 0; }
       }
 
       bool is_command = (bool)id_builtin_command;
@@ -5311,7 +5316,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         *command = sep0 = sep1 = sep = 0;
 
         // Extract command name.
-        // (same as but faster than 'err = cimg_sscanf(item,"%255[a-zA-Z_0-9]%c%c",command,&sep0,&sep1,&sep);').
+        // (same (but faster) as 'err = cimg_sscanf(item,"%255[a-zA-Z_0-9]%c%c",command,&sep0,&sep1,&sep);').
         const char *ps = item;
         char *pd = command;
         char *const pde = _command.end() - 1;
@@ -5334,7 +5339,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
         }
 
-        // Detect if parsed command is a known command.
+        // Detect if parsed command is a known referenced command.
         if ((err==1 || (err==2 && sep0=='.') || (err>=3 && (sep0=='[' || (sep0=='.' && sep1=='.' && sep!='=')))) &&
             (*item<'0' || *item>'9')) { // Is probably a command
           if (!id_builtin_command) { // Search for known built-in command name
@@ -5426,15 +5431,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             selection2cimg(s_selection,parent_images.size(),parent_image_names,command).move_to(selection);
           else
             selection2cimg(s_selection,images.size(),image_names,command).move_to(selection);
-        } else {
-          std::strncpy(command,item,_command.width() - 2);
-          is_command = false; ind_custom = ~0U;
-          command[_command.width() - 2] = *s_selection = 0;
-        }
-      } else {
-        std::strncpy(command,item,_command.width() - 2);
-        command[_command.width() - 2] = *s_selection = 0;
-      }
+        } else { *command = *s_selection = 0; hash_custom = ind_custom = ~0U; }
+      } else { *command = *s_selection = 0; hash_custom = ind_custom = ~0U; }
+
       position = position_argument;
       if (_s_selection._width!=selsiz) { // Go back to initial size for selection image
         _s_selection.assign(selsiz);
