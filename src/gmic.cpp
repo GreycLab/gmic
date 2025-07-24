@@ -5373,13 +5373,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const char *builtin_command = id_builtin_command?builtin_command_names[id_builtin_command - 1]:"";
       const bool no_get = !is_get;
 
-      // Split command/selection, if necessary.
+      // Retrieve command selection.
       const unsigned int selsiz = _s_selection._width;
       CImg<unsigned int> selection;
       bool is_selection = false;
       if (is_command) {
 
-        // Extract selection.
+        // Extract selection string.
         char *ps = item;
         while (*ps && *ps!='.' && *ps!='[') ++ps;
         if (*ps) strreplace_fw(ps);
@@ -5413,7 +5413,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           err = 3;
         }
 
-        // Process selection.
+        // Parse selection string.
         if (err==1) { // No selection -> all images
           if (id_builtin_command==id_pass) selection.assign(1,parent_images.size());
           else if (id_builtin_command!=id_name) selection.assign(1,images.size());
