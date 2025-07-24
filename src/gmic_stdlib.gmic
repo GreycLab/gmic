@@ -280,8 +280,24 @@ help : skip ${1=""}
       isin(s[0],_'-',_'+') && len>1 && !(s[z + 1]==_'3' && s[z + 2]==_'d')?(copy(s,s[z + 1],len - 1); s[len - 1] = 0);
       s"`}
 
-    s +,{'"#@cli "$command" :"'} s +,{'"#@cli "$command":"'} s +,{'"#@cli "$command"\n"'}
-    if $!==1
+    # Extract chunk of documentation.
+    p,q:="
+      p = find(#-1,'#@cli "$command" :',h - 1,-1);
+      p<0?(p = find(#-1,'#@cli "$command":',h - 1,-1));
+      p<0?(p = find(#-1,'#@cli "$command"\n',h - 1,-1));
+      q = -1;
+      p>=0?(
+        q = p;
+        do (
+          q = find(#-1,'#@cli ',q + 1);
+          q<0?(q = h - 1; break());
+          i[q + 6]!=':'?break();
+          q+=6;
+        )
+      ); [p,q]"
+
+     # Display help.
+     if $p<0
       l[] {
         m "foo : "$command # Detect command misspelling
         repeat 16 { um $command } # Be sure the specified command does not exist anymore !
@@ -292,7 +308,7 @@ help : skip ${1=""}
       +e "\n[gmic] No help available for command '"$_vt100_r$command$_vt100_n"'"$misspelling". "\
          "\n       Try '"${_vt100_c}"gmic help"$_vt100_n"' for global help."
     else
-      a y
+      z 0,$p,0,$q
       _display_categories=0
       +parse_cli ascii,$command
       if narg(${}) parse_cli ascii,${} fi # In case of shortcut, display also help for shortcut command
