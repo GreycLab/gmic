@@ -5502,8 +5502,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       }
 
       // Cancellation point.
-      if (*is_abort || is_abort_thread)
-        throw CImgAbortException();
+      if (*is_abort || is_abort_thread) throw CImgAbortException();
 
       // Begin command interpretation.
       if (is_command) {
