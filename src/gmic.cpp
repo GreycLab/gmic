@@ -2422,37 +2422,46 @@ static void *gmic_parallel(void *arg) {
 }
 
 // Define identification numbers for all builtin commands.
+// Those integers are chosen so that for a command id 'id', we get 'builtin_command_names[id - 1] = "command_name"'.
 typedef enum {
-  id_abs=1,id_abscut,id_acos,id_acosh,id_add,id_add3d,id_and,id_append,id_asin,id_asinh,id_atan,id_atan2,
-    id_atanh,
-  id_bilateral,id_blur,id_boxfilter,id_break,id_bsl,id_bsr,
-  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cos,id_cosh,id_crop,id_cumulate,
-    id_cursor,id_cut,
-  id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div,id_div3d,id_do,
-    id_done,
-  id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_eq,id_equalize,id_erf,id_erode,id_error,id_eval,id_exec,
-    id_exp,
-  id_fft,id_fi,id_files,id_fill,id_flood,id_for,id_foreach,
-  id_ge,id_guided,id_gt,
-  id_histogram,
-  id_if,id_ifft,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
-  id_keep,
-  id_label,id_le,id_light3d,id_line,id_local,id_log,id_log10,id_log2,id_lt,
-  id_map,id_matchpatch,id_max,id_maxabs,id_mdiv,id_median,id_min,id_minabs,id_mirror,id_mmul,id_mod,id_move,id_mproj,
-    id_mul,id_mul3d,
-  id_name,id_named,id_neq,id_network,id_noarg,id_noise,id_normalize,
-  id_object3d,id_onfail,id_or,id_output,
-  id_parallel,id_pass,id_permute,id_point,id_polygon,id_pow,id_progress,
-  id_quit,
-  id_rand,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rol,id_ror,id_rotate,id_rotate3d,id_round,
-  id_screen,id_serialize,id_set,id_shared,id_shift,id_sign,id_sin,id_sinc,id_sinh,id_skip,
-  id_smooth,id_solve,id_sort,id_split,id_sqr,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub,id_sub3d,id_svd,
-  id_tan,id_tanh,id_text,
-  id_uncommand,id_unroll,id_unserialize,
-  id_vanvliet,id_verbose,
-  id_wait,id_warn,id_warp,id_watershed,id_while,id_window,
-  id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
-  id_xor
+
+  // Commands of length>3.
+  id_abscut=1,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
+  id_bilateral=11,id_blur,id_boxfilter,id_break,
+  id_camera=15,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_crop,id_cumulate,
+    id_cursor,
+  id_debug=26,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
+  id_echo=36,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
+  id_files=47,id_fill,id_flood,id_foreach,
+  id_guided=51,
+  id_histogram=52,
+  id_ifft=53,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
+  id_keep=61,
+  id_label=62,id_light3d,id_line,id_local,id_log10,id_log2,
+  id_matchpatch=68,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name=78,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d=84,id_onfail,id_output,
+  id_parallel=87,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_quit=93,
+  id_rand=94,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen=103,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+    id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
+  id_tanh=121,id_text,
+  id_uncommand=123,id_unroll,id_unserialize,
+  id_vanvliet=126,id_verbose,
+  id_wait=128,id_warn,id_warp,id_watershed,id_while,id_window,
+    id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
+
+  // Commands of length 3.
+  id_abs=149,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
+  id_log=163,
+  id_map=164,id_max,id_min,id_mod,id_mul,id_neq,
+  id_pow=171,
+  id_rol=173,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
+
+  // Commands of length 2.
+  id_do=189,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
+  id_or=201
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
@@ -2482,7 +2491,7 @@ const char *gmic::builtin_command_names[] = {
   "uncommand","unroll","unserialize",
   "vanvliet","verbose",
   "wait","warn","warp","watershed","while","window",
-  "window0","window1","window2","window3","window4","window5","window6","window7","window8","window9",
+    "window0","window1","window2","window3","window4","window5","window6","window7","window8","window9",
   0,
 
   // Commands of length 3.
