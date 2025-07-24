@@ -13585,7 +13585,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       } // if (is_command) {
 
       // Variable assignment.
-      if (!is_command_input && (*item=='_' || (*item>='a' && *item<='z') || (*item>='A' && *item<='Z'))) {
+      if (!is_command_input && no_get && (*item=='_' || (*item>='a' && *item<='z') || (*item>='A' && *item<='Z'))) {
         const char *const s_equal = std::strchr(item + 1,'=');
         if (s_equal) {
           const char *s_end_left = s_equal;
