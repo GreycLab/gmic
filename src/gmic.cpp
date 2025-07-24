@@ -5549,6 +5549,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         throw CImgAbortException();
 
       // Begin command interpretation.
+      const char *full_command = is_command?(id_builtin_command?builtin_command_names[id_builtin_command - 1]:
+                                             command):"";
       if (is_command) {
 
         // Convert command shortcuts to full names.
@@ -5671,7 +5673,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   *ind,gmic_selection.data(),axis,align);
             const CImg<T> img0 = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(append(img0,axis,align),false);
-          } else arg_error("append");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -5802,7 +5804,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   gmic_selection.data(),
                   vmin,vmax,value);
             cimg_forY(selection,l) gmic_apply(abscut(vmin,vmax,value),true);
-          } else arg_error("abscut");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -5834,7 +5836,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   *ind);
             const CImg<T> img0 = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(atan2(img0),true);
-          } else arg_error("atan2");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -5909,7 +5911,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                           boundary,(bool)is_gaussian),true);
               g_img.assign();
             } else cimg_forY(selection,l) gmic_apply(blur(sigma,boundary,(bool)is_gaussian),true);
-          } else arg_error("blur");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -5963,7 +5965,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                               order,boundary,nb_iter),true);
               g_img.assign();
             } else cimg_forY(selection,l) gmic_apply(gmic_blur_box(sigma,order,boundary,nb_iter),true);
-          } else arg_error("boxfilter");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6040,7 +6042,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep1=='%') sigma_r = -sigma_r;
             cimg_forY(selection,l)
               gmic_apply(blur_bilateral(images[selection[l]],sigma_s,sigma_r,sampling_s,sampling_r),true);
-          } else arg_error("bilateral");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6247,7 +6249,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                          "Command 'crop': Cannot crop empty image [%d] (with arguments '%s').",
                          selection[l],gmic_argument_text());
             }
-          } else arg_error("crop");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6297,7 +6299,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   value0,
                   value1);
             cimg_forY(selection,l) gmic_apply(cut((T)value0,(T)value1),true);
-          } else arg_error("cut");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6540,7 +6542,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                           ysize==(int)(~0U>>1)?~0U:(unsigned int)ysize,
                                                           zsize==(int)(~0U>>1)?~0U:(unsigned int)zsize),false);
             }
-          } else arg_error(is_cond?"convolve":"correlate");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6749,7 +6751,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             unsigned int nb_values = 1, s_argx = (unsigned int)std::strlen(argx) + 1;
             for (const char *s = argument + s_argx; *s; ++s) if (*s==',') ++nb_values;
             try { values.assign(nb_values,1,1,1).fill_from_values(argument + s_argx,true); }
-            catch (CImgException&) { arg_error("discard"); }
+            catch (CImgException&) { arg_error(full_command); }
             print(0,"Discard sequence of values '%s' along '%s'-ax%cs, in image%s.",
                   gmic_argument_text_printed() + s_argx,
                   argx,
@@ -6877,7 +6879,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   dist.move_to(images,~0U);
                 } else dist.move_to(images[uind].assign());
               }
-          } else arg_error("distance");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -6942,7 +6944,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sz = cimg::round(sepz=='%'?sz*img.depth()/100:sz);
               gmic_apply(dilate((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
             }
-          } else arg_error("dilate");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7019,7 +7021,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg_forY(selection,l)
               gmic_apply(blur_patch(sigma_s,sigma_r,(unsigned int)psize,(unsigned int)rsize,smoothness,
                                     (bool)is_fast_approximation),false);
-          } else arg_error("denoise");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7046,7 +7048,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   boundary==0?"dirichlet":boundary==1?"neumann":boundary==2?"periodic":"mirror");
             if (sep=='%') sigma = -sigma;
             cimg_forY(selection,l) gmic_apply(deriche(sigma,order,axis,boundary),true);
-          } else arg_error("deriche");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7099,7 +7101,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg_forY(selection,l) gmic_apply(displacement(reference,smoothness,precision,(unsigned int)nb_scales,
                                                            (unsigned int)nb_iterations,(bool)is_forward,
                                                            constraints),false);
-          } else arg_error("displacement");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7366,7 +7368,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 gmic_apply(draw_ellipse(nx,ny,nR,nr,(float)angle,g_img.data(),opacity),true);
               }
             }
-          } else arg_error("ellipse");
+          } else arg_error(full_command);
           g_img.assign();
           is_change = true;
           ++position;
@@ -7491,7 +7493,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sz = cimg::round(sepz=='%'?sz*img.depth()/100:sz);
               gmic_apply(erode((unsigned int)sx,(unsigned int)sy,(unsigned int)sz),true);
             }
-          } else arg_error("erode");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7816,7 +7818,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 nz = (int)cimg::round(sepz=='%'?z*(img.depth() - 1)/100:z);
               gmic_apply(draw_fill(nx,ny,nz,g_img.data(),opacity,tolerance,(bool)is_high_connectivity),false);
             }
-          } else arg_error("flood");
+          } else arg_error(full_command);
           g_img.assign();
           is_change = true;
           ++position;
@@ -7922,7 +7924,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') radius = -radius;
             if (sep1=='%') regularization = -regularization;
             cimg_forY(selection,l) gmic_apply(blur_guided(images[selection[l]],radius,regularization),false);
-          } else arg_error("guided");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -7990,7 +7992,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                                 value));
               gmic_apply(histogram(_nb_levels,(T)nvalue0,(T)nvalue1),false);
             }
-          } else arg_error("histogram");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8086,7 +8088,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 gmic_apply(gmic_draw_image((float)x,(float)y,(float)z,(float)c,
                                            sepx,sepy,sepz,sepc,sprite,opacity),true);
               }
-          } else arg_error("image");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8227,7 +8229,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             gmic_use_title;
             cimg_snprintf(title,_title.width(),"[3D isoline %g of '%s']",value,formula);
             CImg<char>::string(title).move_to(image_names);
-          } else arg_error("isoline3d");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8348,7 +8350,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             gmic_use_title;
             cimg_snprintf(title,_title.width(),"[3D isosurface %g of '%s']",value,formula);
             CImg<char>::string(title).move_to(image_names);
-          } else arg_error("isosurface3d");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8428,7 +8430,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                        (int)lookup_increment,
                                        (unsigned int)blend_size,(float)blend_threshold,(float)blend_decay,
                                        (unsigned int)blend_scales,(bool)is_blend_outer),false);
-          } else arg_error("inpaint");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8701,7 +8703,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 ny1 = (int)cimg::round(sepy1=='%'?y1*(img.height() - 1)/100:y1);
               gmic_apply(draw_line(nx0,ny0,nx1,ny1,g_img.data(),opacity,pattern),true);
             }
-          } else arg_error("line");
+          } else arg_error(full_command);
           g_img.assign();
           is_change = true;
           ++position;
@@ -8816,7 +8818,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               cimglist_for(_images,l) images[l].swap(_images[l]);
               _image_names.move_to(image_names,0);
             }
-          } else arg_error("move");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8951,7 +8953,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   gmic_argument_text_printed(),
                   std::strlen(argument)>1?'e':'i');
             cimg_forY(selection,l) gmic_apply(mirror(argument),false);
-          } else arg_error("mirror");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -8977,7 +8979,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     fsiz,
                     gmic_selection.data());
             cimg_forY(selection,l) gmic_apply(blur_median((unsigned int)fsiz,threshold),false);
-          } else arg_error("median");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -9041,7 +9043,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                                               patch_penalization,
                                                               (bool)is_score,
                                                               initialization),false);
-          } else arg_error("matchpatch");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -9081,7 +9083,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     method - 2,max_iter?max_iter:A.width(),value);
 
             cimg_forY(selection,l) gmic_apply_double(project_matrix(A,method,max_iter,value));
-          } else arg_error("mproj");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -9311,7 +9313,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   value0,
                   value1);
             cimg_forY(selection,l) gmic_apply(normalize((T)value0,(T)value1),true);
-          } else arg_error("normalize");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -9341,7 +9343,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             else print(0,"Enable load-from-network, with %ds timeout.",err);
             cimg::network_mode(err!=-1,true);
             if (err!=-1) network_timeout = err;
-          } else arg_error("network");
+          } else arg_error(full_command);
           ++position;
           continue;
         }
@@ -9378,7 +9380,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   gmic_selection.data(),
                   cimg::abs(amplitude),sep=='%'?"%":"");
             cimg_forY(selection,l) gmic_apply(noise(amplitude,noise_type),true);
-          } else arg_error("noise");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -9573,7 +9575,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                          opacity,zbuffer,_multithreaded3d),true);
               }
             }
-          } else arg_error("object3d");
+          } else arg_error(full_command);
           g_list_f.assign();
           g_list_uc.assign();
           vertices.assign();
@@ -10514,7 +10516,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 nz = (int)cimg::round(sepz=='%'?z*(img.depth() - 1)/100:z);
               gmic_apply(draw_point(nx,ny,nz,g_img.data(),opacity),true);
             }
-          } else arg_error("point");
+          } else arg_error(full_command);
           g_img.assign();
           is_change = true;
           ++position;
@@ -10588,8 +10590,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   vertices(n,0U) = (float)x0; percents(n,0U) = (sepx=='%');
                   vertices(n,1U) = (float)y0; percents(n,1U) = (sepy=='%');
                   nargument+=std::strlen(argx) + std::strlen(argy) + 2;
-                } else arg_error("polygon");
-              } else arg_error("polygon");
+                } else arg_error(full_command);
+              } else arg_error(full_command);
 
             if (nargument<eargument &&
                 cimg_sscanf(nargument,"%4095[0-9.eEinfa+-]",gmic_use_color)==1 &&
@@ -10621,7 +10623,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     opacity,
                     *p_color?p_color:"default");
 
-          } else arg_error("polygon");
+          } else arg_error(full_command);
 
           cimg_forY(selection,l) {
             CImg<T> &img = images[selection[l]];
@@ -10858,7 +10860,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 nvalc = _nvalc?_nvalc:1;
               gmic_apply(resize(nvalx,nvaly,nvalz,nvalc,iinterpolation,boundary,cx,cy,cz,cc),false);
             }
-          } else arg_error("resize");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -10977,7 +10979,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     boundary==0?"dirichlet":boundary==1?"neumann":boundary==2?"periodic":"mirror");
               cimg_forY(selection,l) gmic_apply(rotate(u,v,w,angle,interpolation,boundary),false);
             }
-          } else arg_error("rotate");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11072,7 +11074,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   value1,
                   *ind0);
             cimg_forY(selection,l) gmic_apply(rand((T)value0,(T)value1),true);
-          } else arg_error("rand");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11102,7 +11104,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else throw;
               }
             }
-          } else arg_error("rotate3d");
+          } else arg_error(full_command);
           vertices.assign();
           is_change = true;
           ++position;
@@ -11206,7 +11208,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 nc = (int)cimg::round(sepc=='%'?c*(img.spectrum() - 1)/100:c);
               gmic_apply(gmic_set(value,nx,ny,nz,nc),true);
             }
-          } else arg_error("set");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11659,7 +11661,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             name.assign();
             g_list.assign();
             g_list_c.assign();
-          } else arg_error("store");
+          } else arg_error(full_command);
           ++position;
           continue;
         }
@@ -11716,7 +11718,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 ndc = (float)(sepc=='%'?dc*img.spectrum()/100:dc);
               gmic_apply(gmic_shift(ndx,ndy,ndz,ndc,boundary,(bool)interpolation),false);
             }
-          } else arg_error("shift");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11777,7 +11779,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   gmic_selection.data(),*ind,pattern?"LU":"SVD");
             const CImg<double> A = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply_double(solve(A,(bool)pattern));
-          } else arg_error("solve");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11808,7 +11810,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else throw;
               }
             }
-          } else arg_error("sub3d");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -11936,7 +11938,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg_forY(selection,l)
               gmic_apply(blur_anisotropic(tensors,(float)value0,dl,da,gauss_prec,interpolation,
                                           is_fast_approximation),true);
-          } else arg_error("smooth");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -12119,7 +12121,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg_snprintf(title,_title.width(),"[3D streamline of '%s' at (%g,%g,%g)]",
                           formula,x,y,z);
             CImg<char>::string(title).move_to(image_names);
-          } else arg_error("streamline3d");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -12259,7 +12261,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (*argz) {
               err = cimg_sscanf(argz,"%lf%c%c",&(value=-1),&sep,&end);
               is_custom_font = !((err=1 || (err==2 && sep=='%')) && value>=0 && cimg::type<double>::is_finite(value));
-              if (is_custom_font && value!=-1) arg_error("text");
+              if (is_custom_font && value!=-1) arg_error(full_command);
             } else is_custom_font = false;
 
             if (!is_cond) {
@@ -12285,7 +12287,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 if (*argz=='[' && argz[l_argz-1]==']') {
                   argz[l_argz-1] = 0;
                   ind = selection2cimg(argz + 1,images.size(),image_names,"text");
-                  if (ind.height()!=1) arg_error("text");
+                  if (ind.height()!=1) arg_error(full_command);
                   uind = (unsigned int)*ind;
                 }
                 try {
@@ -12339,7 +12341,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   }
                 }
             }
-          } else arg_error("text");
+          } else arg_error(full_command);
           g_img.assign();
           g_list_c.assign();
           is_change = true;
@@ -12525,7 +12527,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   boundary==0?"dirichlet":boundary==1?"neumann":boundary==2?"periodic":"mirror");
             if (sep=='%') sigma = -sigma;
             cimg_forY(selection,l) gmic_apply(vanvliet(sigma,order,axis,boundary),true);
-          } else arg_error("vanvliet");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -12812,7 +12814,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
               g_list.assign();
             }
-          } else arg_error("warp");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -12834,7 +12836,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   gmic_selection.data(),*ind,is_high_connectivity?"high":"low");
             const CImg<T> priority = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(watershed(priority,(bool)is_high_connectivity),false);
-          } else arg_error("watershed");
+          } else arg_error(full_command);
           is_change = true;
           ++position;
           continue;
@@ -13257,7 +13259,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   else throw;
                 }
               }
-            } else { if (is_div3d) arg_error("div3d"); else arg_error("mul3d"); }
+            } else arg_error(full_command);
             is_change = true;
             ++position;
             continue;
