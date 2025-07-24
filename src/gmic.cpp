@@ -5425,7 +5425,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             selection2cimg(s_selection,10,CImgList<char>::empty(),command).move_to(selection);
           else if (id_builtin_command==id_input)
             selection2cimg(s_selection,images.size() + 1,image_names,command).move_to(selection);
-          else if (no_get && (id_builtin_command==id_echo || id_builtin_command==id_error || id_builtin_command==id_warn))
+          else if (no_get && (id_builtin_command==id_echo || id_builtin_command==id_error ||
+                              id_builtin_command==id_warn))
             selection2cimg(s_selection,callstack.size(),CImgList<char>::empty(),command).move_to(selection);
           else if (no_get && (id_builtin_command==id_pass))
             selection2cimg(s_selection,parent_images.size(),parent_image_names,command).move_to(selection);
