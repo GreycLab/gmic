@@ -5090,7 +5090,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       is_start = false;
     }
 
-    // Begin command line parsing.
     const int starting_verbosity = verbosity;
     if (!command_line && is_start) {
       print(0,"Start G'MIC interpreter (v.%u.%u.%u).",
@@ -5098,6 +5097,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       is_start = false;
     }
 
+    // Parse specified command line.
     while (position<command_line.size() && !is_quit && !is_return) {
       const bool
         is_first_item = !position,
@@ -5309,6 +5309,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command) { *command = item0; command[1] = item1; command[2] = item2; command[3] = 0; }
       }
 
+      // Detect built-in command (second pass for other command lenghts).
       bool is_command = (bool)id_builtin_command;
       if (!is_command) {
         *command = sep0 = sep1 = sep = 0;
@@ -5337,7 +5338,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
         }
 
-        // Detect if parsed command is a known referenced command.
+        // Detect if parsed command name is a known referenced command.
         if ((err==1 || (err==2 && sep0=='.') || (err>=3 && (sep0=='[' || (sep0=='.' && sep1=='.' && sep!='=')))) &&
             (*item<'0' || *item>'9')) { // Is probably a command
           if (!id_builtin_command) { // Search for known built-in command name
@@ -5372,7 +5373,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const bool no_get = !is_get;
 
       // Retrieve command selection.
-      if (_s_selection.width()>512) { // Go back to a reasonnable size for selection string
+      if (_s_selection.width()>512) { // If needed, go back to a reasonnable size for selection string
         _s_selection.assign(256);
         s_selection = _s_selection.data();
         *s_selection = 0;
@@ -5479,12 +5480,21 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       is_verbose = verbosity>=1 || is_debug;
       const bool is_very_verbose = verbosity>1 || is_debug;
 
-      // Generate strings for displaying image selections when verbosity>=1.
+      // Generate string for displaying image selections when verbosity>=1.
+      // (only done for commands that takes image selections).
       CImg<char> gmic_selection;
-      if (is_debug ||
-          (verbosity>=1 && !is_command_check && !is_command_skip &&
-           !is_command_verbose && !is_command_echo && !is_command_error && !is_command_warn))
-        selection2string(selection,image_names,1,gmic_selection);
+      if (is_debug || (verbosity>=1 && !is_command_check && !is_command_skip && !is_command_verbose &&
+                       !is_command_echo && !is_command_error && !is_command_warn))
+        switch (id_builtin_command) {
+        case id_break : case id_camera : case id_command : case id_continue : case id_debug : case id_delete :
+        case id_do : case id_done : case id_else : case id_elif : case id_exec : case id_fi : case id_for :
+        case id_files : case id_if : case id_light3d : case id_network : case id_noarg : case id_onfail :
+        case id_parallel : case id_progress : case id_quit : case id_repeat : case id_return : case id_status :
+        case id_srand : case id_screen : case id_uncommand : case id_wait : case id_while :
+          break;
+        default :
+          selection2string(selection,image_names,1,gmic_selection);
+        }
 
       if (is_debug) {
         if (std::strcmp(item,initial_item))
