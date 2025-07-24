@@ -5147,7 +5147,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const char *argument = initial_argument;
       if ((*item==',' || (*item=='{' && was_lbrace_command)) && !item[1]) { ++position; continue; }
 
-      // Check if current item is a known command.
+      // Check if current item is a command.
       const bool
         is_hyphen = *item=='-' && item[1] && item[1]!='[' && item[1]!='.' && (item[1]!='3' || item[2]!='d'),
         is_plus = *item=='+' && item[1] && item[1]!='[' && item[1]!='.' && (item[1]!='3' || item[2]!='d');
@@ -5307,7 +5307,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       }
 
       bool is_command = (bool)id_builtin_command;
-
       if (!is_command) {
         *command = sep0 = sep1 = sep = 0;
 
@@ -5335,6 +5334,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           }
         }
 
+        // Detect if parsed command is a known command.
         if ((err==1 || (err==2 && sep0=='.') || (err>=3 && (sep0=='[' || (sep0=='.' && sep1=='.' && sep!='=')))) &&
             (*item<'0' || *item>'9')) { // Is probably a command
           if (!id_builtin_command) { // Search for known built-in command name
@@ -5365,97 +5365,67 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!is_command) hash_custom = ind_custom = ~0U;
         }
       }
+      const char *builtin_command = id_builtin_command?builtin_command_names[id_builtin_command - 1]:"";
+      const bool no_get = !is_get;
 
       // Split command/selection, if necessary.
-      bool is_selection = false;
-      const unsigned int siz = images._width, selsiz = _s_selection._width;
+      const unsigned int selsiz = _s_selection._width;
       CImg<unsigned int> selection;
+      bool is_selection = false;
       if (is_command) {
-        sep0 = sep1 = 0;
-        strreplace_fw(item);
 
         // Extract selection.
-        // (same as but faster than 'err = cimg_sscanf(item,"%255[^[]%c%255[a-zA-Z_0-9.eE%^,:+-]%c%c",
-        //                                             command,&sep0,s_selection,&sep1,&end);
-        if (selsiz<_item._width) { // Expand size for getting a possibly large selection
-          _s_selection.assign(_item.width());
-          s_selection = _s_selection.data();
-          *s_selection = 0;
-        }
+        char *ps = item;
+        while (*ps && *ps!='.' && *ps!='[') ++ps;
+        if (*ps) strreplace_fw(ps);
+        err = sep0 = sep1 = 0;
 
-        const char *ps = item;
-        char *pd = command;
-        char *const pde = _command.end() - 1;
-        for (err = 0; *ps && *ps!='[' && pd<pde; ++ps) *(pd++) = *ps;
-        if (pd!=command) {
-          *pd = 0;
-          ++err;
-          if (*ps) {
-            sep0 = *(ps++);
-            ++err;
-            if (*ps) {
-              const char *pde2 = _s_selection.end() - 1;
-              for (pd = s_selection; *ps && pd<pde2; ++ps) {
-                const char c = *ps;
-                if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') ||
-                    c=='_' || c=='.' || c=='^' || c=='+' || c=='-' || c=='%' || c==',' || c==':')
-                  *(pd++) = c;
-                else break;
-              }
-              if (pd!=s_selection) {
-                *pd = 0;
-                ++err;
-                if (*ps) {
-                  sep1 = *(ps++);
-                  ++err;
-                  if (*ps) ++err;
-                }
-              }
+        if (!*ps) err = 1; // No selection provided
+        else if (*ps=='[' && ps[1]==']' && !ps[2]) err = 2; // Empty selection
+        else if (*ps=='.') { // Selection shortcuts '.', '..' and '...'
+          if (ps[1]=='.') {
+            if (ps[2]=='.') {
+              if (ps[3]) { is_command = false; *command = 0; hash_custom = ind_custom = ~0U; }
+              else { *s_selection = '-'; s_selection[1] = '3'; s_selection[2] = 0; err = 3; sep1 = ']'; }
+            } else {
+              if (ps[2]) { is_command = false; *command = 0; hash_custom = ind_custom = ~0U; }
+              else { *s_selection = '-'; s_selection[1] = '2'; s_selection[2] = 0; err = 3; sep1 = ']'; }
             }
+          } else {
+            if (ps[1]) { is_command = false; *command = 0; hash_custom = ind_custom = ~0U; }
+            else { *s_selection = '-'; s_selection[1] = '1'; s_selection[2] = 0; err = 3; sep1 = ']'; }
           }
+        } else if (*ps=='[') { // Detect generic selection
+          if (selsiz<_item._width) { // Expand size for getting a possibly large selection string
+            _s_selection.assign(_item.width());
+            s_selection = _s_selection.data();
+            *s_selection = 0;
+          }
+          const char *pe = ++ps;
+          while (*pe && *pe!=']') ++pe;
+          const unsigned int l_sel = (unsigned int)std::min((int)(pe - ps),_s_selection.width() - 1);
+          std::memcpy(s_selection,ps,l_sel); s_selection[l_sel] = 0;
+          err = 3;
         }
 
-        unsigned int l_command;
-        if (err==1 && (l_command = (unsigned int)std::strlen(command))>=2 &&
-            command[l_command - 1]=='.') { // Selection shortcut
-          err = 4; sep0 = '['; sep1 = ']';
-          if (command[l_command - 2]!='.') {
-            *s_selection = '-'; s_selection[1] = '1'; s_selection[2] = 0; command[l_command - 1] = 0;
-          }
-          else if (l_command>=3 && command[l_command - 3]!='.') {
-            *s_selection = '-'; s_selection[1] = '2'; s_selection[2] = 0; command[l_command - 2] = 0;
-          }
-          else if (l_command>=4 && command[l_command - 4]!='.') {
-            *s_selection = '-'; s_selection[1] = '3'; s_selection[2] = 0; command[l_command - 3] = 0;
-          }
-          else { is_command = false; ind_custom = ~0U; *s_selection = 0; }
-        }
-
+        // Process selection.
         if (err==1) { // No selection -> all images
-          if (!std::strcmp(command,"pass")) selection.assign(1,parent_images.size());
-          else if (!((*command=='=' && command[1]=='>' && !command[2]) ||
-                     (*command=='n' && command[1]=='m' && !command[2]) ||
-                     !std::strcmp(command,"name"))) selection.assign(1,siz);
+          if (id_builtin_command==id_pass) selection.assign(1,parent_images.size());
+          else if (id_builtin_command!=id_name) selection.assign(1,images.size());
           cimg_forY(selection,y) selection[y] = (unsigned int)y;
-        } else if (err==2 && sep0=='[' && item[std::strlen(command) + 1]==']') { // Empty selection
+        } else if (err==2) is_selection = true; // Empty selection
+        else if (err==3) { // Other selections
           is_selection = true;
-        } else if (err==4 && sep1==']') { // Other selections
-          is_selection = true;
-          if (!is_get && (!std::strcmp("wait",command) ||
-                          !std::strcmp("cursor",command)))
+          if (no_get && (id_builtin_command==id_wait || id_builtin_command==id_cursor))
             selection2cimg(s_selection,10,CImgList<char>::empty(),command).move_to(selection);
-          else if (*command=='i' && (!command[1] || !std::strcmp("input",command)))
-            selection2cimg(s_selection,siz + 1,image_names,command).move_to(selection);
-          else if (!is_get &&
-                   ((*command=='e' && (!command[1] ||
-                                       !std::strcmp("echo",command) ||
-                                       !std::strcmp("error",command))) ||
-                    !std::strcmp("warn",command)))
+          else if (id_builtin_command==id_input)
+            selection2cimg(s_selection,images.size() + 1,image_names,command).move_to(selection);
+          else if (no_get && (id_builtin_command==id_echo || id_builtin_command==id_error || id_builtin_command==id_warn))
             selection2cimg(s_selection,callstack.size(),CImgList<char>::empty(),command).move_to(selection);
-          else if (!std::strcmp("pass",command))
+          else if (no_get && (id_builtin_command==id_pass))
             selection2cimg(s_selection,parent_images.size(),parent_image_names,command).move_to(selection);
           else
-            selection2cimg(s_selection,siz,image_names,command).move_to(selection);
+            selection2cimg(s_selection,images.size(),image_names,command).move_to(selection);
         } else {
           std::strncpy(command,item,_command.width() - 2);
           is_command = false; ind_custom = ~0U;
@@ -5473,7 +5443,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       }
 
       const bool
-        no_get = !is_get,
         no_selection = !is_selection,
         no_get_selection = no_get && no_selection,
         is_command_verbose = id_builtin_command==id_verbose && no_get,
@@ -5537,7 +5506,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         throw CImgAbortException();
 
       // Begin command interpretation.
-      const char *builtin_command = id_builtin_command?builtin_command_names[id_builtin_command - 1]:"";
       if (is_command) {
 
         // Dispatch to dedicated parsing code, regarding the first character of the command.
