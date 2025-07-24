@@ -5551,49 +5551,38 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         //-----------------------------
       gmic_commands_a :
 
-        // Append.
-        if (id_builtin_command==id_append) {
-          gmic_substitute_args(true);
-          float align = 0;
-          axis = sep = 0;
-          if ((cimg_sscanf(argument,"%c%c",
-                           &axis,&end)==1 ||
-               cimg_sscanf(argument,"%c,%f%c",
-                           &axis,&align,&end)==2) &&
-              is_xyzc(axis)) {
-            print(0,"Append image%s along the '%c'-axis, with alignment %g.",
+        // 'abs': Absolute value.
+        gmic_simple_command(abs,"Compute pointwise absolute value of image%s.");
+
+        // 'abscut': Absolute value cut.
+        if (id_builtin_command==id_abscut) {
+          gmic_substitute_args(false);
+          vmin = -cimg::type<double>::inf();
+          vmax = cimg::type<double>::inf();
+          value = 0;
+          if (cimg_sscanf(argument,"%lf%c",
+                          &vmin,&end)==1 ||
+              cimg_sscanf(argument,"%lf,%lf%c",
+                          &vmin,&vmax,&end)==2 ||
+              cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                          &vmin,&vmax,&value,&end)==3) {
+            print(0,"Cut absolute values of image%s in range [%g,%g], with offset %g.",
                   gmic_selection.data(),
-                  axis,align);
-            if (selection) {
-              cimg_forY(selection,l) if (gmic_check(images[selection[l]]))
-                g_list.insert(gmic_check(images[selection[l]]),~0U,true);
-              CImg<T> img = g_list.get_append(axis,align);
-              if (is_get) {
-                img.move_to(images);
-                image_names[selection[0]].get_copymark().move_to(image_names);
-              } else if (selection.height()>=2) {
-                remove_images(images,image_names,selection,1,selection.height() - 1);
-                img.move_to(images[selection[0]].assign());
-              }
-              g_list.assign();
-            }
-          } else if ((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c%c",
-                                  &(*gmic_use_indices=0),&sep,&axis,&end)==3 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c,%f%c",
-                                  indices,&sep,&axis,&(align=0),&end)==4) &&
-                     is_xyzc(axis) && sep==']' &&
-                     (ind=selection2cimg(indices,images.size(),image_names,"append")).height()==1) {
-            print(0,"Append image [%u] to image%s, along the '%c'-axis, with alignment %g.",
-                  *ind,gmic_selection.data(),axis,align);
-            const CImg<T> img0 = gmic_image_arg(*ind);
-            cimg_forY(selection,l) gmic_apply(append(img0,axis,align),false);
+                  vmin,vmax,value);
+            cimg_forY(selection,l) gmic_apply(abscut(vmin,vmax,value),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
           continue;
         }
 
-        // Add.
+        // 'acos': Arccosine.
+        gmic_simple_command(acos,"Compute pointwise arccosine of image%s.");
+
+        // 'acosh': Hyperbolic arccosine.
+        gmic_simple_command(acosh,"Compute pointwise hyperbolic arccosine of image%s.");
+
+        // 'add': Add.
         if (id_builtin_command==id_add)
           gmic_arithmetic_command(add,
                                   operator+=,
@@ -5607,7 +5596,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                   gmic_argument_text_printed(),gmic_selection.data(),
                                   "Add image%s");
 
-        // Add 3D objects together, or shift a 3D object.
+        // 'add3d': Add 3D objects together, or shift a 3D object.
         if (id_builtin_command==id_add3d) {
           gmic_substitute_args(true);
           double tx = 0, ty = 0, tz = 0;
@@ -5699,32 +5688,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           continue;
         }
 
-        // Absolute value.
-        gmic_simple_command(abs,"Compute pointwise absolute value of image%s.");
-
-        // Absolute value cut.
-        if (id_builtin_command==id_abscut) {
-          gmic_substitute_args(false);
-          vmin = -cimg::type<double>::inf();
-          vmax = cimg::type<double>::inf();
-          value = 0;
-          if (cimg_sscanf(argument,"%lf%c",
-                          &vmin,&end)==1 ||
-              cimg_sscanf(argument,"%lf,%lf%c",
-                          &vmin,&vmax,&end)==2 ||
-              cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                          &vmin,&vmax,&value,&end)==3) {
-            print(0,"Cut absolute values of image%s in range [%g,%g], with offset %g.",
-                  gmic_selection.data(),
-                  vmin,vmax,value);
-            cimg_forY(selection,l) gmic_apply(abscut(vmin,vmax,value),true);
-          } else arg_error(builtin_command);
-          is_change = true;
-          ++position;
-          continue;
-        }
-
-        // Bitwise and.
+        // 'and': And.
         gmic_arithmetic_command(and,
                                 operator&=,
                                 "Compute bitwise AND of image%s by %g%s",
@@ -5737,7 +5701,58 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                 gmic_selection.data(),gmic_argument_text_printed(),
                                 "Compute sequential bitwise AND of image%s");
 
-        // Arctangent (two arguments).
+        // 'append': Append.
+        if (id_builtin_command==id_append) {
+          gmic_substitute_args(true);
+          float align = 0;
+          axis = sep = 0;
+          if ((cimg_sscanf(argument,"%c%c",
+                           &axis,&end)==1 ||
+               cimg_sscanf(argument,"%c,%f%c",
+                           &axis,&align,&end)==2) &&
+              is_xyzc(axis)) {
+            print(0,"Append image%s along the '%c'-axis, with alignment %g.",
+                  gmic_selection.data(),
+                  axis,align);
+            if (selection) {
+              cimg_forY(selection,l) if (gmic_check(images[selection[l]]))
+                g_list.insert(gmic_check(images[selection[l]]),~0U,true);
+              CImg<T> img = g_list.get_append(axis,align);
+              if (is_get) {
+                img.move_to(images);
+                image_names[selection[0]].get_copymark().move_to(image_names);
+              } else if (selection.height()>=2) {
+                remove_images(images,image_names,selection,1,selection.height() - 1);
+                img.move_to(images[selection[0]].assign());
+              }
+              g_list.assign();
+            }
+          } else if ((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c%c",
+                                  &(*gmic_use_indices=0),&sep,&axis,&end)==3 ||
+                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c,%f%c",
+                                  indices,&sep,&axis,&(align=0),&end)==4) &&
+                     is_xyzc(axis) && sep==']' &&
+                     (ind=selection2cimg(indices,images.size(),image_names,"append")).height()==1) {
+            print(0,"Append image [%u] to image%s, along the '%c'-axis, with alignment %g.",
+                  *ind,gmic_selection.data(),axis,align);
+            const CImg<T> img0 = gmic_image_arg(*ind);
+            cimg_forY(selection,l) gmic_apply(append(img0,axis,align),false);
+          } else arg_error(builtin_command);
+          is_change = true;
+          ++position;
+          continue;
+        }
+
+        // 'asin': Arcsine.
+        gmic_simple_command(asin,"Compute pointwise arcsine of image%s.");
+
+        // 'asinh': Hyperbolic arcsine.
+        gmic_simple_command(asinh,"Compute pointwise hyperbolic arcsine of image%s.");
+
+        // 'atan': Arctangent.
+        gmic_simple_command(atan,"Compute pointwise arctangent of image%s.");
+
+        // 'atan2': Arctangent (two arguments).
         if (id_builtin_command==id_atan2) {
           gmic_substitute_args(true);
           sep = 0;
@@ -5756,22 +5771,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           continue;
         }
 
-        // Arccosine.
-        gmic_simple_command(acos,"Compute pointwise arccosine of image%s.");
-
-        // Arcsine.
-        gmic_simple_command(asin,"Compute pointwise arcsine of image%s.");
-
-        // Arctangent.
-        gmic_simple_command(atan,"Compute pointwise arctangent of image%s.");
-
-        // Hyperbolic arccosine.
-        gmic_simple_command(acosh,"Compute pointwise hyperbolic arccosine of image%s.");
-
-        // Hyperbolic arcsine.
-        gmic_simple_command(asinh,"Compute pointwise hyperbolic arcsine of image%s.");
-
-        // Hyperbolic arctangent.
+        // 'atanh': Hyperbolic arctangent.
         gmic_simple_command(atanh,"Compute pointwise hyperbolic arctangent of image%s.");
 
         goto gmic_commands_others;
