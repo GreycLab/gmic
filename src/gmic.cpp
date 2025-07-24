@@ -2557,25 +2557,13 @@ const int gmic::builtin_command_ids[] = {
   id_pow,0,id_or,id_done
 };
 
- static const char* onechar_shortcuts[] = {
+ static int onechar_command_ids[] = {
    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, // 0-31
-   0,0,0,0,0,"mod","and",0,0,0,"mul","add",0,"sub",0,"div",0,0,0,0,0,0,0,0,0,0,0,0, // 32-59
-   "lt","set","gt",0, // 60-63
-   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,"pow",0, // 64-95
-   0,"append","blur","cut",0,"echo","fill",0,0,"input","image","keep", // 96-107
-   "local","command","normalize","output",0,"quit","resize","split","text","status", // 108-117
-   "verbose","window","exec","unroll","crop",0,"or","done",0,0 // 118-127
- };
-
- static int onechar_shortcuts_ids[] = {
-   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 0-31
-   -1,-1,-1,-1,-1,id_mod,id_and,-1,-1,-1,id_mul,id_add,-1,id_sub,-1,id_div, // 32-47
-   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, // 48-59
-   id_lt,id_set,id_gt,-1, // 60-63
-   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,id_pow,-1, // 64-95
-   -1,id_append,id_blur,id_cut,-1,id_echo,id_fill,-1,-1,id_input,id_image,id_keep, // 96-107
-   id_local,id_command,id_normalize,id_output,-1,id_quit,id_resize,id_split,id_text,id_status, // 108-117
-   id_verbose,id_window,id_exec,id_unroll,id_crop,-1,id_or,id_done,-1,-1 // 118-127
+   0,0,0,0,0,id_mod,id_and,0,0,0,id_mul,id_add,0,id_sub,0,id_div,0,0,0,0,0,0,0,0,0,0,0,0,id_lt,id_set,id_gt,0, // 32-63
+   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,id_pow,0, // 64-95
+   0,id_append,id_blur,id_cut,0,id_echo,id_fill,0,0,id_input,id_image,id_keep, // 96-107
+   id_local,id_command,id_normalize,id_output,0,id_quit,id_resize,id_split,id_text,id_status, // 108-117
+   id_verbose,id_window,id_exec,id_unroll,id_crop,0,id_or,id_done,0,0 // 118-127
  };
 
 CImg<int> gmic::builtin_commands_bounds = CImg<int>::empty();
@@ -5179,7 +5167,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         case 'k': case 'l' : case 'm' : case 'n' : case 'o' : case 'q' : case 'r' : case 's' : case 't' :
         case 'u': case 'v' : case 'w' : case 'x' : case 'y' : case 'z' : case '%' : case '&' : case '*' : case '+' :
         case '-': case '/' : case '<' : case '=' : case '>' : case '^' : case '|' :
-          id_builtin_command = onechar_shortcuts_ids[(int)item0];
+          id_builtin_command = onechar_command_ids[(int)item0];
           break;
         }
       else if (item0 && item1 && _gmic_eok(2)) switch(item0) { // Command has length 2
@@ -5553,59 +5541,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                              command):"";
       if (is_command) {
 
-        // Convert command shortcuts to full names.
-        char command0 = *command;
-        const char
-          command1 = command0?command[1]:0, command2 = command1?command[2]:0, command3 = command2?command[3]:0;
-        if (!command1) { // Single-char shortcut
-          const bool
-            is_mquvx = command0=='m' || command0=='q' || command0=='u' || command0=='v' || command0=='x' ||
-                       command0=='}',
-            is_eiowx = command0=='e' || command0=='i' || command0=='o' || command0=='w' || command0=='x';
-          if ((unsigned int)command0<128 && onechar_shortcuts[(unsigned int)command0] &&
-              !(is_mquvx && (is_get || is_selection)) && !(is_eiowx && is_get)) {
-            if (is_mquvx) {
-              CImg<char>::string(onechar_shortcuts[(unsigned int)command0]).move_to(_item);
-              *command = 0;
-            } else std::strcpy(command,onechar_shortcuts[(unsigned int)command0]);
-          }
-
-        } else if (!command2) { // Two-chars shortcuts
-          if (command0=='s' && command1=='h') std::strcpy(command,"shared");
-          else if (command0=='m' && command1=='v') std::strcpy(command,"move");
-          else if (no_get && ((command0=='=' && command1=='>') || (command0=='n' && command1=='m')))
-            std::strcpy(command,"name");
-          else if (command0=='r' && command1=='m') std::strcpy(command,"remove");
-          else if (command0=='r' && command1=='v') std::strcpy(command,"reverse");
-          else if (command0=='<' && command1=='<') std::strcpy(command,"bsl");
-          else if (command0=='>' && command1=='>') std::strcpy(command,"bsr");
-          else if (command0=='=' && command1=='=') std::strcpy(command,"eq");
-          else if (command0=='>' && command1=='=') std::strcpy(command,"ge");
-          else if (command0=='<' && command1=='=') std::strcpy(command,"le");
-          else if (command0=='m' && command1=='/') std::strcpy(command,"mdiv");
-          else if (command0=='m' && command1=='*') std::strcpy(command,"mmul");
-          else if (command0=='!' && command1=='=') std::strcpy(command,"neq");
-          else if (command0=='u' && command1=='m') CImg<char>::string("uncommand").move_to(_item);
-
-        } else if (!command3 && command1=='3' && command2=='d') switch (command0) {
-            // Three-chars shortcuts, ending with '3d'.
-          case 'j' : std::strcpy(command,"object3d"); break;
-          case '+' : std::strcpy(command,"add3d"); break;
-          case '/' : std::strcpy(command,"div3d"); break;
-          case 'l' : if (no_get_selection) CImg<char>::string("light3d").move_to(_item); break;
-          case '*' : std::strcpy(command,"mul3d"); break;
-          case 'r' : std::strcpy(command,"rotate3d"); break;
-          case '-' : std::strcpy(command,"sub3d"); break;
-          } else if (no_get && !command3 && command0=='n' && command1=='m' && command2=='d') {
-          std::strcpy(command,"named"); // Shortcut 'nmd' for 'named"
-        }
-        if (item!=_item.data() + (is_hyphen || is_plus?1:0)) item = _item;
-        command0 = *command?*command:*item;
-
         // Dispatch to dedicated parsing code, regarding the first character of the command.
         // We rely on the compiler to optimize this using an associative array (verified with g++).
         if (!id_builtin_command) goto gmic_commands_others;
-        switch (command0) {
+        switch (*full_command) {
         case 'a' : goto gmic_commands_a;
         case 'b' : goto gmic_commands_b;
         case 'c' : goto gmic_commands_c;
@@ -7145,7 +7084,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (s[0]!='*' || s[1]!='i')
             error(true,0,0,
                   "Command '%s': Not associated to a 'if' command within the same scope.",
-                  item);
+                  full_command);
           check_elif = false;
           if (is_very_verbose) print(0,"Reach 'else' block.");
           for (int nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
@@ -12979,9 +12918,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           // If...[elif]...[else]...endif.
           if (no_get_selection && (id_builtin_command==id_if || (check_elif && id_builtin_command==id_elif))) {
             gmic_substitute_args(false);
-            is_cond = check_cond(argument,images,*item=='i'?"if":"elif");
+            is_cond = check_cond(argument,images,*full_command=='i'?"if":"elif");
             check_elif = false;
-            if (*item=='i') {
+            if (*full_command=='i') {
               if (is_debug_info && debug_line!=~0U) {
                 gmic_use_argx;
                 cimg_snprintf(argx,_argx.width(),"*if#%u",debug_line);
