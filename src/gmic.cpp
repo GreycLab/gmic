@@ -5127,8 +5127,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       // Substitute expressions in current item.
       const char
         *const initial_item = run_main_?"_main_":command_line[position].data(),
-        *const empty_argument = "",
-        *initial_argument = empty_argument;
+        *initial_argument = "";
 
       unsigned int position_argument = position + 1;
       while (position_argument<command_line.size() && *(command_line[position_argument])==1)
@@ -5158,8 +5157,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       unsigned int hash_custom = ~0U, ind_custom = ~0U;
       const char item0 = *item, item1 = item0?item[1]:0, item2 = item1?item[2]:0;
 
-      // First optimized pass to determine if specified command is a 'built-in' command
-      // (optimized for command length that are 1,2 or 3).
+      // Detect built-in command (first optimized pass for command lengths that are 1,2 or 3).
       int id_builtin_command = 0;
       if (item0=='}' && !item1) { // Right braces (aka 'done')
         id_builtin_command = id_done; *command='}'; command[1] = 0;
