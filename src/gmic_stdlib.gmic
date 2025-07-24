@@ -281,23 +281,10 @@ help : skip ${1=""}
       s"`}
 
     # Extract chunk of documentation.
-    p,q:="
-      p = find(#-1,'#@cli "$command" :',h - 1,-1);
-      p<0?(p = find(#-1,'#@cli "$command":',h - 1,-1));
-      p<0?(p = find(#-1,'#@cli "$command"\n',h - 1,-1));
-      q = -1;
-      p>=0?(
-        q = p;
-        do (
-          q = find(#-1,'#@cli ',q + 1);
-          q<0?(q = h - 1; break());
-          i[q + 6]!=':'?break();
-          q+=6;
-        )
-      ); [p,q]"
+    p,q=${"_help_chunk "$command}
 
-     # Display help.
-     if $p<0
+    # Display help.
+    if $p<0
       l[] {
         m "foo : "$command # Detect command misspelling
         repeat 16 { um $command } # Be sure the specified command does not exist anymore !
@@ -308,13 +295,35 @@ help : skip ${1=""}
       +e "\n[gmic] No help available for command '"$_vt100_r$command$_vt100_n"'"$misspelling". "\
          "\n       Try '"${_vt100_c}"gmic help"$_vt100_n"' for global help."
     else
-      z 0,$p,0,$q
+      +z 0,$p,0,$q
       _display_categories=0
-      +parse_cli ascii,$command
-      if narg(${}) parse_cli ascii,${} fi # In case of shortcut, display also help for shortcut command
+      +parse_cli. ascii,$command rm.
+      if narg(${}) # In case of shortcut, display also help for shortcut command
+        command=${}
+        p,q=${"_help_chunk "$command}
+        z 0,$p,0,$q
+        parse_cli ascii,$command
+      fi
     fi
   fi
   +e "\n" rm q
+
+# Extract latest chunk corresponding to specified command.
+_help_chunk :
+  u {"
+    p = find(#-1,'#@cli $1 :',h - 1,-1);
+    p<0?(p = find(#-1,'#@cli $1:',h - 1,-1));
+    p<0?(p = find(#-1,'#@cli $1\n',h - 1,-1));
+    q = -1;
+    p>=0?(
+      q = p;
+      do (
+        q = find(#-1,'#@cli ',q + 1);
+        q<0?(q = h - 1; break());
+        i[q + 6]!=':'?break();
+        q+=6;
+      )
+    ); [p,q]"}
 
 # Command to write reference documentation with various output modes.
 # $1 = output mode, can be { ascii | html | man | pdf }.
