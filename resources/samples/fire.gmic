@@ -1,0 +1,62 @@
+#!/usr/bin/env gmic
+# File : fire.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Fire" e[] "" animate 60
+
+# Main function
+go :
+  v 0
+
+  300,300 => trail
+  . => canvas
+  100,100,1,4,"[ u(w#$trail - 1),u(h#$trail - 1),unitnorm([g,g]) ]" => agents
+  nbf=200
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "$f"/"$nbf
+    f[canvas] 0
+    f[agents] ":begin(
+        const no = 5;  # nb_orientations
+        const da = 40; # angle
+        const sd = 10; # sensor_distance;
+        const md = 5;  # move_distance;
+
+        # Pre-compute rotation matrices.
+        Rs = vector(#4*no);
+        off = 0; repeat (no,k, ang = lerp(-da,da,k/(no - 1)); copy(Rs[off],rot(ang°)); off+=4);
+      );
+
+      A = I; X = A[0,2]; U = A[2,2];
+
+      # Get sensor information.
+      max_orientation = max_value = -inf;
+      repeat (no,k,
+        R = Rs[4*k,4];
+        sX = round(X + sd*mul(R,U));
+        value = i(#$trail,sX,1,2);
+        value>max_value?(max_value = value; max_orientation = k);
+      );
+
+      # Turn agent according to sensor measure.
+      max_orientation = round(max_orientation*(no - 1)/(no - 1));
+      R = Rs[4*max_orientation,4];
+      U = lerp(U,mul(R,U),0.2);
+
+      # Move agent along new orientation.
+      X+=md*U;
+      X[0]%=w#$trail;
+      X[1]%=h#$trail;
+      iX = round(X);
+
+      ++i(#$trail,iX);
+      ang = atan2(U[1],U[0]);
+      ellipse(#$canvas,iX,4,1,ang,0.2,255);
+      [ X,unitnorm(U) ]"
+
+    b[trail] 3,2 deform[trail] 2 n[trail] 0,1
+    +map[canvas] hot
+  }
+  k[80--1]
+
+# End of file.
