@@ -14,20 +14,27 @@ go :
   box3d 1,1,1 l. { s3d. f.. int(y/3)+2 a y } => cube
 
   # Generate animation.
-  nbf=32
-  repeat $nbf { f=$>
-    e[] "\r  > Frame "{$f+1}"/"$nbf
-    ang:=-lerp(0,90,$%)
-    +-3d[cube] 1,0,1 r3d. 0,1,0,$ang +3d. 1,0,1 # Rotate cube around bottom edge
-    +3d. 48,48,-1 +3d. [floor] # Place cube on the floor
-    -3d. $%,0,0 # Scroll floor
-    -3d. 48.5,48.5,0 *3d. 150 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
-    512,512 j3d. ..,50%,60%,0,1,2,0,0,500 # Draw object on canvas
-    f. "const boundary=1; i!=j(1)||i!=j(0,1)" # Render as black & white outline
-    rm..
+  nbf=16 orientation=0
+  repeat 8 {
+    orientation:=$orientation<2?v(2,3):v
+    shift:=arg0($orientation,[1,0,1],[0,0,1],[1,0,1],[1,1,1])
+    axis:=arg0($orientation,[0,-1,0],[0,1,0],[-1,0,0],[1,0,0])
+    scroll:=arg0($orientation,[-1,0,0],[1,0,0],[0,1,0],[0,-1,0])
+
+    repeat $nbf { f,t:=$>,$>/($>+$<+1)
+      e[] "\r  > Frame "{$f+1}"/"$nbf
+      ang:=lerp(0,90,$t)
+      +-3d[cube] $shift r3d. $axis,$ang +3d. $shift # Rotate cube around bottom edge
+      +3d. 48,48,-1 +3d. [floor] # Place cube on the floor
+      +3d. {$t*[$scroll]} # Scroll floor
+      -3d. 48.5,48.5,0 *3d. 150 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
+      512,512 j3d. ..,50%,60%,0,1,2,0,0,500 # Draw object on canvas
+      f. "const boundary=1; i!=j(1)||i!=j(0,1)" # Render as black & white outline
+      rm..
+    }
   }
 
-  k[2--2] * 255 to_rgb
+  k[2--1] * 255 to_rgb
   100%,100%,1,3,lerp([8,16,32],[0,0,0],y/h) max[^-1] . rm. # Add background gradient
   foreach { +b 8,0 n. 0,150 +  c 0,255 } # Add  glow
   rows 10,100% # Remove ugly top part due to 3D perspective
