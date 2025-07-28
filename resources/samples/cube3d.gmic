@@ -12,7 +12,8 @@ go :
   # Create checkerboard floor and cube.
   plane3d 97,97,97,97 s3d f.. int(y/3)%2 a y => floor
   box3d 1,1,1 l. { s3d. f.. int(y/3)+2 a y } => cube
-  512,512,1,3,lerp([16,32,64],[0,0,0],y/h) => background
+  512,512,1,3,lerp([16,32,96],[0,0,0],y/h) => background
+  8,1,1,3,"x>1?[64,0,32]:[0,0,0]" => colormap
 
   # Generate animation.
   nbf=16 direction=0 srand 2
@@ -30,15 +31,15 @@ go :
       +3d. {$t*[$scroll]} # Scroll floor
       -3d. 48.5,48.5,0 *3d. 150 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
       {background,[w,h]} j3d. ..,50%,60%,0,1,2,0,0,510 # Draw object on canvas
-      f. "const boundary=1; i!=j(1)||i!=j(0,1)" # Render as black & white outline
-
-      *. 255 dilate. 2 to_rgb. max. [background]
+      +f. "const boundary=1; i!=j(1)||i!=j(0,1)" *. 255 dilate. 2 # Render as black & white outline
+      map.. [colormap]
+      max[-2,-1] max. [background]
       +b. 10,0 n. 0,200 +[-2,-1] c. 0,255
       rows. 10,100% # Remove ugly top part due to 3D perspective
       rs. 480
       rm..
     }
   }
-  k[3--1]
+  k[4--1]
 
 # End of file.
