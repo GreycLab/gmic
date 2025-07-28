@@ -1,0 +1,34 @@
+#!/usr/bin/env gmic
+# File : cube3d.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "3D Cube" e[] "" animate 40
+
+# Main function
+go :
+  v 0
+
+  # Create checkerboard floor and cube.
+  plane3d 97,97,97,97 l. { s3d 1,100%,1,3,"y%2?255:0" permute. cyzx y. rv[-3,-1] rm. a y } => floor
+  box3d 1,1,1 l. { s3d. f.. v(255) a y } => cube
+
+  # Generate animation.
+  nbf=16
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}"/"$nbf
+    ang:=-lerp(0,90,$%)
+    +-3d[cube] 1,0,1 r3d. 0,1,0,$ang +3d. 1,0,1 # Rotate cube around bottom edge
+    +3d. 48,48,-1 +3d. [floor] # Place cube on the floor
+    -3d. $%,0,0 # Scroll floor
+    -3d. 48.5,48.5,0 *3d. 150 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
+    512,512,1,3 j3d. ..,50%,60%,0,1,2,0,0,500 # Draw object on canvas
+    g. xy,1 a[-2,-1] c norm. !=. 0 # Render as black & white outline
+    rm..
+  }
+
+  k[2--2] * 255
+  foreach { +b 8,0 n. 0,200 +  c 0,255 } # Add  glow
+  rows 10,100% # Remove ugly top part due to 3D perspective
+
+# End of file.
