@@ -9386,7 +9386,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
             }
             if (_double3d==~0U) { // Simple/double face property
-              _double3d = 0;
+              _double3d = 1;
               const CImg<char> s_double3d = get_variable("_double3d",variable_sizes,0,0);
               if (s_double3d && *s_double3d>='0' && *s_double3d<='1' && !s_double3d[1])
                 _double3d = (unsigned int)(*s_double3d - '0');
