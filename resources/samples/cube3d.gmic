@@ -9,11 +9,12 @@ go =>[^] "3D Cube" e[] "" animate 40
 go :
   v 0
 
-  # Create checkerboard floor and cube.
-  plane3d 97,97,97,97 s3d f.. int(y/3)%2 a y => floor
-  box3d 1,1,1 l. { s3d. f.. int(y/3)+2 a y } => cube
+  # Create textured checkerboard (floor) and cube.
+  shape_star 64 expand. xy,16,0 S:=w ++. 2 . ... append_tiles[-4--1] 2 r. {a=$S*33;[a,a]},1,100%,0,2
+  quadrangle3d 0,0,0,0,33,0,33,33,0,33,0,0 t3d. .. rm.. => floor
+  box3d 1,1,1 l. { s3d. f.. 6+2*int(y/3) a y } => cube
   (16^32^96;16^16^32;0^0^0) r. 512,512,1,3,3 => background
-  8,1,1,3,"x>1?[64,0,32]:[0,0,0]" => colormap
+  18,1,1,3,"x>=4?[64,0,32]:[0,0,0]" => colormap
 
   # Generate animation.
   nbf,f:=6*16,1 srand 5
@@ -27,11 +28,13 @@ go :
       e[] "\r  > Frame "$f"/"$nbf f+=1
       ang:=lerp(0,90,$t)
       +-3d[cube] $shift r3d. $axis,$ang +3d. $shift # Rotate cube around bottom edge
-      +3d. 48,48,-1 +3d. [floor] # Place cube on the floor
+      +3d. 16,16,-1 +3d. [floor] # Place cube on the floor
       +3d. {$t*[$scroll]} # Scroll floor
-      -3d. 48.5,48.5,0 *3d. 110 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
-      {background,[w,h]} j3d. ..,50%,50%,0,1,2,0,0,400 # Draw object on canvas
-      +f. "const boundary=1; i!=j(1)||i!=j(0,1)" *. 255 dilate. 2 # Render as black & white outline
+      -3d. 16.5,16.5,0 *3d. 110 r3d. 0,0,1,35 r3d. 1,0,0,-50 # Rotate whole object to have a nice view
+      {background,[w,h]}
+      j3d. ..,50%,50%,0,1,2,0,1,400 # Draw object on canvas
+      +f. "const boundary=1; M = abs(maxabs(i - j(1),i - j(0,1))); M>1?1:M>0?0.3:0"
+      *. 255 dilate. 2 # Render as black & white outline
       map.. [colormap]
       max[-2,-1] max. [background]
       +b. 10,0 n. 0,200 +[-2,-1] c. 0,255
