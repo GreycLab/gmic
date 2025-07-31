@@ -19176,7 +19176,7 @@ g :
 #@cli : Compute the gradient components (first derivatives) of selected images, along specified axes.
 #@cli : (eq. to 'g').\n
 #@cli : 'scheme' can be { -1:Backward | 0:Centered | 1:Forward | 2:Sobel | 3:Rotation-invariant (default) | \
-# 4:Deriche | 5:Vanvliet }.
+# 4:Deriche | 5:Vanvliet | 6:FB-Maxabs }.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : (no arg) compute all significant components.
 #@cli : Default values: 'scheme=0' and 'boundary_conditions=1'.
@@ -19197,8 +19197,7 @@ _gradient_get_args : skip "${1=},${2=},${3=}"
       if !$is_axes axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 1st arg
       elif ['$2']==0 axes,scheme,boundary=$1,0,1 # No 2nd arg
       else
-        is_scheme:="isint($2,-1,5)"
-        if !$is_scheme axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 2nd arg
+        if !isint($2,-1,6) axes,scheme,boundary=,0,1 is_noarg=1 # Invalid 2nd arg
         elif ['$3']==0 axes,scheme,boundary=$1,$2,1 # No 3rd arg
         else
           is_boundary:="isint($3,0,3)"
@@ -19212,7 +19211,7 @@ _gradient_get_args : skip "${1=},${2=},${3=}"
   }
   if ['$axes']!=0 s_axes=" along axes '"$axes"'" fi
   e[0--4] "Compute gradient of image"$_gmic_s$s_axes", with "\
-   ${"arg0 $scheme+1,backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet"}" scheme and "\
+   ${"arg0 $scheme+1,backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet,fb-maxabs"}" scheme and "\
    ${"arg0 $boundary,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   u $axes,$scheme,$boundary,$is_noarg
 
@@ -19244,6 +19243,10 @@ _gradient : skip "${1=}"
         else (-0.5${s}0${s}0.5)
         fi
         +correlate[0] .,$3 rm..
+      elif $2==6 # FB-Maxabs
+        (-1${s}1${s}0) +correlate[0] .,$3 rm..
+        (0${s}-1${s}1) +correlate[0] .,$3 rm..
+        maxabs[-2,-1]
       else # Deriche/Vanvliet
         s4,s5=deriche,vanvliet com=${s$2}
         if $3<2 +$com[0] 0,1,$a,$3
