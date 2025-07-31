@@ -19262,13 +19262,30 @@ _gradient : skip "${1=}"
     rm[0,1] =>[^] $nm
   }
 
-#@cli gradient_norm
-#@cli : Compute gradient norm of selected images.
+#@cli gradient_norm : _scheme,_boundary_conditions : (no arg)
+#@cli : Compute the gradient norm of selected images.
+#@cli : 'scheme' can be { -1:Backward | 0:Centered | 1:Forward | 2:Sobel | 3:Rotation-invariant (default) | \
+# 4:Deriche | 5:Vanvliet | 6:FB-Maxabs }.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : Default values: 'scheme=0' and 'boundary_conditions=1'.
 #@cli : $ image.jpg gradient_norm equalize
 #@cli : $$ https://gmic.eu/oldtutorial/_gradient_norm
-gradient_norm :
-  e[^-1] "Compute gradient norm of image$?."
-  foreach { g sqr s c + sqrt }
+gradient_norm : skip "${1=},${2=}"
+  scheme,boundary=0,1
+  l[] {
+    if "!isint($1,-1,6)" scheme,boundary=0,1 noarg
+    else scheme=$1 if "isint($2,0,3)" boundary=$2 elif "narg($2)" scheme,boundary=0,1 noarg fi
+    fi
+    onfail scheme,boundary=0,1 noarg
+  }
+  e[^-1] "Compute gradient norm of image$?, with "\
+   ${"arg0 $scheme+1,backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet,fb-maxabs"}" scheme and "\
+   ${"arg0 $boundary,dirichlet,neumann,periodic,mirror"}" boundary conditions."
+  foreach {
+    axes={`"a = [ 0,0,0 ]; k = 0; w>1?(a[k++] = _'x'); h>1?(a[k++] = _'y'); d>1?(a[k] = _'z'); a"`}
+    g $axes,$scheme,$boundary
+    sqr s c + sqrt
+  }
 
 #@cli gradient_orientation : _dimension={ 1 | 2 | 3 }
 #@cli : Compute N-d gradient orientation of selected images.
