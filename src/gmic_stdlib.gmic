@@ -11128,33 +11128,35 @@ update_color_presets_html : check "isbool(${1=0})"
 
       # Save CLUT as HaldCLUT.
       outfile=$category/clut/$preset.png
-      if !isfile(['$outfile'])
+      if !isfile(['{/$outfile}'])
         s:=sqrt(w*h*d) +r. $s,$s,1,3,-1
         if iM<=255 *. 257 fi # Force PNG to be saved in 16bits
-        o. $category/clut/$preset.png
+        o. $outfile
         rm.
       fi
 
       # Save CLUT as .cube file.
       outfile=$category/clut/$preset.zip
-      if !isfile(['$outfile'])
+      if !isfile(['{/$outfile}'])
         +rs3d. 13
         o. $category/clut/$preset.cube
-        x 0,"rm -f "$category/clut/$preset.zip
-        x 0,"zip -j -9 "$category/clut/$preset.zip" "$category/clut/$preset.cube
+        x 0,"zip -j -9 "$outfile" "$category/clut/$preset.cube
         rm.
       fi
 
       # Process image samples with CLUT.
       repeat $nb_samples { l[{2*$>},{2*$>+1},-1] {
         basename={0,b}
-        if !isfile(['{/$category/$basename/$preset.jpg}'])
+        outfile=$category/$basename/$preset.jpg
+        if !isfile(['{/$outfile}'])
           x "mkdir -p \""$category/$basename"\""
           +map_clut[^-1] .
           _title $preset
           to.. ${},4,{-2,h-28},20,2 frame.. xy,1,0
-          o.. $category/$basename/$preset.jpg,$jpeg_quality
-          _thumb. o. $category/$basename/thumb_$preset.jpg,$jpeg_quality
+          o.. $outfile,$jpeg_quality
+
+          outfile=$category/$basename/thumb_$preset.jpg
+          _thumb. o. $outfile,$jpeg_quality
           rm[-2,-1]
         fi
       } }
@@ -11163,8 +11165,15 @@ update_color_presets_html : check "isbool(${1=0})"
 
       ind_preset+=1
     }
-    x 0,"zip -rj9 "$category/${category}_cube.zip" "$category/clut/*.cube
-    x 0,"zip -rj9 "$category/${category}_haldclut.zip" "$category/clut/*.png
+    outfile=$category/${category}_cube.zip
+    if !isfile(['{/$outfile}'])
+      x 0,"zip -rj9 "$outfile" "$category/clut/*.cube
+    fi
+
+    outfile=$category/${category}_haldclut.zip
+    if !isfile(['{/$outfile}'])
+      x 0,"zip -rj9 "$outfile" "$category/clut/*.png
+    fi
   }
 
   rm[1--1:2] # Remove thumbnails
