@@ -11092,11 +11092,23 @@ update_color_presets_html : check "isbool(${1=0})"
     basename={0,b} basename$<=$basename
     e "    - "$basename
     +rs $thumb_width
-    +to[0] "Reference",4,{0,h-28},20,2 frame. xy,1,0
-    o. original/$basename.jpg,$jpeg_quality rm.
-    +_thumb[1] o. original/thumb_$basename.jpg,$jpeg_quality rm.
-    +rs[0] ,$thumb_height r. {h},{h},1,100%,0,0,0.5,0.5 _thumb.
-    o. original/minithumb_$basename.jpg,$jpeg_quality rm.
+
+    outfile=original/$basename.jpg
+    if !isfile(['$outfile'])
+      +to[0] "Reference",4,{0,h-28},20,2 frame. xy,1,0
+      o. $outfile,$jpeg_quality rm.
+    fi
+
+    outfile=original/thumb_$basename.jpg
+    if !isfile(['$outfile'])
+      +_thumb[1] o. $outfile,$jpeg_quality rm.
+    fi
+
+    outfile=original/minithumb_$basename.jpg
+    if !isfile(['$outfile'])
+      +rs[0] ,$thumb_height r. {h},{h},1,100%,0,0,0.5,0.5 _thumb.
+      o. $outfile,$jpeg_quality rm.
+    fi
   } }
 
   # Generate color grading data and rendering on each input sample.
@@ -11113,17 +11125,27 @@ update_color_presets_html : check "isbool(${1=0})"
       preset=${arg\ {1+$>},$presets}
       e "    - "$preset
       clut $preset,64 to_rgb.
-      s:=sqrt(w*h*d) +r. $s,$s,1,3,-1
-      if iM<=255 *. 257 fi # Force PNG to be saved in 16bits
-      o. $category/clut/$preset.png # Save as HaldCLUT
-      rm.
 
-      +rs3d. 13
-      o. $category/clut/$preset.cube # Save as .cube
-      x 0,"rm -f "$category/clut/$preset.zip
-      x 0,"zip -j -9 "$category/clut/$preset.zip" "$category/clut/$preset.cube
-      rm.
+      # Save CLUT as HaldCLUT.
+      outfile=$category/clut/$preset.png
+      if !isfile(['$outfile'])
+        s:=sqrt(w*h*d) +r. $s,$s,1,3,-1
+        if iM<=255 *. 257 fi # Force PNG to be saved in 16bits
+        o. $category/clut/$preset.png
+        rm.
+      fi
 
+      # Save CLUT as .cube file.
+      outfile=$category/clut/$preset.zip
+      if !isfile(['$outfile'])
+        +rs3d. 13
+        o. $category/clut/$preset.cube
+        x 0,"rm -f "$category/clut/$preset.zip
+        x 0,"zip -j -9 "$category/clut/$preset.zip" "$category/clut/$preset.cube
+        rm.
+      fi
+
+      # Process image samples with CLUT.
       repeat $nb_samples { l[{2*$>},{2*$>+1},-1] {
         basename={0,b}
         if !isfile(['{/$category/$basename/$preset.jpg}'])
