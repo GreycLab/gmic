@@ -15224,12 +15224,6 @@ clut2hald :
     r {a=round(sqrt(w^3));[a,a]},1,100%,-1
   }
 
-#@cli hald2clut
-#@cli : Convert selected 2D HaldCLUTs to 3D CLUTs.
-hald2clut :
-  e[^-1] "Convert 2D HaldCLUT$? to 3D CLUT format."
-  foreach { r {a=round(cbrt(whd));[a,a,a]},100%,-1 }
-
 #@cli cmy2rgb
 #@cli : Convert color representation of selected images from CMY to RGB.
 cmy2rgb :
@@ -15375,6 +15369,17 @@ compose_channels : skip ${1="+"}
     $1[^0] r[0] 100%,100%,100%,1,-1 k[0]
   }
 
+#@cli contrast : strength
+#@cli : Change contrast of selected images, with specified strength.
+#@cli : - If 'strength' is positive, image contrast is amplified.
+#@cli : - If 'strength' is negative, image contrast is reduced.
+#@cli : A typical value range for parameter 'strength' is [-100,100].
+#@cli : $ image.jpg +contrast 20
+contrast : check "isnum($1)"
+  e[^-1] "Change contrast of image$?, with strength $1."
+  fact:=exp($1/64)
+  foreach { im,iM,ia:=im,iM,ia - $ia * $fact + $ia cut $im,$iM }
+
 #@cli count_colors : _count_until={ 0:None | >0:Max number of counted colors }
 #@cli : Count number of distinct colors in selected images until it reaches the specified max number of counted colors.
 #@cli : Set 'count_until' to '0' to disable limit on counted colors.
@@ -15482,6 +15487,12 @@ gradient2rgb : check "isbool(${1=0})"
     if $1 gradient_orientation 2 else g xy fi
     a c direction2rgb
   }
+
+#@cli hald2clut
+#@cli : Convert selected 2D HaldCLUTs to 3D CLUTs.
+hald2clut :
+  e[^-1] "Convert 2D HaldCLUT$? to 3D CLUT format."
+  foreach { r {a=round(cbrt(whd));[a,a,a]},100%,-1 }
 
 #@cli hcy2rgb
 #@cli : Convert color representation of selected images from HCY to RGB.
