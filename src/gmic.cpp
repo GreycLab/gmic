@@ -5073,10 +5073,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   try {
 
     // Init interpreter environment.
-    if (images.size()<image_names.size())
-      image_names.remove(images.size(),image_names.size() - 1);
-    else if (images.size()>image_names.size())
-      image_names.insert(images.size() - image_names.size(),CImg<char>::string("[unnamed]"));
+    const unsigned int
+      is = images.size(),
+      ins = image_names.size();
+    if (is<ins) image_names.remove(is,ins - 1);
+    else if (is>ins) {
+      image_names.insert(is - ins);
+      for (unsigned int k = ins; k<is; ++k) {
+        cimg_snprintf(s_selection,_s_selection.width(),"unnamed_%u",k);
+        CImg<char>::string(s_selection).move_to(image_names[k]);
+      }
+    }
 
     if (is_debug) {
       if (is_start) {
@@ -6005,7 +6012,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             else print(0,"Insert %g image%s from camera #%g, with %g frames skipping.",
                        cam_index,nb_frames,nb_frames>1?"s":"",skip_frames);
             gmic_use_title;
-            cimg_snprintf(title,_title.width(),"[Camera #%g]",cam_index);
+            cimg_snprintf(title,_title.width(),"camera_%g",cam_index);
             CImg<char>::string(title).move_to(name);
             if (nb_frames>1) {
               cimg::mutex(29);
