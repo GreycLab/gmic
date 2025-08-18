@@ -6012,7 +6012,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             else print(0,"Insert %g image%s from camera #%g, with %g frames skipping.",
                        cam_index,nb_frames,nb_frames>1?"s":"",skip_frames);
             gmic_use_title;
-            cimg_snprintf(title,_title.width(),"[Camera #%g]",cam_index);
+            cimg_snprintf(title,_title.width(),"camera_%g",cam_index);
             CImg<char>::string(title).move_to(name);
             if (nb_frames>1) {
               cimg::mutex(29);
