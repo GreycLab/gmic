@@ -16083,9 +16083,9 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
     # Estimate warping field.
     if $constraints
       +pointcloud. 0 r. ...,...,...,3,0 +compose_channels. + a[-2,-1] c
-      displacement[f_img] [f_reference],0.001,5,0,10000,0,. rm[f_reference,constraints,-1]
+      displacement[f_img] [f_reference],0.001,8,0,5000,0,. rm[f_reference,constraints,-1]
     else
-      displacement[f_img] [f_reference],0.005,5,0,10000,0 rm[f_reference]
+      displacement[f_img] [f_reference],0.005,8,0,5000,0 rm[f_reference]
     fi
     =>[f_img] displacement
 
@@ -16128,8 +16128,8 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
 
     # Enforce luminosity constraint for non-confident colors.
     if $4>0
-      ^[f_confidence] {$4/10} *[f_confidence] -1 +[f_confidence] 1
-      +f[f_confidence] x +f. y +f. z a[-3--1] c *. {255/(w-1)}
+      f[f_confidence] "(1 - i)^(1 - $4)"
+      {f_confidence,[w,h,d,3]},"[ x,y,z ]*255/(w - 1)"
       rgb2hsv[clut,-1] channels. 100%
       j[clut] .,0,0,0,2,1,[f_confidence] rm.
       hsv2rgb[clut]
