@@ -1452,7 +1452,7 @@ CImg<T>& operator_diveq(const char *const expression, CImgList<T> &images) {
 template<typename t>
 CImg<T>& operator_eq(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr == (T)value,131072);
+  cimg_openmp_for(*this,*ptr == (T)value,131072,T);
   return *this;
 }
 
@@ -1478,7 +1478,7 @@ CImg<T>& operator_eq(const CImg<t>& img) {
 template<typename t>
 CImg<T>& operator_ge(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr >= (T)value,131072);
+  cimg_openmp_for(*this,*ptr >= (T)value,131072,T);
   return *this;
 }
 
@@ -1504,7 +1504,7 @@ CImg<T>& operator_ge(const CImg<t>& img) {
 template<typename t>
 CImg<T>& operator_gt(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr > (T)value,131072);
+  cimg_openmp_for(*this,*ptr > (T)value,131072,T);
   return *this;
 }
 
@@ -1530,7 +1530,7 @@ CImg<T>& operator_gt(const CImg<t>& img) {
 template<typename t>
 CImg<T>& operator_le(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr <= (T)value,131072);
+  cimg_openmp_for(*this,*ptr <= (T)value,131072,T);
   return *this;
 }
 
@@ -1556,7 +1556,7 @@ CImg<T>& operator_le(const CImg<t>& img) {
 template<typename t>
 CImg<T>& operator_lt(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr < (T)value,131072);
+  cimg_openmp_for(*this,*ptr < (T)value,131072,T);
   return *this;
 }
 
@@ -1615,7 +1615,7 @@ CImg<T> operator_muleq(const CImg<t>& img) {
 template<typename t>
 CImg<T>& operator_neq(const t value) {
   if (is_empty()) return *this;
-  cimg_openmp_for(*this,*ptr != (T)value,131072);
+  cimg_openmp_for(*this,*ptr != (T)value,131072,T);
   return *this;
 }
 
