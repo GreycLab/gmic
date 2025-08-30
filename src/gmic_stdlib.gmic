@@ -24122,6 +24122,72 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
 #@cli : from the 3D environment variables.
 #@cli : $ image.jpg torus3d 100,10 cone3d 30,-120 add3d[-2,-1] rotate3d. 1,1,0,60 object3d[0] [-1],50%,50% keep[0]
 
+#@cli object3d_depth : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_focale
+#@cli : Draw depth map of specified 3D object on selected images.
+#@cli : Default values: 'x=y=50%', 'z=0'. \
+# All other arguments take their default values from the 3D environment variables.
+object3d_depth : check ${"is_image_arg $1"}" && isnum(${4=0})" skip ${2=50%},${3=50%}
+  pass$1 2 check3d. 0
+  foreach[^-1] {
+    pass. 0
+
+    # Recreate specific version of 3D object to render depths.
+    nbv,nbp:=i[6],i[7]
+    1,$nbv,1,1,"i[#1,8 + 3*y+2]" zm,zM,zf:=im,iM,1023/(iM-im) rm. # Compute min/max of z coordinates
+
+    +z[1] 0,0,0,{8+3*$nbv-1} # Header + vertices
+    0x2 # Primitives & colors/textures
+
+    1,$nbp,1,1,"begin(p = 8 + 3*$nbv; ind_t = -1);
+      const zm = $zm;
+      const zM = $zM;
+      const zf = $zf;
+
+      push_texture() = (
+        ind_t<0?( # Insert first occurrence of texture
+          da_push(#4,-128,1024,1,1);
+          repeat(1024, k, da_push(#4,lerp(zm,zM,k/1023)));
+          ind_t = y;
+        ):da_push(#4,-128,ind_t,0,0); # Shared texture
+      );
+
+      n = i[#1,p++];
+      n==1?( # Point
+        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
+        da_push(#3,1,i0); da_push(#4,z0,z0,z0);
+      ):isin(n,2,6)?( # Segment
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        da_push(#3,6,i0,i1,z0,0,z1,0); push_texture();
+        p+=n - 2;
+      ):isin(n,3,9)?( # Triangle
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
+        da_push(#3,9,i0,i1,i2,z0,0,z1,0,z2,0); push_texture();
+        p+=n - 3;
+      ):isin(n,4,12)?( # Quadrangle
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
+        i3 = i[#1,p++]; z3 = round((i[#1,10 + 3*i3] - zm)*zf);
+        da_push(#3,12,i0,i1,i2,i3,z0,0,z1,0,z2,0,z3,0); push_texture();
+        p+=n - 4
+      ):n==5?( # Sphere
+        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
+        i1 = i[#1,p++]; z1 = i[#1,10 + 3*i1];
+        za = (z0 + z1)/2;
+        da_push(#3,6,i0,i1,z0,0,z1,0); da_push(#4,za,za,za);
+        push_texture();
+        p+=n - 2;
+      ):(p+=n);
+      end(da_freeze(#3); da_freeze(#4))" rm.
+    1,$nbp,1,1,1
+
+    a[-4--1] y j3d[0] .,${2-4},1,2 k[0]
+  }
+  rm.
+
 #@cli pack_sprites : [sprite_set],_nb_scales>=1,0<_min_scale<=100,\
 # _allow_rotation={ 0:None | 1:180 deg. | 2:90 deg. | 3:Any },_spacing,_max_attempts>0
 #@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
