@@ -24110,98 +24110,6 @@ newton_fractal : check "isin(${6=1},0,1,2) && ${7=200}>=0 && ${8=0.01}>0"
     );
     cabs(zn)<2?[ zn,iter ]:[ 0,0,iter ]"
 
-#@cli j3d : eq. to 'object3d'. : (+)
-
-#@cli object3d : [object3d],_x[%],_y[%],_z,_opacity,_rendering_mode,_is_double_sided={ 0:No | 1:Yes },\
-# _is_zbuffer={ 0:No | 1:Yes },_focale,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess,\
-# _is_multithreaded_rendering={ 0:No | 1:Yes } : (+)
-#@cli : Draw specified 3D object on selected images.
-#@cli : (eq. to 'j3d').\n
-#@cli : 'rendering_mode' can be { 0:Dots | 1:Wireframe | 2:Flat | 3:Flat-shaded | 4:Gouraud-shaded | 5:Phong-shaded }.
-#@cli : Default values: 'x=y=50%', 'z=0', 'opacity=1' and 'is_zbuffer=1'. All other arguments take their default values
-#@cli : from the 3D environment variables.
-#@cli : $ image.jpg torus3d 100,10 cone3d 30,-120 add3d[-2,-1] rotate3d. 1,1,0,60 object3d[0] [-1],50%,50% keep[0]
-
-#@cli object3d_depth : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focale
-#@cli : Draw depth map of specified 3D object on selected images.
-#@cli : Default values: 'x=y=50%', 'z=0' and 'is_zbuffer=1'. \
-# All other arguments take their default values from the 3D environment variables.
-#@cli : $ gmic3d center3d normalize3d rotate3d 0,1,0,45 mul3d 360 400,400 object3d_depth[-1] [-2] snapshot3d[-2] 400
-object3d_depth : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || isbool($5)) && "\
-                 "isbool(${6=1}) && (!narg(${7=}) || isnum($7))" skip "${2=50%},${3=50%}"
-  pass$1 2 check3d. 0
-  if !i[6]" || "!i[7] rm. return fi
-  is_double_sided:=narg($5)?$5:narg($_double3d)?$_double3d:1
-  focale:=narg($7)?$7:narg($_focale3d)?$_focale3d:700
-
-  foreach[^-1] {
-    pass. 0
-
-    # Recreate specific version of 3D object to render depths.
-    nbv,nbp:=i[6],i[7]
-    1,$nbv,1,1,"i[#1,8 + 3*y+2]" zm,zM,zf:=im,iM,1023/(iM-im) rm. # Compute min/max of z coordinates
-
-    +z[1] 0,0,0,{8+3*$nbv-1} # Header + vertices
-    0x2 # Primitives, Colors & z-texture
-
-    1,$nbp,1,1,"
-      begin(p = 8 + 3*$nbv; ind = 0; ind_t = -1);
-      const zm = $zm;
-      const zM = $zM;
-      const zf = $zf;
-
-      push_color(z) = (
-        da_push(#4,z,z,z);
-      );
-      push_texture() = (
-        ind_t<0?(
-          z_texture = expr(string('lerp(',$4 + zm,',',$4 + zM,',x/1023)'),1024,1,1,3);
-          da_push(#4,-128,1024,1,3);
-          siz = da_size(#4);
-          resize(#4,1,siz + size(z_texture) + 1,1,1,0);
-          copy(i[#4,siz],z_texture);
-          siz = h(#4) - 1;
-          i[#4,siz] = siz;
-          ind_t = y;
-        ):da_push(#4,-128,ind_t,0,0);
-      );
-
-      n = i[#1,p++];
-      n==1?( # Point
-        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
-        da_push(#3,1,i0); push_color(z0);
-      ):isin(n,2,6)?( # Segment
-        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
-        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
-        da_push(#3,6,i0,i1,z0,0,z1,0); push_texture();
-        p+=n - 2;
-      ):isin(n,3,9)?( # Triangle
-        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
-        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
-        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
-        da_push(#3,9,i0,i1,i2,z0,0,z1,0,z2,0); push_texture();
-        p+=n - 3;
-      ):isin(n,4,12)?( # Quadrangle
-        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
-        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
-        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
-        i3 = i[#1,p++]; z3 = round((i[#1,10 + 3*i3] - zm)*zf);
-        da_push(#3,12,i0,i1,i2,i3,z0,0,z1,0,z2,0,z3,0); push_texture();
-        p+=n - 4;
-      ):n==5?( # Sphere
-        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
-        i1 = i[#1,p++]; z1 = i[#1,10 + 3*i1];
-        za = (z0 + z1)/2;
-        da_push(#3,6,i0,i1,z0,0,z1,0); push_color(za);
-        p+=n - 2;
-      ):(p+=n);
-      end(da_freeze(#3); da_freeze(#4); set('ind',ind))" rm.
-    1,$nbp,1,1,1
-
-    a[-4--1] y j3d[0] .,${2-4},1,2,$is_double_sided,$6,$focale k[0]
-  }
-  rm.
-
 #@cli pack_sprites : [sprite_set],_nb_scales>=1,0<_min_scale<=100,\
 # _allow_rotation={ 0:None | 1:180 deg. | 2:90 deg. | 3:Any },_spacing,_max_attempts>0
 #@cli : Try to randomly pack as many sprites as possible onto the 'empty' areas of an image.
@@ -26340,6 +26248,116 @@ normals3d : check "isint(${1=2},0,2)"
 #@cli o3d : eq. to 'opacity3d'.
 o3d :
   _gmic_s="$?" v + _opacity3d $*
+
+#@cli j3d : eq. to 'object3d'. : (+)
+
+#@cli object3d : [object3d],_x[%],_y[%],_z,_opacity,_rendering_mode,_is_double_sided={ 0:No | 1:Yes },\
+# _is_zbuffer={ 0:No | 1:Yes },_focale,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess,\
+# _is_multithreaded_rendering={ 0:No | 1:Yes } : (+)
+#@cli : Draw specified 3D object on selected images.
+#@cli : (eq. to 'j3d').\n
+#@cli : 'rendering_mode' can be { 0:Dots | 1:Wireframe | 2:Flat | 3:Flat-shaded | 4:Gouraud-shaded | 5:Phong-shaded }.
+#@cli : Default values: 'x=y=50%', 'z=0', 'opacity=1' and 'is_zbuffer=1'. All other arguments take their default values
+#@cli : from the 3D environment variables.
+#@cli : $ image.jpg torus3d 100,10 cone3d 30,-120 add3d[-2,-1] rotate3d. 1,1,0,60 object3d[0] [-1],50%,50% keep[0]
+
+#@cli object3d_depth : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focale
+#@cli : Draw depth map of specified 3D object on selected images.
+#@cli : Default values: 'x=y=50%', 'z=0' and 'is_zbuffer=1'. \
+# All other arguments take their default values from the 3D environment variables.
+#@cli : $ gmic3d center3d normalize3d rotate3d 0,1,0,45 mul3d 360 400,400 object3d_depth[-1] [-2] snapshot3d[-2] 400
+object3d_depth : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || isbool($5)) && "\
+                 "isbool(${6=1}) && (!narg(${7=}) || isnum($7))" skip "${2=50%},${3=50%}"
+  pass$1 2
+  if !i[6]" || "!i[7] rm. return fi
+  is_double_sided:=narg($5)?$5:narg($_double3d)?$_double3d:1
+  focale:=narg($7)?$7:narg($_focale3d)?$_focale3d:700
+
+  foreach[^-1] {
+    pass. 0
+
+    # Recreate specific version of 3D object to render depths.
+    nbv,nbp:=i[6],i[7]
+    1,$nbv,1,1,"i[#1,8 + 3*y+2]" zm,zM,zf:=im,iM,1023/(iM-im) rm. # Compute min/max of z coordinates
+
+    +z[1] 0,0,0,{8+3*$nbv-1} # Header + vertices
+    0x2 # Primitives, Colors & z-texture
+
+    1,$nbp,1,1,"
+      begin(p = 8 + 3*$nbv; ind = 0; ind_t = -1);
+      const zm = $zm;
+      const zM = $zM;
+      const zf = $zf;
+
+      push_color(z) = (
+        da_push(#4,z,z,z);
+      );
+      push_texture() = (
+        ind_t<0?(
+          z_texture = expr(string('lerp(',$4 + zm,',',$4 + zM,',x/1023)'),1024,1,1,3);
+          da_push(#4,-128,1024,1,3);
+          siz = da_size(#4);
+          resize(#4,1,siz + size(z_texture) + 1,1,1,0);
+          copy(i[#4,siz],z_texture);
+          siz = h(#4) - 1;
+          i[#4,siz] = siz;
+          ind_t = y;
+        ):da_push(#4,-128,ind_t,0,0);
+      );
+
+      n = i[#1,p++];
+      n==1?( # Point
+        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
+        da_push(#3,1,i0); push_color(z0);
+      ):isin(n,2,6)?( # Segment
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        da_push(#3,6,i0,i1,z0,0,z1,0); push_texture();
+        p+=n - 2;
+      ):isin(n,3,9)?( # Triangle
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
+        da_push(#3,9,i0,i1,i2,z0,0,z1,0,z2,0); push_texture();
+        p+=n - 3;
+      ):isin(n,4,12)?( # Quadrangle
+        i0 = i[#1,p++]; z0 = round((i[#1,10 + 3*i0] - zm)*zf);
+        i1 = i[#1,p++]; z1 = round((i[#1,10 + 3*i1] - zm)*zf);
+        i2 = i[#1,p++]; z2 = round((i[#1,10 + 3*i2] - zm)*zf);
+        i3 = i[#1,p++]; z3 = round((i[#1,10 + 3*i3] - zm)*zf);
+        da_push(#3,12,i0,i1,i2,i3,z0,0,z1,0,z2,0,z3,0); push_texture();
+        p+=n - 4;
+      ):n==5?( # Sphere
+        i0 = i[#1,p++]; z0 = i[#1,10 + 3*i0];
+        i1 = i[#1,p++]; z1 = i[#1,10 + 3*i1];
+        za = (z0 + z1)/2;
+        da_push(#3,6,i0,i1,z0,0,z1,0); push_color(za);
+        p+=n - 2;
+      ):(p+=n);
+      end(da_freeze(#3); da_freeze(#4); set('ind',ind))" rm.
+    1,$nbp,1,1,1
+
+    a[-4--1] y j3d[0] .,${2-4},1,2,$is_double_sided,$6,$focale k[0]
+  }
+  rm.
+
+#@cli object3d_normal : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focale
+#@cli : Draw normal map of specified 3D object on selected images.
+#@cli : Default values: 'x=y=50%', 'z=0' and 'is_zbuffer=1'. \
+# All other arguments take their default values from the 3D environment variables.
+#@cli : $ gmic3d center3d normalize3d rotate3d 0,1,0,45 mul3d 360 400,400 object3d_normal[-1] [-2] snapshot3d[-2] 400
+object3d_normal : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || isbool($5)) && "\
+                  "isbool(${6=1}) && (!narg(${7=}) || isnum($7))" skip "${2=50%},${3=50%}"
+  pass$1 0 p3d. 2
+  if !i[6]" || "!i[7] rm. return fi
+  is_double_sided:=narg($5)?$5:narg($_double3d)?$_double3d:1
+  focale:=narg($7)?$7:narg($_focale3d)?$_focale3d:700
+
+  +normals3d. 1 channels. 3,5 permute. cyzx y.
+  s3d.. rv[-3,-1] rm.
+  a[-6--1] y
+
+  j3d[^-1] .,${2-4},1,2,$is_double_sided,$6,$focale rm.
 
 #@cli opacity3d : opacity
 #@cli : Set opacity of selected 3D objects.
