@@ -1,0 +1,67 @@
+#!/usr/bin/env gmic
+# File : tunnel3d.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Tunnel 3D" e[] "" animate 30
+
+# Main function
+go :
+  v 0
+
+  # Generate template mesh for the 3D tunnel.
+  curve3d 0,0,t,1,64,0,63,16,0 rv3d # Generate a straight bar along z-axis
+  s3d eval "i[#1,1]-=32" rows... 0,{-3,h-4*32-1} rows.. 0,{-2,h-3*32-1} rows. 0,{h-32-1} a y # Remove closed extremities
+  2,1024,1,3,"x?[255,200,128]:[255,0,0]"
+  (0^0^0;0^1^1;0.25^0.25^1;1^1^1;0.9^0.8^0.2;0.3^0.3^0.3;0.2^0.2^0.2;0.1^0.1^0.1;0.1^0^0)
+  2,{-2,h},1,3,"Y = lerp(0,h#-1,(y/h)^0.6); I(#-1,0,Y,0,2)" rm.. *[-2,-1] # Colors for depth shading
+
+  t3d.. . rm. . => template3d,mesh3d
+  +l. { s3d off_p:=8+{2,h} k... r 13,{h/13},1,1,-1 permute zycx } => primitives # Keep editable version of primitives
+
+  # Generate sequence of 3D tunnel centers.
+  1,32,1,2,u b. y,4,2 n. -1.5,1.5 a. .,y => coords
+  +g. y channels. 0,2 sh. 100% f. 1 rm. orientation. => orientations # Desired camera orientations
+
+  # Display animation
+  nbf=256 mzi2=-inf
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}"/"$nbf
+
+    z:=16+lerp(0,h#$coords/2,$>/$nbf)
+    zi2:=2*int($z/2)
+    if $zi2!=$mzi2 # Generate 3D mesh for current tunnel view.
+      +z[template3d] 0,8,0,{template3d,8+3*i[6]-1} r. 3,{h/3},1,1,-1 permute. zycx # Extract 3D coordinates
+      f. "C = I[#$coords,$zi2 + i2,2]; [ i0 + C[0],i1 + C[1],i2 ]"
+      permute. cyzx y. +j[template3d] .,0,8,0,0 rm..
+      mzi2:=$zi2
+      j[mesh3d] . rm.
+    fi
+
+    cx,cy:="I(#$coords,0,$z,0,2,2)"
+    u,v,w:="unitnorm(I(#$orientations,0,$z,0,2,2))"
+    M:="W = unitnorm(I(#$orientations,0,$z,0,2,2)); V = cross(W,[1,0,0]); U = cross(V,W); 1.5*[ U,V,W ]" # Camera matrix
+
+    +-3d[mesh3d] $cx,$cy,{$z%2}
+    apply_matrix3d. $M
+    r3d. 0,0,1,{180*cos(2*pi*$>/$nbf)}
+
+    # Add depth effect.
+    f[primitives] "
+      P = I;
+      z = int(y/16);
+      P[5] = P[7] = P[9] = P[11] = xor(z,y)%2;
+      P[6] = 16*i[#-1,8+3*i1+2];
+      P[8] = 16*i[#-1,8+3*i2+2];
+      P[10] = 16*i[#-1,8+3*i3+2];
+      P[12] = 16*i[#-1,8+3*i4+2];
+      P"
+    +permute[primitives] cyzx y. j.. .,0,$off_p rm.
+
+    # Render frame.
+    600,600,1,3
+    j3d. ..,50%,50%,-502,1,2,0,0,500 rm..
+  }
+  k[5--1] rs 320
+
+# End of file.
