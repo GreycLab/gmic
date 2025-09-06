@@ -25385,19 +25385,21 @@ cubes3d : check ${1=1}>=0
   lathe3d. $1,2
   => [3D\ cup]
 
-#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,_is_closed_curve={ 0:No | 1:Yes }
+#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,\
+# _cap_style={ 0:Open | 1: Capped | 2: Closed }
 #@cli : Input 3D curve with specified parameterization.
 #@cli : If 'r(t)==0' or 'nb_sides<3', the generated 3D object is composed of segments only.
 #@cli : Default values: 'x(t)=cos(2*pi*t)', 'y(t)=sin(2*pi*t)', 'z(t)=t', 'r(t)=0.025', 'resolution=128', \
-# 'tmin=0', 'tmax=1', 'nb_sides=16' and 'is_closed_curve=0'.
+# 'tmin=0', 'tmax=1', 'nb_sides=16' and 'cap_style=1'.
 #@cli : $ curve3d ,
-+curve3d : check "isint(${5=128},2) && isbool(${9=0}) && isint(${8=16},0)"
++curve3d : check "isint(${5=128},2) && isint(${8=16},0) && isint(${9=1},0,2)"
            skip "${1=0.25*cos(4*pi*t)},${2=0.25*sin(4*pi*t)},${3=t},${4=0.025},${6=0},${7=1}"
-  xt,yt,zt,rt,resolution,tmin,tmax,nb_sides,is_closed=$"*"
+  xt,yt,zt,rt,resolution,tmin,tmax,nb_sides,cap_style=$"*"
   nb_sides:="$nb_sides<3 || ['"$rt"']=='0'?1:$nb_sides"
-  s0,s1="open","closed"
-  e[^-1] "Input 3D "${s$is_closed}" curve with parameterization ("$xt,$yt,$zt"), radius '"$rt"', "\
+  s0,s1,s2="open","capped","closed"
+  e[^-1] "Input 3D "${s$cap_style}" curve with parameterization ("$xt,$yt,$zt"), radius '"$rt"', "\
          "resolution "$resolution", t-range ["$tmin,$tmax"], radius and "$nb_sides" sides."
+  is_closed:=$cap_style>=2
   ('CImg3d') (0,0)
   1,$resolution,1,4,"t = lerp($tmin,$tmax,y/(h - !$is_closed)); [ ("$xt"),("$yt"),("$zt"),("$rt") ]" s. c,-3
   if $nb_sides==1 # Curve made of segments
@@ -25423,7 +25425,7 @@ cubes3d : check ${1=1}>=0
       Q = P + R*mul(M,[ cos(ang),sin(ang),0 ]);
       da_push(Q[0],Q[1],Q[2]);
       end(
-        !$is_closed?da_push(P0[0],P0[1],P0[2],P[0],P[1],P[2]);
+        $cap_style==1?da_push(P0[0],P0[1],P0[2],P[0],P[1],P[2]);
         da_freeze();
       )" rm[-5--3,-1]
     nbv:=h/3
@@ -25436,7 +25438,7 @@ cubes3d : check ${1=1}>=0
         const indmin = $nb_sides*$resolution;
         const indmax = indmin + 1;
         const last = indmin - $nb_sides;
-        !$is_closed?(
+        $cap_style==1?(
           repeat ($nb_sides,k,da_push(3,indmin,(k + 1)%$nb_sides,k); ++nbp);
           repeat ($nb_sides,k,da_push(3,indmax,last + k,last + ((k + 1)%$nb_sides)); ++nbp);
         );
