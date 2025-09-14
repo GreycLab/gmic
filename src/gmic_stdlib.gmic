@@ -36014,6 +36014,32 @@ math_lib :
     min(dist(A,C,D),dist(B,C,D),dist(C,A,B),dist(D,A,B));
   );
 
+  # Convert epoch to UTC date.
+  epoch2date_is_leap(year) = ((!(year%4) && (year%100)) || !(year%400));
+  epoch2date_days_in_month(year,month) = (
+    month==2 && epoch2date_is_leap(year)?29:arg0(month - 1,31,28,31,30,31,30,31,31,30,31,30,31)
+  );
+  epoch2date(epoch) = (
+    ref(epoch,e2d_epoch);
+    e2d_days = int(e2d_epoch/86400);
+    e2d_secs_in_day = e2d_epoch%86400;
+    e2d_epoch<0 && e2d_secs_in_day>0?(--e2d_days; e2d_secs_in_day-=86400; e2d_secs_in_day*=-1);
+    e2d_hour = int(e2d_secs_in_day/3600);
+    e2d_minute = int((e2d_secs_in_day%3600)/60);
+    e2d_second = e2d_secs_in_day%60;
+    e2d_year = 1970;
+    e2d_days>=0?
+      do(e2d_dpy = epoch2date_is_leap(e2d_year)?366:365;
+         e2d_days>=e2d_dpy?(e2d_days-=e2d_dpy; ++e2d_year):break()):
+      do(e2d_pyear = e2d_year - 1; e2d_dpy = epoch2date_is_leap(e2d_pyear)?366:365;
+         e2d_days<0?(e2d_days+=e2d_dpy; --e2d_year):break());
+    e2d_month = 1;
+    do (e2d_dim = epoch2date_days_in_month(e2d_year,e2d_month);
+        e2d_days>=e2d_dim?(e2d_days-=e2d_dim; ++e2d_month):break());
+    e2d_day = int(e2d_days) + 1;
+    [ e2d_year,e2d_month,e2d_day,e2d_hour,e2d_minute,e2d_second ]
+  );
+
   # Return the 'm' largest eigenvalues of a (large) square matrix A,
   # using the Arnoldi iteration method (https://en.wikipedia.org/wiki/Arnoldi_iteration).
   # A larger 'm' goes with better numerical precision.
