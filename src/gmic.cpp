@@ -2470,7 +2470,7 @@ const char *gmic::builtin_command_names[] = {
   // Commands of length>3.
   "abscut","acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
   "bilateral","blur","boxfilter","break",
-  "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","createdir","cumulate","cursor",
+  "camera","check","check3d","command","continue","convolve","correlate","cosh","createdir","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
@@ -2514,7 +2514,7 @@ const int gmic::builtin_command_ids[] = {
   // Commands of length>3.
   id_abscut,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
   id_bilateral,id_blur,id_boxfilter,id_break,
-  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_crop,id_createdir,
+  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_createdir,id_crop,
     id_cumulate,id_cursor,
   id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
   id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
@@ -6288,22 +6288,47 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'cosh'.
         gmic_simple_command(cosh,"Compute pointwise hyperbolic cosine of image%s.");
 
-        // 'createdir'
+        // 'createdir'.
         if (id_builtin_command==id_createdir && no_get_selection) {
           gmic_substitute_args(false);
-          name.assign(argument,(unsigned int)std::strlen(argument) + 1);
-          const char *arg_command_text = gmic_argument_text_printed();
-          unsigned int offset_argument_text = 0, count_new = 0, count_replaced = 0;
-          char *arg_command = name;
-          strreplace_fw(arg_command);
+          const CImg<T> arg = CImg<char>::string(argument);
+          const unsigned int pend = (unsigned int)arg.size();
+          g_list_c.assign();
+          for (unsigned int p = 0; p<pend; ) { // Retrieve list of filenames
+            unsigned int np = p;
+            while (np<pend && arg[np] && arg[np]!=',') ++np;
+            if (np<pend) {
+              CImg<T>(arg.data(p),1,++np - p,1,1,true).move_to(g_list_c);
+              g_list_c.back().back() = 0;
+            }
+            p = np;
+          }
+          int nb_dirs = g_list_c.width(), off = 0;
+          is_cond = true;
 
-          bool add_debug_info = is_debug;
-          const bool is_debug_arg = (*arg_command=='0' || *arg_command=='1') && arg_command[1]==',';
-          if (is_debug_arg) {
-            add_debug_info = (*arg_command=='1');
-            arg_command+=2; arg_command_text+=2; offset_argument_text = 2;
+          if (g_list_c.width()==1 && (!g_list_c[0] || !g_list_c(0,0))) nb_dirs = 0;
+          else if (nb_dirs>1 && (g_list_c(0,0)=='0' || g_list_c(0,0)=='1')) {
+            is_cond = (bool)(g_list_c(0,0) - '0');
+            --nb_dirs; ++off;
           }
 
+          if (nb_dirs) {
+            print(0,"Create director%s '%s' (%d director%s), with%s overwrite mode.",
+                  nb_dirs!=1?"ies":"y",gmic_argument_text_printed(),
+                  nb_dirs,nb_dirs!=1?"ies":"y",
+                  is_cond?"":"out");
+            cimglist_for_in(g_list_c,off,g_list.width() - 1,l) {
+              strreplace_fw(g_list_c[l]);
+              try {
+                cimg::create_directory(g_list_c[l],is_cond);
+              } catch (CImgException&) {
+                error(true,0,0,
+                      "Command 'createdir': Error occured when trying to create directory '%s'.",
+                      g_list_c[l].data());
+              }
+            }
+          }
+          g_list_c.assign();
           ++position;
           continue;
         }
