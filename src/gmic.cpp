@@ -6306,8 +6306,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           int nb_dirs = g_list_c.width(), off = 0;
           is_cond = true;
 
-          if (g_list_c.width()==1 && (!g_list_c[0] || !g_list_c(0,0))) nb_dirs = 0;
-          else if (nb_dirs>1 && (g_list_c(0,0)=='0' || g_list_c(0,0)=='1')) {
+          if (nb_dirs>1 && g_list_c && (g_list_c(0,0)=='0' || g_list_c(0,0)=='1')) {
             is_cond = (bool)(g_list_c(0,0) - '0');
             --nb_dirs; ++off;
           }
@@ -6323,7 +6322,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 cimg::create_directory(g_list_c[l],is_cond);
               } catch (CImgException&) {
                 error(true,0,0,
-                      "Command 'createdir': Error occured when trying to create directory '%s'.",
+                      "Command 'createdir': Failed to create directory '%s'.",
                       g_list_c[l].data());
               }
             }
