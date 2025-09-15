@@ -1959,10 +1959,9 @@ compress_pdf : skip "${2=out.pdf}"
     "-dMonoImageDownsampleType=/Bicubic -dMonoImageResolution=144 "\
     "-sOutputFile=\"$2\" \"$1\""
 
-#@cli cursor : _mode = { 0:hide | 1:show } : (+)
-#@cli : Show or hide mouse cursor for selected instant display windows.
-#@cli : Command selection (if any) stands for instant display window indices instead of image indices.
-#@cli : Default value: 'mode=1'.
+#@cli createdir : force_overwrite={ 0:No | 1:Yes },directory_path_1,_directory_path_2,... : (+)
+#@cli : Create one or several new directories 'directory_path_k' on the filesystem.
+#@cli : Default value: 'force_overwrite=1'.
 
 # csv2ts : _output_locale
 # Convert selected buffers from .csv format to .ts format (translation files for G'MIC-Qt).
@@ -2007,6 +2006,11 @@ csv2ts : skip "${1=fr}"
       a[^0] y k.
     fi
   }
+
+#@cli cursor : _mode = { 0:hide | 1:show } : (+)
+#@cli : Show or hide mouse cursor for selected instant display windows.
+#@cli : Command selection (if any) stands for instant display window indices instead of image indices.
+#@cli : Default value: 'mode=1'.
 
 #@cli delete : filename1[,filename2,...] : (+)
 #@cli : Delete specified filenames on disk. Multiple filenames must be separated by commas.
@@ -11499,7 +11503,7 @@ update_gallery_html : check "isbool(${1=0})"
         "the <a href=\"https://gmic.eu/reference/\">technical reference</a> to get a full documentation on this "\
         "software.</p>"\n
 
-    html_menu="          <table class=\"gallery_navigation\"><tr>\n              "\
+    html_menu="          <table id=\"menu\" class=\"gallery_navigation\"><tr>\n              "\
              $td_arrays"<a href=\"arrays.html#menu\">Arrays &amp; Frames</a></td>"\
              $td_artistic"<a href=\"artistic.html#menu\">Artistic</a></td>"\
              $td_blackandwhite"<a href=\"blackandwhite.html#menu\">B&amp;W</a></td>"\
@@ -12819,8 +12823,6 @@ upload_filters :
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
-
-#  files=${},https://gmic.eu/gmic_stdlib.353
   files=${},$HOME/work/src/gmic/src/gmic_stdlib.gmic
 
   repeat narg($files) { l[] {
@@ -25385,19 +25387,21 @@ cubes3d : check ${1=1}>=0
   lathe3d. $1,2
   => [3D\ cup]
 
-#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,_is_closed_curve={ 0:No | 1:Yes }
+#@cli curve3d : _"x(t)",_"y(t)",_"z(t)",_"r(t)",_resolution>1,_tmin,_tmax,_nb_sides>=0,\
+# _cap_style={ 0:Open | 1: Capped | 2: Closed }
 #@cli : Input 3D curve with specified parameterization.
 #@cli : If 'r(t)==0' or 'nb_sides<3', the generated 3D object is composed of segments only.
 #@cli : Default values: 'x(t)=cos(2*pi*t)', 'y(t)=sin(2*pi*t)', 'z(t)=t', 'r(t)=0.025', 'resolution=128', \
-# 'tmin=0', 'tmax=1', 'nb_sides=16' and 'is_closed_curve=0'.
+# 'tmin=0', 'tmax=1', 'nb_sides=16' and 'cap_style=1'.
 #@cli : $ curve3d ,
-+curve3d : check "isint(${5=128},2) && isbool(${9=0}) && isint(${8=16},0)"
++curve3d : check "isint(${5=128},2) && isint(${8=16},0) && isint(${9=1},0,2)"
            skip "${1=0.25*cos(4*pi*t)},${2=0.25*sin(4*pi*t)},${3=t},${4=0.025},${6=0},${7=1}"
-  xt,yt,zt,rt,resolution,tmin,tmax,nb_sides,is_closed=$"*"
+  xt,yt,zt,rt,resolution,tmin,tmax,nb_sides,cap_style=$"*"
   nb_sides:="$nb_sides<3 || ['"$rt"']=='0'?1:$nb_sides"
-  s0,s1="open","closed"
-  e[^-1] "Input 3D "${s$is_closed}" curve with parameterization ("$xt,$yt,$zt"), radius '"$rt"', "\
+  s0,s1,s2="open","capped","closed"
+  e[^-1] "Input 3D "${s$cap_style}" curve with parameterization ("$xt,$yt,$zt"), radius '"$rt"', "\
          "resolution "$resolution", t-range ["$tmin,$tmax"], radius and "$nb_sides" sides."
+  is_closed:=$cap_style>=2
   ('CImg3d') (0,0)
   1,$resolution,1,4,"t = lerp($tmin,$tmax,y/(h - !$is_closed)); [ ("$xt"),("$yt"),("$zt"),("$rt") ]" s. c,-3
   if $nb_sides==1 # Curve made of segments
@@ -25423,7 +25427,7 @@ cubes3d : check ${1=1}>=0
       Q = P + R*mul(M,[ cos(ang),sin(ang),0 ]);
       da_push(Q[0],Q[1],Q[2]);
       end(
-        !$is_closed?da_push(P0[0],P0[1],P0[2],P[0],P[1],P[2]);
+        $cap_style==1?da_push(P0[0],P0[1],P0[2],P[0],P[1],P[2]);
         da_freeze();
       )" rm[-5--3,-1]
     nbv:=h/3
@@ -25436,7 +25440,7 @@ cubes3d : check ${1=1}>=0
         const indmin = $nb_sides*$resolution;
         const indmax = indmin + 1;
         const last = indmin - $nb_sides;
-        !$is_closed?(
+        $cap_style==1?(
           repeat ($nb_sides,k,da_push(3,indmin,(k + 1)%$nb_sides,k); ++nbp);
           repeat ($nb_sides,k,da_push(3,indmax,last + k,last + ((k + 1)%$nb_sides)); ++nbp);
         );
@@ -29825,7 +29829,7 @@ nn_lib :
     nn_loss_binary_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,1e-8);
       OUT#_epsiloned1 = vmax(1 - IN#,1e-8);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1))/size(IN#)*OUT#_weight;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1))*OUT#_weight;
       batch_#OUT+=OUT#_single;
     );
 
@@ -29849,7 +29853,7 @@ nn_lib :
 
     nn_loss_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,1e-8);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned))/size(IN#)*OUT#_weight;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned))*OUT#_weight;
       batch_#OUT+=OUT#_single;
     );
 
@@ -29930,7 +29934,7 @@ nn_lib :
 
     nn_loss_softmax_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),1e-8);
-      OUT#_single = -sum(TRUTH*log(OUT#_softmax))/size(IN#)*OUT#_weight;
+      OUT#_single = -sum(TRUTH*log(OUT#_softmax))*OUT#_weight;
       batch_#OUT+=OUT#_single;
     );
 
@@ -36012,6 +36016,32 @@ math_lib :
   # Distance from segment [A,B] to segment [C,D]
   dist_segment2segment(A,B,C,D) = (
     min(dist(A,C,D),dist(B,C,D),dist(C,A,B),dist(D,A,B));
+  );
+
+  # Convert epoch to UTC date.
+  epoch2date_is_leap(year) = ((!(year%4) && (year%100)) || !(year%400));
+  epoch2date_days_in_month(year,month) = (
+    month==2 && epoch2date_is_leap(year)?29:arg0(month - 1,31,28,31,30,31,30,31,31,30,31,30,31)
+  );
+  epoch2date(epoch) = (
+    ref(epoch,e2d_epoch);
+    e2d_days = int(e2d_epoch/86400);
+    e2d_secs_in_day = e2d_epoch%86400;
+    e2d_epoch<0 && e2d_secs_in_day>0?(--e2d_days; e2d_secs_in_day-=86400; e2d_secs_in_day*=-1);
+    e2d_hour = int(e2d_secs_in_day/3600);
+    e2d_minute = int((e2d_secs_in_day%3600)/60);
+    e2d_second = e2d_secs_in_day%60;
+    e2d_year = 1970;
+    e2d_days>=0?
+      do(e2d_dpy = epoch2date_is_leap(e2d_year)?366:365;
+         e2d_days>=e2d_dpy?(e2d_days-=e2d_dpy; ++e2d_year):break()):
+      do(e2d_pyear = e2d_year - 1; e2d_dpy = epoch2date_is_leap(e2d_pyear)?366:365;
+         e2d_days<0?(e2d_days+=e2d_dpy; --e2d_year):break());
+    e2d_month = 1;
+    do (e2d_dim = epoch2date_days_in_month(e2d_year,e2d_month);
+        e2d_days>=e2d_dim?(e2d_days-=e2d_dim; ++e2d_month):break());
+    e2d_day = int(e2d_days) + 1;
+    [ e2d_year,e2d_month,e2d_day,e2d_hour,e2d_minute,e2d_second ]
   );
 
   # Return the 'm' largest eigenvalues of a (large) square matrix A,
@@ -62493,20 +62523,20 @@ fx_solve_maze_preview :
 
 #@cli _gallery_codesamples
 #@cli : This entry defines some examples of coding fun filters for the G'MIC gallery page.
-#@cli : $ https://gmic.eu/samples/lissajous.gmic go _fps=10 _label="Lissajous"
-#@cli : $ https://gmic.eu/samples/torus3d.gmic go _fps=10 _label="3D~torus"
-#@cli : $ https://gmic.eu/samples/pacman.gmic go _fps=25 _label="Pacman"
-#@cli : $ https://gmic.eu/samples/scrolling.gmic go _fps=25 _label="Scrolling"
-#@cli : $ https://gmic.eu/samples/landscape.gmic go _fps=12 _label="Landscape"
-#@cli : $ https://gmic.eu/samples/mandelbrot.gmic go _fps=8 _label="Mandelbrot"
-#@cli : $ https://gmic.eu/samples/heart.gmic go _fps=15 _label="Heart"
-#@cli : $ https://gmic.eu/samples/distortion.gmic go _fps=20 _label="Distortion"
-#@cli : $ https://gmic.eu/samples/rotozoom.gmic go _fps=15 _label="Rotozoom"
 #@cli : $ https://gmic.eu/samples/french_flag.gmic go _fps=20 _label="French~Flag"
 #@cli : $ https://gmic.eu/samples/snow.gmic go _fps=20 _label="Snow"
 #@cli : $ https://gmic.eu/samples/fire.gmic go _fps=15 _label="Fire"
 #@cli : $ https://gmic.eu/samples/cube3d.gmic go _fps=20 _label="3D Cube"
 #@cli : $ https://gmic.eu/samples/tunnel3d.gmic go _fps=20 _label="3D Tunnel"
+#@cli : $ https://gmic.eu/samples/pacman.gmic go _fps=25 _label="Pacman"
+#@cli : $ https://gmic.eu/samples/scrolling.gmic go _fps=25 _label="Scrolling"
+#@cli : $ https://gmic.eu/samples/landscape.gmic go _fps=12 _label="Landscape"
+#@cli : $ https://gmic.eu/samples/mandelbrot.gmic go _fps=8 _label="Mandelbrot"
+#@cli : $ https://gmic.eu/samples/lissajous.gmic go _fps=10 _label="Lissajous"
+#@cli : $ https://gmic.eu/samples/torus3d.gmic go _fps=10 _label="3D~torus"
+#@cli : $ https://gmic.eu/samples/heart.gmic go _fps=15 _label="Heart"
+#@cli : $ https://gmic.eu/samples/distortion.gmic go _fps=20 _label="Distortion"
+#@cli : $ https://gmic.eu/samples/rotozoom.gmic go _fps=15 _label="Rotozoom"
 
 # Local Variables:
 # mode: sh

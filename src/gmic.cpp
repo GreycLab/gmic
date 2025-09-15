@@ -2428,40 +2428,40 @@ typedef enum {
   // Commands of length>3.
   id_abscut=1,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
   id_bilateral=11,id_blur,id_boxfilter,id_break,
-  id_camera=15,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_crop,id_cumulate,
-    id_cursor,
-  id_debug=26,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
-  id_echo=36,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
-  id_files=47,id_fill,id_flood,id_foreach,
-  id_guided=51,
-  id_histogram=52,
-  id_ifft=53,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
-  id_keep=61,
-  id_label=62,id_light3d,id_line,id_local,id_log10,id_log2,
-  id_matchpatch=68,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
-  id_name=78,id_named,id_network,id_noarg,id_noise,id_normalize,
-  id_object3d=84,id_onfail,id_output,
-  id_parallel=87,id_pass,id_permute,id_point,id_polygon,id_progress,
-  id_quit=93,
-  id_rand=94,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
-  id_screen=103,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+  id_camera=15,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_createdir,id_crop,
+    id_cumulate,id_cursor,
+  id_debug=27,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
+  id_echo=37,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
+  id_files=48,id_fill,id_flood,id_foreach,
+  id_guided=52,
+  id_histogram=53,
+  id_ifft=54,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
+  id_keep=62,
+  id_label=63,id_light3d,id_line,id_local,id_log10,id_log2,
+  id_matchpatch=69,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name=79,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d=85,id_onfail,id_output,
+  id_parallel=88,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_quit=94,
+  id_rand=95,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen=104,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
     id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
-  id_tanh=121,id_text,
-  id_uncommand=123,id_unroll,id_unserialize,
-  id_vanvliet=126,id_verbose,
-  id_wait=128,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_tanh=122,id_text,
+  id_uncommand=124,id_unroll,id_unserialize,
+  id_vanvliet=127,id_verbose,
+  id_wait=129,id_warn,id_warp,id_watershed,id_while,id_window,
     id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 3.
-  id_abs=149,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
-  id_log=163,
-  id_map=164,id_max,id_min,id_mod,id_mul,id_neq,
-  id_pow=171,
-  id_rol=173,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
+  id_abs=150,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
+  id_log=164,
+  id_map=165,id_max,id_min,id_mod,id_mul,id_neq,
+  id_pow=172,
+  id_rol=174,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
 
   // Commands of length 2.
-  id_do=189,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
-  id_or=201
+  id_do=190,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
+  id_or=202
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
@@ -2470,7 +2470,7 @@ const char *gmic::builtin_command_names[] = {
   // Commands of length>3.
   "abscut","acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
   "bilateral","blur","boxfilter","break",
-  "camera","check","check3d","command","continue","convolve","correlate","cosh","crop","cumulate","cursor",
+  "camera","check","check3d","command","continue","convolve","correlate","cosh","createdir","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
@@ -2514,7 +2514,8 @@ const int gmic::builtin_command_ids[] = {
   // Commands of length>3.
   id_abscut,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
   id_bilateral,id_blur,id_boxfilter,id_break,
-  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_crop,id_cumulate,id_cursor,
+  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_createdir,id_crop,
+    id_cumulate,id_cursor,
   id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
   id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
   id_files,id_fill,id_flood,id_foreach,
@@ -2940,23 +2941,9 @@ bool gmic::init_rc(const char *const custom_path) {
     char &c = dirname[dirname.width() - 2];
     if (c=='/' || c=='\\') c = 0;
   }
-  if (!cimg::is_directory(dirname)) {
-#if cimg_OS==2
-    DeleteFileA(dirname); // In case 'dirname' is already a file
-    if (!CreateDirectoryA(dirname,0)) {
-      // The path may be UTF-8, convert it to a
-      // wide-character string and try again.
-      const int wideLength = MultiByteToWideChar(CP_UTF8,0,dirname,-1,0,0);
-      if (!wideLength) return false;
-      CImg<wchar_t> wpath(wideLength);
-      if (!MultiByteToWideChar(CP_UTF8,0,dirname,-1,wpath,wideLength)) return false;
-      DeleteFileW(wpath);
-      return (bool)CreateDirectoryW(wpath,0);
-    }
-#elif cimg_OS==1
-    std::remove(dirname); // In case 'dirname' is already a file
-    return !(bool)mkdir(dirname,0777);
-#endif
+  try { cimg::create_directory(dirname); }
+  catch (CImgIOException&) {
+//    warn(0,"Could not create G'MIC resource directory '%s'",dirname.data());
   }
   return true;
 }
@@ -5493,9 +5480,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       if (is_debug || (verbosity>=1 && !is_command_check && !is_command_skip && !is_command_verbose &&
                        !is_command_echo && !is_command_error && !is_command_warn))
         switch (id_builtin_command) {
-        case id_break : case id_camera : case id_command : case id_continue : case id_debug : case id_delete :
-        case id_do : case id_done : case id_else : case id_elif : case id_exec : case id_fi : case id_for :
-        case id_files : case id_if : case id_light3d : case id_network : case id_noarg : case id_onfail :
+        case id_break : case id_camera : case id_command : case id_continue : case id_createdir : case id_debug :
+        case id_delete : case id_do : case id_done : case id_else : case id_elif : case id_exec : case id_fi :
+        case id_for : case id_files : case id_if : case id_light3d : case id_network : case id_noarg : case id_onfail :
         case id_parallel : case id_progress : case id_quit : case id_repeat : case id_return : case id_status :
         case id_srand : case id_screen : case id_uncommand : case id_wait : case id_while :
           break;
@@ -6300,6 +6287,50 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'cosh'.
         gmic_simple_command(cosh,"Compute pointwise hyperbolic cosine of image%s.");
+
+        // 'createdir'.
+        if (id_builtin_command==id_createdir && no_get_selection) {
+          gmic_substitute_args(false);
+          const CImg<T> arg = CImg<char>::string(argument);
+          const unsigned int pend = (unsigned int)arg.size();
+          g_list_c.assign();
+          for (unsigned int p = 0; p<pend; ) { // Retrieve list of filenames
+            unsigned int np = p;
+            while (np<pend && arg[np] && arg[np]!=',') ++np;
+            if (np<pend) {
+              CImg<T>(arg.data(p),1,++np - p,1,1,true).move_to(g_list_c);
+              g_list_c.back().back() = 0;
+            }
+            p = np;
+          }
+          int nb_dirs = g_list_c.width(), off = 0;
+          is_cond = true;
+
+          if (nb_dirs>1 && g_list_c && (g_list_c(0,0)=='0' || g_list_c(0,0)=='1')) {
+            is_cond = (bool)(g_list_c(0,0) - '0');
+            --nb_dirs; ++off;
+          }
+
+          if (nb_dirs) {
+            print(0,"Create director%s '%s' (%d director%s), with%s overwrite mode.",
+                  nb_dirs!=1?"ies":"y",gmic_argument_text_printed(),
+                  nb_dirs,nb_dirs!=1?"ies":"y",
+                  is_cond?"":"out");
+            cimglist_for_in(g_list_c,off,g_list.width() - 1,l) {
+              strreplace_fw(g_list_c[l]);
+              try {
+                cimg::create_directory(g_list_c[l],is_cond);
+              } catch (CImgException&) {
+                error(true,0,0,
+                      "Command 'createdir': Failed to create directory '%s'.",
+                      g_list_c[l].data());
+              }
+            }
+          }
+          g_list_c.assign();
+          ++position;
+          continue;
+        }
 
         // 'crop'.
         if (id_builtin_command==id_crop) {
