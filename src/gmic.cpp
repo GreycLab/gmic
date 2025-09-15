@@ -2941,7 +2941,10 @@ bool gmic::init_rc(const char *const custom_path) {
     char &c = dirname[dirname.width() - 2];
     if (c=='/' || c=='\\') c = 0;
   }
-  cimg::create_directory(dirname);
+  try { cimg::create_directory(dirname); }
+  catch (CImgIOException&) {
+//    warn(0,"Could not create G'MIC resource directory '%s'",dirname.data());
+  }
   return true;
 }
 
