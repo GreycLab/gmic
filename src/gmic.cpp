@@ -2940,24 +2940,7 @@ bool gmic::init_rc(const char *const custom_path) {
     char &c = dirname[dirname.width() - 2];
     if (c=='/' || c=='\\') c = 0;
   }
-  if (!cimg::is_directory(dirname)) {
-#if cimg_OS==2
-    DeleteFileA(dirname); // In case 'dirname' is already a file
-    if (!CreateDirectoryA(dirname,0)) {
-      // The path may be UTF-8, convert it to a
-      // wide-character string and try again.
-      const int wideLength = MultiByteToWideChar(CP_UTF8,0,dirname,-1,0,0);
-      if (!wideLength) return false;
-      CImg<wchar_t> wpath(wideLength);
-      if (!MultiByteToWideChar(CP_UTF8,0,dirname,-1,wpath,wideLength)) return false;
-      DeleteFileW(wpath);
-      return (bool)CreateDirectoryW(wpath,0);
-    }
-#elif cimg_OS==1
-    std::remove(dirname); // In case 'dirname' is already a file
-    return !(bool)mkdir(dirname,0777);
-#endif
-  }
+  cimg::create_directory(dirname);
   return true;
 }
 
