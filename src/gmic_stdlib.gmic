@@ -1961,6 +1961,7 @@ compress_pdf : skip "${2=out.pdf}"
 
 #@cli createdir : force_overwrite={ 0:No | 1:Yes },directory_path_1,_directory_path_2,... : (+)
 #@cli : Create one or several new directories 'directory_path_k' on the filesystem.
+#@cli : If a specified directory path contains itself several subdirectories, they are all created if necessary.
 #@cli : Default value: 'force_overwrite=1'.
 
 # csv2ts : _output_locale
@@ -7927,7 +7928,7 @@ _gmd2html_pipeline :
       onfail rm error[] "Command '"$_gmd_command"': "${}
     }
     if $!
-      if !isdir('img') x "mkdir -p img" fi
+      if !isdir('img') createdir img fi
       o. $_gmd_filename rm.
     fi
   } fi
@@ -7957,7 +7958,7 @@ _gmd2html_formula :
     if isfile(['${path_tmp}$varname.pdf'])
       i ${path_tmp}$varname.pdf,800
       autocrop. lt. 128 rs. ,20% n. 0,255 channels. -3,0
-      if !isdir('img') x "mkdir -p img" fi
+      if !isdir('img') createdir img fi
       o. $_gmd_filename
     fi
     rm
@@ -8795,7 +8796,7 @@ parse_gui_images :
 parse_gui_parseparams_thumbnails : u 1 # Tell parser to parse filter parameters
 parse_gui_thumbnails :
   e "  >> Generate output, in 'thumbnails' mode.\n"
-  if !isdir('thumbnails') x "mkdir -p thumbnails" fi
+  if !isdir('thumbnails') createdir thumbnails fi
   sp landscape rs ,256 r 256,256,1,3,0,0,0.5,0.5 store img
   _preview_area_width,_preview_area_height=256
 
@@ -11085,11 +11086,11 @@ update_color_presets_html : check "isbool(${1=0})"
   e $_vt100_g"\n  * Prepare folder structure."$_vt100_n
   x "ln -fs "$HOME/work/src/gmic/html/header1.html" ."
   x "ln -fs "$HOME/work/src/gmic/html/footer.html" ."
-  x "mkdir -p img"
+  createdir img
 
   # Generate thumbnails.
   e $_vt100_g"\n  * Generate thumbnails from samples.\n"$_vt100_n
-  x "mkdir -p original"
+  createdir original
   nb_samples=$!
   to_rgb repeat $nb_samples { l[$<] {
     =>[0] sample_{1+$<}
@@ -11122,8 +11123,8 @@ update_color_presets_html : check "isbool(${1=0})"
     presets=${-_fx_cluts_$category}
 
     e $_vt100_g"\n  * Category ""#"{1+$>}": "$_vt100_b$category"\n"$_vt100_n
-    x "mkdir -p "$category
-    x "mkdir -p "$category/clut
+    createdir $category
+    createdir $category/clut
 
     repeat narg({/$presets}) {
       preset=${arg\ {1+$>},$presets}
@@ -11153,7 +11154,7 @@ update_color_presets_html : check "isbool(${1=0})"
         basename={0,b}
         outfile=$category/$basename/$preset.jpg
         if !isfile(['{/$outfile}'])
-          x "mkdir -p \""$category/$basename"\""
+          createdir $category/$basename
           +map_clut[^-1] .
           _title $preset
           to.. ${},4,{-2,h-28},20,2 frame.. xy,1,0
@@ -11411,7 +11412,7 @@ update_gallery_html : check "isbool(${1=0})"
     error[0--3] "Command 'update_gallery_html: Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
-  x "rm -rf img && mkdir -p img"
+  delete img createdir img
 
   # Define categories and sample pictures.
   categories=arrays,artistic,blackandwhite,colors,deformations,filtering,patterns,3dmeshes,stylization,codesamples
@@ -12327,7 +12328,7 @@ update_reference_html : check "isbool(${1=0})"
 
   # Generate image of examples.
   if $1 _prerelease= fi
-  x "mkdir -p img"
+  createdir img
   _parse_cli_images_path="img/"
   +parse_cli images
   parse_cli html
@@ -12364,7 +12365,7 @@ update_tutorial_html : check "isbool(${1=0})"
   e " > Build directory structure."
   x "ln -fs "$HOME/work/src/gmic/html/header1.html" ."
   x "ln -fs "$HOME/work/src/gmic/html/footer.html" ."
-  x "mkdir -p images scripts"
+  createdir images,scripts
   files 5,$path_tutorial/*
   l[] {
     ({'${}'}:y) s -,{','}
@@ -12819,7 +12820,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=360,361,362,$_version
+  versions=362,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -36862,7 +36863,7 @@ path_cache :
       if isdir(['{/$HOME/.cache}']) _path_cache=$HOME/.cache/gmic/
       elif ['$XDG_CACHE_HOME']!=0 _path_cache=$XDG_CACHE_HOME/gmic/
       fi
-      if !isdir('{/$_path_cache}') x "mkdir -p "$_path_cache fi
+      if !isdir('{/$_path_cache}') createdir $_path_cache fi
     fi
   fi
   u $_path_cache
