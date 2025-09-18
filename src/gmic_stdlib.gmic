@@ -30084,19 +30084,19 @@ nn_clone : check "isvarname('$1') && isvarname('$2')"
   _${net}_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
-# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,initialization=${3-11}
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30109,7 +30109,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
-                      "learning_mode="$learning_mode", regularization="$regularization
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay
   if !isint(${$nout})
     {[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels
     if $initialization==1
@@ -30125,7 +30125,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_forward="begin(nn_conv2d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,\
                    $shrink,$boundary_conditions"));"\
                    "nn_conv2d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
                     "end(nn_conv2d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30134,20 +30134,20 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${net}_previous_layer=$out
 
 #@cli nn_conv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,regularization>=0,_initialization
+# _activation,_learning_mode,weight_decay>=0,_initialization
 #@cli : Add a 'conv2dnl' (2D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30156,27 +30156,27 @@ nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv2dnnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2dnnl' (2D convolutional layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30185,26 +30185,26 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   nn_normalize ${out}_normalize,.,1,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3d' layer (3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,initialization=${3-11}
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30218,7 +30218,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
-                      "regularization="$regularization
+                      "weight_decay="$weight_decay
   if !isint(${$nout})
     {[${_${nin}_size}][3]*$kernel_size^3+1},$nb_channels
     if $initialization==1
@@ -30234,7 +30234,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_forward="begin(nn_conv3d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,$shrink,\
                                                   $boundary_conditions"));"\
                    "nn_conv3d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv3d_backward("$nout,$nin");"\
                     "end(nn_conv3d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30243,20 +30243,20 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${net}_previous_layer=$out
 
 #@cli nn_conv3dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3dnl' (3D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30266,27 +30266,27 @@ nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv3d ${out}_conv3d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,\
-            $learning_mode,$regularization,$initialization
+            $learning_mode,$weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv3dnnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3dnnl' (3D convolutional layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30296,7 +30296,7 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv3d ${out}_conv3d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,\
-            $learning_mode,$regularization,$initialization
+            $learning_mode,$weight_decay,$initialization
   nn_normalize ${out}_normalize,.,1,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
@@ -30407,16 +30407,16 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default value: 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=3},0,3)"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi # nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,learning_mode,regularization,initialization=${3-6}
+  nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
   _${net}_layer_names.=$out,
@@ -30424,7 +30424,7 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${nout}_size=1,1,1,$3
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="learning_mode="$learning_mode", regularization="$regularization
+  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
   if !isint(${$nout})
     {prod(${_${nin}_size})+1},$nb_channels
     if $initialization==1 # Identity
@@ -30439,7 +30439,7 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   fi
   _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin"));"\
                    "nn_fc_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_fc_backward("$nout,$nin");"\
                     "end(nn_fc_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30447,43 +30447,43 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fcnl : out,in,nb_channels>0,_activation,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fcnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fcnl' layer (fully connected layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
           skip ${4=leakyrelu}
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,activation,learning_mode,regularization,initialization=${3-7}
+  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
 
   e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fcnnl : out,in,nb_channels>0,_activation,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fcnnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fcnnl' layer (fully connected layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
            skip ${4=leakyrelu}
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,activation,learning_mode,regularization,initialization=${3-7}
+  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
 
   e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
   nn_normalize ${out}_normalize,.,0,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
@@ -30999,18 +30999,18 @@ nn_rename : check "isvarname('$1')"
   _${net}_previous_layer=$out
 
 #@cli nn_resconv2dnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
+# _weight_decay>=0
 #@cli : Add a 'resconv2dnl' (residual 2D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
+# 'activation=leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
+  kernel_size,dilation,boundary_conditions,activation,learning_mode,weight_decay=${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'resconv2dnl' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -31019,11 +31019,11 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   init=${_${net}_init}
   nb_channels:=[${_${nin}_size}][3]
   nn_conv2d ${out}_conv2d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv2d1})
   nn_conv2d ${out}_conv2d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_conv2d1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
@@ -31031,18 +31031,18 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   _${net}_previous_layer=$out
 
 #@cli nn_resconv3dnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
+# _weight_decay>=0
 #@cli : Add a 'resconv3dnl' (residual 3D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# activation='leakyrelu', 'learning_mode=3' and 'regularization=0'.
+# activation='leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
+  kernel_size,dilation,boundary_conditions,activation,learning_mode,weight_decay=${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'resconv3dnl' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -31051,35 +31051,35 @@ nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   init=${_${net}_init}
   nb_channels:=[${_${nin}_size}][3]
   nn_conv3d ${out}_conv3d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv3d1})
   nn_conv3d ${out}_conv3d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_conv3d1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_resfcnl : out,_in,_activation,_learning_mode,_regularization>=0
+#@cli nn_resfcnl : out,_in,_activation,_learning_mode,_weight_decay>=0
 #@cli : Add a 'resfcnl' (residual fully connecter layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
+#@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=leakyrelu}
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  activation,learning_mode,regularization=${3-5}
+  activation,learning_mode,weight_decay=${3-5}
 
   e[^-1] "[nn_lib] Add 'resfc+nl' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "'"$activation"' activation."
   init=${_${net}_init}
   nb_channels:=prod(${_${nin}_size})
-  nn_fc ${out}_fc0,.,$nb_channels,$learning_mode,$regularization,2
+  nn_fc ${out}_fc0,.,$nb_channels,$learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv3d1})
-  nn_fc ${out}_fc1,.,$nb_channels,$learning_mode,$regularization,2
+  nn_fc ${out}_fc1,.,$nb_channels,$learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_fc1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
@@ -31290,19 +31290,19 @@ nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${net}_previous_layer=$out
 
 #@cli nn_tconv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'tconv2d' layer (2D transposed convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', \
-# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_tconv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
                    "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,\
     initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -31312,25 +31312,25 @@ nn_tconv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint($
   init=${_${net}_init}
   nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
   nn_conv2d ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_tconv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'tconv2dnl' layer (2D transposed convolutional layer+nonlinearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', 'shrink=0', 'boundary_conditions=1', \
-# 'activation=leakyrelu' 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'activation=leakyrelu' 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
                      "isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -31340,7 +31340,7 @@ nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
   init=${_${net}_init}
   nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
   nn_conv2dnl ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$activation,$learning_mode,\
-              $regularization,$initialization
+              $weight_decay,$initialization
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
