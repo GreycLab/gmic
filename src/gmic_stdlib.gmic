@@ -28664,7 +28664,7 @@ nn_lib :
     #-----------------------------------
     nn_optimizer_sgd_init() = 0;
 
-    nn_optimizer_sgd_update(W) = (
+    nn_optimizer_sgd_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       W#-=nn_learning_rate*batch_d#W;
     );
@@ -28673,14 +28673,13 @@ nn_lib :
     #-------------------
     nn_optimizer_rmsprop_init() = (
       const nn_optimizer_rmsprop_beta = 0.9;
-      const nn_optimizer_rmsprop_weight_decay = 0.01;
     );
 
-    nn_optimizer_rmsprop_update(W) = (
+    nn_optimizer_rmsprop_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
       W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
-      nn_optimizer_rmsprop_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_rmsprop_weight_decay)*W#;
+      #weight_decay>0?W#-=(nn_learning_rate*#weight_decay)*W#;
     );
 
     # Adam.
@@ -28689,19 +28688,18 @@ nn_lib :
       begin(
         const nn_optimizer_adam_beta1 = 0.9;
         const nn_optimizer_adam_beta2 = 0.999;
-        const nn_optimizer_adam_weight_decay = 0.01;
         nn_optimizer_adam_beta1_t = nn_iteration>200?0:nn_optimizer_adam_beta1^(nn_iteration + 1);
         nn_optimizer_adam_beta2_t = nn_iteration>200?0:nn_optimizer_adam_beta2^(nn_iteration + 1);
         nn_optimizer_adam_alpha_t = sqrt(1 - nn_optimizer_adam_beta2_t)/(1 - nn_optimizer_adam_beta1_t);
       );
     );
 
-    nn_optimizer_adam_update(W) = (
+    nn_optimizer_adam_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adam_beta1);
       d#W#_v = lerp(batch_d#W^2,d#W#_v,nn_optimizer_adam_beta2);
       W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
-      nn_optimizer_adam_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_adam_weight_decay)*W#;
+      #weight_decay>0?W#-=(nn_learning_rate*#weight_decay)*W#;
     );
 
     # Adamax.
@@ -28710,17 +28708,16 @@ nn_lib :
       begin(
         const nn_optimizer_adamax_beta1 = 0.9;
         const nn_optimizer_adamax_beta2 = 0.999;
-        const nn_optimizer_adamax_weight_decay = 0.01;
         nn_optimizer_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_optimizer_adamax_beta1^(nn_iteration + 1));
       );
     );
 
-    nn_optimizer_adamax_update(W) = (
+    nn_optimizer_adamax_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
       d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
       W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
-      nn_optimizer_adamax_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_adamax_weight_decay)*W#;
+      #weight_decay>0?W#-=(nn_learning_rate*#weight_decay)*W#;
     );
 
     #----------------
@@ -29214,18 +29211,18 @@ nn_lib :
 
     nn_fc_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_params);
-        learning_mode&2?nn_optimizer_#O#_update(P#_biases);
+        learning_mode&1?nn_optimizer_#O#_update(P#_params,0);
+        learning_mode&2?nn_optimizer_#O#_update(P#_biases,0);
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
           d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind - 1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_params);
+          nn_optimizer_#O#_update(P#_params,0.01);
           draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_biases_g2 = crop(##P#_ind_g2,w##P#_ind - 1,0,1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_biases);
+          nn_optimizer_#O#_update(P#_biases,0);
           draw(##P#_ind_g2,d#P#_biases_g2,w##P#_ind - 1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?( # adam & adamax
@@ -29234,14 +29231,14 @@ nn_lib :
         learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
           d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind - 1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_params);
+          nn_optimizer_#O#_update(P#_params,0.01);
           draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
           draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
           d#P#_biases_v = crop(##P#_ind_v,w##P#_ind - 1,0,1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_biases);
+          nn_optimizer_#O#_update(P#_biases,0);
           draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
           draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
         );
@@ -29504,18 +29501,18 @@ nn_lib :
       draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
 
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_alpha);
-        learning_mode&2?nn_optimizer_#O#_update(P#_beta);
+        learning_mode&1?nn_optimizer_#O#_update(P#_alpha,0);
+        learning_mode&2?nn_optimizer_#O#_update(P#_beta,0);
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
           d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
-          nn_optimizer_#O#_update(P#_alpha);
+          nn_optimizer_#O#_update(P#_alpha,0);
           draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
-          nn_optimizer_#O#_update(P#_beta);
+          nn_optimizer_#O#_update(P#_beta,0);
           draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?(
@@ -29524,14 +29521,14 @@ nn_lib :
         learning_mode&1?(
           d#P#_alpha_m = crop(##P#_ind_m,0,1);
           d#P#_alpha_v = crop(##P#_ind_v,0,1);
-          nn_optimizer_#O#_update(P#_alpha);
+          nn_optimizer_#O#_update(P#_alpha,0);
           draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
         );
         learning_mode&2?(
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_#O#_update(P#_beta);
+          nn_optimizer_#O#_update(P#_beta,0);
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
         );
