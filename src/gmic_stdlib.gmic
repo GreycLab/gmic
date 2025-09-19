@@ -28862,11 +28862,11 @@ nn_lib :
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
-    nn_conv2d_init_backward(OUT,IN,regularization) = (
+    nn_conv2d_init_backward(OUT,IN,weight_decay) = (
       const OUT#_width_stride = OUT#_width*OUT#_stride;
       const OUT#_height_stride = OUT#_height*OUT#_stride;
       const OUT#_prestrided_whd = OUT#_width_stride*OUT#_height_stride*OUT#_depth;
-      const OUT#_regularization = regularization;
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -28903,7 +28903,7 @@ nn_lib :
       # Compute dLOSS/dbiases.
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
+      OUT#_weight_decay>0?(d#OUT#_biases+=OUT#_weight_decay*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -28927,7 +28927,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
-      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -28978,12 +28978,12 @@ nn_lib :
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
-    nn_conv3d_init_backward(OUT,IN,regularization) = (
+    nn_conv3d_init_backward(OUT,IN,weight_decay) = (
       const OUT#_width_stride = OUT#_width*OUT#_stride;
       const OUT#_height_stride = OUT#_height*OUT#_stride;
       const OUT#_depth_stride = OUT#_depth*OUT#_stride;
       const OUT#_prestrided_whd = OUT#_width_stride*OUT#_height_stride*OUT#_depth_stride;
-      const OUT#_regularization = regularization;
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -29020,7 +29020,7 @@ nn_lib :
       # Compute dLOSS/dbiases.
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
+      OUT#_weight_decay>0?(d#OUT#_biases+=OUT#_weight_decay*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -29044,7 +29044,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
       );
-      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -29185,8 +29185,8 @@ nn_lib :
       OUT#+=OUT#_biases;
     );
 
-    nn_fc_init_backward(OUT,IN,regularization) = (
-      const OUT#_regularization = regularization;
+    nn_fc_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -29196,9 +29196,9 @@ nn_lib :
       d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
       d#OUT#_params = mul(d#OUT,IN#,size(IN#));
       d#OUT#_biases = d#OUT;
-      OUT#_regularization>0?(
-        d#OUT#_params+=OUT#_regularization*OUT#_params;
-        d#OUT#_biases+=OUT#_regularization*OUT#_biases;
+      OUT#_weight_decay>0?(
+        d#OUT#_params+=OUT#_weight_decay*OUT#_params;
+        d#OUT#_biases+=OUT#_weight_decay*OUT#_biases;
       );
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT#_biases;
