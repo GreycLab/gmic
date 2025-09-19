@@ -28660,8 +28660,8 @@ nn_lib :
       );
     );
 
-    # Stochastic gradient descent.
-    #-----------------------------
+    # Stochastic gradient descent (SGD).
+    #-----------------------------------
     nn_optimizer_sgd_init() = 0;
 
     nn_optimizer_sgd_update(W) = (
@@ -28673,12 +28673,14 @@ nn_lib :
     #-------------------
     nn_optimizer_rmsprop_init() = (
       const nn_optimizer_rmsprop_beta = 0.9;
+      const nn_optimizer_rmsprop_weight_decay = 0.01;
     );
 
     nn_optimizer_rmsprop_update(W) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
-      W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
+      W#-=nn_learning_rate*(batch_d#W/sqrt(1e-8 + d#W#_g2) +
+                            nn_optimizer_rmsprop_weight_decay*W#);
     );
 
     # Adam.
@@ -28687,6 +28689,7 @@ nn_lib :
       begin(
         const nn_optimizer_adam_beta1 = 0.9;
         const nn_optimizer_adam_beta2 = 0.999;
+        const nn_optimizer_adam_weight_decay = 0.01;
         nn_optimizer_adam_beta1_t = nn_iteration>200?0:nn_optimizer_adam_beta1^(nn_iteration + 1);
         nn_optimizer_adam_beta2_t = nn_iteration>200?0:nn_optimizer_adam_beta2^(nn_iteration + 1);
         nn_optimizer_adam_alpha_t = sqrt(1 - nn_optimizer_adam_beta2_t)/(1 - nn_optimizer_adam_beta1_t);
@@ -28697,7 +28700,9 @@ nn_lib :
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adam_beta1);
       d#W#_v = lerp(batch_d#W^2,d#W#_v,nn_optimizer_adam_beta2);
-      W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
+      W#-=nn_learning_rate*(nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v) +
+                            nn_optimizer_adam_weight_decay*W#);
+
     );
 
     # Adamax.
@@ -28706,6 +28711,7 @@ nn_lib :
       begin(
         const nn_optimizer_adamax_beta1 = 0.9;
         const nn_optimizer_adamax_beta2 = 0.999;
+        const nn_optimizer_adamax_weight_decay = 0.01;
         nn_optimizer_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_optimizer_adamax_beta1^(nn_iteration + 1));
       );
     );
@@ -28714,7 +28720,8 @@ nn_lib :
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
       d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
-      W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
+      W#-=nn_learning_rate*(d#W#_m/sqrt(1e-8 + d#W#_v)/nn_optimizer_adamax_ombeta1_t +
+                            nn_optimizer_adamax_weight_decay*W#);
     );
 
     #----------------
