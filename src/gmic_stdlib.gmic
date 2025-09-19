@@ -28679,8 +28679,8 @@ nn_lib :
     nn_optimizer_rmsprop_update(W) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
-      W#-=nn_learning_rate*(batch_d#W/sqrt(1e-8 + d#W#_g2) +
-                            nn_optimizer_rmsprop_weight_decay*W#);
+      W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
+      nn_optimizer_rmsprop_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_rmsprop_weight_decay)*W#;
     );
 
     # Adam.
@@ -28700,9 +28700,8 @@ nn_lib :
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adam_beta1);
       d#W#_v = lerp(batch_d#W^2,d#W#_v,nn_optimizer_adam_beta2);
-      W#-=nn_learning_rate*(nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v) +
-                            nn_optimizer_adam_weight_decay*W#);
-
+      W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
+      nn_optimizer_adam_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_adam_weight_decay)*W#;
     );
 
     # Adamax.
@@ -28720,8 +28719,8 @@ nn_lib :
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
       d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
-      W#-=nn_learning_rate*(d#W#_m/sqrt(1e-8 + d#W#_v)/nn_optimizer_adamax_ombeta1_t +
-                            nn_optimizer_adamax_weight_decay*W#);
+      W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
+      nn_optimizer_adamax_weight_decay>0?W#-=(nn_learning_rate*nn_optimizer_adamax_weight_decay)*W#;
     );
 
     #----------------
@@ -28907,10 +28906,9 @@ nn_lib :
              -1); # Add to d#IN
       );
 
-      # Compute dLOSS/dbiases.
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_weight_decay>0?(d#OUT#_biases+=OUT#_weight_decay*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -29024,10 +29022,9 @@ nn_lib :
              -1); # Add to d#IN
       );
 
-      # Compute dLOSS/dbiases.
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_weight_decay>0?(d#OUT#_biases+=OUT#_weight_decay*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -29203,10 +29200,7 @@ nn_lib :
       d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
       d#OUT#_params = mul(d#OUT,IN#,size(IN#));
       d#OUT#_biases = d#OUT;
-      OUT#_weight_decay>0?(
-        d#OUT#_params+=OUT#_weight_decay*OUT#_params;
-        d#OUT#_biases+=OUT#_weight_decay*OUT#_biases;
-      );
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT#_biases;
     );
