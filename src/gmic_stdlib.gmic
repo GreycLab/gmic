@@ -14543,6 +14543,49 @@ otsu : check "isint(${1=256},1)"
     if $> u ${},$otsu else u $otsu fi
   }
 
+#@cli pca_vectors : _dim>0,_output_Xavg_V={ 0:No | 1:Yes }
+#@cli : Reduce the number of channels of selected images to 'dim', using PCA reduction.
+#@cli : \nEach vector 'Xk' of the selected image is transformed as `Yk = Ut*(Xk - Xavg)`, where :
+#@cli : - 'Xavg' is the average vector of all the 'Xk'.
+#@cli : - 'Ut' is the transpose of the matrix 'U', where 'U' is the matrix of the 'dim' first eigenvectors \
+# of the covariance matrix of the 'Xk' (arranged by columns).
+#@cli : If 'output_Xavg_V' is set to '1', the average vector 'Xavg' and the matrix 'U' are output on the image stack.
+#@cli : Thus, it is possible to (approximately) reconstruct the image in its initial space, by computing \
+# `Xk = Xavg + U*Yk`.
+pca_vectors : check "isint($1,1) && isbool(${2=0})"
+  e[^-1] "Reduce number of channels of image$?, using PCA reduction."
+  target_dim=$1
+  foreach {
+    nm={n}
+    nb_samples,dim:=whd,s
+    if $target_dim>$dim
+      channels 0,{$target_dim-1}
+    elif $target_dim<$dim
+      +r. 1,1,1,100%,2 Xavg={^}
+      r. {-2,[w,h,d]},100% - # Centered Xk
+      eval. " # Estimate covariance matrix
+        begin(cov = vector(#$dim^2));
+        Xk = I; cov+=mul(Xk,Xk,$dim);
+        end(
+          merge(cov,+);
+          eig = eig(cov);
+          val = eig[0,$dim];
+          Vt = eig[s,$dim*$target_dim];
+          repeat ($target_dim,k,
+            U = Vt[k*$dim,$dim];
+            U[argmaxabs(U)]<0?(U*=-1; copy(Vt[k*$dim],U));
+          );
+          store('Vt',Vt);
+        )"
+      100%,100%,100%,$target_dim,"begin(Vt = get('Vt',$dim*$target_dim)); mul(Vt,I(#0))"
+      k. => $nm
+      if $2
+        ($Xavg:c) => Xavg_$nm
+        $Vt r. $dim,$target_dim,1,1,-1 transpose. => V_$nm
+      fi
+    fi
+  }
+
 #@cli polar2complex
 #@cli : Compute polar to complex transforms of selected images.
 polar2complex :
