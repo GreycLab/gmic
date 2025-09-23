@@ -22012,18 +22012,19 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   repeat $!-1 { warp[$>] .,0,0,0 } rm.
   foreach { s y,$H s x,$W k[0-{$N-1}] }
 
-#@cli pca : _target_dim>0,_output_mode
-#@cli : Reduce the number of vector components (channels) of selected images to 'target_dim', using PCA.
-#@cli : \nEach vector 'Xk' (i.e. pixel) of the selected image is transformed as `Yk = Mt*(Xk - avg)`, where :
-#@cli : - 'avg' is the average vector of all 'Xk'.
-#@cli : - 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) \
-# of the covariance matrix of the 'Xk'.
-#@cli : Combinations of bits of 'output_mode' tells what data must be output on the image stack:
-#@cli : - 1: Output reduced image (replace input image).
-#@cli : - 2: Output average vector 'avg'.
-#@cli : - 4: Output transformation matrix 'M'.
-#@cli : With 'avg' and 'M', it is possible to (approximately) reproject the image in its initial space, by computing \
-# `Xk = avg + M*Yk` for each image pixel.
+#@cli pca : _output_mode,_target_dim[%]>0
+#@cli : Perform PCA (Principal Component Analysis) on selected images, viewed as sets of vector-valued samples 'Xk'.
+#@cli : \nBits of 'output_mode' selects what output data are returned on the image stack:
+#@cli : - '1': Output image of vector-valued samples `Yk = Mt*(Xk - avg)`, that are the projections of the 'Xk' in \
+# a vector space of lower dimension 'target_dim'. \
+# 'avg' is the average of all vectors 'Xk'. \
+# 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) of \
+# the covariance matrix of the 'Xk'.
+#@cli : - '2': Output average vector 'avg' of the 'Xk'.
+#@cli : - '4': Output matrix 'M'.
+#@cli : \nKnowing 'avg' and 'M' makes it possible to (approximately) retro-project the 'Yk' in \
+# the initial vector space, by computing `Xk = avg + M*Yk` for each image pixel.
+#@cli : $ shape_dragonfly 400 mul 128 0 eval.. "i?da_push([x,y])" da_freeze. pca. 2,6 eval "C = I[#-2,0]; M = transpose(crop(#-1),2); repeat(2,k,polygon(#0,-2,C-1000*M[2*k,2],C+1000*M[2*k,2],1,0xF0F0F0F0,180)); ellipse(#0,C,5,5,0,1,255)" k[0]
 pca : check "isint($1,1) && isint(${2=1},0)"
   e[^-1] "Reduce image$? to $1 channels, using PCA reduction."
   target_dim=$1
