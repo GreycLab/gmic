@@ -22036,7 +22036,10 @@ pca : check "isint(${1=7},0) && ${2=100%}>0 && isint(${3=1},0,2)"
     target_dim:=ispercentage($2)?max(1,int($source_dim*$2)):$2
     if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
     +r. 1,1,1,100%,2 +store. avg
-    if $3 r. ..,..,..,100% - else rm. fi # Center samples
+    if $3 # Normalize samples
+      r. ..,..,..,100% - # Center
+      if $3>1 s c foreach { / {id} } a c fi # Scale
+    else rm. fi
     eval. " # Estimate eigenvectors of covariance matrix
       begin(
         const source_dim = $source_dim;
