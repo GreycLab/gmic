@@ -22012,7 +22012,7 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   repeat $!-1 { warp[$>] .,0,0,0 } rm.
   foreach { s y,$H s x,$W k[0-{$N-1}] }
 
-#@cli pca : _output_mode,_target_dim[%]>0,_center_data={ 0:No | 1:Yes }
+#@cli pca : _output_mode,_target_dim[%]>0,_normalization={ 0:None | 1:Center | 2:Center+scale }
 #@cli : Perform PCA (Principal Component Analysis) on selected images, viewed as sets of vector-valued samples 'Xk'.
 #@cli : \nBits of 'output_mode' selects what output data are returned on the image stack:
 #@cli : - '1': Output image of vector-valued samples `Yk = Mt*(Xk - avg)`, that are the projections of the 'Xk' in \
@@ -22028,8 +22028,9 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 #@cli : $ shape_dragonfly 400 mul 128 0 eval.. "i?da_push([x,y])" da_freeze. pca. 6,2 eval "C = I[#-2,0]; \
 # M = transpose(crop(#-1),2); repeat(2,k,polygon(#0,-2,C-1000*M[2*k,2],C+1000*M[2*k,2],1,0xF0F0F0F0,180)); \
 # ellipse(#0,C,5,5,0,1,255)" k[0]
-pca : check "isint(${1=7},0) && ${2=100%}>0 && isbool(${3=1})"
-  e[^-1] "Perform PCA on image$?, with target dimension $2."
+pca : check "isint(${1=7},0) && ${2=100%}>0 && isint(${3=1},0,2)"
+  s0,s1,s2=""," and sample centering"," and sample centering & scaling"
+  e[^-1] "Perform PCA on image$?, with target dimension $2"${s$3}.
   foreach {
     nm={n} bnm={b} source_dim:=s
     target_dim:=ispercentage($2)?max(1,int($source_dim*$2)):$2
