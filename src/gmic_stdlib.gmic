@@ -13754,6 +13754,27 @@ apply_gamma : check $1>=0
   if $1==1 return fi
   foreach { mM:=[im,iM] n 0,1 ^ {1/$1} n $mM }
 
+#@cli apply_mask : "command",[opacity_mask],_max_opacity_mask
+#@cli : Apply specified command on selected images but only inside the specified mask.
+#@cli : Default value: 'max_opacity_mask=1'.
+#@cli : $ image.jpg 100%,100% noise. 10 blur. 2%,0 ge. 50% blur. 0.5% normalize. 0,1 +apply_mask.. "sepia whirls",[-1]
+apply_mask : check ${"is_image_arg $2"}" && isnum(${3=1})"
+  e[^-1] "Apply command '$1' on image$?, using opacity mask $2 and max opacity mask value $3."
+  m "__apply_mask : $1"
+  pass$2 if !w rm. return fi
+  foreach[^-1] {
+    +l { __apply_mask if $! k. fi }
+    if $!>1
+      if [w,h,d]!=[w#-2,h#-2,d#-2] r. {-2,[w,h,d]},100% fi
+      if s!=s#-2 to_colormode 0 fi
+      pass. 1 if [w,h,d]!=[{-2,[w,h,d]}] +r. {-2,[w,h,d]},100% rm.. fi
+      j[0] ..,0,0,0,0,1,.,$3
+      k[0]
+    fi
+  }
+  rm.
+  um __apply_mask
+
 #@cli balance_gamma : _ref_color1,...
 #@cli : Compute gamma-corrected color balance of selected image, with respect to specified reference color.
 #@cli : Default value: 'ref_color1=128'.
@@ -21991,6 +22012,53 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   repeat $!-1 { warp[$>] .,0,0,0 } rm.
   foreach { s y,$H s x,$W k[0-{$N-1}] }
 
+#@cli pca : _output_mode,_target_dim[%]>0
+#@cli : Perform PCA (Principal Component Analysis) on selected images, viewed as sets of vector-valued samples 'Xk'.
+#@cli : \nBits of 'output_mode' selects what output data are returned on the image stack:
+#@cli : - '1': Output image of vector-valued samples `Yk = Mt*(Xk - avg)`, that are the projections of the 'Xk' in \
+# a vector sub-space of (lower) dimension 'target_dim'. \
+# 'avg' is the average of all vectors 'Xk'. \
+# 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) of \
+# the covariance matrix of the 'Xk'.
+#@cli : - '2': Output vector 'avg'.
+#@cli : - '4': Output matrix 'M'.
+#@cli : \nKnowing 'avg' and 'M' makes it possible to (approximately) retro-project the 'Yk' in \
+# the initial vector space, by computing `Xk = avg + M*Yk` for each image pixel.
+#@cli : Default values: 'output_mode=7' and 'target_dim=100%'.
+#@cli : $ shape_dragonfly 400 mul 128 0 eval.. "i?da_push([x,y])" da_freeze. pca. 6,2 eval "C = I[#-2,0]; \
+# M = transpose(crop(#-1),2); repeat(2,k,polygon(#0,-2,C-1000*M[2*k,2],C+1000*M[2*k,2],1,0xF0F0F0F0,180)); \
+# ellipse(#0,C,5,5,0,1,255)" k[0]
+pca : check "isint(${1=7},0) && ${2=100%}>0"
+  e[^-1] "Perform PCA on image$?, with target dimension $2."
+  foreach {
+    nm={n} bnm={b} source_dim:=s
+    target_dim:=ispercentage($2)?max(1,int($source_dim*$2)):$2
+    if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
+    +r. 1,1,1,100%,2 +store. avg
+    r. ..,..,..,100% - # Centered Xk
+    eval. " # Estimate eigenvectors of covariance matrix
+      begin(
+        const source_dim = $source_dim;
+        const target_dim = $target_dim;
+        cov = vector(#source_dim^2);
+      );
+      Xk = I;
+      cov+=mul(Xk,Xk,source_dim);
+      end(
+        merge(cov,+);
+        eig = eig(cov/whd);
+        Mt = eig[s,source_dim*target_dim];
+        repeat (target_dim,k,
+          V = Mt[k*source_dim,source_dim];
+          V[argmaxabs(V)]<0?(V*=-1; copy(Mt[k*source_dim],V));
+        );
+        store('Mt',Mt,source_dim,target_dim);
+      )"
+    if $1&1 f "begin(Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I)" channels 0,{$target_dim-1} => $nm else rm. fi
+    if $1&2 $avg => ${bnm}_avg fi
+    if $1&4 $Mt transpose. => ${bnm}_M fi
+  }
+
 #@cli matchpatch : [patch_image],patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations>=0,\
 # _nb_randoms>=0,_occurence_penalization,_output_score={ 0:No | 1:Yes },_[guide] : (+)
 #@cli : Estimate correspondence map between selected images and specified patch image, using
@@ -28660,11 +28728,11 @@ nn_lib :
       );
     );
 
-    # Stochastic gradient descent.
-    #-----------------------------
+    # Stochastic gradient descent (SGD).
+    #-----------------------------------
     nn_optimizer_sgd_init() = 0;
 
-    nn_optimizer_sgd_update(W) = (
+    nn_optimizer_sgd_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       W#-=nn_learning_rate*batch_d#W;
     );
@@ -28675,10 +28743,11 @@ nn_lib :
       const nn_optimizer_rmsprop_beta = 0.9;
     );
 
-    nn_optimizer_rmsprop_update(W) = (
+    nn_optimizer_rmsprop_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
       W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
+      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
     );
 
     # Adam.
@@ -28693,11 +28762,12 @@ nn_lib :
       );
     );
 
-    nn_optimizer_adam_update(W) = (
+    nn_optimizer_adam_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adam_beta1);
       d#W#_v = lerp(batch_d#W^2,d#W#_v,nn_optimizer_adam_beta2);
       W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
+      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
     );
 
     # Adamax.
@@ -28710,11 +28780,12 @@ nn_lib :
       );
     );
 
-    nn_optimizer_adamax_update(W) = (
+    nn_optimizer_adamax_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
       d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
       W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
+      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
     );
 
     #----------------
@@ -28862,11 +28933,11 @@ nn_lib :
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
-    nn_conv2d_init_backward(OUT,IN,regularization) = (
+    nn_conv2d_init_backward(OUT,IN,weight_decay) = (
       const OUT#_width_stride = OUT#_width*OUT#_stride;
       const OUT#_height_stride = OUT#_height*OUT#_stride;
       const OUT#_prestrided_whd = OUT#_width_stride*OUT#_height_stride*OUT#_depth;
-      const OUT#_regularization = regularization;
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -28900,10 +28971,9 @@ nn_lib :
              -1); # Add to d#IN
       );
 
-      # Compute dLOSS/dbiases.
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -28927,7 +28997,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
       );
-      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -28978,12 +29048,12 @@ nn_lib :
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
-    nn_conv3d_init_backward(OUT,IN,regularization) = (
+    nn_conv3d_init_backward(OUT,IN,weight_decay) = (
       const OUT#_width_stride = OUT#_width*OUT#_stride;
       const OUT#_height_stride = OUT#_height*OUT#_stride;
       const OUT#_depth_stride = OUT#_depth*OUT#_stride;
       const OUT#_prestrided_whd = OUT#_width_stride*OUT#_height_stride*OUT#_depth_stride;
-      const OUT#_regularization = regularization;
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -29017,10 +29087,9 @@ nn_lib :
              -1); # Add to d#IN
       );
 
-      # Compute dLOSS/dbiases.
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
       fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
-      OUT#_regularization>0?(d#OUT#_biases+=OUT#_regularization*OUT#_biases);
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
@@ -29044,7 +29113,7 @@ nn_lib :
              0,0,0,_nn_k*IN#_spectrum,
              OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
       );
-      OUT#_regularization>0?(d#OUT#_params+=OUT#_regularization*OUT#_params);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
 
@@ -29185,8 +29254,8 @@ nn_lib :
       OUT#+=OUT#_biases;
     );
 
-    nn_fc_init_backward(OUT,IN,regularization) = (
-      const OUT#_regularization = regularization;
+    nn_fc_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -29196,10 +29265,7 @@ nn_lib :
       d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
       d#OUT#_params = mul(d#OUT,IN#,size(IN#));
       d#OUT#_biases = d#OUT;
-      OUT#_regularization>0?(
-        d#OUT#_params+=OUT#_regularization*OUT#_params;
-        d#OUT#_biases+=OUT#_regularization*OUT#_biases;
-      );
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT#_biases;
     );
@@ -29213,18 +29279,19 @@ nn_lib :
 
     nn_fc_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_params);
-        learning_mode&2?nn_optimizer_#O#_update(P#_biases);
+        learning_mode&1?nn_optimizer_#O#_update(P#_params,0);
+        learning_mode&2?nn_optimizer_#O#_update(P#_biases,0);
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
           d#P#_params_g2 = crop(##P#_ind_g2,0,0,w##P#_ind - 1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_params);
+          nn_optimizer_#O#_update(P#_params,0.01);
+#          nn_optimizer_#O#_update(P#_params,0.01);
           draw(##P#_ind_g2,d#P#_params_g2,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_biases_g2 = crop(##P#_ind_g2,w##P#_ind - 1,0,1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_biases);
+          nn_optimizer_#O#_update(P#_biases,0);
           draw(##P#_ind_g2,d#P#_biases_g2,w##P#_ind - 1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?( # adam & adamax
@@ -29233,14 +29300,15 @@ nn_lib :
         learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
           d#P#_params_v = crop(##P#_ind_v,0,0,w##P#_ind - 1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_params);
+          nn_optimizer_#O#_update(P#_params,0.01);
+#          nn_optimizer_#O#_update(P#_params,0);
           draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
           draw(##P#_ind_v,d#P#_params_v,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
           d#P#_biases_v = crop(##P#_ind_v,w##P#_ind - 1,0,1,h##P#_ind);
-          nn_optimizer_#O#_update(P#_biases);
+          nn_optimizer_#O#_update(P#_biases,0);
           draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
           draw(##P#_ind_v,d#P#_biases_v,w##P#_ind - 1,0,1,h##P#_ind);
         );
@@ -29503,18 +29571,18 @@ nn_lib :
       draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
 
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_alpha);
-        learning_mode&2?nn_optimizer_#O#_update(P#_beta);
+        learning_mode&1?nn_optimizer_#O#_update(P#_alpha,0);
+        learning_mode&2?nn_optimizer_#O#_update(P#_beta,0);
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
           d#P#_alpha_g2 = crop(##P#_ind_g2,0,1);
-          nn_optimizer_#O#_update(P#_alpha);
+          nn_optimizer_#O#_update(P#_alpha,0);
           draw(##P#_ind_g2,d#P#_alpha_g2,0,0,1,h##P#_ind);
         );
         learning_mode&2?(
           d#P#_beta_g2 = crop(##P#_ind_g2,1,1);
-          nn_optimizer_#O#_update(P#_beta);
+          nn_optimizer_#O#_update(P#_beta,0);
           draw(##P#_ind_g2,d#P#_beta_g2,1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?(
@@ -29523,14 +29591,14 @@ nn_lib :
         learning_mode&1?(
           d#P#_alpha_m = crop(##P#_ind_m,0,1);
           d#P#_alpha_v = crop(##P#_ind_v,0,1);
-          nn_optimizer_#O#_update(P#_alpha);
+          nn_optimizer_#O#_update(P#_alpha,0);
           draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_alpha_v,0,0,1,h##P#_ind_v);
         );
         learning_mode&2?(
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_beta_v = crop(##P#_ind_v,1,1);
-          nn_optimizer_#O#_update(P#_beta);
+          nn_optimizer_#O#_update(P#_beta,0);
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
           draw(##P#_ind_v,d#P#_beta_v,1,0,1,h##P#_ind_v);
         );
@@ -30084,19 +30152,19 @@ nn_clone : check "isvarname('$1') && isvarname('$2')"
   _${net}_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
-# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,initialization=${3-11}
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30109,7 +30177,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
-                      "learning_mode="$learning_mode", regularization="$regularization
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay
   if !isint(${$nout})
     {[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels
     if $initialization==1
@@ -30125,7 +30193,7 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_forward="begin(nn_conv2d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,\
                    $shrink,$boundary_conditions"));"\
                    "nn_conv2d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
                     "end(nn_conv2d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30134,20 +30202,20 @@ nn_conv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${net}_previous_layer=$out
 
 #@cli nn_conv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,regularization>=0,_initialization
+# _activation,_learning_mode,weight_decay>=0,_initialization
 #@cli : Add a 'conv2dnl' (2D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30156,27 +30224,27 @@ nn_conv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv2dnnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2dnnl' (2D convolutional layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30185,26 +30253,26 @@ nn_conv2dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
          "border shrink "$shrink", "${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv2d ${out}_conv2d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   nn_normalize ${out}_normalize,.,1,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3d' layer (3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && isint(${7=0},0) && "\
                   "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,initialization=${3-11}
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30218,7 +30286,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
-                      "regularization="$regularization
+                      "weight_decay="$weight_decay
   if !isint(${$nout})
     {[${_${nin}_size}][3]*$kernel_size^3+1},$nb_channels
     if $initialization==1
@@ -30234,7 +30302,7 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${nout}_forward="begin(nn_conv3d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,$shrink,\
                                                   $boundary_conditions"));"\
                    "nn_conv3d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv3d_backward("$nout,$nin");"\
                     "end(nn_conv3d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30243,20 +30311,20 @@ nn_conv3d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${
   _${net}_previous_layer=$out
 
 #@cli nn_conv3dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3dnl' (3D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                     "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
               skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30266,27 +30334,27 @@ nn_conv3dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv3d ${out}_conv3d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,\
-            $learning_mode,$regularization,$initialization
+            $learning_mode,$weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_conv3dnnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3dnnl' (3D convolutional layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
-# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'boundary_conditions=1', 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=1},1) && "\
                      "isint(${7=0},0) && isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30296,7 +30364,7 @@ nn_conv3dnnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
          ${s$boundary_conditions}" boundary conditions and '"$activation"' activation."
   init=${_${net}_init}
   nn_conv3d ${out}_conv3d,$in,$nb_channels,$kernel_size,$stride,$dilation,$shrink,$boundary_conditions,\
-            $learning_mode,$regularization,$initialization
+            $learning_mode,$weight_decay,$initialization
   nn_normalize ${out}_normalize,.,1,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
@@ -30407,16 +30475,16 @@ nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default value: 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=3},0,3)"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi # nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,learning_mode,regularization,initialization=${3-6}
+  nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
   _${net}_layer_names.=$out,
@@ -30424,7 +30492,7 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${nout}_size=1,1,1,$3
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="learning_mode="$learning_mode", regularization="$regularization
+  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
   if !isint(${$nout})
     {prod(${_${nin}_size})+1},$nb_channels
     if $initialization==1 # Identity
@@ -30439,7 +30507,7 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   fi
   _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin"));"\
                    "nn_fc_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$regularization"));"\
+  _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_fc_backward("$nout,$nin");"\
                     "end(nn_fc_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
@@ -30447,43 +30515,43 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fcnl : out,in,nb_channels>0,_activation,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fcnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fcnl' layer (fully connected layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
           skip ${4=leakyrelu}
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,activation,learning_mode,regularization,initialization=${3-7}
+  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
 
   e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_fcnnl : out,in,nb_channels>0,_activation,_learning_mode,_regularization>=0,_initialization
+#@cli nn_fcnnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fcnnl' layer (fully connected layer followed by a normalization layer, then a non-linearity) \
 # to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
            skip ${4=leakyrelu}
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout=${net}_$out
-  nb_channels,activation,learning_mode,regularization,initialization=${3-7}
+  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
 
   e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels and '"$activation"' activation."
   init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$regularization,$initialization
+  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
   nn_normalize ${out}_normalize,.,0,3
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
@@ -30999,18 +31067,18 @@ nn_rename : check "isvarname('$1')"
   _${net}_previous_layer=$out
 
 #@cli nn_resconv2dnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
+# _weight_decay>=0
 #@cli : Add a 'resconv2dnl' (residual 2D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
+# 'activation=leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=3},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
+  kernel_size,dilation,boundary_conditions,activation,learning_mode,weight_decay=${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'resconv2dnl' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -31019,11 +31087,11 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   init=${_${net}_init}
   nb_channels:=[${_${nin}_size}][3]
   nn_conv2d ${out}_conv2d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv2d1})
   nn_conv2d ${out}_conv2d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_conv2d1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
@@ -31031,18 +31099,18 @@ nn_resconv2dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   _${net}_previous_layer=$out
 
 #@cli nn_resconv3dnl : out,_in,_kernel_size>0,_dilation>0,_boundary_conditions,_activation,_learning_mode,\
-# _regularization>=0
+# _weight_decay>=0
 #@cli : Add a 'resconv3dnl' (residual 3D convolutional layer followed by a non-linearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : Default values: 'in=. (previous layer)', 'kernel_size=3', 'dilation=1', 'boundary_conditions=1', \
-# activation='leakyrelu', 'learning_mode=3' and 'regularization=0'.
+# activation='leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) && isint(${7=1},0,3) && ${8=0}>=0"
                  skip "${4=1}","${6=leakyrelu}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  kernel_size,dilation,boundary_conditions,activation,learning_mode,regularization=${3-8}
+  kernel_size,dilation,boundary_conditions,activation,learning_mode,weight_decay=${3-8}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'resconv3dnl' layer '"$out"' to network '"$net"', with input '"$in"', "\
@@ -31051,35 +31119,35 @@ nn_resconv3dnl : check "isvarname('$1') && isint(${3=3},1) && isint(${5=1},0,3) 
   init=${_${net}_init}
   nb_channels:=[${_${nin}_size}][3]
   nn_conv3d ${out}_conv3d0,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv3d1})
   nn_conv3d ${out}_conv3d1,.,$nb_channels,$kernel_size,1,$dilation,0,$boundary_conditions,\
-            $learning_mode,$regularization,2
+            $learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_conv3d1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_resfcnl : out,_in,_activation,_learning_mode,_regularization>=0
+#@cli nn_resfcnl : out,_in,_activation,_learning_mode,_weight_decay>=0
 #@cli : Add a 'resfcnl' (residual fully connecter layer followed by a non-linearity) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'regularization=0'.
+#@cli : Default values: 'in=. (previous layer)', 'activation=leakyrelu', 'learning_mode=3' and 'weight_decay=0'.
 nn_resfcnl : check "isvarname('$1') && isint(${4=3},0,3) && ${5=0}>=0" skip ${3=leakyrelu}
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  activation,learning_mode,regularization=${3-5}
+  activation,learning_mode,weight_decay=${3-5}
 
   e[^-1] "[nn_lib] Add 'resfc+nl' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "'"$activation"' activation."
   init=${_${net}_init}
   nb_channels:=prod(${_${nin}_size})
-  nn_fc ${out}_fc0,.,$nb_channels,$learning_mode,$regularization,2
+  nn_fc ${out}_fc0,.,$nb_channels,$learning_mode,$weight_decay,2
   nn_nl ${out}_nl0,.,$activation
   initialize_weights:=!isint(${${nout}_conv3d1})
-  nn_fc ${out}_fc1,.,$nb_channels,$learning_mode,$regularization,2
+  nn_fc ${out}_fc1,.,$nb_channels,$learning_mode,$weight_decay,2
   if $initialize_weights /[${nout}_fc1] 10 fi
   nn_add ${out}_add,.,$in
   nn_nl $out,.,$activation
@@ -31290,19 +31358,19 @@ nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnu
   _${net}_previous_layer=$out
 
 #@cli nn_tconv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_regularization>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'tconv2d' layer (2D transposed convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', \
-# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_tconv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
                    "isint(${8=1},0,3) && isint(${9=3},0,3) && ${10=0}>=0 && isint(${11=3},0,3)" skip "${6=1}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,\
     initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -31312,25 +31380,25 @@ nn_tconv2d : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint($
   init=${_${net}_init}
   nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
   nn_conv2d ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$learning_mode,\
-            $regularization,$initialization
+            $weight_decay,$initialization
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_tconv2dnl : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
-# _activation,_learning_mode,_regularization>=0,_initialization
+# _activation,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'tconv2dnl' layer (2D transposed convolutional layer+nonlinearity) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=2', 'dilation=1', 'shrink=0', 'boundary_conditions=1', \
-# 'activation=leakyrelu' 'learning_mode=3', 'regularization=0' and 'initialization=2'.
+# 'activation=leakyrelu' 'learning_mode=3', 'weight_decay=0' and 'initialization=2'.
 nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint(${5=2},1) && isint(${7=0},0) && "\
                      "isint(${8=1},0,3) && isint(${10=3},0,3) && ${11=0}>=0 && isint(${12=3},0,3)"
                skip "${6=1}","${9=leakyrelu}"
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,regularization,\
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,activation,learning_mode,weight_decay,\
     initialization=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -31340,7 +31408,7 @@ nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
   init=${_${net}_init}
   nn_resize ${out}_grid,$in,{s=[${_${nin}_size}];[$stride*s[0],$stride*s[1],s[2],s[3]]},4
   nn_conv2dnl ${out},.,$nb_channels,$kernel_size,1,$dilation,$shrink,$boundary_conditions,$activation,$learning_mode,\
-              $regularization,$initialization
+              $weight_decay,$initialization
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
