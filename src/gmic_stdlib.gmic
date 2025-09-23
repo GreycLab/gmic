@@ -14543,8 +14543,8 @@ otsu : check "isint(${1=256},1)"
     if $> u ${},$otsu else u $otsu fi
   }
 
-#@cli pca_vectors : _target_dim>0,_output_mode
-#@cli : Reduce the number of vector components (channels) of selected images to 'target_dim', using PCA reduction.
+#@cli pca : _target_dim>0,_output_mode
+#@cli : Reduce the number of vector components (channels) of selected images to 'target_dim', using PCA.
 #@cli : \nEach vector 'Xk' (i.e. pixel) of the selected image is transformed as `Yk = Mt*(Xk - avg)`, where :
 #@cli : - 'avg' is the average vector of all 'Xk'.
 #@cli : - 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) \
@@ -14555,13 +14555,14 @@ otsu : check "isint(${1=256},1)"
 #@cli : - 4: Output transformation matrix 'M'.
 #@cli : With 'avg' and 'M', it is possible to (approximately) reproject the image in its initial space, by computing \
 # `Xk = avg + M*Yk` for each image pixel.
-pca_vectors : check "isint($1,1) && isint(${2=1},0)"
+pca : check "isint($1,1) && isint(${2=1},0)"
   e[^-1] "Reduce image$? to $1 channels, using PCA reduction."
   target_dim=$1
   foreach {
     nm={n} bnm={b} source_dim:=s
     if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
     +r. 1,1,1,100%,2 store. avg
+    +f. "begin(avg = get('avg',$source_dim)); I - avg"
     eval. " # Estimate eigenvectors of covariance matrix
       begin(
         const source_dim = $source_dim;
@@ -14574,7 +14575,6 @@ pca_vectors : check "isint($1,1) && isint(${2=1},0)"
       end(
         merge(cov,+);
         eig = eig(cov/whd);
-        val = eig[0,source_dim];
         Mt = eig[s,source_dim*target_dim];
         repeat (target_dim,k,
           V = Mt[k*source_dim,source_dim];
@@ -14582,7 +14582,11 @@ pca_vectors : check "isint($1,1) && isint(${2=1},0)"
         );
         store('Mt',Mt,source_dim,target_dim);
       )"
-    if $2&1 100%,100%,100%,$target_dim,"begin(Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I(#0))" => $nm k. fi
+    if $2&1
+      f. "begin(avg = get('avg',$source_dim); Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I(#0) - avg)"
+      k. channels 0,{$target_dim-1} => $nm
+    else rm.
+    fi
     if $2&2 $avg => avg_$bnm fi
     if $2&4 $Mt transpose. => M_$bnm fi
   }
