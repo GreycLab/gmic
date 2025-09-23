@@ -14543,54 +14543,6 @@ otsu : check "isint(${1=256},1)"
     if $> u ${},$otsu else u $otsu fi
   }
 
-#@cli pca : _target_dim>0,_output_mode
-#@cli : Reduce the number of vector components (channels) of selected images to 'target_dim', using PCA.
-#@cli : \nEach vector 'Xk' (i.e. pixel) of the selected image is transformed as `Yk = Mt*(Xk - avg)`, where :
-#@cli : - 'avg' is the average vector of all 'Xk'.
-#@cli : - 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) \
-# of the covariance matrix of the 'Xk'.
-#@cli : Combinations of bits of 'output_mode' tells what data must be output on the image stack:
-#@cli : - 1: Output reduced image (replace input image).
-#@cli : - 2: Output average vector 'avg'.
-#@cli : - 4: Output transformation matrix 'M'.
-#@cli : With 'avg' and 'M', it is possible to (approximately) reproject the image in its initial space, by computing \
-# `Xk = avg + M*Yk` for each image pixel.
-pca : check "isint($1,1) && isint(${2=1},0)"
-  e[^-1] "Reduce image$? to $1 channels, using PCA reduction."
-  target_dim=$1
-  foreach {
-    nm={n} bnm={b} source_dim:=s
-    if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
-    +r. 1,1,1,100%,2 store. avg
-    +f. "begin(avg = get('avg',$source_dim)); I - avg"
-    eval. " # Estimate eigenvectors of covariance matrix
-      begin(
-        const source_dim = $source_dim;
-        const target_dim = $target_dim;
-        avg = get('avg',source_dim);
-        cov = vector(#source_dim^2);
-      );
-      Xk = I - avg;
-      cov+=mul(Xk,Xk,source_dim);
-      end(
-        merge(cov,+);
-        eig = eig(cov/whd);
-        Mt = eig[s,source_dim*target_dim];
-        repeat (target_dim,k,
-          V = Mt[k*source_dim,source_dim];
-          V[argmaxabs(V)]<0?(V*=-1; copy(Mt[k*source_dim],V));
-        );
-        store('Mt',Mt,source_dim,target_dim);
-      )"
-    if $2&1
-      f. "begin(avg = get('avg',$source_dim); Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I(#0) - avg)"
-      k. channels 0,{$target_dim-1} => $nm
-    else rm.
-    fi
-    if $2&2 $avg => avg_$bnm fi
-    if $2&4 $Mt transpose. => M_$bnm fi
-  }
-
 #@cli polar2complex
 #@cli : Compute polar to complex transforms of selected images.
 polar2complex :
@@ -22059,6 +22011,54 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
   $1,$2,$3,1,x-{int($1/2)} +f. y-{int($2/2)} +f. z-{int($3/2)} a[-3--1] c ri. ..,0,2 +[-2,-1]
   repeat $!-1 { warp[$>] .,0,0,0 } rm.
   foreach { s y,$H s x,$W k[0-{$N-1}] }
+
+#@cli pca : _target_dim>0,_output_mode
+#@cli : Reduce the number of vector components (channels) of selected images to 'target_dim', using PCA.
+#@cli : \nEach vector 'Xk' (i.e. pixel) of the selected image is transformed as `Yk = Mt*(Xk - avg)`, where :
+#@cli : - 'avg' is the average vector of all 'Xk'.
+#@cli : - 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) \
+# of the covariance matrix of the 'Xk'.
+#@cli : Combinations of bits of 'output_mode' tells what data must be output on the image stack:
+#@cli : - 1: Output reduced image (replace input image).
+#@cli : - 2: Output average vector 'avg'.
+#@cli : - 4: Output transformation matrix 'M'.
+#@cli : With 'avg' and 'M', it is possible to (approximately) reproject the image in its initial space, by computing \
+# `Xk = avg + M*Yk` for each image pixel.
+pca : check "isint($1,1) && isint(${2=1},0)"
+  e[^-1] "Reduce image$? to $1 channels, using PCA reduction."
+  target_dim=$1
+  foreach {
+    nm={n} bnm={b} source_dim:=s
+    if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
+    +r. 1,1,1,100%,2 store. avg
+    +f. "begin(avg = get('avg',$source_dim)); I - avg"
+    eval. " # Estimate eigenvectors of covariance matrix
+      begin(
+        const source_dim = $source_dim;
+        const target_dim = $target_dim;
+        avg = get('avg',source_dim);
+        cov = vector(#source_dim^2);
+      );
+      Xk = I - avg;
+      cov+=mul(Xk,Xk,source_dim);
+      end(
+        merge(cov,+);
+        eig = eig(cov/whd);
+        Mt = eig[s,source_dim*target_dim];
+        repeat (target_dim,k,
+          V = Mt[k*source_dim,source_dim];
+          V[argmaxabs(V)]<0?(V*=-1; copy(Mt[k*source_dim],V));
+        );
+        store('Mt',Mt,source_dim,target_dim);
+      )"
+    if $2&1
+      f. "begin(avg = get('avg',$source_dim); Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I(#0) - avg)"
+      k. channels 0,{$target_dim-1} => $nm
+    else rm.
+    fi
+    if $2&2 $avg => avg_$bnm fi
+    if $2&4 $Mt transpose. => M_$bnm fi
+  }
 
 #@cli matchpatch : [patch_image],patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations>=0,\
 # _nb_randoms>=0,_occurence_penalization,_output_score={ 0:No | 1:Yes },_[guide] : (+)
