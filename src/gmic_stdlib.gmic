@@ -22020,26 +22020,26 @@ patches : check "isint($1,1) && isint($2,1) && isint($3,1)"
 # 'avg' is the average of all vectors 'Xk'. \
 # 'Mt' is the transpose of 'M', the matrix of the 'target_dim' first eigenvectors (arranged by columns) of \
 # the covariance matrix of the 'Xk'.
-#@cli : - '2': Output vector 'avg'.
-#@cli : - '4': Output matrix 'M'.
-#@cli : \nKnowing 'avg' and 'M' makes it possible to (approximately) retro-project the 'Yk' in \
-# the initial vector space, by computing `Xk = avg + M*Yk` for each image pixel.
-#@cli : Default values: 'output_mode=7', 'target_dim=100%' and 'center_data=1'.
-#@cli : $ shape_dragonfly 400 mul 128 0 eval.. "i?da_push([x,y])" da_freeze. pca. 6,2 eval "C = I[#-2,0]; \
+#@cli : - '2': Output vector 'avg': average of the 'Xk'.
+#@cli : - '4': Output vector 'std': standard deviations of the 'Xk'.
+#@cli : - '8': Output matrix 'M': projection matrix (orthonormal).
+#@cli : \nKnowing 'avg', 'std' and 'M' makes it possible to (approximately) retro-project the 'Yk' in \
+# the initial vector space, by computing `Xk = avg + std*M*Yk` for each image pixel.
+#@cli : Default values: 'output_mode=15', 'target_dim=100%' and 'center_data=1'.
+#@cli : $ shape_dragonfly 400 mul 128 0 eval.. "i?da_push([x,y])" da_freeze. pca. 11,2 eval "C = I[#-2,0]; \
 # M = transpose(crop(#-1),2); repeat(2,k,polygon(#0,-2,C-1000*M[2*k,2],C+1000*M[2*k,2],1,0xF0F0F0F0,180)); \
 # ellipse(#0,C,5,5,0,1,255)" k[0]
-pca : check "isint(${1=7},0) && ${2=100%}>0 && isint(${3=1},0,2)"
+pca : check "isint(${1=15},0) && ${2=100%}>0 && isint(${3=1},0,2)"
   s0,s1,s2=""," and sample centering"," and sample centering & scaling"
   e[^-1] "Perform PCA on image$?, with target dimension $2"${s$3}.
   foreach {
     nm={n} bnm={b} source_dim:=s
     target_dim:=ispercentage($2)?max(1,int($source_dim*$2)):$2
     if $target_dim>$source_dim channels 0,{$target_dim-1} source_dim=$target_dim fi
-    +r. 1,1,1,100%,2 +store. avg
-    if $3 # Normalize samples
-      r. ..,..,..,100% - # Centering
-      if $3>1 s c foreach { / {max(1e-8,id)} } a c fi # Scaling
-    else rm. fi
+    if ($1&2)" || "$3>0 +r. 1,1,1,100%,2 store. avg fi
+    if ($1&4)" || "$3>1 1,1,1,100%,"max(1e-8,std(crop(#0,0,0,0,c,w#0,h#0,d#0,1)))" store. std fi
+    if $3>0 $avg r. ..,..,..,100% - fi # Centering
+    if $3>1 $std r. ..,..,..,100% / fi # Scaling
     eval. " # Estimate eigenvectors of covariance matrix
       begin(
         const source_dim = $source_dim;
@@ -22060,7 +22060,8 @@ pca : check "isint(${1=7},0) && ${2=100%}>0 && isint(${3=1},0,2)"
       )"
     if $1&1 f "begin(Mt = get('Mt',$source_dim*$target_dim)); mul(Mt,I)" channels 0,{$target_dim-1} => $nm else rm. fi
     if $1&2 $avg => ${bnm}_avg fi
-    if $1&4 $Mt transpose. => ${bnm}_M fi
+    if $1&4 $std => ${bnm}_std fi
+    if $1&8 $Mt transpose. => ${bnm}_M fi
   }
 
 #@cli matchpatch : [patch_image],patch_width>=1,_patch_height>=1,_patch_depth>=1,_nb_iterations>=0,\
@@ -43780,8 +43781,8 @@ fx_gmicky_preview :
 #@gui : - <b>2024/06/14</b> : version <i>3.4.0</i>.\n
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
-#@gui : - <span foreground="#EE5500"><b>2025/08/26</b> : version <i>3.6.1</i> (Current stable).</span>\n
-#@gui : - <b>2025/09/02</b> : version <i>3.6.2_pre</i> (Current pre-release).\n
+#@gui : - <span foreground="#EE5500"><b>2025/09/24</b> : version <i>3.6.2</i> (Current stable).</span>\n
+##@gui : - <b>2025/10/XX</b> : version <i>3.6.3_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
