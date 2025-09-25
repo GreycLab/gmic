@@ -29492,6 +29492,17 @@ nn_lib :
       d#IN+=(d#OUT - dot(d#OUT,OUT#))*OUT#;
     );
 
+    # Special case: Norm2.
+    nn_norm2_forward(OUT,IN) = (
+      OUT#_epsiloned = max(norm(IN#),1e-8);
+      OUT# = IN#/OUT#_epsiloned;
+    );
+
+    nn_norm2_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
+    );
+
     # normalize: Layer normalization.
     #--------------------------------
     nn_normalize_init_forward(OUT,IN,is_channelwise) = (
@@ -30850,7 +30861,10 @@ nn_nl : check "isvarname('$1')" skip ${3=leakyrelu}
   _${nout}_input=$in
   _${nout}_properties="activation="$activation
   _${nout}_forward="begin(nn_nl_init_forward("$nout,$nin"));"
-  if ['$activation']=='softmax'
+  if ['$activation']=='norm2'
+    _${nout}_forward.="nn_norm2_forward("$nout,$nin");"
+    _${nout}_backward="nn_norm2_backward("$nout,$nin");"
+  elif ['$activation']=='softmax'
     _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
     _${nout}_backward="nn_softmax_backward("$nout,$nin");"
   else
