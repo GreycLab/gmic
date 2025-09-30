@@ -28628,18 +28628,19 @@ nn_lib :
     nn_trainer_init_update(T,L) = (
       const T#_ind = $""#T;
       nn_is_training = 1;
-      nn_learning_rate = i[##T#_ind,2];
-      nn_weight_decay = i[##T#_ind,3];
-      nn_clip_grad_min = i[##T#_ind,4];
-      nn_clip_grad_max = i[##T#_ind,5];
-      nn_iteration = i(##T#_ind,0,1,0,0);
+      nn_iteration = i[##T#_ind,0];
+      nn_learning_rate = i[##T#_ind,4];
+      nn_weight_decay = i[##T#_ind,5];
+      nn_clip_grad_min = i[##T#_ind,6];
+      nn_clip_grad_max = i[##T#_ind,7];
+
     );
 
     nn_trainer_update(T,L) = (
-      i(##T#_ind,0,1,0,0) = ++nn_iteration;
-      i(##T#_ind,2,1,0,0) = i(##T#_ind,1,1);
-      i(##T#_ind,1,1,0,0) = L#;
-      i(##T#_ind,3,1,0,0) = min(L#,i(##T#_ind,3,1));
+      i[##T#_ind,0] = ++nn_iteration;
+      i[##T#_ind,2] = i[##T#_ind,1];
+      i[##T#_ind,1] = L#;
+      i[##T#_ind,3] = min(L#,i[##T#_ind,3]);
     );
 
     #-------------
@@ -28668,37 +28669,39 @@ nn_lib :
     # Adaptive Learning Rate.
     #------------------------
     nn_scheduler_adaptive_init(T) = (
-      nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
-      nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
-      nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
+      0;
+      # nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
+      # nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
+      # nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
     );
 
     nn_scheduler_adaptive_update(T,L) = (
-      nn_iteration?(
-        # Compute trend: percentage of loss decrease(<0) or increase(>0).
-        nn_adaptive_trend = (L# - nn_previous_loss)/max(1e-8,nn_previous_loss);
-        nn_adaptive_trend_moment = lerp(sign(nn_adaptive_trend),nn_adaptive_trend_moment,0.75);
+      0;
+      # nn_iteration?(
+      #   # Compute trend: percentage of loss decrease(<0) or increase(>0).
+      #   nn_adaptive_trend = (L# - nn_previous_loss)/max(1e-8,nn_previous_loss);
+      #   nn_adaptive_trend_moment = lerp(sign(nn_adaptive_trend),nn_adaptive_trend_moment,0.75);
 
-        # Adapt strategy regarding to trend.
-        nn_adaptive_trend>=0.3?( # Large local loss increase -> drastically reduce learning rate
-          nn_learning_rate = max(0.25*nn_learning_rate,1e-8);
-          nn_adaptive_nb_increases = nn_adaptive_nb_decreases = 0;
-        ):nn_adaptive_trend_moment>=0?( # Global loss increase
-          ++nn_adaptive_nb_increases;
-          nn_adaptive_nb_decreases = 0;
-          nn_adaptive_nb_increases>=2?( # Global loss increase -> slightly reduce learning rate
-            nn_learning_rate = max(0.75*nn_learning_rate,1e-8);
-            nn_adaptive_nb_increases = 0;
-          );
-        ):nn_adaptive_trend_moment<0?( # Global loss decrease
-          ++nn_adaptive_nb_decreases;
-          nn_adaptive_nb_decreases>=4?( # Global loss decrease -> slightly increase learning rate
-            nn_learning_rate = min(nn_learning_rate*1.15,0.1);
-            nn_adaptive_nb_decreases = 0;
-          );
-        );
-      );
-      copy(i(##T#_ind,0,2,0,0),[ nn_adaptive_trend_moment,nn_adaptive_nb_decreases,nn_adaptive_nb_increases ]);
+      #   # Adapt strategy regarding to trend.
+      #   nn_adaptive_trend>=0.3?( # Large local loss increase -> drastically reduce learning rate
+      #     nn_learning_rate = max(0.25*nn_learning_rate,1e-8);
+      #     nn_adaptive_nb_increases = nn_adaptive_nb_decreases = 0;
+      #   ):nn_adaptive_trend_moment>=0?( # Global loss increase
+      #     ++nn_adaptive_nb_increases;
+      #     nn_adaptive_nb_decreases = 0;
+      #     nn_adaptive_nb_increases>=2?( # Global loss increase -> slightly reduce learning rate
+      #       nn_learning_rate = max(0.75*nn_learning_rate,1e-8);
+      #       nn_adaptive_nb_increases = 0;
+      #     );
+      #   ):nn_adaptive_trend_moment<0?( # Global loss decrease
+      #     ++nn_adaptive_nb_decreases;
+      #     nn_adaptive_nb_decreases>=4?( # Global loss decrease -> slightly increase learning rate
+      #       nn_learning_rate = min(nn_learning_rate*1.15,0.1);
+      #       nn_adaptive_nb_decreases = 0;
+      #     );
+      #   );
+      # );
+      # copy(i(##T#_ind,0,2,0,0),[ nn_adaptive_trend_moment,nn_adaptive_nb_decreases,nn_adaptive_nb_increases ]);
     );
 
     # Cosine Decrease.
@@ -28743,7 +28746,7 @@ nn_lib :
     # RMSprop optimizer.
     #-------------------
     nn_optimizer_rmsprop_init(T) = (
-      nn_optimizer_rmsprop_beta = i(##T#_ind,0,2,0,0);
+      nn_optimizer_rmsprop_beta = i(##T#_ind,1,1,0,0);
     );
 
     nn_optimizer_rmsprop_update(W,weight_decay) = (
@@ -28757,8 +28760,8 @@ nn_lib :
     #------
     nn_optimizer_adam_init(T) = (
       begin(
-        nn_optimizer_adam_beta1 = i(##T#_ind,0,2,0,0);
-        nn_optimizer_adam_beta2 = i(##T#_ind,1,2,0,0);
+        nn_optimizer_adam_beta1 = i(##T#_ind,1,1,0,0);
+        nn_optimizer_adam_beta2 = i(##T#_ind,2,1,0,0);
         nn_optimizer_adam_beta1_t = nn_iteration>200?0:nn_optimizer_adam_beta1^(nn_iteration + 1);
         nn_optimizer_adam_beta2_t = nn_iteration>200?0:nn_optimizer_adam_beta2^(nn_iteration + 1);
         nn_optimizer_adam_alpha_t = sqrt(1 - nn_optimizer_adam_beta2_t)/(1 - nn_optimizer_adam_beta1_t);
@@ -28777,8 +28780,8 @@ nn_lib :
     #--------
     nn_optimizer_adamax_init(T) = (
       begin(
-        nn_optimizer_adamax_beta1 = i(##T#_ind,0,2,0,0);
-        nn_optimizer_adamax_beta2 = i(##T#_ind,1,2,0,0);
+        nn_optimizer_adamax_beta1 = i(##T#_ind,1,1,0,0);
+        nn_optimizer_adamax_beta2 = i(##T#_ind,2,1,0,0);
         nn_optimizer_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_optimizer_adamax_beta1^(nn_iteration + 1));
       );
     );
@@ -31457,25 +31460,25 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
 
   # Trainer matrix is organized as follow:
   #
-  # (optimizer,scheduler,learning_rate,weight_decay,clip_gradient_min,clip_gradient_max;
-  #  iteration,current_loss,previous_loss,best_loss;
-  #  {optimizer parameters};
-  #  {scheduler parameters}))
+  # ( [0]:iteration, [1]:current_loss, [2]:previous_loss, [3]:best_loss, [4]:learning_rate, [5]:weight_decay,
+  #     [6]:clip_gradient__min, [7]:clip_gradient_max;
+  #   (0,1):optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax | 4:other}, (1,1):optimizer_param1, ...;
+  #   (0,2):scheduler_ind, (1,2):scheduler_param1, ...)
   #
   if !isint(${$nout})
-    ($optimizer_ind,$scheduler_ind,$learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max;\
-     0,inf,inf,inf;\
-     0;0)
+    (0,inf,inf,inf,$learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max;\
+     $optimizer_ind,0;\
+     $scheduler_ind,0)
     => $nout
   else
-    sh[$nout] 0,5,0,0,0
-    f. $optimizer_ind,$scheduler_ind,$learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
+    sh[$nout] 4,7,0,0,0
+    f. $learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
   fi
 
-  if $optimizer_ind==0 =[$nout] 0.9,0,2 # sgd: (momentum)
-  elif $optimizer_ind==1 =[$nout] 0.9,0,2 # rmsprop: (beta)
-  elif $optimizer_ind==2 =[$nout] 0.9,0,2 =[$nout] 0.999,1,2 # adam: (beta1,beta2)
-  elif $optimizer_ind==3 =[$nout] 0.9,0,2 =[$nout] 0.999,1,2 # adamax: (beta1,beta2)
+  if $optimizer_ind==0 =[$nout] 0.9,1,1 # sgd: (momentum)
+  elif $optimizer_ind==1 =[$nout] 0.9,1,1 # rmsprop: (beta)
+  elif $optimizer_ind==2 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adam: (beta1,beta2)
+  elif $optimizer_ind==3 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adamax: (beta1,beta2)
   fi
 
   if $scheduler_ind==0 # constant
