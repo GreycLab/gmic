@@ -28455,8 +28455,6 @@ nn_lib :
       const nn_optimizer_rmsprop = 1;
       const nn_optimizer_adam = 2;
       const nn_optimizer_adamax = 3;
-      const nn_optimizer_gradient_threshold_min = 0.1;
-      const nn_optimizer_gradient_threshold_max = 1;
       nn_is_training = 0;
     );
 
@@ -28631,8 +28629,8 @@ nn_lib :
       nn_iteration = i[##T#_ind,0];
       nn_learning_rate = i[##T#_ind,4];
       nn_weight_decay = i[##T#_ind,5];
-      nn_clip_grad_min = i[##T#_ind,6];
-      nn_clip_grad_max = i[##T#_ind,7];
+      nn_clip_gradient_min = i[##T#_ind,6];
+      nn_clip_gradient_max = i[##T#_ind,7];
 
     );
 
@@ -28727,10 +28725,10 @@ nn_lib :
     #-------------------
     nn_optimizer_clip_gradient(W) = (
       batch_d#W#_norm = norm(batch_d#W);
-      batch_d#W#_norm<nn_optimizer_gradient_threshold_min?(
-        batch_d#W*=nn_optimizer_gradient_threshold_min/(1e-8 + batch_d#W#_norm);
-      ):batch_d#W#_norm>nn_optimizer_gradient_threshold_max?(
-        batch_d#W*=nn_optimizer_gradient_threshold_max/batch_d#W#_norm;
+      batch_d#W#_norm<nn_clip_gradient_min?(
+        batch_d#W*=nn_clip_gradient_min/(1e-8 + batch_d#W#_norm);
+      ):batch_d#W#_norm>nn_clip_gradient_max?(
+        batch_d#W*=nn_clip_gradient_max/batch_d#W#_norm;
       );
     );
 
@@ -28741,6 +28739,7 @@ nn_lib :
     nn_optimizer_sgd_update(W,weight_decay) = (
       nn_optimizer_clip_gradient(#W);
       W#-=nn_learning_rate*batch_d#W;
+      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
     );
 
     # RMSprop optimizer.
@@ -29285,7 +29284,7 @@ nn_lib :
 
     nn_fc_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_params,0);
+        learning_mode&1?nn_optimizer_#O#_update(P#_params,weight_decay);
         learning_mode&2?nn_optimizer_#O#_update(P#_biases,0);
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
