@@ -28723,13 +28723,13 @@ nn_lib :
 
     # Gradient clipping
     #-------------------
-    nn_optimizer_clip_gradient(W) = (
+    nn_optimizer_clip_gradient(P) = (
       nn_is_clip_gradient?(
-        batch_d#W#_norm = norm(batch_d#W);
-        batch_d#W#_norm<nn_clip_gradient_min?(
-          batch_d#W*=nn_clip_gradient_min/(1e-8 + batch_d#W#_norm);
-        ):batch_d#W#_norm>nn_clip_gradient_max?(
-          batch_d#W*=nn_clip_gradient_max/batch_d#W#_norm;
+        batch_d#P#_norm = norm(batch_d#P);
+        batch_d#P#_norm<nn_clip_gradient_min?(
+          batch_d#P*=nn_clip_gradient_min/(1e-8 + batch_d#P#_norm);
+        ):batch_d#P#_norm>nn_clip_gradient_max?(
+          batch_d#P*=nn_clip_gradient_max/batch_d#P#_norm;
         );
       );
     );
@@ -28738,10 +28738,10 @@ nn_lib :
     #-----------------------------------
     nn_optimizer_sgd_init(T) = 0;
 
-    nn_optimizer_sgd_update(W,weight_decay) = (
-      nn_optimizer_clip_gradient(#W);
-      W#-=nn_learning_rate*batch_d#W;
-      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
+    nn_optimizer_sgd_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      P#-=nn_learning_rate*batch_d#P;
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
     # RMSprop optimizer.
@@ -28750,11 +28750,11 @@ nn_lib :
       nn_optimizer_rmsprop_beta = i(##T#_ind,1,1,0,0);
     );
 
-    nn_optimizer_rmsprop_update(W,weight_decay) = (
-      nn_optimizer_clip_gradient(#W);
-      d#W#_g2 = lerp(batch_d#W^2,d#W#_g2,nn_optimizer_rmsprop_beta);
-      W#-=nn_learning_rate*batch_d#W/sqrt(1e-8 + d#W#_g2);
-      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
+    nn_optimizer_rmsprop_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_g2 = lerp(batch_d#P^2,d#P#_g2,nn_optimizer_rmsprop_beta);
+      P#-=nn_learning_rate*batch_d#P/sqrt(1e-8 + d#P#_g2);
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
     # Adam.
@@ -28769,12 +28769,12 @@ nn_lib :
       );
     );
 
-    nn_optimizer_adam_update(W,weight_decay) = (
-      nn_optimizer_clip_gradient(#W);
-      d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adam_beta1);
-      d#W#_v = lerp(batch_d#W^2,d#W#_v,nn_optimizer_adam_beta2);
-      W#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#W#_m/sqrt(1e-8 + d#W#_v);
-      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
+    nn_optimizer_adam_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_adam_beta1);
+      d#P#_v = lerp(batch_d#P^2,d#P#_v,nn_optimizer_adam_beta2);
+      P#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#P#_m/sqrt(1e-8 + d#P#_v);
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
     # Adamax.
@@ -28787,12 +28787,12 @@ nn_lib :
       );
     );
 
-    nn_optimizer_adamax_update(W,weight_decay) = (
-      nn_optimizer_clip_gradient(#W);
-      d#W#_m = lerp(batch_d#W,d#W#_m,nn_optimizer_adamax_beta1);
-      d#W#_v = vmax(abs(batch_d#W),nn_optimizer_adamax_beta2*d#W#_v);
-      W#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#W#_m/sqrt(1e-8 + d#W#_v);
-      weight_decay>0?(W#-=(nn_learning_rate*weight_decay)*W#);
+    nn_optimizer_adamax_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_adamax_beta1);
+      d#P#_v = vmax(abs(batch_d#P),nn_optimizer_adamax_beta2*d#P#_v);
+      P#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#P#_m/sqrt(1e-8 + d#P#_v);
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
     #----------------
@@ -31476,12 +31476,14 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
     f. $learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
   fi
 
+  # Parameters of the optimizer.
   if $optimizer_ind==0 =[$nout] 0.9,1,1 # sgd: (momentum)
   elif $optimizer_ind==1 =[$nout] 0.9,1,1 # rmsprop: (beta)
   elif $optimizer_ind==2 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adam: (beta1,beta2)
   elif $optimizer_ind==3 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adamax: (beta1,beta2)
   fi
 
+  # Parameters of the scheduler.
   if $scheduler_ind==0 # constant
   elif $scheduler_ind==1 # linear
   elif $scheduler_ind==2 # exponential
