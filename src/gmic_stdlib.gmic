@@ -28736,11 +28736,14 @@ nn_lib :
 
     # Stochastic gradient descent (SGD).
     #-----------------------------------
-    nn_optimizer_sgd_init(T) = 0;
+    nn_optimizer_sgd_init(T) = (
+      nn_optimizer_sgd_momentum = i(##T#_ind,1,1,0,0);
+    );
 
     nn_optimizer_sgd_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
-      P#-=nn_learning_rate*batch_d#P;
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_sgd_momentum);
+      P#-=nn_learning_rate*d#P#_m;
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29286,8 +29289,17 @@ nn_lib :
 
     nn_fc_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_params,nn_weight_decay);
-        learning_mode&2?nn_optimizer_#O#_update(P#_biases,0);
+        const P#_ind_m = $""P#_m;
+        learning_mode&1?(
+          d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
+          nn_optimizer_#O#_update(P#_params,nn_weight_decay);
+          draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
+          nn_optimizer_#O#_update(P#_biases,0);
+          draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
+        );
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
@@ -29587,8 +29599,17 @@ nn_lib :
       draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
 
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        learning_mode&1?nn_optimizer_#O#_update(P#_alpha,0);
-        learning_mode&2?nn_optimizer_#O#_update(P#_beta,0);
+        const P#_ind_m = $""P#_m;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
+        );
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
         const P#_ind_g2 = $""P#_g2;
         learning_mode&1?(
@@ -31506,10 +31527,12 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
 
       # Allocate data for storing optimizer extra data (moments,...).
       if $learning_mode
-        if ['$optimizer']=='rmsprop'
+        if ['$optimizer']=='sgd'
+          if !isint(${${net}_${name}_m}) +f[${net}_$name] 0 => ${net}_${name}_m fi
+          _${net}_trainer_data.=${net}_${name}_m,
+        elif ['$optimizer']=='rmsprop'
           if !isint(${${net}_${name}_g2}) +f[${net}_$name] 0 => ${net}_${name}_g2 fi
           _${net}_trainer_data.=${net}_${name}_g2,
-
         elif isin('$optimizer','adam','adamax')
           if !isint(${${net}_${name}_m}) +f[${net}_$name] 0 => ${net}_${name}_m fi
           if !isint(${${net}_${name}_v}) +f[${net}_$name] 0 => ${net}_${name}_v fi
