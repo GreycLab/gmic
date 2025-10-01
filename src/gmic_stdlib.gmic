@@ -28750,13 +28750,15 @@ nn_lib :
     # RMSprop optimizer.
     #-------------------
     nn_optimizer_rmsprop_init(T) = (
-      nn_optimizer_rmsprop_beta = i(##T#_ind,1,1,0,0);
+      nn_optimizer_rmsprop_momentum = i(##T#_ind,1,1,0,0);
+      nn_optimizer_rmsprop_beta = i(##T#_ind,2,1,0,0);
     );
 
     nn_optimizer_rmsprop_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_rmsprop_momentum);
       d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_optimizer_rmsprop_beta);
-      P#-=nn_learning_rate*batch_d#P/sqrt(1e-8 + d#P#_m2);
+      P#-=nn_learning_rate*d#P#_m/sqrt(1e-8 + d#P#_m2);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29301,15 +29303,20 @@ nn_lib :
           draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
         );
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
+        const P#_ind_m = $""P#_m;
         const P#_ind_m2 = $""P#_m2;
         learning_mode&1?(
+          d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
           d#P#_params_m2 = crop(##P#_ind_m2,0,0,w##P#_ind - 1,h##P#_ind);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
+          draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
           draw(##P#_ind_m2,d#P#_params_m2,0,0,w##P#_ind - 1,h##P#_ind);
         );
         learning_mode&2?(
+          d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
           d#P#_biases_m2 = crop(##P#_ind_m2,w##P#_ind - 1,0,1,h##P#_ind);
           nn_optimizer_#O#_update(P#_biases,0);
+          draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
           draw(##P#_ind_m2,d#P#_biases_m2,w##P#_ind - 1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?( # adam & adamax
@@ -29611,15 +29618,20 @@ nn_lib :
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
         );
       ):nn_optimizer_#O==nn_optimizer_rmsprop?( # rmsprop
+        const P#_ind_m = $""P#_m;
         const P#_ind_m2 = $""P#_m2;
         learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
           d#P#_alpha_m2 = crop(##P#_ind_m2,0,1);
           nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
           draw(##P#_ind_m2,d#P#_alpha_m2,0,0,1,h##P#_ind);
         );
         learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
           nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
           draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind);
         );
       ):isin(nn_optimizer_#O,nn_optimizer_adam,nn_optimizer_adamax)?(
@@ -31477,10 +31489,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   _${nout}_input=$in
   _${nout}_properties="optimizer="$optimizer", scheduler="$scheduler", learning_rate="$learning_rate", "\
                       "weight_decay="$weight_decay", clip_gradient_min="$clip_gradient_min", "\
-                      "clip_gradient_max="$clip_gradient_max", optimizer_params='"$optimizer_params"', "\
-                      "scheduler params='"$scheduler_params"'"
-  optimizer_ind:="s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"
-  scheduler_ind:="s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"
+                      "clip_gradient_max="$clip_gradient_max", "
 
   # Trainer matrix is organized as follow:
   #
@@ -31496,15 +31505,20 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   sh[$nout] 4,7,0,0,0 f. $learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
 
   # Parameters of the optimizer.
+  optimizer_ind:="s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"
   if !narg($optimizer_params) # Define default parameters for optimizers
-    if $optimizer_ind<=1 optimizer_params=0.9          # sgd & rmsprop: momentum
-    elif $optimizer_ind<=3 optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
+    if '$optimizer'=='sgd' optimizer_params=0.9 # momentum
+    elif '$optimizer'=='rmsprop' optimizer_params=0.9,0.9 # momentum,beta
+    elif isin('$optimizer','adam','adamax') optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
     fi
   fi
   if narg($optimizer_params) eval "copy(i(#$nout_ind,0,1),[ "$optimizer_ind,$optimizer_params" ])" fi
 
   # Parameters of the scheduler.
+  scheduler_ind:="s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"
   if narg($scheduler_params) eval "copy(i(#$nout_ind,0,1),[ "$scheduler_ind,$scheduler_params" ])" fi
+
+  _${nout}_properties.="optimizer_params='"$optimizer_params"', scheduler params='"$scheduler_params"'"
 
   # Generate code for updating network weights.
   _${net}_update="begin("\
