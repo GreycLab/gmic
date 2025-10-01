@@ -31466,17 +31466,21 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   optimizer,scheduler,learning_rate,weight_decay,clip_gradient_min,clip_gradient_max=${3-8}
+  optimizer_params="$9"
+  schedular_params="$10"
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' of network '"$net"', with "$optimizer" optimizer, "\
-         $scheduler" scheduler, learning rate "$learning_rate", weight decay "$weight_decay", and "\
-         "min/max clipping gradient thresholds ("$clip_gradient_min,$clip_gradient_max")."
+         $scheduler" scheduler, learning rate "$learning_rate", weight decay "$weight_decay", "\
+         "min/max clipping gradient thresholds ("$clip_gradient_min,$clip_gradient_max"), "\
+         "optimizer parameters '"$optimizer_params"' and scheduler parameers '"$scheduler_params"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
   _${nout}_input=$in
   _${nout}_properties="optimizer="$optimizer", scheduler="$scheduler", learning_rate="$learning_rate", "\
                       "weight_decay="$weight_decay", clip_gradient_min="$clip_gradient_min", "\
-                      "clip_gradient_max="$clip_gradient_max,
+                      "clip_gradient_max="$clip_gradient_max", optimizer_params='"$optimizer_params"', "\
+                      "scheduler params='"$scheduler_params"'"
   optimizer_ind:="s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"
   scheduler_ind:="s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"
 
@@ -31487,22 +31491,22 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   #   (0,1):optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax | 4:other}, (1,1):optimizer_param1, ...;
   #   (0,2):scheduler_ind, (1,2):scheduler_param1, ...)
   #
-  if !isint(${$nout})
-    (0,inf,inf,inf,$learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max;\
-     $optimizer_ind,0;\
-     $scheduler_ind,0)
-    => $nout
-  fi
+  if !isint(${$nout}) (0,inf,inf,inf) r. 8,3,1,1,0,0 => $nout fi
+  nout_ind=${$nout}
+
+  # Global training parameters.
   sh[$nout] 4,7,0,0,0 f. $learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
 
   # Parameters of the optimizer.
-  if $optimizer_ind==0 =[$nout] 0.9,1,1 # sgd: (momentum)
-  elif $optimizer_ind==1 =[$nout] 0.9,1,1 # rmsprop: (beta)
-  elif $optimizer_ind==2 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adam: (beta1,beta2)
-  elif $optimizer_ind==3 =[$nout] 0.9,1,1 =[$nout] 0.999,2,1 # adamax: (beta1,beta2)
+  if !narg($optimizer_params) # Define default parameters for optimizers
+    if $optimizer_ind<=1 optimizer_params=0.9          # sgd & rmsprop: momentum
+    elif $optimizer_ind<=3 optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
+    fi
   fi
+  if narg($optimizer_params) eval "copy(i(#$nout_ind,0,1),[ "$optimizer_ind,$optimizer_params" ])" fi
 
   # Parameters of the scheduler.
+  =[$nout] $scheduler_ind,0,2
   if $scheduler_ind==0 # constant
   elif $scheduler_ind==1 # linear
   elif $scheduler_ind==2 # exponential
