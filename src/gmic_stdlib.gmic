@@ -31468,7 +31468,7 @@ nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
 #@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
 #@cli : Default values: 'in=. (previous layer)', 'optimizer=adam', 'scheduler=constant', 'learning_rate=5e-4', \
-# 'weight_decay=0.01', `clip_gradient_min=0`, `clip_gradient_max=1`, optimizer_params="" and scheduler_params="".
+# 'weight_decay=0.01', `clip_gradient_min=0`, `clip_gradient_max=1`, optimizer_params=(default) and scheduler_params=(default).
 nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=constant}'];
                     isvarname(s1) && (s2=='.' || isvarname(s2)) && isvarname(s3) && isvarname(s4) &&
                     ${5=5e-4}>=0 && ${6=0.01}>=0 && ${7=0}>=0 && ${8=1}>0" skip "${9=},${10=}"
@@ -31476,8 +31476,16 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   optimizer,scheduler,learning_rate,weight_decay,clip_gradient_min,clip_gradient_max=${3-8}
+
+  # Define default parameters for each optimizer and scheduler.
   optimizer_params="$9"
   schedular_params="$10"
+  if !narg($optimizer_params)
+    if '$optimizer'=='sgd' optimizer_params=0.9 # momentum
+    elif '$optimizer'=='rmsprop' optimizer_params=0.9,0.9 # momentum,beta
+    elif isin('$optimizer','adam','adamax') optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
+    fi
+  fi
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' of network '"$net"', with "$optimizer" optimizer, "\
          $scheduler" scheduler, learning rate "$learning_rate", weight decay "$weight_decay", "\
@@ -31489,7 +31497,8 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
   _${nout}_input=$in
   _${nout}_properties="optimizer="$optimizer", scheduler="$scheduler", learning_rate="$learning_rate", "\
                       "weight_decay="$weight_decay", clip_gradient_min="$clip_gradient_min", "\
-                      "clip_gradient_max="$clip_gradient_max", "
+                      "clip_gradient_max="$clip_gradient_max", optimizer_params='"$optimizer_params"', "\
+                      "scheduler params='"$scheduler_params"'"
 
   # Trainer matrix is organized as follow:
   #
@@ -31506,19 +31515,11 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
 
   # Parameters of the optimizer.
   optimizer_ind:="s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"
-  if !narg($optimizer_params) # Define default parameters for optimizers
-    if '$optimizer'=='sgd' optimizer_params=0.9 # momentum
-    elif '$optimizer'=='rmsprop' optimizer_params=0.9,0.9 # momentum,beta
-    elif isin('$optimizer','adam','adamax') optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
-    fi
-  fi
   if narg($optimizer_params) eval "copy(i(#$nout_ind,0,1),[ "$optimizer_ind,$optimizer_params" ])" fi
 
   # Parameters of the scheduler.
   scheduler_ind:="s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"
   if narg($scheduler_params) eval "copy(i(#$nout_ind,0,1),[ "$scheduler_ind,$scheduler_params" ])" fi
-
-  _${nout}_properties.="optimizer_params='"$optimizer_params"', scheduler params='"$scheduler_params"'"
 
   # Generate code for updating network weights.
   _${net}_update="begin("\
