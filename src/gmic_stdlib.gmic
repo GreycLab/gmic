@@ -31006,7 +31006,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) # patch_size
                       "
   net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
 
@@ -31073,9 +31073,12 @@ nn_print :
 
 #@cli nn_rename : out,in
 #@cli : Add a 'rename' layer to the current network.
-nn_rename : check "isvarname('$1')"
+nn_rename : check "s1 = ['$1']; s2 = ['$2'];
+                   isvarname(s1) && # out
+                   (isvarname(s2) || s2=='.') # in
+                   "
   net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
 
   e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
@@ -31090,11 +31093,19 @@ nn_rename : check "isvarname('$1')"
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_reshape : out,in,width>0,height>0,depth>0,spectrum>0
+#@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
-nn_reshape : check "isvarname('$1')"
+#@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
+nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    isint($3,1) && # width
+                    isint(${4=1},1) && # height
+                    isint(${5=1},1) && # depth
+                    isint(${6=1},1) # spectrum
+                    "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   width,height,depth,spectrum=${3-6}
 
@@ -31118,10 +31129,17 @@ nn_reshape : check "isvarname('$1')"
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
 #@cli : Add a 'resize' layer to the current network.
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
-nn_resize : check "isvarname('$1') && $3>0 && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0"
-            skip ${7=3}
+nn_resize : check "s1 = ['$1']; s2 = ['$2'];
+                   isvarname(s1) && # out
+                   (isvarname(s2) || s2=='.') && # in
+                   $3>0 && # width
+                   ${4=100%}>0 && # height
+                   ${5=100%}>0 && # depth
+                   ${6=100%}>0 # spectrum
+                   isint(${7=3},-1,6) # interpolation
+                   "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   if ispercentage($3) width:=max(1,round([${_${nin}_size}][1]*$3)) else width=$3 fi
   if ispercentage($4) height:=max(1,round([${_${nin}_size}][1]*$4)) else height=$4 fi
