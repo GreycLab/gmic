@@ -30462,9 +30462,16 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 && isint(${6=3},0,3)"
+nn_fc : check "s1 = ['$1']; s2 = ['$2'];
+               isvarname(s1) && # out
+               (isvarname(s2) || s2=='.') && # in
+               isint($3,1) && # nb_channels
+               isint(${4=3},0,3) && # learning_mode
+               ${5=0}>=0 && # weight_decay
+               isint(${6=3},0,3) # initialization
+               "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi # nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
@@ -30495,48 +30502,6 @@ nn_fc : check "isvarname('$1') && isint($3,1) && isint(${4=3},0,3) && ${5=0}>=0 
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_fcnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'fcnl' layer (fully connected layer followed by a non-linearity) to the current network.
-#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_fcnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
-          skip ${4=leakyrelu}
-  net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout=${net}_$out
-  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
-
-  e[^-1] "[nn_lib] Add 'fc+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels and '"$activation"' activation."
-  init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
-  nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
-  _${net}_previous_layer=$out
-
-#@cli nn_fcnnl : out,in,nb_channels>0,_activation,_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'fcnnl' layer (fully connected layer followed by a normalization layer, then a non-linearity) \
-# to the current network.
-#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
-#@cli : Default values: 'activation=leakyrelu', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_fcnnl : check "isvarname('$1') && isint($3,1) && isint(${5=3},0,3) && ${6=0}>=0 && isint(${7=3},0,3)"
-           skip ${4=leakyrelu}
-  net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout=${net}_$out
-  nb_channels,activation,learning_mode,weight_decay,initialization=${3-7}
-
-  e[^-1] "[nn_lib] Add 'fc+normalize+nl' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels and '"$activation"' activation."
-  init=${_${net}_init}
-  nn_fc ${out}_fc,$in,$nb_channels,$learning_mode,$weight_decay,$initialization
-  nn_normalize ${out}_normalize,.,0,3
-  nn_nl $out,.,$activation
-  _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
 #@cli nn_init : network_name
