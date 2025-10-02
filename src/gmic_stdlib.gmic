@@ -31095,7 +31095,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
-#@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
+#@cli : Default values: 'height=depth=spectrum=1'.
 nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
                     isvarname(s1) && # out
                     (isvarname(s2) || s2=='.') && # in
@@ -31165,15 +31165,22 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_run : out,in,"command",_width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0
 #@cli : Add a 'run' layer to the current network.
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
-nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && ${7=100%}>0"
+nn_run : check "s1 = ['$1']; s2 = ['$2'];
+                isvarname(s1) && # out
+                (isvarname(s2) || s2=='.') && # in
+                ${4=100%}>0 && # width
+                ${5=100%}>0 && # height
+                ${6=100%}>0 && # depth
+                ${7=100%}>0 # spectrum
+                "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   if ispercentage($4) width:=max(1,round([${_${nin}_size}][0]*$4)) else width=$4 fi
   if ispercentage($5) height:=max(1,round([${_${nin}_size}][1]*$5)) else height=$5 fi
   if ispercentage($6) depth:=max(1,round([${_${nin}_size}][2]*$6)) else depth=$6 fi
   if ispercentage($7) spectrum:=max(1,round([${_${nin}_size}][3]*$7)) else spectrum=$7 fi
-  command="$2"
+  command="$3"
 
   e[^-1] "[nn_lib] Add 'run' layer '"$out"' to network '"$net"', with input '"$in"', command '"$command"' "\
          "and output size ("$width","$height","$depth","$spectrum")."
@@ -31194,17 +31201,21 @@ nn_run : check "isvarname('$1') && ${4=100%}>0 && ${5=100%}>0 && ${6=100%}>0 && 
 #@cli : Save current network as a .gmz file.
 #@cli : `.gmz` is mandatory extension, specifying another file extension will throw an error.
 #@cli : Default value: 'include_trainer_data=1'.
-nn_save : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
+nn_save : check "s1 = ['$1'];
+                 find(s,'.gmz')==size(s) - 4 && # filename
+                 isbool(${2=1}) # include_trainer_data
+                 "
   net=$_nn_network
   s0,s1=""," (include training data)"
-
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
   __nn_store $2 o[$sel,-1] "$1" rm.
   is_change 0
 
 #@cli nn_select : _network_name
 #@cli : Select network with specified name as the current one.
-nn_select : check "isvarname(['$1'])"
+nn_select : check "s1 = ['$1'];
+                   isvarname(s1) # network_name
+                   "
   _nn_network=$1
   e[^-1] "[nn_lib] Select '"$_nn_network"' as the current network."
 
@@ -31212,7 +31223,6 @@ nn_select : check "isvarname(['$1'])"
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
   net=$_nn_network
-
   e[^-1] "[nn_lib] Return size of network '"$net"'."
   siz=0
   repeat narg(${_${net}_layer_names})-1 {
@@ -31224,9 +31234,15 @@ nn_size :
 
 #@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0
 #@cli : Add a 'split' layer to the current network.
-nn_split : check "isvarname('$1') && isvarname('$2') && isin(_'$4',_'x',_'y',_'z',_'c') && isint($5,1)"
+nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out0
+                  isvarname(s2) && # out1
+                  (isvarname(s3) || s3=='.') && # in
+                  isin(s4,'x','y','z','c') # axis
+                  isint($5,1)
+                  "
   net,out0,out1=$_nn_network,${1,2}
-  if ['$3']=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
   axis,size0=${4-5}
   ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
@@ -31251,17 +31267,21 @@ nn_split : check "isvarname('$1') && isvarname('$2') && isin(_'$4',_'x',_'y',_'z
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Store current network into a variable.
 #@cli : Default value: 'include_trainer_data=1'.
-+nn_store : check "isbool(${2=1})"
++nn_store : check "s1 = ['$1'];
+                   isvarname(s1) && # variable_name
+                   isbool(${2=1}) # include_trainer_data
+                   "
   net=$_nn_network
   s0,s1=""," (include training data)"
-
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 +store[$sel,-1] "$1" rm.
 
-nn_store : check "isbool(${2=1})"
+nn_store : check "s1 = ['$1'];
+                  isvarname(s1) && # variable_name
+                  isbool(${2=1}) # include_trainer_data
+                  "
   net=$_nn_network
   s0,s1=""," (include training data)"
-
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 store[$sel,-1] "$1"
 
@@ -31285,13 +31305,17 @@ __nn_store :
 #@cli nn_sub : out,in0,in1
 #@cli : Add a 'sub' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_sub : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum3 = isnum($3);
+                isvarname(s1) && # out
+                (isvarname(s2) || s2=='.' || isnum2) && # in0
+                (isvarname(s3) || s3=='.' || isnum3) && # in1
+                (!isnum2 || isnum3)"
   net,out=$_nn_network,$1
-  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-
   out_size=
+  isnum0,isnum1:=isnum($in0),isnum($in1)
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
