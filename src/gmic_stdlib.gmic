@@ -28482,7 +28482,7 @@ nn_lib :
     #--------------------------------------
 
     # elu: Exponential Linear Unit.
-    #-------------------------------
+    #------------------------------
     nn_activation_elu(z) = (z<0?exp(z) - 1:z);
     nn_activation_d_elu(z) = (z<0?exp(z):1);
 
@@ -28504,22 +28504,22 @@ nn_lib :
     );
 
     # gelu: Gaussian Error Linear Unit.
-    #-----------------------------------
+    #----------------------------------
     nn_activation_gelu(z) = (0.5*z*(1 + erf(z/sqrt(2))));
     nn_activation_d_gelu(z) = (0.5 + 0.5*erf(z/sqrt(2)) + z*exp(-z^2/2)/sqrt(2*pi));
 
     # leakyrelu: Leaky Rectified Linear Unit.
-    #-----------------------------------------
+    #----------------------------------------
     nn_activation_leakyrelu(z) = (z<0?0.05*z:z);
     nn_activation_d_leakyrelu(z) = (z<0?0.05:1);
 
-    # Linear.
-    #--------
+    # linear: Identity function.
+    #---------------------------
     nn_activation_linear(z) = z;
     nn_activation_d_linear(z) = 1;
 
     # relu: Rectified Linear Unit.
-    #------------------------------
+    #-----------------------------
     nn_activation_relu(z) = (z<0?0:z);
     nn_activation_d_relu(z) = (z>=0);
 
@@ -28635,11 +28635,14 @@ nn_lib :
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,0] = ++nn_iteration;
-      i[##T#_ind,2] = i[##T#_ind,1];
-      i[##T#_ind,1] = L#;
-      i[##T#_ind,3] = min(L#,i[##T#_ind,3]);
+      i[##T#_ind,2] = i[##T#_ind,1]; # previous_loss
+      i[##T#_ind,1] = L#; # loss
+      i[##T#_ind,3] = min(L#,i[##T#_ind,3]); # best_loss
+      i[##T#_ind,5] = i[##T#_ind,4]; # previous smoothed loss
+      i[##T#_ind,4] = !nn_iteration?L#:lerp(L#,i[##T#_ind,4],0.9); # smoothed loss
+      i[##T#_ind,6] = min(i[##T#_ind,4],i[##T#_ind,6]); # best_smoothed_loss
       nn_scheduler_#S#_update(#T);
+      i[##T#_ind,0] = ++nn_iteration;
     );
 
     #------------
@@ -31471,11 +31474,11 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
 
   # Trainer matrix has size 8x3, and is organized as follow:
   #
-  # ( iteration, loss, previous_loss, smoothed_loss, best_loss;
+  # ( iteration, loss, previous_loss, best_loss, smoothed_loss, previous_smoothed_loss, best_smoothed_loss;
   #   optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax}, optimizer_params...;
   #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
   #
-  if !isint(${$nout}) (0,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout fi
+  if !isint(${$nout}) (0,inf,inf,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout fi
   nout_ind=${$nout}
 
   # Define optimizer and scheduler parameters.
