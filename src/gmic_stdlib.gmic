@@ -31495,36 +31495,38 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
   fi
   if narg($default_optimizer_params) eval "copy(i(#$nout_ind,1,1),["$default_optimizer_params"])" fi
   if narg($optimizer_params) eval "copy(i(#$nout_ind,1,1),["$optimizer_params"])" fi
-  optimizer_params={$nout,_crop(1,1,narg($default_optimizer_params),1)}
+  s,c= repeat narg($default_optimizer_params) { s.=$c${arg0\ $>,$s_optimizer_params}={$nout,_i(1+$>,1)} c=", " }
+  s_optimizer_params=$s
 
   =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"},0,2
   if '$scheduler'=='constant'
     s_scheduler_params=
-    default_scheduler_params=0
+    default_scheduler_params=
   elif '$scheduler'=='linear'
     s_scheduler_params=
-    default_scheduler_params=0
+    default_scheduler_params=
   elif '$scheduler'=='exponential'
     s_scheduler_params=
-    default_scheduler_params=0
+    default_scheduler_params=
   elif '$scheduler'=='adaptive'
     s_scheduler_params=
-    default_scheduler_params=0
+    default_scheduler_params=
   fi
   if narg($default_scheduler_params) eval "copy(i(#$nout_ind,1,2),["$default_scheduler_params"])" fi
   if narg($scheduler_params) eval "copy(i(#$nout_ind,1,1),["$scheduler_params"])" fi
-  scheduler_params={$nout,_crop(1,2,narg($default_scheduler_params),1)}
+  s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,1)} c=", " }
+  s_scheduler_params=$s
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' in network '"$net"', with '"$optimizer"' optimizer "\
-         "(parameters: [ "$s_optimizer_params" ] = [ "$optimizer_params" ]) and '"$scheduler"' scheduler "\
-         "(parameters: [ "$s_scheduler_params" ] = [ "$scheduler_params" ])."
-
+         ($s_optimizer_params)" and '"$scheduler"' scheduler "($s_scheduler_params)"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
   _${nout}_input=$in
-  _${nout}_properties="optimizer="$optimizer", optimizer_params='"$optimizer_params"', "\
-                      "scheduler="$scheduler", scheduler params='"$scheduler_params"'"
+  _${nout}_properties="optimizer="$optimizer
+  if ['$s_optimizer_params']!=0 _${nout}_properties.=" ,"$s_optimizer_params fi
+  _${nout}_properties.=", scheduler="$scheduler
+  if ['$s_scheduler_params']!=0 _${nout}_properties.=" ,"$s_scheduler_params fi
 
   # Generate code for updating network weights.
   _${net}_update="begin(nn_trainer_init("$nout,$nin,$optimizer,$scheduler"));"\
