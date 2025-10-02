@@ -28455,6 +28455,10 @@ nn_lib :
       const nn_optimizer_rmsprop = 1;
       const nn_optimizer_adam = 2;
       const nn_optimizer_adamax = 3;
+      const nn_scheduler_constant = 0;
+      const nn_scheduler_linear = 1;
+      const nn_scheduler_exponential = 2;
+      const nn_scheduler_adaptive = 3;
       nn_is_training = 0;
     );
 
@@ -28623,98 +28627,20 @@ nn_lib :
     #---------
     # Trainer.
     #---------
-    nn_trainer_init_update(T,L) = (
+    nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
       nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
-      nn_learning_rate = i[##T#_ind,4];
-      nn_weight_decay = i[##T#_ind,5];
-      nn_clip_gradient_min = i[##T#_ind,6];
-      nn_clip_gradient_max = i[##T#_ind,7];
-      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
+      nn_optimizer_#O#_init(#T);
+      nn_scheduler_#S#_init(#T);
     );
 
-    nn_trainer_update(T,L) = (
+    nn_trainer_update(T,L,O,S) = (
       i[##T#_ind,0] = ++nn_iteration;
       i[##T#_ind,2] = i[##T#_ind,1];
       i[##T#_ind,1] = L#;
       i[##T#_ind,3] = min(L#,i[##T#_ind,3]);
-    );
-
-    #-------------
-    # Schedulers.
-    #-------------
-
-    # Constant.
-    #----------
-    nn_scheduler_constant_init(T) = 0;
-    nn_scheduler_constant_update(T,L) = 0;
-
-    # Linear Decrease.
-    #-----------------
-    nn_scheduler_linear_init(T) = 0;
-    nn_scheduler_linear_update(T,L) = (
-      nn_learning_rate = lerp(nn_learning_rate0,1e-8,min(1,nn_iteration/1000));
-    );
-
-    # Exponential Decrease.
-    #----------------------
-    nn_scheduler_exponential_init(T) = 0;
-    nn_scheduler_exponential_update(T,L) = (
-      nn_learning_rate*=0.999;
-    );
-
-    # Adaptive Learning Rate.
-    #------------------------
-    nn_scheduler_adaptive_init(T) = (
-      0;
-      # nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
-      # nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
-      # nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
-    );
-
-    nn_scheduler_adaptive_update(T,L) = (
-      0;
-      # nn_iteration?(
-      #   # Compute trend: percentage of loss decrease(<0) or increase(>0).
-      #   nn_adaptive_trend = (L# - nn_previous_loss)/max(1e-8,nn_previous_loss);
-      #   nn_adaptive_trend_moment = lerp(sign(nn_adaptive_trend),nn_adaptive_trend_moment,0.75);
-
-      #   # Adapt strategy regarding to trend.
-      #   nn_adaptive_trend>=0.3?( # Large local loss increase -> drastically reduce learning rate
-      #     nn_learning_rate = max(0.25*nn_learning_rate,1e-8);
-      #     nn_adaptive_nb_increases = nn_adaptive_nb_decreases = 0;
-      #   ):nn_adaptive_trend_moment>=0?( # Global loss increase
-      #     ++nn_adaptive_nb_increases;
-      #     nn_adaptive_nb_decreases = 0;
-      #     nn_adaptive_nb_increases>=2?( # Global loss increase -> slightly reduce learning rate
-      #       nn_learning_rate = max(0.75*nn_learning_rate,1e-8);
-      #       nn_adaptive_nb_increases = 0;
-      #     );
-      #   ):nn_adaptive_trend_moment<0?( # Global loss decrease
-      #     ++nn_adaptive_nb_decreases;
-      #     nn_adaptive_nb_decreases>=4?( # Global loss decrease -> slightly increase learning rate
-      #       nn_learning_rate = min(nn_learning_rate*1.15,0.1);
-      #       nn_adaptive_nb_decreases = 0;
-      #     );
-      #   );
-      # );
-      # copy(i(##T#_ind,0,2,0,0),[ nn_adaptive_trend_moment,nn_adaptive_nb_decreases,nn_adaptive_nb_increases ]);
-    );
-
-    # Cosine Decrease.
-    #-----------------
-    nn_scheduler_cosine_init(T) = (
-      nn_scheduler_cosine_lr_avg = nn_learning_rate0;
-      nn_scheduler_cosine_lr_min = 10*nn_scheduler_cosine_lr_avg;
-      nn_scheduler_cosine_lr_max = 0.01*nn_scheduler_cosine_lr_avg;
-      const nn_scheduler_cosine_period = 1000;
-    );
-
-    nn_scheduler_cosine_update(T,L) = (
-      nn_learning_rate = lerp(nn_scheduler_cosine_lr_min,
-                              nn_scheduler_cosine_lr_max,
-                              0.5*(1 + cos(nn_iteration*2*pi/nn_scheduler_cosine_period)));
+      nn_scheduler_#S#_update(#T);
     );
 
     #------------
@@ -28737,12 +28663,17 @@ nn_lib :
     # Stochastic gradient descent (SGD).
     #-----------------------------------
     nn_optimizer_sgd_init(T) = (
-      nn_optimizer_sgd_momentum = i(##T#_ind,1,1,0,0);
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_momentum = i(##T#_ind,2,1);
+      nn_weight_decay = i(##T#_ind,3,1);
+      nn_clip_gradient_min = i(##T#_ind,4,1);
+      nn_clip_gradient_max = i(##T#_ind,5,1);
+      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
     );
 
     nn_optimizer_sgd_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_sgd_momentum);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
       P#-=nn_learning_rate*d#P#_m;
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
@@ -28750,14 +28681,19 @@ nn_lib :
     # RMSprop optimizer.
     #-------------------
     nn_optimizer_rmsprop_init(T) = (
-      nn_optimizer_rmsprop_momentum = i(##T#_ind,1,1,0,0);
-      nn_optimizer_rmsprop_beta = i(##T#_ind,2,1,0,0);
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_momentum = i(##T#_ind,2,1);
+      nn_rmsprop_beta = i(##T#_ind,3,1);
+      nn_weight_decay = i(##T#_ind,4,1);
+      nn_clip_gradient_min = i(##T#_ind,5,1);
+      nn_clip_gradient_max = i(##T#_ind,6,1);
+      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
     );
 
     nn_optimizer_rmsprop_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_rmsprop_momentum);
-      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_optimizer_rmsprop_beta);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
+      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_rmsprop_beta);
       P#-=nn_learning_rate*d#P#_m/sqrt(1e-8 + d#P#_m2);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
@@ -28765,39 +28701,96 @@ nn_lib :
     # Adam.
     #------
     nn_optimizer_adam_init(T) = (
-      begin(
-        nn_optimizer_adam_beta1 = i(##T#_ind,1,1,0,0);
-        nn_optimizer_adam_beta2 = i(##T#_ind,2,1,0,0);
-        nn_optimizer_adam_beta1_t = nn_iteration>200?0:nn_optimizer_adam_beta1^(nn_iteration + 1);
-        nn_optimizer_adam_beta2_t = nn_iteration>200?0:nn_optimizer_adam_beta2^(nn_iteration + 1);
-        nn_optimizer_adam_alpha_t = sqrt(1 - nn_optimizer_adam_beta2_t)/(1 - nn_optimizer_adam_beta1_t);
-      );
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_adam_beta1 = i(##T#_ind,2,1);
+      nn_adam_beta2 = i(##T#_ind,3,1);
+      nn_weight_decay = i(##T#_ind,4,1);
+      nn_clip_gradient_min = i(##T#_ind,5,1);
+      nn_clip_gradient_max = i(##T#_ind,6,1);
+      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
+      nn_adam_beta1_t = nn_iteration>200?0:nn_adam_beta1^(nn_iteration + 1);
+      nn_adam_beta2_t = nn_iteration>200?0:nn_adam_beta2^(nn_iteration + 1);
+      nn_adam_alpha_t = sqrt(1 - nn_adam_beta2_t)/(1 - nn_adam_beta1_t);
     );
 
     nn_optimizer_adam_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_adam_beta1);
-      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_optimizer_adam_beta2);
-      P#-=nn_learning_rate*nn_optimizer_adam_alpha_t*d#P#_m/sqrt(1e-8 + d#P#_m2);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_adam_beta1);
+      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_adam_beta2);
+      P#-=nn_learning_rate*nn_adam_alpha_t*d#P#_m/sqrt(1e-8 + d#P#_m2);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
     # Adamax.
     #--------
     nn_optimizer_adamax_init(T) = (
-      begin(
-        nn_optimizer_adamax_beta1 = i(##T#_ind,1,1,0,0);
-        nn_optimizer_adamax_beta2 = i(##T#_ind,2,1,0,0);
-        nn_optimizer_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_optimizer_adamax_beta1^(nn_iteration + 1));
-      );
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_adamax_beta1 = i(##T#_ind,2,1);
+      nn_adamax_beta2 = i(##T#_ind,3,1);
+      nn_weight_decay = i(##T#_ind,4,1);
+      nn_clip_gradient_min = i(##T#_ind,5,1);
+      nn_clip_gradient_max = i(##T#_ind,6,1);
+      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
+      nn_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_adamax_beta1^(nn_iteration + 1));
     );
 
     nn_optimizer_adamax_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_optimizer_adamax_beta1);
-      d#P#_m2 = vmax(abs(batch_d#P),nn_optimizer_adamax_beta2*d#P#_m2);
-      P#-=(nn_learning_rate/nn_optimizer_adamax_ombeta1_t)*d#P#_m/sqrt(1e-8 + d#P#_m2);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_adamax_beta1);
+      d#P#_m2 = vmax(abs(batch_d#P),nn_adamax_beta2*d#P#_m2);
+      P#-=(nn_learning_rate/nn_optimizer_ombeta1_t)*d#P#_m/sqrt(1e-8 + d#P#_m2);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
+    );
+
+    #-------------
+    # Schedulers.
+    #-------------
+
+    # Constant.
+    #----------
+    nn_scheduler_constant_init(T) = 0;
+    nn_scheduler_constant_update(T) = 0;
+
+    # Linear Decrease.
+    #-----------------
+    nn_scheduler_linear_init(T) = 0;
+    nn_scheduler_linear_update(T) = (
+      nn_learning_rate = lerp(nn_learning_rate0,1e-8,min(1,nn_iteration/1000));
+    );
+
+    # Exponential Decrease.
+    #----------------------
+    nn_scheduler_exponential_init(T) = 0;
+    nn_scheduler_exponential_update(T) = (
+      nn_learning_rate*=0.999;
+    );
+
+    # Adaptive Learning Rate.
+    #------------------------
+    nn_scheduler_adaptive_init(T) = (
+      0;
+      # nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
+      # nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
+      # nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
+    );
+
+    nn_scheduler_adaptive_update(T) = (
+      0;
+    );
+
+    # Cosine Decrease.
+    #-----------------
+    nn_scheduler_cosine_init(T) = (
+      nn_scheduler_cosine_lr_avg = nn_learning_rate0;
+      nn_scheduler_cosine_lr_min = 10*nn_scheduler_cosine_lr_avg;
+      nn_scheduler_cosine_lr_max = 0.01*nn_scheduler_cosine_lr_avg;
+      const nn_scheduler_cosine_period = 1000;
+    );
+
+    nn_scheduler_cosine_update(T,L) = (
+      nn_learning_rate = lerp(nn_scheduler_cosine_lr_min,
+                              nn_scheduler_cosine_lr_max,
+                              0.5*(1 + cos(nn_iteration*2*pi/nn_scheduler_cosine_period)));
     );
 
     #----------------
@@ -31462,71 +31455,82 @@ nn_tconv2dnl : check "isvarname('$1') && isint($3,1) && isint(${4=3},1) && isint
   _${net}_init=${init}"$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_trainer : out,_in,_optimizer,_scheduler,_learning_rate>=0,_weight_decay>=0,\
-# _clip_gradient_min>=0,_clip_gradient_max>0,"optimizer_params","scheduler_params"
-#@cli : Add a network trainer to the current network.
+#@cli nn_trainer : out,_in,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
+#@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
-#@cli : Default values: 'in=. (previous layer)', 'optimizer=adam', 'scheduler=constant', 'learning_rate=5e-4', \
-# 'weight_decay=0.01', `clip_gradient_min=0`, `clip_gradient_max=1`, optimizer_params=(default) and scheduler_params=(default).
-nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=constant}'];
-                    isvarname(s1) && (s2=='.' || isvarname(s2)) && isvarname(s3) && isvarname(s4) &&
-                    ${5=5e-4}>=0 && ${6=0.01}>=0 && ${7=0}>=0 && ${8=1}>0" skip "${9=},${10=}"
+#@cli : Value of 'optimizer_params' depends on the chosen optimizer:
+#@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,cli_gradient_max).
+#@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,cli_gradient_max).
+#@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,cli_gradient_max).
+#@cli : Default values: 'in=. (previous layer)', 'optimizer=adam', 'optimizer_params=(default)', \
+# 'scheduler=constant' and 'scheduler_params=(default)'.
+nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=constant}'];
+                    isvarname(s1) && (s2=='.' || isvarname(s2)) && isvarname(s3) && isvarname(s5) &&
+                    isin(s3,'sgd','rmsprop','adam','adamax') && isin(s5,'constant','linear','exponential','adaptive')"
+             skip "${4=},${6=}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  optimizer,scheduler,learning_rate,weight_decay,clip_gradient_min,clip_gradient_max=${3-8}
+  optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
-  # Define default parameters for each optimizer and scheduler.
-  optimizer_params="$9"
-  schedular_params="$10"
-  if !narg($optimizer_params)
-    if '$optimizer'=='sgd' optimizer_params=0.9 # momentum
-    elif '$optimizer'=='rmsprop' optimizer_params=0.9,0.9 # momentum,beta
-    elif isin('$optimizer','adam','adamax') optimizer_params=0.9,0.999  # adam & adamax: beta,beta2
-    fi
+  # Trainer matrix has size 8x3, and is organized as follow:
+  #
+  # ( iteration, loss, previous_loss, smoothed_loss, best_loss;
+  #   optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax}, optimizer_params...;
+  #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
+  #
+  if !isint(${$nout}) (0,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout fi
+  nout_ind=${$nout}
+
+  # Define optimizer and scheduler parameters.
+  =[$nout] {"s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"},0,1
+  if '$optimizer'=='sgd'
+    s_optimizer_params=learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max
+    default_optimizer_params=5e-4,0.9,0.01,0,1
+  elif '$optimizer'=='rmsprop'
+    s_optimizer_params=learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max
+    default_optimizer_params=5e-4,0.9,0.9,0.01,0,1
+  elif isin('$optimizer','adam','adamax')
+    s_optimizer_params=learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max
+    default_optimizer_params=5e-4,0.9,0.999,0.01,0,1
   fi
+  if narg($default_optimizer_params) eval "copy(i(#$nout_ind,1,1),["$default_optimizer_params"])" fi
+  if narg($optimizer_params) eval "copy(i(#$nout_ind,1,1),["$optimizer_params"])" fi
+  optimizer_params={$nout,_crop(1,1,narg($default_optimizer_params),1)}
 
-  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' of network '"$net"', with "$optimizer" optimizer, "\
-         $scheduler" scheduler, learning rate "$learning_rate", weight decay "$weight_decay", "\
-         "min/max clipping gradient thresholds ("$clip_gradient_min,$clip_gradient_max"), "\
-         "optimizer parameters '"$optimizer_params"' and scheduler parameers '"$scheduler_params"'."
+  =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"},0,2
+  if '$scheduler'=='constant'
+    s_scheduler_params=
+    default_scheduler_params=0
+  elif '$scheduler'=='linear'
+    s_scheduler_params=
+    default_scheduler_params=0
+  elif '$scheduler'=='exponential'
+    s_scheduler_params=
+    default_scheduler_params=0
+  elif '$scheduler'=='adaptive'
+    s_scheduler_params=
+    default_scheduler_params=0
+  fi
+  if narg($default_scheduler_params) eval "copy(i(#$nout_ind,1,2),["$default_scheduler_params"])" fi
+  if narg($scheduler_params) eval "copy(i(#$nout_ind,1,1),["$scheduler_params"])" fi
+  scheduler_params={$nout,_crop(1,2,narg($default_scheduler_params),1)}
+
+  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' in network '"$net"', with '"$optimizer"' optimizer "\
+         "(parameters: [ "$s_optimizer_params" ] = [ "$optimizer_params" ]) and '"$scheduler"' scheduler "\
+         "(parameters: [ "$s_scheduler_params" ] = [ "$scheduler_params" ])."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
   _${nout}_input=$in
-  _${nout}_properties="optimizer="$optimizer", scheduler="$scheduler", learning_rate="$learning_rate", "\
-                      "weight_decay="$weight_decay", clip_gradient_min="$clip_gradient_min", "\
-                      "clip_gradient_max="$clip_gradient_max", optimizer_params='"$optimizer_params"', "\
-                      "scheduler params='"$scheduler_params"'"
-
-  # Trainer matrix is organized as follow:
-  #
-  # ( [0]:iteration, [1]:current_loss, [2]:previous_loss, [3]:best_loss, [4]:learning_rate, [5]:weight_decay,
-  #     [6]:clip_gradient__min, [7]:clip_gradient_max;
-  #   (0,1):optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax | 4:other}, (1,1):optimizer_param1, ...;
-  #   (0,2):scheduler_ind, (1,2):scheduler_param1, ...)
-  #
-  if !isint(${$nout}) (0,inf,inf,inf) r. 8,3,1,1,0,0 => $nout fi
-  nout_ind=${$nout}
-
-  # Global training parameters.
-  sh[$nout] 4,7,0,0,0 f. $learning_rate,$weight_decay,$clip_gradient_min,$clip_gradient_max rm.
-
-  # Parameters of the optimizer.
-  optimizer_ind:="s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"
-  if narg($optimizer_params) eval "copy(i(#$nout_ind,0,1),[ "$optimizer_ind,$optimizer_params" ])" fi
-
-  # Parameters of the scheduler.
-  scheduler_ind:="s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"
-  if narg($scheduler_params) eval "copy(i(#$nout_ind,0,1),[ "$scheduler_ind,$scheduler_params" ])" fi
+  _${nout}_properties="optimizer="$optimizer", optimizer_params='"$optimizer_params"', "\
+                      "scheduler="$scheduler", scheduler params='"$scheduler_params"'"
 
   # Generate code for updating network weights.
-  _${net}_update="begin("\
-                 "nn_trainer_init_update("$nout,$nin"); "\
-                 "nn_optimizer_"${optimizer}"_init("$nout"); "\
-                 "nn_scheduler_"${scheduler}"_init("$nout"); "\
-                 ");end("
+  _${net}_update="begin(nn_trainer_init("$nout,$nin,$optimizer,$scheduler"));"\
+                 "end("
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
@@ -31535,7 +31539,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
-      # Allocate data for storing optimizer extra data (moments,...).
+      # Allocate data needed by optimizer (moments,...).
       if $learning_mode
         if !isint(${${net}_${name}_m}) +f[${net}_$name] 0 => ${net}_${name}_m fi
         _${net}_trainer_data.=${net}_${name}_m,
@@ -31546,8 +31550,9 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s4 = ['${4=co
       fi
     fi
   }
-  _${net}_update.="nn_scheduler_"${scheduler}"_update("$nout,$nin"); "\
-                  "nn_trainer_update("$nout,$nin"));" # Last thing that must happen in 'end()'!
+
+  # That should be the very last thing in 'end()'!
+  _${net}_update.="nn_trainer_update("$nout,$nin,$optimizer,$scheduler"));"
 
 #----------------------------------
 #
