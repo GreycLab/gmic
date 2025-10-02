@@ -30071,7 +30071,6 @@ nn_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-
   out_size=
   isnum0,isnum1:=isnum($in0),isnum($in1)
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
@@ -30186,7 +30185,6 @@ nn_check_layer :
 
 #@cli nn_clone : out0,out1,in
 #@cli : Add a 'clone' layer to the current network.
-#@cli : Default value: 'in=. (previous layer)'.
 nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                   isvarname(s1) && # out0
                   isvarname(s2) && # out1
@@ -30345,7 +30343,7 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
                  isint(${11=0},0,3) # boundary_conditions
                  "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -30377,8 +30375,8 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      isint(${4=0},0) # boundary_conditions
                      "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
+  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
   check [${_${nin0}_size}]==[${_${nin1}_size}]
   metric=$4
@@ -30402,16 +30400,20 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_div : out,in0,_in1
 #@cli : Add a 'div' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-#@cli : Default value: 'in1=. (previous layer)'.
-nn_div : check "isvarname('$1')" isnum0,isnum1:=isnum($2),isnum($3) check !$isnum0" || "!$isnum1
+nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum3 = isnum($3);
+                isvarname(s1) && # out
+                (isvarname(s2) || s2=='.' || isnum2) && # in0
+                (isvarname(s3) || s3=='.' || isnum3) && # in1
+                (!isnum2 || isnum3)"
   net,out=$_nn_network,$1
-  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
   out_size=
-  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} nin0=${net}_$in0 else nin0=$in0 fi
-  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} nin1=${net}_$in1 else nin1=$in1 fi
-  if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+  isnum0,isnum1:=isnum($in0),isnum($in1)
+  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} fi
+  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} fi
+  if !$inum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
