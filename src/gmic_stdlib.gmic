@@ -30059,11 +30059,10 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,_in1
+#@cli nn_add : out,in0,in1
 #@cli : Add an 'add' layer to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-#@cli : Default value: 'in1=. (previous layer)'.
-nn_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=.}']; isnum2 = isnum($2); isnum3 = isnum($3);
+nn_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum3 = isnum($3);
                 isvarname(s1) &&
                 (isvarname(s2) || s2=='.' || isnum2) &&
                 (isvarname(s3) || s3=='.' || isnum3) &&
@@ -30121,10 +30120,9 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_avgpool2d : out,_in,_patch_size>1
+#@cli nn_avgpool2d : out,in,patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
-#@cli : Default value: 'in=. (previous layer)'.
-nn_avgpool2d : check "s1 = ['$1']; s2 = ['${2=.}'];
+nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) &&
                       (isvarname(s2) || s2=='.') &&
                       isint(${3=2},2)"
@@ -30148,10 +30146,9 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['${2=.}'];
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_avgpool3d : out,_in,_patch_size>1
+#@cli nn_avgpool3d : out,in,patch_size>1
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
-#@cli : Default value: 'in=. (previous layer)'.
-nn_avgpool3d : check "s1 = ['$1']; s2 = ['${2=.}'];
+nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) &&
                       (isvarname(s2) || s2=='.') &&
                       isint(${3=2},2)"
@@ -30184,12 +30181,15 @@ nn_check_layer :
     error[0--3] "Command 'nn_check_layer': Layer with name '$1' does not exist."
   fi
 
-#@cli nn_clone : name0,name1,_in
+#@cli nn_clone : name0,name1,in
 #@cli : Add a 'clone' layer to the current network.
 #@cli : Default value: 'in=. (previous layer)'.
-nn_clone : check "isvarname('$1') && isvarname('$2')"
+nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) &&
+                  isvarname(s2) &&
+                  (isvarname(s3) || s3=='.')"
   net,out0,out1=$_nn_network,${1,2}
-  if ['${3=.}']=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
