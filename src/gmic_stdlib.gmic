@@ -30120,8 +30120,9 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_avgpool2d : out,in,patch_size>1
+#@cli nn_avgpool2d : out,in,_patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
+#@cli : Default value: 'patch_size=2'.
 nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
@@ -30149,6 +30150,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_avgpool3d : out,in,patch_size>1
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
+#@cli : Default value: 'patch_size=2'.
 nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
@@ -30372,7 +30374,7 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      isvarname(s1) && # out
                      (isvarname(s2) || s2=='.') && # in0
                      (isvarname(s3) || s3=='.') && # in1
-                     isint(${4=0},0) # boundary_conditions
+                     isint(${4=2},0) # metric
                      "
   net,out=$_nn_network,$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
@@ -30430,9 +30432,13 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
-nn_dropout : check "isvarname('$1') && inrange($3,0,1,1,0)"
+nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    inrange($3,0,1,1,0) # dropout_rate
+                    "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   dropout_rate=$3
 
