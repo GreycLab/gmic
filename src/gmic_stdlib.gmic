@@ -28537,7 +28537,7 @@ nn_lib :
     # sinc: Sinc.
     #------------
     nn_activation_sinc(z) = sinc(z);
-    nn_activation_d_sinc(z) = ((cos(z) - sinc(z))/abscut(z,1e-8));
+    nn_activation_d_sinc(z) = ((cos(z) - sinc(z))/abscut(z,nn_eps));
 
     # sqr: Square.
     #-------------
@@ -28657,7 +28657,7 @@ nn_lib :
       nn_is_clip_gradient?(
         batch_d#P#_norm = norm(batch_d#P);
         batch_d#P#_norm<nn_clip_gradient_min?(
-          batch_d#P*=nn_clip_gradient_min/(1e-8 + batch_d#P#_norm);
+          batch_d#P*=nn_clip_gradient_min/(batch_d#P#_norm + nn_eps);
         ):batch_d#P#_norm>nn_clip_gradient_max?(
           batch_d#P*=nn_clip_gradient_max/batch_d#P#_norm;
         );
@@ -28696,7 +28696,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
       d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_rmsprop_beta);
-      P#-=nn_learning_rate*d#P#_m/sqrt(1e-8 + d#P#_m2);
+      P#-=nn_learning_rate*d#P#_m/sqrt(d#P#_m2 + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -28718,7 +28718,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adam_beta1);
       d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_adam_beta2);
-      P#-=nn_learning_rate*nn_adam_alpha_t*d#P#_m/sqrt(1e-8 + d#P#_m2);
+      P#-=nn_learning_rate*nn_adam_alpha_t*d#P#_m/sqrt(d#P#_m2 + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -28738,7 +28738,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adamax_beta1);
       d#P#_m2 = vmax(abs(batch_d#P),nn_adamax_beta2*d#P#_m2);
-      P#-=(nn_learning_rate/nn_optimizer_ombeta1_t)*d#P#_m/sqrt(1e-8 + d#P#_m2);
+      P#-=(nn_learning_rate/nn_optimizer_ombeta1_t)*d#P#_m/sqrt(d#P#_m2 + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29172,7 +29172,7 @@ nn_lib :
     );
 
     nn_div_forward(OUT,IN0,IN1) = (
-      OUT#_nonzero_IN1 = abscut(IN1#,1e-8);
+      OUT#_nonzero_IN1 = abscut(IN1#,nn_eps);
       OUT# = IN0#/OUT#_nonzero_IN1;
     );
 
@@ -29202,9 +29202,9 @@ nn_lib :
       !OUT_#metric?( # L2-squared
         d#IN0+=2*OUT#_delta;
       ):OUT#_metric==2?( # L2
-        d#IN0+=OUT#_delta/(1e-8 + OUT#[0]);
+        d#IN0+=OUT#_delta/(OUT#[0] + nn_eps);
       ):( # L
-        d#IN0+=(abs(OUT#_delta)/(1e-8 + OUT#[0]))^(OUT#_metric - 1)*sign(OUT#_delta);
+        d#IN0+=(abs(OUT#_delta)/(OUT#[0] + nn_eps))^(OUT#_metric - 1)*sign(OUT#_delta);
       );
       d#IN1+=-d#IN0;
     );
