@@ -29523,32 +29523,33 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
+      const OUT#_eps = 1e-8;
       const OUT#_is_channelwise = is_channelwise;
       OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
       OUT#_alpha = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_avg = crop(##OUT#_ind,2,1);
       OUT#_var = crop(##OUT#_ind,3,1);
-      OUT#_std = sqrt(OUT#_var) + 1e-8;
+      OUT#_std = sqrt(OUT#_var);
     );
 
     nn_normalize_forward(OUT,IN) = (
       !OUT#_is_avg_var?(
         OUT#_avg = avg(IN#);
-        OUT#_std = std(IN#) + 1e-8;
+        OUT#_std = std(IN#);
       );
       OUT#_is_channelwise?( # Channel-by-channel normalization
         const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
         OUT#_hat = OUT# = vector(#size(IN#));
         repeat (size(OUT#_avg),_nn_k,
-          OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/max(1e-8,OUT#_std[_nn_k]);
+          OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/(OUT#_eps + OUT#_std[_nn_k]);
           copy(OUT#_hat[_nn_k*OUT#_whd],OUT#_tmp);
           OUT#_tmp*=OUT#_alpha[_nn_k];
           OUT#_tmp+=OUT#_beta[_nn_k];
           copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
         );
       ):( # Global normalization
-        OUT#_hat = (IN# - OUT#_avg[0])/max(1e-8,OUT#_std[0]);
+        OUT#_hat = (IN# - OUT#_avg[0])/(OUT#_eps + OUT#_std[0]);
         OUT# = OUT#_hat*OUT#_alpha[0] + OUT#_beta[0];
       );
     );
@@ -29565,7 +29566,7 @@ nn_lib :
       OUT#_is_channelwise?( # Channel-by-channel normalization
         repeat (size(#OUT#_avg),_nn_k,
           OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/max(1e-8,OUT#_std[_nn_k]),OUT#_whd,1,1,
+          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/(OUT#_eps + OUT#_std[_nn_k]),OUT#_whd,1,1,
                -1); # Add to d#IN
           batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
           batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
@@ -29574,7 +29575,7 @@ nn_lib :
           batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
         );
       ):( # Global normalization
-        d#IN+=d#OUT*(OUT#_alpha[0]/max(1e-8,OUT#_std[0]));
+        d#IN+=d#OUT*(OUT#_alpha[0]/(OUT#_eps + OUT#_std[0]));
         batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
         batch_d#OUT#_beta+=sum(d#OUT);
         batch_#OUT#_avg+=avg(IN#);
@@ -29594,8 +29595,8 @@ nn_lib :
     );
 
     nn_normalize_update(P,O,learning_mode) = (
-      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.001:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.001:1);
 
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         const P#_ind_m = $""P#_m;
@@ -30866,11 +30867,11 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : 'normalization_mode' can be { 0:Global parameters | 1:Channel-by-channel parameters }
 #@cli : 'learning_mode' can be { 0:No learning | 1:Alpha only | 2:Beta only | 3:Alpha+beta }
-#@cli : Default values: 'normalization_mode=1' and 'learning_mode=3'.
+#@cli : Default values: 'normalization_mode=0' and 'learning_mode=3'.
 nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
-                      isbool(${3=1}) && # normalization_mode
+                      isbool(${3=0}) && # normalization_mode
                       isint(${4=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
