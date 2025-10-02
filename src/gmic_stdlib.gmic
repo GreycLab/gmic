@@ -30506,7 +30506,6 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_init : network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
-#@cli : Default value: 'network_name=nn'.
 nn_init : check "isvarname(['$1'])"
   e[^-1] "[nn_lib] Initialize new network '$1'."
   _nn_network,net=$1
@@ -30542,7 +30541,10 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Load and initialize network saved as a .gmz file.
 #@cli : Neural network files can be only loaded in .gmz format.
 #@cli : Default value: 'include_trainer_data=1'.
-+nn_load : check "s=['$1']; find(s,'.gmz')==size(s) - 4 && isbool(${2=1})"
++nn_load : check "s1 = ['$1'];
+                  find(s,'.gmz')==size(s) - 4 && # filename
+                  isbool(${2=1}) # include_trainer_data
+                  "
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
   l[] {
@@ -30563,13 +30565,17 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
     k[$sel]
   }
 
-#@cli nn_loss_add : out,in0,_in1
+#@cli nn_loss_add : out,in0,in1
 #@cli : Add a 'add' loss to the current network (sum of losses).
 #@cli : Default value: 'in1=. (previous loss)'.
-nn_loss_add : check "isvarname('$1')"
+nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                     isvarname(s1) && # out
+                     (isvarname(s2) || s2=='.') && # in0
+                     (isvarname(s3) || s3=='.') && # in1
+                     "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if ['${3=.}']=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
+  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
@@ -30585,9 +30591,14 @@ nn_loss_add : check "isvarname('$1')"
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
 #@cli : Default value: 'weight=1'.
-nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
+nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                                     isvarname(s1) && # out
+                                     (isvarname(s2) || s2=='.') && # in
+                                     isvarname(s3) && # ground_truth
+                                     isnum(${4=1}) # weight
+                                     "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
 
@@ -30609,9 +30620,14 @@ nn_loss_binary_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum
 #@cli nn_loss_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'crossentropy' loss to the current network (cross entropy).
 #@cli : Default value: 'weight=1'.
-nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
+nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                              isvarname(s1) && # out
+                              (isvarname(s2) || s2=='.') && # in
+                              isvarname(s3) && # ground_truth
+                              isnum(${4=1}) # weight
+                              "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
 
@@ -30633,9 +30649,14 @@ nn_loss_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum(${4=1}
 #@cli nn_loss_mse : out,in,ground_truth,_weight
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
 #@cli : Default value: 'weight=1'.
-nn_loss_mse : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
+nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                     isvarname(s1) && # out
+                     (isvarname(s2) || s2=='.') && # in
+                     isvarname(s3) && # ground_truth
+                     isnum(${4=1}) # weight
+                     "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
 
@@ -30657,9 +30678,15 @@ nn_loss_mse : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
 #@cli nn_loss_normp : out,in,ground_truth,_metric>0,_weight
 #@cli : Add a 'normp' loss to the current network (||out - ground_truth||_metric).
 #@cli : Default value: 'metric=1' and 'weight=1'.
-nn_loss_normp : check "isvarname('$1') && isvarname('$3') && ${4=1}>0 && isnum(${5=1})"
+nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                       isvarname(s1) && # out
+                       (isvarname(s2) || s2=='.') && # in
+                       isvarname(s3) && # ground_truth
+                       isint(${4=1},0) && # metric
+                       isnum(${5=1}) # weight
+                       "
   net,out=$_nn_network,$1
-  if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,metric,weight=${3-5}
 
@@ -30680,7 +30707,12 @@ nn_loss_normp : check "isvarname('$1') && isvarname('$3') && ${4=1}>0 && isnum($
 
 #@cli nn_loss_softmax_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
-nn_loss_softmax_crossentropy : check "isvarname('$1') && isvarname('$3') && isnum(${4=1})"
+nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                                      isvarname(s1) && # out
+                                      (isvarname(s2) || s2=='.') && # in
+                                      isvarname(s3) && # ground_truth
+                                      isnum(${4=1}) # weight
+                                      "
   net,out=$_nn_network,$1
   if ['$2']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
