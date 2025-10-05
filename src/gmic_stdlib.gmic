@@ -28629,7 +28629,7 @@ nn_lib :
       nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
       nn_clip_gradient_min = 0;
-      nn_clip_gradient_max = 1;
+      nn_clip_gradient_max = 5;
       nn_optimizer_#O#_init(#T);
       nn_scheduler_#S#_init(#T);
       !nn_iteration?(nn_momentum = 0);
@@ -31345,8 +31345,11 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=constant}'];
-                    isvarname(s1) && (s2=='.' || isvarname(s2)) && isvarname(s3) && isvarname(s5) &&
-                    isin(s3,'sgd','rmsprop','adam','adamax') && isin(s5,'constant','linear','exponential','adaptive')"
+                    isvarname(s1) &&
+                    (s2=='.' || isvarname(s2)) &&
+                    isvarname(s3) && isvarname(s5) &&
+                    isin(s3,'sgd','rmsprop','adam','adamax') &&
+                    isin(s5,'constant','linear','exponential','adaptive')"
              skip "${4=},${6=}"
   net,out=$_nn_network,$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
@@ -31367,13 +31370,13 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
   =[$nout] {"s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"},0,1
   if '$optimizer'=='sgd'
     s_optimizer_params=learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.01,0,1
+    default_optimizer_params=5e-4,0.9,0.01,0,5
   elif '$optimizer'=='rmsprop'
     s_optimizer_params=learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.9,0.01,0,1
+    default_optimizer_params=5e-4,0.9,0.9,0.01,0,5
   elif isin('$optimizer','adam','adamax')
     s_optimizer_params=learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.999,0.01,0,1
+    default_optimizer_params=5e-4,0.9,0.999,0.01,0,5
   fi
   if narg($default_optimizer_params) eval "copy(i(#$nout_ind,1,1),["$default_optimizer_params"])" fi
   if narg($optimizer_params) eval "copy(i(#$nout_ind,1,1),["$optimizer_params"])" fi
