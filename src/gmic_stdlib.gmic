@@ -28488,22 +28488,8 @@ nn_lib :
     nn_activation_elu(z) = (z<0?exp(z) - 1:z);
     nn_activation_d_elu(z) = (z<0?exp(z):1);
 
-    # expr: custom expression.
-    #-------------------------
-    "{['$_nn_expr']!=0}"?(
-      begin(
-        _nn_tab_expr = expr('z = lerp(-32,32,x/(w-1)); "$_nn_expr"',65537);
-        _nn_tab_d_expr = vector(#size(_nn_tab_expr));
-        const _nn_delta_expr = 64/(size(_nn_tab_expr) - 1);
-        fill(_nn_tab_d_expr,_nn_k,
-          _nn_pk = _nn_k?_nn_k - 1:_nn_k;
-          _nn_nk = _nn_k<size(_nn_tab_expr) - 1?_nn_k + 1:_nn_k;
-          (_nn_tab_expr[_nn_nk] - _nn_tab_expr[_nn_pk])/(2*_nn_delta_expr);
-        );
-      );
-      nn_activation_expr(z) = _nn_tab_expr[cut((z + 32)/64,0,1)*(size(_nn_tab_expr) - 1)];
-      nn_activation_d_expr(z) = _nn_tab_d_expr[cut((z + 32)/64,0,1)*(size(_nn_tab_expr) - 1)];
-    );
+    nn_activation_elu_vector(z) = ((z<0)*(exp(z) - 1) + (z>0)*z);
+    nn_activation_d_elu_vector(z) = 0;
 
     # gelu: Gaussian Error Linear Unit.
     #----------------------------------
