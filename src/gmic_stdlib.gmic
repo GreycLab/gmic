@@ -28482,11 +28482,12 @@ nn_lib :
     #--------------------------------------
     # Activation functions and derivatives.
     #--------------------------------------
+    # Activation functions **must work** with vector-valued arguments.
 
     # elu: Exponential Linear Unit.
     #------------------------------
-    nn_activation_elu(z) = (z<0?exp(z) - 1:z);
-    nn_activation_d_elu(z) = (z<0?exp(z):1);
+    nn_activation_elu(z) = lerp(exp(z) - 1,z,z>=0);
+    nn_activation_d_elu(z) = lerp(exp(z),1,z>=0);
 
     # gelu: Gaussian Error Linear Unit.
     #----------------------------------
@@ -28495,8 +28496,8 @@ nn_lib :
 
     # leakyrelu: Leaky Rectified Linear Unit.
     #----------------------------------------
-    nn_activation_leakyrelu(z) = (z<0?0.01*z:z);
-    nn_activation_d_leakyrelu(z) = (z<0?0.01:1);
+    nn_activation_leakyrelu(z) = (lerp(0.01,1,z>=0)*z);
+    nn_activation_d_leakyrelu(z) = lerp(0.01,1,z>=0);
 
     # linear: Identity function.
     #---------------------------
@@ -28505,7 +28506,7 @@ nn_lib :
 
     # relu: Rectified Linear Unit.
     #-----------------------------
-    nn_activation_relu(z) = max(0,z);
+    nn_activation_relu(z) = vmax(z,0);
     nn_activation_d_relu(z) = (z>=0);
 
     # sigmoid : Sigmoid (a.k.a Logistic).
@@ -28532,25 +28533,6 @@ nn_lib :
     #-----------------
     nn_activation_sqrt(z) = (sqrt(abs(z)));
     nn_activation_d_sqrt(z) = (0.5*sign(x)/sqrt(abs(z) + nn_eps));
-
-    # steps.
-    #-------
-    const _nn_steps_S0 = isnan($_S0)?2:$_S0;
-    const _nn_steps_S1 = isnan($_S1)?0.5:$_S1;
-    const _nn_steps_b = (1 - _nn_steps_S1)/2;
-    const _nn_steps_eps = _nn_steps_b/max(_nn_steps_S0 - _nn_steps_S1,nn_eps);
-    nn_activation_steps(z) = (
-      _nn_steps_zi = round(z);
-      _nn_steps_zf = z - _nn_steps_zi;
-      _nn_steps_zi + (_nn_steps_zf<-_nn_steps_eps?_nn_steps_S1*_nn_steps_zf - _nn_steps_b:
-                      _nn_steps_zf<_nn_steps_eps?_nn_steps_S0*_nn_steps_zf:
-                      _nn_steps_S1*_nn_steps_zf + _nn_steps_b);
-    );
-    nn_activation_d_steps(z) = (
-      _nn_steps_zi = round(z);
-      _nn_steps_zf = z - _nn_steps_zi;
-      abs(_nn_steps_zf)<_nn_steps_eps?_nn_steps_S0:_nn_steps_S1;
-    );
 
     # swish.
     #--------
@@ -29452,13 +29434,12 @@ nn_lib :
     );
 
     nn_nl_forward(OUT,IN,activation) = (
-     OUT# = vector(#size(IN#));
-     fill(OUT#,_nn_k,_nn_z = IN#[_nn_k]; nn_activation_#activation(_nn_z));
+      OUT# = nn_activation_#activation(IN#);
     );
 
     nn_nl_backward(OUT,IN,activation) = (
       nn_define_backward(IN#);
-      fill(d#IN,_nn_k,_nn_z = IN#[_nn_k]; d#IN[_nn_k] + d#OUT[_nn_k]*nn_activation_d_#activation(_nn_z));
+      d#IN+=d#OUT*nn_activation_d_#activation(IN#);
     );
 
     # Special case: Softmax.
@@ -30816,11 +30797,11 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : 'normalization_mode' can be { 0:Global parameters | 1:Channel-by-channel parameters }
 #@cli : 'learning_mode' can be { 0:No learning | 1:Alpha only | 2:Beta only | 3:Alpha+beta }
-#@cli : Default values: 'normalization_mode=0' and 'learning_mode=3'.
+#@cli : Default values: 'normalization_mode=1' and 'learning_mode=3'.
 nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
-                      isbool(${3=0}) && # normalization_mode
+                      isbool(${3=1}) && # normalization_mode
                       isint(${4=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
