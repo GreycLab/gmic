@@ -14205,6 +14205,63 @@ eigen2tensor :
 # R<=180?255*abs(cos(c+200*(x/w-0.5)*(y/h-0.5))):850*(a%(0.1*(c+1)))"
 #@cli : $$
 
+#@cli icp : [reference],_precision>0
+#@cli : Transform selected images, viewed as sets of d-dimensional vectors, to match specified set of reference \
+# vectors, using the ICP algorithm (*Iterative Closest Point*).
+#@cli : A description of ICP is available at <https://en.wikipedia.org/wiki/Iterative_closest_point>.
+#@cli : Default values: 'precision=1e-3'.
+icp : check ${"is_image_arg $1"}" && ${2=1e-3}>0"
+  e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm and precision $2."
+  sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
+  foreach[^-1] {
+    nm={n}
+    if s!=$dim
+      arg0 $>,$sel
+      error[0--4] "Command '$0': Number of channels image ["${}"] ("{s}") does not match those of reference "\
+                  "image ("$dim")."
+    fi
+    whds:=w,h,d,s r {whd},1,1,100%,-1 pass. 1
+
+    # Perform ICP iterations.
+    eval "
+      const precision = $2;
+      const dim = $dim;
+      const nb = w#0;
+      const dim1 = dim + 1;
+      const dim1_2 = dim1^2;
+      const dim_dim1 = dim*dim1;
+      const nb_dim = nb*dim;
+      const nb_dim1 = nb*dim1;
+
+      P = crop(#0);
+      R = crop(#1);
+      ONE = vector(#nb,1);
+
+      do (
+        # Find nearest correspondences.
+        Q = index(P,R,dim,0,1);
+
+        # Efficient hack to generate main matrix used for the over-determined linear system.
+        P1 = [ P,ONE ];
+        M1 = permute(P1,nb,1,1,dim1,'cxyz');
+        M2 = resize(M1,dim1,nb,1,1,dim1_2,nb,1,1,0);
+        M3 = resize(M2,dim1_2,nb,1,1,dim1_2,nb_dim,1,1);
+        M4 = resize(M3,dim1_2,nb_dim,1,1,dim_dim1,nb_dim1,1,1,-1);
+        M = resize(M4,dim_dim1,nb_dim1,1,1,dim_dim1,nb_dim,1,1);
+
+        # Estimate affine transformation and apply it on P.
+        Y = permute(Q,nb,1,1,dim,'cxyz');
+        C = solve(M,Y);
+
+        nP = mul(C,P1,nb);
+        diff = norm(nP - P);
+        swap(nP,P);
+      ,_(while) diff>=precision);
+      draw(#0,P)"
+    rm. r. $whds,-1
+  }
+  rm.
+
 #@cli index : { [palette] | palette_name },0<=_dithering<=1,_map_colors={ 0:No | 1:Yes } : (+)
 #@cli : Index selected vector-valued images by specified vector-valued palette.
 #@cli : 'palette_name' can be { default | hsv | lines | hot | cool | jet | flag | cube | rainbow | algae | amp |\
