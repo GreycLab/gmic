@@ -14210,14 +14210,14 @@ eigen2tensor :
 # vectors, using the ICP algorithm (*Iterative Closest Point*).
 #@cli : A description of ICP is available at <https://en.wikipedia.org/wiki/Iterative_closest_point>.
 #@cli : Argument 'affine_mode' tells about the type of affine transform applied. \
-# It can be: { 0:Free | 1:Rotation | 2:Rotation+Scaling }.
+# It can be: { 0:Free | 1:Rotation+Scaling | 2:Rotation-Only }.
 #@cli : Default values: 'affine_mode=0' and 'precision=1e-3'.
 icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
   s0,s1,s2=free,rotation,rotation+scaling
   e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm, affine mode '"${s$2}"' "\
          "and precision $3."
   sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
-  +r. 1,1,1,100%,2 store. ref_avg ref_std:=id
+  +r. 1,1,1,100%,2 store. ref_avg if $2<2 ref_std:=id fi
   foreach[^-1] {
     nm={n}
     if s!=$dim
@@ -14226,7 +14226,7 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
                   "image ("$dim")."
     fi
     whds:=w,h,d,s r {whd},1,1,100%,-1
-    +r. 1,1,1,100%,2 ri. .. - * {$ref_std/(1e-8+id)} $ref_avg ri. .. + # Align center/scale with reference
+    +r. 1,1,1,100%,2 ri. .. - if $2<2 * {$ref_std/(1e-8+id)} fi $ref_avg ri. .. + # Align center/scale with reference
     pass. 1
 
     # Perform ICP iterations.
@@ -14276,10 +14276,13 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
           );
 
           # Orthonormalize.
-          affine_mode==1?(
-            0;
+          affine_mode>1?(
+            repeat (dim,p,
+              v = crop(C,dim1,dim,1,1,p,0,1,dim);
+              v = unitnorm(v);
+              draw(C,dim1,dim,1,1,v,p,0,1,dim);
+            );
           );
-
         );
 
         # Apply affine transformation.
