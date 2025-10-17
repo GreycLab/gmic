@@ -14213,7 +14213,7 @@ eigen2tensor :
 icp : check ${"is_image_arg $1"}" && ${2=1e-3}>0"
   e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm and precision $2."
   sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
-  +r. 1,1,1,100%,2 store. avg_ref
+  +r. 1,1,1,100%,2 store. ref_avg ref_std:=id
   foreach[^-1] {
     nm={n}
     if s!=$dim
@@ -14222,7 +14222,7 @@ icp : check ${"is_image_arg $1"}" && ${2=1e-3}>0"
                   "image ("$dim")."
     fi
     whds:=w,h,d,s r {whd},1,1,100%,-1
-    +r. 1,1,1,100%,2 $avg_ref -[-2,-1] ri. .. - # Align center with reference
+    +r. 1,1,1,100%,2 ri. .. - * {$ref_std/(1e-8+id)} $ref_avg ri. .. + # Align center/scale with reference
     pass. 1
 
     # Perform ICP iterations.
