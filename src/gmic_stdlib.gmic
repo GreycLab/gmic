@@ -14240,6 +14240,7 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
       const dim_dim1 = dim*dim1;
       const nb_dim = nb*dim;
       const nb_dim1 = nb*dim1;
+      proj(u,v) = (dot(u,v)/dot(u,u)*u);
 
       P = crop(#0);
       R = crop(#1);
@@ -14261,7 +14262,25 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
         Y = permute(Q,nb,1,1,dim,'cxyz');
         C = solve(M,Y);
 
-        # Orthogonalize transformation if requested.
+        # Constrain transformation if requested.
+        affine_mode?(
+
+          # Orthogonalize.
+          for (p = 1, p<dim, ++p,
+            v = crop(C,dim1,dim,1,1,p,0,1,dim);
+            repeat (p,q,
+              u = crop(C,dim1,dim,1,1,q,0,1,dim);
+              v-=proj(u,v);
+            );
+            draw(C,dim1,dim,1,1,v,p,0,1,dim);
+          );
+
+          # Orthonormalize.
+          affine_mode==1?(
+            0;
+          );
+
+        );
 
         # Apply affine transformation.
         nP = mul(C,P1,nb);
