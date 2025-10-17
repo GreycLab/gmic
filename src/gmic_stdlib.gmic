@@ -14213,6 +14213,7 @@ eigen2tensor :
 icp : check ${"is_image_arg $1"}" && ${2=1e-3}>0"
   e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm and precision $2."
   sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
+  +r. 1,1,1,100%,2 store. avg_ref
   foreach[^-1] {
     nm={n}
     if s!=$dim
@@ -14220,7 +14221,9 @@ icp : check ${"is_image_arg $1"}" && ${2=1e-3}>0"
       error[0--4] "Command '$0': Number of channels image ["${}"] ("{s}") does not match those of reference "\
                   "image ("$dim")."
     fi
-    whds:=w,h,d,s r {whd},1,1,100%,-1 pass. 1
+    whds:=w,h,d,s r {whd},1,1,100%,-1
+    +r. 1,1,1,100%,2 $avg_ref -[-2,-1] ri. .. - # Align center with reference
+    pass. 1
 
     # Perform ICP iterations.
     eval "
