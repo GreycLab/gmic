@@ -14236,6 +14236,7 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
       const dim = $dim;
       const nb = w#0;
       const dim1 = dim + 1;
+      const dim_2 = dim^2;
       const dim1_2 = dim1^2;
       const dim_dim1 = dim*dim1;
       const nb_dim = nb*dim;
@@ -14262,27 +14263,14 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
         Y = permute(Q,nb,1,1,dim,'cxyz');
         C = solve(M,Y);
 
-        # Constrain transformation if requested.
+        # Orthogonalize transformation if requested.
         affine_mode?(
-
-          # Orthogonalize.
-          for (p = 1, p<dim, ++p,
-            v = crop(C,dim1,dim,1,1,p,0,1,dim);
-            repeat (p,q,
-              u = crop(C,dim1,dim,1,1,q,0,1,dim);
-              v-=proj(u,v);
-            );
-            draw(C,dim1,dim,1,1,v,p,0,1,dim);
-          );
-
-          # Orthonormalize.
-          affine_mode>1?(
-            repeat (dim,p,
-              v = crop(C,dim1,dim,1,1,p,0,1,dim);
-              v = unitnorm(v);
-              draw(C,dim1,dim,1,1,v,p,0,1,dim);
-            );
-          );
+          A = crop(C,dim1,dim,1,1,0,0,dim,dim);
+          SVD = svd(A,dim);
+          U = SVD[0,dim_2];
+          V = SVD[dim_2 + dim,dim_2];
+          O = mul(U,transpose(V,dim),dim);
+          draw(C,dim1,dim,1,1,O,0,0,dim,dim);
         );
 
         # Apply affine transformation.
