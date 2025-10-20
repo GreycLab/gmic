@@ -59599,22 +59599,25 @@ _fx_gradient_from_curve :
 #@gui : Starting Color = ~color(0,0,0,255)
 #@gui : Ending Color = ~color(255,255,255,255)
 #@gui : Swap Colors = bool()
-#@gui : Angle = ~float(45,0,360)
-#@gui : Fade Start = ~float(0,0,100)
-#@gui : Fade End = ~float(100,0,100)
+#@gui : Angle (deg.) = ~float(45,0,360)
+#@gui : Fade Start (%) = ~float(0,0,100)
+#@gui : Fade End (%) = ~float(100,0,100)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
 #@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/20</i>.</small>")
 fx_linear_gradient : skip ${13=0}
+  Rs,Gs,Bs,As,Re,Ge,Be,Ae,is_swap,angle,fade_s,fade_e,quantization,colorspace=${1-14}
   foreach {
     wh:=w,h rm
-    ($1^$2^$3^$4) ($5^$6^$7^$8)
-    if $9 rv[-2,-1] fi
+    ($Rs^$Gs^$Bs^$As) ($Re^$Ge^$Be^$Ae)
+    if $is_swap rv[-2,-1] fi
     r $wh
-    _gb_fwd $13
-    fade_linear $10,$11,$12
-    _gb_bwd $13
+    _gb_fwd $colorspace
+    fade_linear $angle,$fade_s,$fade_e
+    if $quantization quantize $quantization,1,-1 fi
+    _gb_bwd $colorspace
   }
 
 #@gui Gradient [Radial] : fx_radial_gradient, fx_radial_gradient
