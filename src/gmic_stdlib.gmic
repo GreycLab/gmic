@@ -59629,6 +59629,7 @@ fx_linear_gradient : skip ${13=0}
 #@gui Gradient [Poles] : fx_gradient_poles,fx_gradient_poles(1)
 #@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
 #@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
 #@gui : Point #0 = ~point(25,25,1,1,200,200,200)
 #@gui : Color #0 = ~color(0,0,0,255)
@@ -59655,18 +59656,18 @@ fx_linear_gradient : skip ${13=0}
 #@gui : Color #7 = ~color(255,255,255,255)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>
-#@gui :       Latest Update: <i>2025/10/22</i>.</small>")
+#@gui :       Latest Update: <i>2025/10/23</i>.</small>")
 fx_gradient_poles :
-  phi_r,colorspace,\
+  phi_r,colorspace,quantization,\
     x0,y0,R0,G0,B0,A0,x1,y1,R1,G1,B1,A1,x2,y2,R2,G2,B2,A2,x3,y3,R3,G3,B3,A3,\
-    x4,y4,R4,G4,B4,A4,x5,y5,R5,G5,B5,A5,x6,y6,R6,G6,B6,A6,x7,y7,R7,G7,B7,A7=${1-50}
+    x4,y4,R4,G4,B4,A4,x5,y5,R5,G5,B5,A5,x6,y6,R6,G6,B6,A6,x7,y7,R7,G7,B7,A7=${1-51}
   arg0 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
   foreach {
     w,h:=w,h rm
     l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
-    sh. 2,100% _gb_fwd. $colorspace avg=${average_vectors.} 100%,1,1,100%,[$avg] -[-2,-1] rm.
+    sh. 2,100% _gb_fwd. $colorspace rm.
     rbf {[$w,$h,0,0,100,100]},$phi_r
-    100%,100%,1,100%,[$avg] +[-2,-1]
+    if $quantization quantize $quantization,1,-1 fi
     _gb_bwd. $colorspace
     c 0,255
   }
