@@ -59701,28 +59701,31 @@ fx_radial_gradient : skip ${14=0}
 #@gui : Density = ~int(32,1,1024)
 #@gui : Seed = ~int(0,0,65535)
 #@gui : Smoothness = ~float(0,0,10)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : Color Balance = ~color(128,128,128)
 #@gui : Opacity = float(1,0,1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/08</i>.</small>")
 fx_random_gradient :
+  density,seed,smoothness,quantization,Rb,Gb,Bb,opacity=${1-8}
   foreach {
-    to_rgba 100%,100% srand $2
-    eval "repeat ($1,n,
+    to_rgba 100%,100% srand $seed
+    eval "repeat ($density,n,
             x = v(w - 1);
             y = v(h - 1);
             i(x,y) = 1;
             i(#0,x,y,0,0) = v(255);
             i(#0,x,y,0,1) = v(255);
             i(#0,x,y,0,2) = v(255);
-            i(#0,x,y,0,3) = $7*255 + (1-$7)*v(255);
+            i(#0,x,y,0,3) = $opacity*255 + (1 - $opacity)*v(255);
           )"
-    if $7!=1 sh.. 100% n. 0,255 rm. fi
+    if $opacity!=1 sh.. 100% n. 0,255 rm. fi
     ==. 0
     sh.. 0,2 srgb2rgb. rm.
     inpaint_pde.. [1],100%,1 rm.
-    b $3% n 0,255
-    sh 0,2 rgb2srgb. balance_gamma. ${4-6} rm.
+    b $smoothness% n 0,255
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    sh 0,2 rgb2srgb. balance_gamma. $Rb,$Gb,$Bb rm.
   }
 
 #@gui Hypotrochoid : fx_hypotrochoid, fx_hypotrochoid(1)
