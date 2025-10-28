@@ -2547,8 +2547,8 @@ const int gmic::builtin_command_ids[] = {
 
   // Commands of length 2.
   id_neq,id_bsl,id_le,id_eq,id_name,id_ge,id_bsr,
-  id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_qr,id_remove,id_reverse,id_shared,
-    id_uncommand,
+  id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_qr,id_remove,id_reverse,
+    id_shared,id_uncommand,
   id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 1.
