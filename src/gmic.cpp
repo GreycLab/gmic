@@ -8158,16 +8158,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'invert'.
         if (id_builtin_command==id_invert) {
           gmic_substitute_args(false);
-          pattern = 0; value = 0;
-          if ((cimg_sscanf(argument,"%u%c",
-                           &pattern,&end)==1 ||
-               cimg_sscanf(argument,"%u,%lf%c",
-                           &pattern,&value,&end)==2) &&
-              pattern<=1 && value>=0) ++position;
-          else pattern = 0;
-          print(0,"Invert matrix image%s, using %s solver and lambda %g.",
+          print(0,"Invert matrix image%s.",
                 gmic_selection.data(),pattern?"LU":"SVD",value);
-          cimg_forY(selection,l) gmic_apply(invert((bool)pattern,(float)value),false);
+          cimg_forY(selection,l) gmic_apply(invert(),false);
           is_change = true;
           continue;
         }
