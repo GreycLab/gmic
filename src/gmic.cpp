@@ -11607,15 +11607,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_solve) {
           gmic_substitute_args(true);
           sep = *indices = 0;
-          pattern = 0;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",gmic_use_indices,&pattern,&end)==2) &&
-              (ind=selection2cimg(indices,images.size(),image_names,"solve")).height()==1 &&
-              pattern<=1) {
-            print(0,"Solve linear system AX = B, with B-vector%s, A-matrix [%d] and %s solver.",
-                  gmic_selection.data(),*ind,pattern?"LU":"SVD");
+          if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' &&
+              (ind=selection2cimg(indices,images.size(),image_names,"solve")).height()==1) {
+            print(0,"Solve linear system AX = B, with B-vector%s, A-matrix [%d].",
+                  gmic_selection.data(),*ind);
             const CImg<double> A = gmic_image_arg(*ind);
-            cimg_forY(selection,l) gmic_apply_double(solve(A,(bool)pattern));
+            cimg_forY(selection,l) gmic_apply_double(solve(A));
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
