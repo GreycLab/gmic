@@ -8160,7 +8160,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'invert'.
         if (id_builtin_command==id_invert) {
-          gmic_substitute_args(false);
           print(0,"Invert matrix image%s.",
                 gmic_selection.data(),pattern?"LU":"SVD",value);
           cimg_forY(selection,l) gmic_apply(invert(),false);
@@ -10602,14 +10601,18 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'qr'.
         if (id_builtin_command==id_qr) {
-          print(0,"Compute QR decomposition%s of matri%s%s.",
-                selection.height()>1?"s":"",selection.height()>1?"ce":"x",gmic_selection.data());
+          gmic_substitute_args(true);
+          if ((*argument=='0' || *argument=='1') && !argument[1]) { is_cond = (*argument=='1'); ++position; }
+          else is_cond = true;
+          print(0,"Compute QR decomposition%s of matri%s%s%s.",
+                selection.height()>1?"s":"",selection.height()>1?"ce":"x",gmic_selection.data(),
+                is_cond?", in reduced form":"");
           CImg<float> Q, R;
           unsigned int off = 0;
           cimg_forY(selection,l) {
             uind = selection[l] + off;
             const CImg<T>& img = gmic_check(images[uind]);
-            img.QR(Q,R,true);
+            img.QR(Q,R,is_cond);
             if (is_get) {
               Q.move_to(images);
               R.move_to(images);
