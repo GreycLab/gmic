@@ -858,10 +858,10 @@ reference : skip "${2=}"
 "## Matrix-valued functions:"\n\
 "A `MN`-dimensional vector may be seen as a `M` x `N` matrix and used in those particular functions/operators: "\
 "'*' (matrix-vector multiplication), 'det(A)' (determinant), 'diag(V)' (diagonal matrix from a vector), "\
-"'eig(A)' (eigenvalues/eigenvectors), 'eye(n)' (n x n identity matrix), 'invert(A,_nb_colsA,_use_LU,_lambda)' "\
+"'eig(A)' (eigenvalues/eigenvectors), 'eye(n)' (n x n identity matrix), 'invert(A,_nb_colsA)' "\
 "(matrix inverse), 'mul(A,B,_nb_colsB)' (matrix-matrix multiplication), "\
 "'rot(u,v,w,angle)' (3D rotation matrix), 'rot(angle)' (2D rotation matrix), "\
-"'solve(A,B,_nb_colsB,_use_LU)' (solver of linear system A.X = B), 'svd(A,_nb_colsA)' (singular value decomposition), "\
+"'solve(A,B,_nb_colsB)' (solver of linear system A.X = B), 'svd(A,_nb_colsA)' (singular value decomposition), "\
 "'trace(A)' (matrix trace) and 'transpose(A,nb_colsA)' (matrix transpose). Argument 'nb_colsB' may be omitted if "\
 "it is equal to `1`".\n\
 "## Image-valued functions:"\n\
@@ -10925,7 +10925,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.6.3').
+# $1 = version number (e.g. '3.6.4').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -12827,7 +12827,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=363,$_version
+  versions=363,364,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -14205,6 +14205,85 @@ eigen2tensor :
 # R<=180?255*abs(cos(c+200*(x/w-0.5)*(y/h-0.5))):850*(a%(0.1*(c+1)))"
 #@cli : $$
 
+#@cli icp : [reference],_affine_mode,_precision>0
+#@cli : Apply affine transformation on vector-valued points of selected images, to match specified set of reference \
+# vectors, using the ICP algorithm (*Iterative Closest Point*).
+#@cli : A description of ICP is available at <https://en.wikipedia.org/wiki/Iterative_closest_point>.
+#@cli : Argument 'affine_mode' tells about the type of affine transform applied. \
+# It can be: { 0:Free | 1:Rotation+Scaling | 2:Rotation-Only }.
+#@cli : Default values: 'affine_mode=0' and 'precision=1e-3'.
+icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
+  s0,s1,s2=free,rotation+scaling,rotation-only
+  e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm, affine mode '"${s$2}"' "\
+         "and precision $3."
+  sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
+  +r. 1,1,1,100%,2 store. ref_avg if $2<2 ref_std:=id fi
+  foreach[^-1] {
+    nm={n}
+    if s!=$dim
+      arg0 $>,$sel
+      error[0--4] "Command '$0': Number of channels image ["${}"] ("{s}") does not match those of reference "\
+                  "image ("$dim")."
+    fi
+    whds:=w,h,d,s r {whd},1,1,100%,-1
+    +r. 1,1,1,100%,2 ri. .. - if $2<2 * {$ref_std/(1e-8+id)} fi $ref_avg ri. .. + # Align center/scale with reference
+    pass. 1
+
+    # Perform ICP iterations.
+    eval "
+      const affine_mode = $2;
+      const precision = $3;
+      const dim = $dim;
+      const nb = w#0;
+      const dim1 = dim + 1;
+      const dim_2 = dim^2;
+      const dim1_2 = dim1^2;
+      const dim_dim1 = dim*dim1;
+      const nb_dim = nb*dim;
+      const nb_dim1 = nb*dim1;
+      proj(u,v) = (dot(u,v)/dot(u,u)*u);
+
+      P = crop(#0);
+      R = crop(#1);
+      ONE = vector(#nb,1);
+
+      repeat (1000,
+        # Find nearest correspondences.
+        Q = index(P,R,dim,0,1);
+
+        # Efficient hack to generate main matrix used for the over-determined linear system.
+        P1 = [ P,ONE ];
+        M1 = permute(P1,nb,1,1,dim1,'cxyz');
+        M2 = resize(M1,dim1,nb,1,1,dim1_2,nb,1,1,0);
+        M3 = resize(M2,dim1_2,nb,1,1,dim1_2,nb_dim,1,1);
+        M4 = resize(M3,dim1_2,nb_dim,1,1,dim_dim1,nb_dim1,1,1,-1);
+        M = resize(M4,dim_dim1,nb_dim1,1,1,dim_dim1,nb_dim,1,1);
+
+        # Estimate affine transformation.
+        Y = permute(Q,nb,1,1,dim,'cxyz');
+        C = solve(M,Y);
+
+        # Orthogonalize estimated transformation if requested.
+        affine_mode?(
+          A = crop(C,dim1,dim,1,1,0,0,dim,dim);
+          SVD = svd(A,dim);
+          U = SVD[0,dim_2];
+          V = SVD[dim_2 + dim,dim_2];
+          O = mul(U,transpose(V,dim),dim);
+          draw(C,dim1,dim,1,1,O,0,0,dim,dim);
+        );
+
+        # Apply affine transformation.
+        nP = mul(C,P1,nb);
+        diff = norm(nP - P);
+        swap(nP,P);
+        diff<precision?break();
+      );
+      draw(#0,P)"
+    rm. r. $whds,-1
+  }
+  rm.
+
 #@cli index : { [palette] | palette_name },0<=_dithering<=1,_map_colors={ 0:No | 1:Yes } : (+)
 #@cli : Index selected vector-valued images by specified vector-valued palette.
 #@cli : 'palette_name' can be { default | hsv | lines | hot | cool | jet | flag | cube | rainbow | algae | amp |\
@@ -15204,8 +15283,8 @@ brightness : check "isnum($1)"
 # rollei_ir_400 | rollei_ortho_25 | rollei_retro_100_tonal | rollei_retro_80s | rotate_muted | rotate_vibrant | \
 # rotated | rotated_crush | satid | saturated_blue | saving_private_damon | scala | science_fiction | scrittle | \
 # sea | seges | selor | sensum | separation | serenity | seringe_4 | serpent | seventies_magazine | sevsuz | \
-# shade_kings_ink | shadow_king_39 | shine | sicario | sino | skin_tones | slog_to_rec709_basic | \
-# slog_to_rec709_contrasty | slog_to_rec709_crush_shadows | slog_to_rec709_green_correction | smart_contrast | \
+# shade_kings_ink | shadow_king_39 | shine | sicario | sino | skin_tones | slog_to_rec_709_basic | \
+# slog_to_rec_709_contrasty | slog_to_rec_709_crush_shadows | slog_to_rec_709_green_correction | smart_contrast | \
 # smokey | smooth_clear | smooth_cromeish | smooth_fade | smooth_green_orange | smooth_sailing | smooth_teal_orange | \
 # soft_fade | softblackandwhite | softwarming | solarized_color | solarized_color_2 | soldi | \
 # spider-man_far_from_home | spotlight | springmorning | sprocket_231 | spy_29 | standard | \
@@ -20519,13 +20598,13 @@ periodize_poisson :
 #@cli : Values 'x_k','y_k' and 'z_k' are the spatial coordinates of keypoint 'k'.
 #@cli : Values 'f1(),..,fN()' are the 'N' components of the vector value of keypoint 'k'.
 #@cli : The command reconstructs an image with specified size 'dx'x'dy'x'dz', with 'N' channels.
-#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1', 'phi(r)=r^2*log(1e-5+r)'.
+#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1', 'phi(r)=r*log(1+r)'.
 #@cli : $ sample colorful,400 100%,100% noise_poissondisk. 10 1,{is},1,5 \
 # eval[-2] "begin(p=0);i?(I[#-1,p++]=[x,y,I(#0)])" to_rgb[1] mul[0,1] dilate_circ[0] 5 +rbf[-1] {0,[w,h]} c[-1] 0,255
 #@cli : $ 32,1,1,5,u([400,400,255,255,255]) rbf 400,400 c 0,255
 rbf :
   $=a
-  default_phi_r="r^2*log(1 + r)"
+  default_phi_r="r*log(1 + r)"
   if isin($#,1,3,4) # 1D reconstruction
     dx,x0,x1=$a1,{$#>1?[$a2,$a3]:[0,$a1-1]}
     phi_r={`$#>3?['$a4']:'$default_phi_r'`}
@@ -20533,6 +20612,7 @@ rbf :
     e[^-1] "Reconstruct 1D image from keypoint set$?, with size "$dx", "\
      "from ("$x0") to ("$x1") and phi(r) = "$phi_r.
     foreach { nm={n} if !w $dx elif whd==1 channels. 1,100% r. $dx,1,1,100% else
+      sh 1,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,1,1,{w-1},"*
         begin(
@@ -20546,13 +20626,13 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          W = solve(M,F,s,1);
+          W = solve(M,F,s);
           const fx = ("$x1-$x0")/(w-1);
         );
         res = vectors(); x = (x - "$x0")*fx;
         repeat (h#0,k, r = abs(x - X[k]); res+=W[s*k,s]*phi(r));
         res"
-      k. => $nm
+      k. $avg ri. .. + => $nm
     fi }
 
   elif isin($#,2,6,7) # 2D reconstruction
@@ -20562,6 +20642,7 @@ rbf :
     e[^-1] "Reconstruct 2D image from keypoint set$?, with size "$dx,$dy", "\
      "from ("$x0,$y0") to ("$x1,$y1") and phi(r) = "$phi_r.
     foreach { nm={n} if !w $dx,$dy elif whd==1 channels 2,100% r. $dx,$dy,1,100% else
+      sh 2,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,$dy,1,{w-2},"*
         begin(
@@ -20576,14 +20657,14 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          W = solve(M,F,s,1);
+          W = solve(M,F,s);
           const fx = ("$x1-$x0")/(w-1);
           const fy = ("$y1-$y0")/(h-1);
         );
         res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy;
         repeat (h#0,k, r = norm(x - X[k], y - Y[k]); res+=W[s*k,s]*phi(r));
         res"
-      k. => $nm
+      k. $avg ri. .. + => $nm
     fi }
 
   elif isin($#,3,9,10) # 3D reconstruction
@@ -20593,6 +20674,7 @@ rbf :
     e[^-1] "Reconstruct 3D image from keypoint set$?, with size "$dx,$dy,$dz", "\
      "from ("$x0,$y0,$z0") to ("$x1,$y1,$z1") and phi(r) = "$phi_r.
     foreach { nm={n} if !w $dx,$dy,$dz elif whd==1 channels 3,100% r. $dx,$dy,$dz,100% else
+      sh 3,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,$dy,$dz,{w-3},"*
         begin(
@@ -20608,7 +20690,7 @@ rbf :
               M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
             )
           );
-          W = solve(M,F,s,1);
+          W = solve(M,F,s);
           const fx = ("$x1-$x0")/(w - 1);
           const fy = ("$y1-$y0")/(h - 1);
           const fz = ("$z1-$z0")/(d - 1);
@@ -20616,7 +20698,7 @@ rbf :
         res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy; z = (z - "$z0")*fz;
         repeat (h#0,k, r = norm(x - X[k], y - Y[k], z - Z[k]); res+=W[s*k,s]*phi(r));
         res"
-      k. => $nm
+      k. $avg ri. .. + => $nm
     fi }
 
   else error[0--2] "Command 'rbf': invalid arguments '$*'."
@@ -24862,7 +24944,7 @@ fitsamples : check "isint($1,1) && ${2=100%}>0" skip "${3=},${4=},${5=}"
     k. permute ${bwd$type} => $nm
   }
 
-#@cli invert : _use_LU={ 0:SVD | 1:LU },_lambda>=0 : (+)
+#@cli invert : : (+)
 #@cli : Inverse selected matrices (or compute Moore-Penrose pseudoinverse for non-square matrices).
 #@cli : SVD solver is slower but more precise than LU.
 #@cli : 'lambda' is used only in the Moore-Penrose pseudoinverse, by estimating A^t.(A^t.A + lambda.Id)^-1.
@@ -24969,10 +25051,9 @@ poweriteration : check "isint(${1=1},1) && ${2=1e-6}>0 && isint(${3=1000},1)"
     rm[0]
   }
 
-#@cli solve : [image],_use_LU={ 0:SVD | 1:LU } : (+)
+#@cli solve : [image] : (+)
 #@cli : Solve linear system AX = B for selected B-matrices and specified A-matrix.
-#@cli : If the system is under- or over-determined, the least squares solution is returned.
-#@cli : Default value: 'use_LU=0'.
+#@cli : If the system is under- or over-determined, the least squares or minimal norm solution is returned.
 #@cli : $ (0,1,0;1,0,0;0,0,1) (1;2;3) +solve[-1] [-2]
 
 #@cli svd : (+)
@@ -43642,7 +43723,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.3</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.4</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -43674,7 +43755,7 @@ fx_gmicky_preview :
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2025/10/13</b> : version <i>3.6.3</i> (Current stable).</span>\n
-##@gui : - <b>2025/10/XX</b> : version <i>3.6.4_pre</i> (Current pre-release).\n
+#@gui : - <b>2025/10/28</b> : version <i>3.6.4_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
@@ -57953,7 +58034,7 @@ fx_smooth_bilateral : skip ${5=0},${6=0}
 #@gui : if you don't have many CPU cores available.
 #@gui : </small>"}
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/01/18</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
 fx_denoise :
   if $6 l[] {
     delete ${-path_cache}gmic_denoise_cnn.gmz
@@ -58350,7 +58431,7 @@ fx_smooth_haar :
 #@gui : if you don't have many CPU cores available.
 #@gui : </small>"}
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2024/11/07</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
 fx_scale2x_cnn :
   scale2x_cnn $1
 
@@ -59315,17 +59396,20 @@ fx_generate_random_portrait_preview :
 #@gui : Color 2 (Up/Right Corner) = ~color(255,0,0,255)
 #@gui : Color 3 (Bottom/Left Corner) = ~color(0,255,0,255)
 #@gui : Color 4 (Bottom/Right Corner) = ~color(0,0,255,255)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
 #@gui : Colorspace = ~choice(1,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/20</i>.</small>")
 fx_corner_gradient : skip ${17=0}
+  R1,G1,B1,A1,R2,G2,B2,A2,R3,G3,B3,A3,R4,G4,B4,A4,quantization,colorspace=${1-18}
   foreach {
     wh:=w,h rm
-    ($1,$5;$9,$13^$2,$6;$10,$14^$3,$7;$11,$15^$4,$8;$12,$16)
-    _gb_fwd $17
+    ($R1^$G1^$B1^$A1,$R2^$G2^$B2^$A2;$R3^$G3^$B3^$A3,$R4^$G4^$B4^$A4)
+    _gb_fwd $colorspace
     r. $wh,1,100%,3
-    _gb_bwd $17
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    _gb_bwd $colorspace
   }
 
 #@gui Gradient [Custom Shape] : fx_custom_gradient, fx_custom_gradient_preview(1)
@@ -59520,22 +59604,71 @@ _fx_gradient_from_curve :
 #@gui : Starting Color = ~color(0,0,0,255)
 #@gui : Ending Color = ~color(255,255,255,255)
 #@gui : Swap Colors = bool()
-#@gui : Angle = ~float(45,0,360)
-#@gui : Fade Start = ~float(0,0,100)
-#@gui : Fade End = ~float(100,0,100)
+#@gui : Angle (deg.) = ~float(45,0,360)
+#@gui : Fade Start (%) = ~float(0,0,100)
+#@gui : Fade End (%) = ~float(100,0,100)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
 #@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/20</i>.</small>")
 fx_linear_gradient : skip ${13=0}
+  Rs,Gs,Bs,As,Re,Ge,Be,Ae,is_swap,angle,fade_s,fade_e,quantization,colorspace=${1-14}
   foreach {
     wh:=w,h rm
-    ($1^$2^$3^$4) ($5^$6^$7^$8)
-    if $9 rv[-2,-1] fi
+    ($Rs^$Gs^$Bs^$As) ($Re^$Ge^$Be^$Ae)
+    if $is_swap rv[-2,-1] fi
     r $wh
-    _gb_fwd $13
-    fade_linear $10,$11,$12
-    _gb_bwd $13
+    _gb_fwd $colorspace
+    fade_linear $angle,$fade_s,$fade_e
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    _gb_bwd $colorspace
+  }
+
+#@gui Gradient [Poles] : fx_gradient_poles,fx_gradient_poles(1)
+#@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
+#@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Quantization = ~int(0,0,64)
+#@gui : sep = separator()
+#@gui : Point #0 = ~point(25,25,1,1,200,200,200)
+#@gui : Color #0 = ~color(0,0,0,255)
+#@gui : sep = separator()
+#@gui : Point #1 = ~point(75,25,1,1,200,200,200)
+#@gui : Color #1 = ~color(0,0,255,255)
+#@gui : sep = separator()
+#@gui : Point #2 = ~point(75,75,1,1,200,200,200)
+#@gui : Color #2 = ~color(0,255,0,255)
+#@gui : sep = separator()
+#@gui : Point #3 = ~point(25,75,1,1,200,200,200)
+#@gui : Color #3 = ~color(0,255,255,255)
+#@gui : sep = separator()
+#@gui : Point #4 = ~point(50,50,-1,1,200,200,200)
+#@gui : Color #4 = ~color(255,0,0,255)
+#@gui : sep = separator()
+#@gui : Point #5 = ~point(10,50,-1,1,200,200,200)
+#@gui : Color #5 = ~color(255,0,255,255)
+#@gui : sep = separator()
+#@gui : Point #6 = ~point(20,50,-1,1,200,200,200)
+#@gui : Color #6 = ~color(255,255,0,255)
+#@gui : sep = separator()
+#@gui : Point #7 = ~point(30,50,-1,1,200,200,200)
+#@gui : Color #7 = ~color(255,255,255,255)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>
+#@gui :       Latest Update: <i>2025/10/23</i>.</small>")
+fx_gradient_poles :
+  phi_r,colorspace,quantization,\
+    x0,y0,R0,G0,B0,A0,x1,y1,R1,G1,B1,A1,x2,y2,R2,G2,B2,A2,x3,y3,R3,G3,B3,A3,\
+    x4,y4,R4,G4,B4,A4,x5,y5,R5,G5,B5,A5,x6,y6,R6,G6,B6,A6,x7,y7,R7,G7,B7,A7=${1-51}
+  arg0 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
+  foreach {
+    w,h:=w,h rm
+    l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
+    sh. 2,100% _gb_fwd. $colorspace rm.
+    rbf {[$w,$h,0,0,100,100]},$phi_r
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    _gb_bwd. $colorspace
+    c 0,255
   }
 
 #@gui Gradient [Radial] : fx_radial_gradient, fx_radial_gradient
@@ -59544,48 +59677,54 @@ fx_linear_gradient : skip ${13=0}
 #@gui : Swap Colors = bool()
 #@gui : Fade Start = ~float(0,0,100)
 #@gui : Fade End = ~float(100,0,100)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : Center (%) = ~point(50,50,0,1,255)
 #@gui : sep = separator()
 #@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/06/29</i>.</small>")
 fx_radial_gradient : skip ${14=0}
+  Rs,Gs,Bs,As,Re,Ge,Be,Ae,swap_colors,fade_start,fade_end,quantization,cx,cy,colorspace=${1-15}
   foreach {
     wh:=w,h rm
-    ($1^$2^$3^$4) ($5^$6^$7^$8)
-    if $9 rv[-2,-1] fi
+    ($Rs^$Gs^$Bs^$As) ($Re^$Ge^$Be^$Ae)
+    if $swap_colors rv[-2,-1] fi
     r $wh
-    _gb_fwd $14
-    100%,100% =. 1,$12%,$13% distance. 1 _fade $10,$11
-    _gb_bwd $14
+    _gb_fwd $colorspace
+    100%,100% =. 1,$cx%,$cy% distance. 1 _fade $fade_start,$fade_end
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    _gb_bwd $colorspace
   }
 
 #@gui Gradient [Random] : fx_random_gradient, fx_random_gradient
 #@gui : Density = ~int(32,1,1024)
 #@gui : Seed = ~int(0,0,65535)
 #@gui : Smoothness = ~float(0,0,10)
+#@gui : Quantization = ~int(0,0,64)
 #@gui : Color Balance = ~color(128,128,128)
 #@gui : Opacity = float(1,0,1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/08</i>.</small>")
 fx_random_gradient :
+  density,seed,smoothness,quantization,Rb,Gb,Bb,opacity=${1-8}
   foreach {
-    to_rgba 100%,100% srand $2
-    eval "repeat ($1,n,
+    to_rgba 100%,100% srand $seed
+    eval "repeat ($density,n,
             x = v(w - 1);
             y = v(h - 1);
             i(x,y) = 1;
             i(#0,x,y,0,0) = v(255);
             i(#0,x,y,0,1) = v(255);
             i(#0,x,y,0,2) = v(255);
-            i(#0,x,y,0,3) = $7*255 + (1-$7)*v(255);
+            i(#0,x,y,0,3) = $opacity*255 + (1 - $opacity)*v(255);
           )"
-    if $7!=1 sh.. 100% n. 0,255 rm. fi
+    if $opacity!=1 sh.. 100% n. 0,255 rm. fi
     ==. 0
     sh.. 0,2 srgb2rgb. rm.
     inpaint_pde.. [1],100%,1 rm.
-    b $3% n 0,255
-    sh 0,2 rgb2srgb. balance_gamma. ${4-6} rm.
+    b $smoothness% n 0,255
+    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+    sh 0,2 rgb2srgb. balance_gamma. $Rb,$Gb,$Bb rm.
   }
 
 #@gui Hypotrochoid : fx_hypotrochoid, fx_hypotrochoid(1)
