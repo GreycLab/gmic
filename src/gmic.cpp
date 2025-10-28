@@ -2461,7 +2461,7 @@ typedef enum {
 
   // Commands of length 2.
   id_do=190,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
-  id_or=202
+  id_or=202,id_qr
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
@@ -2500,7 +2500,7 @@ const char *gmic::builtin_command_names[] = {
 
   // Commands of length 2.
   "!=","<<","<=","==","=>",">=",">>",
-  "do","eq","fi","ge","gt","if","le","lt","m*","m/","mv","nm","or","rm","rv","sh","um",
+  "do","eq","fi","ge","gt","if","le","lt","m*","m/","mv","nm","or","qr","rm","rv","sh","um",
   "w0","w1","w2","w3","w4","w5","w6","w7","w8","w9",
 
   // Commands of length 1.
@@ -2547,8 +2547,8 @@ const int gmic::builtin_command_ids[] = {
 
   // Commands of length 2.
   id_neq,id_bsl,id_le,id_eq,id_name,id_ge,id_bsr,
-  id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_remove,id_reverse,id_shared,
-    id_uncommand,
+  id_do,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,id_mmul,id_mdiv,id_move,id_name,id_or,id_qr,id_remove,id_reverse,
+    id_shared,id_uncommand,
   id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 1.
@@ -5211,6 +5211,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           break;
         case 'o' : // 'or'
           if (item1=='r') id_builtin_command = id_or;
+          break;
+        case 'q' : // 'qr'
+          if (item1=='r') id_builtin_command = id_qr;
           break;
         case 'r' : // 'rm' and 'rv'
           if (item1=='m') { id_builtin_command = id_remove; break; }
@@ -8157,7 +8160,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'invert'.
         if (id_builtin_command==id_invert) {
-          gmic_substitute_args(false);
           print(0,"Invert matrix image%s.",
                 gmic_selection.data(),pattern?"LU":"SVD",value);
           cimg_forY(selection,l) gmic_apply(invert(),false);
@@ -10596,6 +10598,38 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'q...'
         //-----------------------------
       gmic_commands_q :
+
+        // 'qr'.
+        if (id_builtin_command==id_qr) {
+          gmic_substitute_args(true);
+          if ((*argument=='0' || *argument=='1') && !argument[1]) { is_cond = (*argument=='1'); ++position; }
+          else is_cond = true;
+          print(0,"Compute QR decomposition%s of matri%s%s%s.",
+                selection.height()>1?"s":"",selection.height()>1?"ce":"x",gmic_selection.data(),
+                is_cond?", in reduced form":"");
+          CImg<float> Q, R;
+          unsigned int off = 0;
+          cimg_forY(selection,l) {
+            uind = selection[l] + off;
+            const CImg<T>& img = gmic_check(images[uind]);
+            img.QR(Q,R,is_cond);
+            if (is_get) {
+              Q.move_to(images);
+              R.move_to(images);
+              image_names[uind].get_copymark().move_to(image_names);
+              image_names.back().get_copymark().move_to(image_names);
+            } else {
+              images.insert(1,uind + 1);
+              Q.move_to(images[uind].assign());
+              R.move_to(images[uind + 1]);
+              image_names.insert(1,uind + 1);
+              image_names[uind].get_copymark().move_to(image_names[uind + 1]);
+              ++off;
+            }
+          }
+          is_change = true;
+          continue;
+        }
 
         // 'quit'.
         if (id_builtin_command==id_quit && no_get_selection) {
