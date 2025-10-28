@@ -10600,6 +10600,34 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         //-----------------------------
       gmic_commands_q :
 
+        // 'qr'.
+        if (id_builtin_command==id_qr) {
+          print(0,"Compute QR decomposition%s of matri%s%s.",
+                selection.height()>1?"s":"",selection.height()>1?"ce":"x",gmic_selection.data());
+          CImg<float> Q, R;
+          unsigned int off = 0;
+          cimg_forY(selection,l) {
+            uind = selection[l] + off;
+            const CImg<T>& img = gmic_check(images[uind]);
+            img.QR(Q,R,true);
+            if (is_get) {
+              Q.move_to(images);
+              R.move_to(images);
+              image_names[uind].get_copymark().move_to(image_names);
+              image_names.back().get_copymark().move_to(image_names);
+            } else {
+              images.insert(1,uind + 1);
+              Q.move_to(images[uind].assign());
+              R.move_to(images[uind + 1]);
+              image_names.insert(1,uind + 1);
+              image_names[uind].get_copymark().move_to(image_names[uind + 1]);
+              ++off;
+            }
+          }
+          is_change = true;
+          continue;
+        }
+
         // 'quit'.
         if (id_builtin_command==id_quit && no_get_selection) {
           print(0,"Quit G'MIC interpreter.");
