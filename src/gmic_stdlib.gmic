@@ -59381,41 +59381,44 @@ fx_linear_gradient : skip ${13=0}
     _gb_bwd $colorspace
   }
 
-#@gui Gradient [Poles] : fx_gradient_poles,fx_gradient_poles(1)
+#@gui Gradient [Poles] : fx_gradient_poles,fx_gradient_poles_preview(1)
 #@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
 #@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
-#@gui : Point #0 = ~point(25,25,1,1,200,200,200)
+#@gui : Point #0 = ~point(25,25,1,1,200,200,200,0)
 #@gui : Color #0 = ~color(0,0,0,255)
 #@gui : sep = separator()
-#@gui : Point #1 = ~point(75,25,1,1,200,200,200)
+#@gui : Point #1 = ~point(75,25,1,1,200,200,200,0)
 #@gui : Color #1 = ~color(0,0,255,255)
 #@gui : sep = separator()
-#@gui : Point #2 = ~point(75,75,1,1,200,200,200)
+#@gui : Point #2 = ~point(75,75,1,1,200,200,200,0)
 #@gui : Color #2 = ~color(0,255,0,255)
 #@gui : sep = separator()
-#@gui : Point #3 = ~point(25,75,1,1,200,200,200)
+#@gui : Point #3 = ~point(25,75,1,1,200,200,200,0)
 #@gui : Color #3 = ~color(0,255,255,255)
 #@gui : sep = separator()
-#@gui : Point #4 = ~point(50,50,-1,1,200,200,200)
+#@gui : Point #4 = ~point(50,50,-1,1,200,200,200,0)
 #@gui : Color #4 = ~color(255,0,0,255)
 #@gui : sep = separator()
-#@gui : Point #5 = ~point(10,50,-1,1,200,200,200)
+#@gui : Point #5 = ~point(10,50,-1,1,200,200,200,0)
 #@gui : Color #5 = ~color(255,0,255,255)
 #@gui : sep = separator()
-#@gui : Point #6 = ~point(20,50,-1,1,200,200,200)
+#@gui : Point #6 = ~point(20,50,-1,1,200,200,200,0)
 #@gui : Color #6 = ~color(255,255,0,255)
 #@gui : sep = separator()
-#@gui : Point #7 = ~point(30,50,-1,1,200,200,200)
+#@gui : Point #7 = ~point(30,50,-1,1,200,200,200,0)
 #@gui : Color #7 = ~color(255,255,255,255)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>
 #@gui :       Latest Update: <i>2025/10/23</i>.</small>")
-fx_gradient_poles :
+__fx_gradient_poles :
   phi_r,colorspace,quantization,\
     x0,y0,R0,G0,B0,A0,x1,y1,R1,G1,B1,A1,x2,y2,R2,G2,B2,A2,x3,y3,R3,G3,B3,A3,\
     x4,y4,R4,G4,B4,A4,x5,y5,R5,G5,B5,A5,x6,y6,R6,G6,B6,A6,x7,y7,R7,G7,B7,A7=${1-51}
+
+fx_gradient_poles :
+  __fx_gradient_poles $*
   arg0 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
   foreach {
     w,h:=w,h rm
@@ -59425,6 +59428,20 @@ fx_gradient_poles :
     if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
     _gb_bwd. $colorspace
     c 0,255
+  }
+
+fx_gradient_poles_preview :
+  __fx_gradient_poles $*
+  fx_gradient_poles $*
+  drgba
+  repeat 8 {
+    x,y,R,G,B,A=${x$>},${y$>},${R$>},${G$>},${B$>},${A$>}
+    if !isnan($x)
+      circle $x%,$y%,9,1,255,255,255
+      circle $x%,$y%,8,1,0,0,0
+      circle $x%,$y%,6,1,$R,$G,$B
+      label=\#$> foreach { to $label,{[($x*w%)-14,($y*h%)-34]},20,1,1,255 }
+    fi
   }
 
 #@gui Gradient [Radial] : fx_radial_gradient, fx_radial_gradient
