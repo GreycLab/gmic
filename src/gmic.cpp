@@ -2435,33 +2435,33 @@ typedef enum {
   id_files=48,id_fill,id_flood,id_foreach,
   id_guided=52,
   id_histogram=53,
-  id_ifft=54,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
-  id_keep=62,
-  id_label=63,id_light3d,id_line,id_local,id_log10,id_log2,
-  id_matchpatch=69,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
-  id_name=79,id_named,id_network,id_noarg,id_noise,id_normalize,
-  id_object3d=85,id_onfail,id_output,
-  id_parallel=88,id_pass,id_permute,id_point,id_polygon,id_progress,
-  id_quit=94,
-  id_rand=95,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
-  id_screen=104,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+  id_ifft=54,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
+  id_keep=61,
+  id_label=62,id_light3d,id_line,id_local,id_log10,id_log2,
+  id_matchpatch=68,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name=78,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d=84,id_onfail,id_output,
+  id_parallel=87,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_quit=93,
+  id_rand=94,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen=103,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
     id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
-  id_tanh=122,id_text,
-  id_uncommand=124,id_unroll,id_unserialize,
-  id_vanvliet=127,id_verbose,
-  id_wait=129,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_tanh=121,id_text,
+  id_uncommand=123,id_unroll,id_unserialize,
+  id_vanvliet=126,id_verbose,
+  id_wait=128,id_warn,id_warp,id_watershed,id_while,id_window,
     id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 3.
-  id_abs=150,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
-  id_log=164,
-  id_map=165,id_max,id_min,id_mod,id_mul,id_neq,
-  id_pow=172,
-  id_rol=174,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
+  id_abs=149,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
+  id_log=163,
+  id_map=164,id_max,id_min,id_mod,id_mul,id_neq,
+  id_pow=171,
+  id_rol=173,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
 
   // Commands of length 2.
-  id_do=190,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
-  id_or=202,id_qr
+  id_do=189,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
+  id_or=201,id_qr
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
@@ -2476,7 +2476,7 @@ const char *gmic::builtin_command_names[] = {
   "files","fill","flood","foreach",
   "guided",
   "histogram",
-  "ifft","image","index","inpaint","input","invert","isoline3d","isosurface3d",
+  "ifft","image","index","inpaint","input","isoline3d","isosurface3d",
   "keep",
   "label","light3d","line","local","log10","log2",
   "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d",
@@ -2521,7 +2521,7 @@ const int gmic::builtin_command_ids[] = {
   id_files,id_fill,id_flood,id_foreach,
   id_guided,
   id_histogram,
-  id_ifft,id_image,id_index,id_inpaint,id_input,id_invert,id_isoline3d,id_isosurface3d,
+  id_ifft,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
   id_keep,
   id_label,id_light3d,id_line,id_local,id_log10,id_log2,
   id_matchpatch,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
@@ -8155,15 +8155,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
-          continue;
-        }
-
-        // 'invert'.
-        if (id_builtin_command==id_invert) {
-          print(0,"Invert matrix image%s.",
-                gmic_selection.data(),pattern?"LU":"SVD",value);
-          cimg_forY(selection,l) gmic_apply(invert(),false);
-          is_change = true;
           continue;
         }
 
