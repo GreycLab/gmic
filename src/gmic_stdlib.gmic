@@ -28955,28 +28955,32 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
+      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
+      const OUT#_whds = size(IN#);
       OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
       OUT#_alpha = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_avg = crop(##OUT#_ind,2,1);
       OUT#_var = crop(##OUT#_ind,3,1);
-      OUT#_std = sqrt(OUT#_var);
+      OUT#_std = sqrt(nn_eps + OUT#_var);
+      OUT#_alpha_whds = resize(OUT#_alpha,OUT#_whds);
+      OUT#_beta_whds = resize(OUT#_beta,OUT#_whds);
+      OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
+      OUT#_std_whds = resize(OUT#_std,OUT#_whds);
     );
 
     nn_batchnorm_forward(OUT,IN) = (
       !OUT#_is_avg_var?(
         OUT#_avg = avg(IN#);
         OUT#_std = std(IN#);
+        OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
+        OUT#_std_whds = resize(OUT#_std,OUT#_whds);
       );
-      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
-      OUT#_hat = OUT# = vector(#size(IN#));
-      repeat (size(OUT#_avg),_nn_k,
-        OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/(OUT#_std[_nn_k] + nn_eps);
-        copy(OUT#_hat[_nn_k*OUT#_whd],OUT#_tmp);
-        OUT#_tmp*=OUT#_alpha[_nn_k];
-        OUT#_tmp+=OUT#_beta[_nn_k];
-        copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
-      );
+      OUT# = IN# - OUT#_avg_whds;
+      OUT#/=OUT#_std_whds;
+      OUT#_hat = OUT#;
+      OUT#*=OUT#_alpha_whds;
+      OUT#+=OUT#_beta_whds;
     );
 
     nn_batchnorm_init_backward(OUT,IN) = (
