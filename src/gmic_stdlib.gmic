@@ -29561,7 +29561,7 @@ nn_lib :
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
 
-    # batchnorm: Layer normalization.
+    # batchnorm: Batch normalization.
     #--------------------------------
     nn_batchnorm_init_forward(OUT,IN,is_channelwise) = (
       const OUT#_ind = $""#OUT;
@@ -30581,7 +30581,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','mp','normalize')
+      if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -30908,10 +30908,10 @@ nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
   normalization_mode,learning_mode=${3-4}
   s0,s1=global,channel-by-channel
 
-  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and "${s$normalization_mode}" normalization."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=normalize,
+  _${net}_layer_types.=batchnorm,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
@@ -31086,7 +31086,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','mp','normalize')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -31257,7 +31257,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={${net}_$name,whds} fi
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm') siz+={${net}_$name,whds} fi
   }
   u $siz
 
@@ -31319,7 +31319,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','trainer')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31449,7 +31449,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','mp','normalize')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
