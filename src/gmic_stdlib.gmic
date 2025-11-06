@@ -29561,9 +29561,9 @@ nn_lib :
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
 
-    # normalize: Layer normalization.
+    # batchnorm: Layer normalization.
     #--------------------------------
-    nn_normalize_init_forward(OUT,IN,is_channelwise) = (
+    nn_batchnorm_init_forward(OUT,IN,is_channelwise) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29578,7 +29578,7 @@ nn_lib :
       OUT#_std = sqrt(OUT#_var);
     );
 
-    nn_normalize_forward(OUT,IN) = (
+    nn_batchnorm_forward(OUT,IN) = (
       !OUT#_is_avg_var?(
         OUT#_avg = avg(IN#);
         OUT#_std = std(IN#);
@@ -29599,14 +29599,14 @@ nn_lib :
       );
     );
 
-    nn_normalize_init_backward(OUT,IN) = (
+    nn_batchnorm_init_backward(OUT,IN) = (
       batch_d#OUT#_alpha = vector(#size(OUT#_avg));
       batch_d#OUT#_beta = vector(#size(OUT#_avg));
       batch_#OUT#_avg = vector(#size(OUT#_avg));
       batch_#OUT#_var = vector(#size(OUT#_avg));
     );
 
-    nn_normalize_backward(OUT,IN) = (
+    nn_batchnorm_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_is_channelwise?( # Channel-by-channel normalization
         repeat (size(#OUT#_avg),_nn_k,
@@ -29628,7 +29628,7 @@ nn_lib :
       );
     );
 
-    nn_normalize_end_backward(OUT) = (
+    nn_batchnorm_end_backward(OUT) = (
       merge(batch_d#OUT#_alpha,+);
       merge(batch_d#OUT#_beta,+);
       merge(batch_#OUT#_avg,+);
@@ -29639,7 +29639,7 @@ nn_lib :
       batch_#OUT#_var/=nn_batch_size;
     );
 
-    nn_normalize_update(P,O,learning_mode) = (
+    nn_batchnorm_update(P,O,learning_mode) = (
       draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
       draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
 
@@ -30891,12 +30891,12 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1} "
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,_normalization_mode,_learning_mode
+#@cli nn_batchnorm : out,in,_normalization_mode,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : 'normalization_mode' can be { 0:Global parameters | 1:Channel-by-channel parameters }
 #@cli : 'learning_mode' can be { 0:No learning | 1:Alpha only | 2:Beta only | 3:Alpha+beta }
 #@cli : Default values: 'normalization_mode=1' and 'learning_mode=3'.
-nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
+nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isbool(${3=1}) && # normalization_mode
@@ -30921,11 +30921,11 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
     if $normalization_mode r. 100%,{[${_${nin}_size}][3]} fi # channel-by-channel normalization
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_mode"));"\
-                   "nn_normalize_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
-                    "nn_normalize_backward("$nout,$nin");"\
-                    "end(nn_normalize_end_backward("$nout"));"
+  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin,$normalization_mode"));"\
+                   "nn_batchnorm_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_batchnorm_init_backward("$nout,$nin"));"\
+                    "nn_batchnorm_backward("$nout,$nin");"\
+                    "end(nn_batchnorm_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1} "
