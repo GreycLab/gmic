@@ -28947,6 +28947,109 @@ nn_lib :
     nn_avgpool3d_forward(OUT,IN) = nn_avgpool2d_forward(OUT#,IN#); # Same as avgpool2d
     nn_avgpool3d_backward(OUT,IN) = nn_avgpool2d_backward(OUT#,IN#); # Same as avgpool2d
 
+    # batchnorm: Batch normalization.
+    #--------------------------------
+    nn_batchnorm_init_forward(OUT,IN) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+      OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
+      OUT#_alpha = crop(##OUT#_ind,0,1);
+      OUT#_beta = crop(##OUT#_ind,1,1);
+      OUT#_avg = crop(##OUT#_ind,2,1);
+      OUT#_var = crop(##OUT#_ind,3,1);
+      OUT#_std = sqrt(OUT#_var);
+    );
+
+    nn_batchnorm_forward(OUT,IN) = (
+      !OUT#_is_avg_var?(
+        OUT#_avg = avg(IN#);
+        OUT#_std = std(IN#);
+      );
+      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
+      OUT#_hat = OUT# = vector(#size(IN#));
+      repeat (size(OUT#_avg),_nn_k,
+        OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/(OUT#_std[_nn_k] + nn_eps);
+        copy(OUT#_hat[_nn_k*OUT#_whd],OUT#_tmp);
+        OUT#_tmp*=OUT#_alpha[_nn_k];
+        OUT#_tmp+=OUT#_beta[_nn_k];
+        copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
+      );
+    );
+
+    nn_batchnorm_init_backward(OUT,IN) = (
+      batch_d#OUT#_alpha = vector(#size(OUT#_avg));
+      batch_d#OUT#_beta = vector(#size(OUT#_avg));
+      batch_#OUT#_avg = vector(#size(OUT#_avg));
+      batch_#OUT#_var = vector(#size(OUT#_avg));
+    );
+
+    nn_batchnorm_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (size(#OUT#_avg),_nn_k,
+        OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
+        copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/(OUT#_std[_nn_k] + nn_eps),OUT#_whd,1,1,
+             -1); # Add to d#IN
+        batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
+        batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
+        OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
+        batch_#OUT#_avg[_nn_k]+=avg(OUT#_tmp);
+        batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
+      );
+    );
+
+    nn_batchnorm_end_backward(OUT) = (
+      merge(batch_d#OUT#_alpha,+);
+      merge(batch_d#OUT#_beta,+);
+      merge(batch_#OUT#_avg,+);
+      merge(batch_#OUT#_var,+);
+      batch_d#OUT#_alpha/=nn_batch_size;
+      batch_d#OUT#_beta/=nn_batch_size;
+      batch_#OUT#_avg/=nn_batch_size;
+      batch_#OUT#_var/=nn_batch_size;
+    );
+
+    nn_batchnorm_update(P,O,learning_mode) = (
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        const P#_ind_m = $""P#_m;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
+        );
+      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
+        const P#_ind_m = $""P#_m;
+        const P#_ind_m2 = $""P#_m2;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          d#P#_alpha_m2 = crop(##P#_ind_m2,0,1);
+          nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_alpha_m2,0,0,1,h##P#_ind_m2);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
+        );
+      );
+
+      learning_mode&1?draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
+    );
+
     # clone: Duplicate input as two new outputs.
     #-------------------------------------------
     nn_clone_init_forward(OUT0,OUT1,IN) = (
@@ -29398,6 +29501,22 @@ nn_lib :
       ref(d#OUT,d#IN);
     );
 
+    # layernorm: Layer normalization.
+    #--------------------------------
+    nn_layernorm_init_forward(OUT,IN) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+      OUT#_alpha = crop(##OUT#_ind,0,1);
+      OUT#_beta = crop(##OUT#_ind,1,1);
+    );
+
+    nn_layernorm_forward(OUT,IN) = (
+      OUT# = expr('I = I; (I - avg(I))/max(1e-8,std(I))',w,h,d,s,IN#);
+    );
+
     # maxpool2d : 2D max pooling.
     #----------------------------
     nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
@@ -29562,123 +29681,6 @@ nn_lib :
     nn_norm2_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
-    );
-
-    # batchnorm: Batch normalization.
-    #--------------------------------
-    nn_batchnorm_init_forward(OUT,IN,is_channelwise) = (
-      const OUT#_ind = $""#OUT;
-      const OUT#_width = IN#_width;
-      const OUT#_height = IN#_height;
-      const OUT#_depth = IN#_depth;
-      const OUT#_spectrum = IN#_spectrum;
-      const OUT#_is_channelwise = is_channelwise;
-      OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
-      OUT#_alpha = crop(##OUT#_ind,0,1);
-      OUT#_beta = crop(##OUT#_ind,1,1);
-      OUT#_avg = crop(##OUT#_ind,2,1);
-      OUT#_var = crop(##OUT#_ind,3,1);
-      OUT#_std = sqrt(OUT#_var);
-    );
-
-    nn_batchnorm_forward(OUT,IN) = (
-      !OUT#_is_avg_var?(
-        OUT#_avg = avg(IN#);
-        OUT#_std = std(IN#);
-      );
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
-        OUT#_hat = OUT# = vector(#size(IN#));
-        repeat (size(OUT#_avg),_nn_k,
-          OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/(OUT#_std[_nn_k] + nn_eps);
-          copy(OUT#_hat[_nn_k*OUT#_whd],OUT#_tmp);
-          OUT#_tmp*=OUT#_alpha[_nn_k];
-          OUT#_tmp+=OUT#_beta[_nn_k];
-          copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
-        );
-      ):( # Global normalization
-        OUT#_hat = (IN# - OUT#_avg[0])/(OUT#_std[0] + nn_eps);
-        OUT# = OUT#_hat*OUT#_alpha[0] + OUT#_beta[0];
-      );
-    );
-
-    nn_batchnorm_init_backward(OUT,IN) = (
-      batch_d#OUT#_alpha = vector(#size(OUT#_avg));
-      batch_d#OUT#_beta = vector(#size(OUT#_avg));
-      batch_#OUT#_avg = vector(#size(OUT#_avg));
-      batch_#OUT#_var = vector(#size(OUT#_avg));
-    );
-
-    nn_batchnorm_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        repeat (size(#OUT#_avg),_nn_k,
-          OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/(OUT#_std[_nn_k] + nn_eps),OUT#_whd,1,1,
-               -1); # Add to d#IN
-          batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
-          batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
-          OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
-          batch_#OUT#_avg[_nn_k]+=avg(OUT#_tmp);
-          batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
-        );
-      ):( # Global normalization
-        d#IN+=d#OUT*(OUT#_alpha[0]/(OUT#_std[0] + nn_eps));
-        batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
-        batch_d#OUT#_beta+=sum(d#OUT);
-        batch_#OUT#_avg+=avg(IN#);
-        batch_#OUT#_var+=var(IN#);
-      );
-    );
-
-    nn_batchnorm_end_backward(OUT) = (
-      merge(batch_d#OUT#_alpha,+);
-      merge(batch_d#OUT#_beta,+);
-      merge(batch_#OUT#_avg,+);
-      merge(batch_#OUT#_var,+);
-      batch_d#OUT#_alpha/=nn_batch_size;
-      batch_d#OUT#_beta/=nn_batch_size;
-      batch_#OUT#_avg/=nn_batch_size;
-      batch_#OUT#_var/=nn_batch_size;
-    );
-
-    nn_batchnorm_update(P,O,learning_mode) = (
-      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-
-      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        const P#_ind_m = $""P#_m;
-        learning_mode&1?(
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          nn_optimizer_#O#_update(P#_alpha,0);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
-        );
-        learning_mode&2?(
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          nn_optimizer_#O#_update(P#_beta,0);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
-        );
-      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
-        const P#_ind_m = $""P#_m;
-        const P#_ind_m2 = $""P#_m2;
-        learning_mode&1?(
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          d#P#_alpha_m2 = crop(##P#_ind_m2,0,1);
-          nn_optimizer_#O#_update(P#_alpha,0);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-          draw(##P#_ind_m2,d#P#_alpha_m2,0,0,1,h##P#_ind_m2);
-        );
-        learning_mode&2?(
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
-          nn_optimizer_#O#_update(P#_beta,0);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-          draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
-        );
-      );
-
-      learning_mode&1?draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
-      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
     # patchdown2d: 2D downscale by patch.
@@ -30894,37 +30896,33 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_batchnorm : out,in,_normalization_mode,_learning_mode
+#@cli nn_batchnorm : out,in,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
-#@cli : 'normalization_mode' can be { 0:Global parameters | 1:Channel-by-channel parameters }
 #@cli : 'learning_mode' can be { 0:No learning | 1:Alpha only | 2:Beta only | 3:Alpha+beta }
-#@cli : Default values: 'normalization_mode=1' and 'learning_mode=3'.
+#@cli : Default values: 'learning_mode=3'.
 nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
-                      isbool(${3=1}) && # normalization_mode
-                      isint(${4=3},0,3) # learning_mode
+                      isint(${3=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  normalization_mode,learning_mode=${3-4}
-  s0,s1=global,channel-by-channel
+  learning_mode=$3
 
-  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"' "\
-         "and "${s$normalization_mode}" normalization."
+  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=batchnorm,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="normalization="${s$normalization_mode}", learning_mode="$learning_mode
+  _${nout}_properties="learning_mode="$learning_mode
   if !isint(${$nout})
     (1,0,0,-1) # alpha,beta,running_avg,running_var
-    if $normalization_mode r. 100%,{[${_${nin}_size}][3]} fi # channel-by-channel normalization
+    r. 100%,{[${_${nin}_size}][3]}
     => $nout
   fi
-  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin,$normalization_mode"));"\
+  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin"));"\
                    "nn_batchnorm_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_batchnorm_init_backward("$nout,$nin"));"\
                     "nn_batchnorm_backward("$nout,$nin");"\
