@@ -28993,13 +28993,13 @@ nn_lib :
     nn_batchnorm_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=((d#OUT*OUT#_alpha_whds)/=OUT#_std_whds);
-
+      batch_d#OUT#_alpha+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                  1,1,1,OUT#_spectrum,2)*=OUT#_whd);
+      batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                 1,1,1,OUT#_spectrum,2)*=OUT#_whd);
+      batch_#OUT#_avg+=resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,1,1,1,IN#_spectrum,2);
       repeat (size(#OUT#_avg),_nn_k,
-        OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-        batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
-        batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
         OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
-        batch_#OUT#_avg[_nn_k]+=avg(OUT#_tmp);
         batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
       );
     );
