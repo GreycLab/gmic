@@ -866,8 +866,10 @@ reference : skip "${2=}"
 "it is equal to `1`".\n\
 "## Image-valued functions:"\n\
 "Some functions takes vector-valued arguments that represent image data :"\n\
-"* Function 'expr(formula,_w,_h,_d,_s)' outputs a vector of size 'w*h*d*s' with values generated from "\
-"the specified formula, as if one were filling an image with dimensions '(w,h,d,s)'."\n\
+"* Function 'expr(formula,_w,_h,_d,_s,_A)' outputs a vector of size 'w*h*d*s' with values generated from "\
+"the specified formula, as if one were filling an image with dimensions '(w,h,d,s)'. If 'A' is specified, "\
+"it must be a vector of size 'w*h*d*N' ('N' can be different from 's'). "\
+"It is then passed as a reference image (of size 'w' x 'h' x 'd' x 'N') for the specified expression."\n\
 "* Function 'resize(A,wA,hA,dA,sA,nwA,_nhA,_ndA,_nsA,_interpolation,_boundary_conditions,_ax,_ay,_az,_ac)' is an "\
 "extended version of the 'resize()' function. It allows to resize the vector 'A', seen as an image of size "\
 "'(ow,oh,od,os)' as a new image of size '(nw,nh,nd,ns)', with specified resizing options."\n\
@@ -957,10 +959,11 @@ reference : skip "${2=}"
 "* 'addr(expr)': return the pointer address to the specified expression 'expr'. "\n\
 "* 'o2c(_#ind,offset,_boundary_conditions)' and 'c2o(_#ind,x,_y,_z,_c,_boundary_conditions)': Convert image offset to "\
 "image coordinates and vice-versa. Argument 'boundary_conditions' can be { 0:None | 1:Return -1 if out-of-range }."\n\
-"* 'fill(target,expr)' or 'fill(target,index_name,expr)' fill the content of the specified target "\
-"(often vector-valued) using a given expression, e.g. `V = vector16(); fill(V,k,k^2 + k + 1);`. "\
-"For a vector-valued target, it is basically equivalent to: "\
+"* 'fill(target,expr)' or 'fill(target,index_name,expr)' fill the vector-valued variable 'target', "\
+"using the specified expression, e.g. `V = vector16(); fill(V,k,k^2 + k + 1);`. This is basically equivalent to: "\
 "`for (index_name = 0, index_name<size(target), ++index_name, target[index_name] = expr);`."\n\
+"* 'fill(target,w,h,d,s,'expr')' fills the vector-valued variable 'target', viewed as an image "\
+"of size `(w,h,d,s)`, using the specified expression."\n\
 "* 'u(max)' or 'u(min,max,_include_min,_include_max)': return a random value in range '0...max' or 'min...max', "\
 "following a uniform distribution. Each range extremum can be included (default) in the distribution or not."\n\
 "* 'v(max)' or 'v(min,max,_include_min,_include_max)' do the same but returns an integer in specified range."\n\
@@ -28944,6 +28947,111 @@ nn_lib :
     nn_avgpool3d_forward(OUT,IN) = nn_avgpool2d_forward(OUT#,IN#); # Same as avgpool2d
     nn_avgpool3d_backward(OUT,IN) = nn_avgpool2d_backward(OUT#,IN#); # Same as avgpool2d
 
+    # batchnorm: (Simplified) batch normalization.
+    #---------------------------------------------
+    nn_batchnorm_init_forward(OUT,IN) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
+      const OUT#_whds = size(IN#);
+      OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
+      OUT#_alpha = crop(##OUT#_ind,0,1);
+      OUT#_beta = crop(##OUT#_ind,1,1);
+      OUT#_avg = crop(##OUT#_ind,2,1);
+      OUT#_var = crop(##OUT#_ind,3,1);
+      OUT#_std = sqrt(OUT#_var + nn_eps);
+      OUT#_alpha_whds = resize(OUT#_alpha,OUT#_whds);
+      OUT#_beta_whds = resize(OUT#_beta,OUT#_whds);
+      OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
+      OUT#_std_whds = resize(OUT#_std,OUT#_whds);
+    );
+
+    nn_batchnorm_forward(OUT,IN) = (
+      !OUT#_is_avg_var?(
+        OUT#_avg = avg(IN#);
+        OUT#_std = std(IN#);
+        OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
+        OUT#_std_whds = resize(OUT#_std,OUT#_whds);
+      );
+      OUT# = IN# - OUT#_avg_whds;
+      OUT#/=OUT#_std_whds;
+      OUT#_hat = OUT#;
+      OUT#*=OUT#_alpha_whds;
+      OUT#+=OUT#_beta_whds;
+    );
+
+    nn_batchnorm_init_backward(OUT,IN) = (
+      batch_d#OUT#_alpha = vector(#size(OUT#_avg));
+      batch_d#OUT#_beta = vector(#size(OUT#_avg));
+      batch_#OUT#_avg = vector(#size(OUT#_avg));
+      batch_#OUT#_var = vector(#size(OUT#_avg));
+    );
+
+    nn_batchnorm_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=((d#OUT*OUT#_alpha_whds)/=OUT#_std_whds);
+      batch_d#OUT#_alpha+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                  1,1,1,OUT#_spectrum,2)*=OUT#_whd);
+      batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                 1,1,1,OUT#_spectrum,2)*=OUT#_whd);
+      batch_#OUT#_avg+=resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                              1,1,1,OUT#_spectrum,2);
+      repeat (size(#OUT#_avg),_nn_k,batch_#OUT#_var[_nn_k]+=var(IN#[_nn_k*OUT#_whd,OUT#_whd]));
+    );
+
+    nn_batchnorm_end_backward(OUT) = (
+      merge(batch_d#OUT#_alpha,+);
+      merge(batch_d#OUT#_beta,+);
+      merge(batch_#OUT#_avg,+);
+      merge(batch_#OUT#_var,+);
+      batch_d#OUT#_alpha/=nn_batch_size;
+      batch_d#OUT#_beta/=nn_batch_size;
+      batch_#OUT#_avg/=nn_batch_size;
+      batch_#OUT#_var/=nn_batch_size;
+    );
+
+    nn_batchnorm_update(P,O,learning_mode) = (
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
+
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        const P#_ind_m = $""P#_m;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
+        );
+      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
+        const P#_ind_m = $""P#_m;
+        const P#_ind_m2 = $""P#_m2;
+        learning_mode&1?(
+          d#P#_alpha_m = crop(##P#_ind_m,0,1);
+          d#P#_alpha_m2 = crop(##P#_ind_m2,0,1);
+          nn_optimizer_#O#_update(P#_alpha,0);
+          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_alpha_m2,0,0,1,h##P#_ind_m2);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
+        );
+      );
+
+      learning_mode&1?draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
+    );
+
     # clone: Duplicate input as two new outputs.
     #-------------------------------------------
     nn_clone_init_forward(OUT0,OUT1,IN) = (
@@ -29395,6 +29503,22 @@ nn_lib :
       ref(d#OUT,d#IN);
     );
 
+    # layernorm: Layer normalization.
+    #--------------------------------
+    nn_layernorm_init_forward(OUT,IN) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+      OUT#_alpha = crop(##OUT#_ind,0,1);
+      OUT#_beta = crop(##OUT#_ind,1,1);
+    );
+
+    nn_layernorm_forward(OUT,IN) = (
+      OUT# = expr('I = I; (I - avg(I))/(1e-8 + std(I))',w,h,d,s,IN#);
+    );
+
     # maxpool2d : 2D max pooling.
     #----------------------------
     nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
@@ -29559,123 +29683,6 @@ nn_lib :
     nn_norm2_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
-    );
-
-    # normalize: Layer normalization.
-    #--------------------------------
-    nn_normalize_init_forward(OUT,IN,is_channelwise) = (
-      const OUT#_ind = $""#OUT;
-      const OUT#_width = IN#_width;
-      const OUT#_height = IN#_height;
-      const OUT#_depth = IN#_depth;
-      const OUT#_spectrum = IN#_spectrum;
-      const OUT#_is_channelwise = is_channelwise;
-      OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
-      OUT#_alpha = crop(##OUT#_ind,0,1);
-      OUT#_beta = crop(##OUT#_ind,1,1);
-      OUT#_avg = crop(##OUT#_ind,2,1);
-      OUT#_var = crop(##OUT#_ind,3,1);
-      OUT#_std = sqrt(OUT#_var);
-    );
-
-    nn_normalize_forward(OUT,IN) = (
-      !OUT#_is_avg_var?(
-        OUT#_avg = avg(IN#);
-        OUT#_std = std(IN#);
-      );
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
-        OUT#_hat = OUT# = vector(#size(IN#));
-        repeat (size(OUT#_avg),_nn_k,
-          OUT#_tmp = (IN#[_nn_k*OUT#_whd,OUT#_whd] - OUT#_avg[_nn_k])/(OUT#_std[_nn_k] + nn_eps);
-          copy(OUT#_hat[_nn_k*OUT#_whd],OUT#_tmp);
-          OUT#_tmp*=OUT#_alpha[_nn_k];
-          OUT#_tmp+=OUT#_beta[_nn_k];
-          copy(OUT#[_nn_k*OUT#_whd],OUT#_tmp);
-        );
-      ):( # Global normalization
-        OUT#_hat = (IN# - OUT#_avg[0])/(OUT#_std[0] + nn_eps);
-        OUT# = OUT#_hat*OUT#_alpha[0] + OUT#_beta[0];
-      );
-    );
-
-    nn_normalize_init_backward(OUT,IN) = (
-      batch_d#OUT#_alpha = vector(#size(OUT#_avg));
-      batch_d#OUT#_beta = vector(#size(OUT#_avg));
-      batch_#OUT#_avg = vector(#size(OUT#_avg));
-      batch_#OUT#_var = vector(#size(OUT#_avg));
-    );
-
-    nn_normalize_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      OUT#_is_channelwise?( # Channel-by-channel normalization
-        repeat (size(#OUT#_avg),_nn_k,
-          OUT#_tmp = d#OUT[_nn_k*OUT#_whd,OUT#_whd]; # One channel of dOUT
-          copy(d#IN[_nn_k*OUT#_whd],OUT#_tmp*OUT#_alpha[_nn_k]/(OUT#_std[_nn_k] + nn_eps),OUT#_whd,1,1,
-               -1); # Add to d#IN
-          batch_d#OUT#_alpha[_nn_k]+=dot(OUT#_tmp,OUT#_hat[_nn_k*OUT#_whd,OUT#_whd]);
-          batch_d#OUT#_beta[_nn_k]+=sum(OUT#_tmp);
-          OUT#_tmp = IN#[_nn_k*OUT#_whd,OUT#_whd]; # One channel of IN
-          batch_#OUT#_avg[_nn_k]+=avg(OUT#_tmp);
-          batch_#OUT#_var[_nn_k]+=var(OUT#_tmp);
-        );
-      ):( # Global normalization
-        d#IN+=d#OUT*(OUT#_alpha[0]/(OUT#_std[0] + nn_eps));
-        batch_d#OUT#_alpha+=dot(d#OUT,OUT#_hat);
-        batch_d#OUT#_beta+=sum(d#OUT);
-        batch_#OUT#_avg+=avg(IN#);
-        batch_#OUT#_var+=var(IN#);
-      );
-    );
-
-    nn_normalize_end_backward(OUT) = (
-      merge(batch_d#OUT#_alpha,+);
-      merge(batch_d#OUT#_beta,+);
-      merge(batch_#OUT#_avg,+);
-      merge(batch_#OUT#_var,+);
-      batch_d#OUT#_alpha/=nn_batch_size;
-      batch_d#OUT#_beta/=nn_batch_size;
-      batch_#OUT#_avg/=nn_batch_size;
-      batch_#OUT#_var/=nn_batch_size;
-    );
-
-    nn_normalize_update(P,O,learning_mode) = (
-      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.01:1);
-
-      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
-        const P#_ind_m = $""P#_m;
-        learning_mode&1?(
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          nn_optimizer_#O#_update(P#_alpha,0);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind);
-        );
-        learning_mode&2?(
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          nn_optimizer_#O#_update(P#_beta,0);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
-        );
-      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
-        const P#_ind_m = $""P#_m;
-        const P#_ind_m2 = $""P#_m2;
-        learning_mode&1?(
-          d#P#_alpha_m = crop(##P#_ind_m,0,1);
-          d#P#_alpha_m2 = crop(##P#_ind_m2,0,1);
-          nn_optimizer_#O#_update(P#_alpha,0);
-          draw(##P#_ind_m,d#P#_alpha_m,0,0,1,h##P#_ind_m);
-          draw(##P#_ind_m2,d#P#_alpha_m2,0,0,1,h##P#_ind_m2);
-        );
-        learning_mode&2?(
-          d#P#_beta_m = crop(##P#_ind_m,1,1);
-          d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
-          nn_optimizer_#O#_update(P#_beta,0);
-          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
-          draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
-        );
-      );
-
-      learning_mode&1?draw(##P#_ind,P#_alpha,0,0,1,h##P#_ind);
-      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
     # patchdown2d: 2D downscale by patch.
@@ -30116,7 +30123,7 @@ nn_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_append : out,in0,in1,axis={ x | y | z | c }
@@ -30146,7 +30153,7 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${nout}_backward="nn_append_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_avgpool2d : out,in,_patch_size>1
@@ -30174,7 +30181,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_avgpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_avgpool3d : out,in,patch_size>1
@@ -30202,7 +30209,7 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_avgpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_check_layer : layer_name
@@ -30237,7 +30244,7 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
@@ -30298,7 +30305,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
                     "end(nn_conv2d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
@@ -30360,7 +30367,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                     "end(nn_conv3d_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_crop : out,in,x0,y0,z0,c0,x1,y1,z1,c1,_boundary_conditions
@@ -30393,7 +30400,7 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_crop_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_distance : out,in0,in1,_metric={ 0:Squared-L2 | p>0:Lp-norm }
@@ -30425,7 +30432,7 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_backward="nn_distance_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_div : out,in0,in1
@@ -30456,7 +30463,7 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
@@ -30483,7 +30490,7 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_dropout_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
@@ -30530,7 +30537,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                     "end(nn_fc_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_init : network_name
@@ -30540,7 +30547,7 @@ nn_init : check "isvarname(['$1'])"
   _nn_network,net=$1
   _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
    _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_${net}_previous_layer=
-  _${net}_init="$0 ${1--1} "
+  _${net}_init="$0 ${1--1}\n"
 
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
@@ -30563,7 +30570,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_input_backward("$nout,$out");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
@@ -30581,7 +30588,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','mp','normalize')
+      if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -30789,7 +30796,7 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
@@ -30819,7 +30826,7 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_maxpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_mul : out,in0,in1
@@ -30850,7 +30857,7 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${nout}_backward="nn_mul_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_nl : out,in,_activation
@@ -30888,47 +30895,42 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   fi
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,_normalization_mode,_learning_mode
-#@cli : Add a 'normalize' layer to the current network.
-#@cli : 'normalization_mode' can be { 0:Global parameters | 1:Channel-by-channel parameters }
+#@cli nn_batchnorm : out,in,_learning_mode
+#@cli : Add a 'batchnorm' layer to the current network (simplified batchnorm).
 #@cli : 'learning_mode' can be { 0:No learning | 1:Alpha only | 2:Beta only | 3:Alpha+beta }
-#@cli : Default values: 'normalization_mode=1' and 'learning_mode=3'.
-nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
+#@cli : Default values: 'learning_mode=3'.
+nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
-                      isbool(${3=1}) && # normalization_mode
-                      isint(${4=3},0,3) # learning_mode
+                      isint(${3=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  normalization_mode,learning_mode=${3-4}
-  s0,s1=global,channel-by-channel
+  learning_mode=$3
 
-  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"' "\
-         "and "${s$normalization_mode}" normalization."
+  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"'."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=normalize,
+  _${net}_layer_types.=batchnorm,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="normalization="${s$normalization_mode}", learning_mode="$learning_mode
+  _${nout}_properties="learning_mode="$learning_mode
   if !isint(${$nout})
-    (1,0,0,-1) # alpha,beta,running_avg,running_var
-    if $normalization_mode r. 100%,{[${_${nin}_size}][3]} fi # channel-by-channel normalization
+    (1,0,0,-1) r. 100%,{[${_${nin}_size}][3]} # alpha,beta,running_avg,running_var (for each channel)
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_mode"));"\
-                   "nn_normalize_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
-                    "nn_normalize_backward("$nout,$nin");"\
-                    "end(nn_normalize_end_backward("$nout"));"
+  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin"));"\
+                   "nn_batchnorm_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_batchnorm_init_backward("$nout,$nin"));"\
+                    "nn_batchnorm_backward("$nout,$nin");"\
+                    "end(nn_batchnorm_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_patchdown2d : out,in,_patch_size>1
@@ -30961,7 +30963,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                     "nn_patchdown2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_patchdown3d : out,in,_patch_size>1
@@ -30994,7 +30996,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                     "nn_patchdown3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_patchup2d : out,in,_patch_size>1
@@ -31023,7 +31025,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                     "nn_patchup2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_patchup3d : out,in,_patch_size>1
@@ -31052,7 +31054,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                     "nn_patchup3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_print
@@ -31086,7 +31088,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','mp','normalize')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -31119,7 +31121,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_rename_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
@@ -31152,7 +31154,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="begin(nn_reshape_init_backward("$nout,$nin"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
@@ -31188,7 +31190,7 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_resize_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_run : out,in,"command",_width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0
@@ -31223,7 +31225,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_backward="nn_run_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1-2},\"$3\",${4--1} "
+  _${net}_init.="$0 ${1-2},\"$3\",${4--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_save : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
@@ -31257,7 +31259,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize') siz+={${net}_$name,whds} fi
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm') siz+={${net}_$name,whds} fi
   }
   u $siz
 
@@ -31290,7 +31292,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${nout0}_backward="nn_split_backward("$nout0,$nout1,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out0
 
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:No | 1:Yes }
@@ -31319,7 +31321,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','normalize','trainer')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','trainer')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31359,7 +31361,7 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1} "
+  _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
 #@cli nn_trainer : out,in,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
@@ -31449,7 +31451,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','mp','normalize')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
@@ -37523,7 +37525,7 @@ demos : check "isint(${1=2},0,2)" check_display $0
     if $ind>0 +==[menu_ind] # Draw selection background
       $ind j.. [menu_bgcol],0,0,0,0,{$mb" && "$ind_clicked==$ind?0.6:1},. rm.
     fi
-    j. [menu_fgcol],0,0,0,0,1,[menu_opac]
+       j. [menu_fgcol],0,0,0,0,0.75,[menu_opac]
 
     if $mx>0
       +r3d[cursor3d] 1,1.3,0.6,{50*cos($|)}
