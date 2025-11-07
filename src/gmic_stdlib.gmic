@@ -28957,6 +28957,7 @@ nn_lib :
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
       const OUT#_whds = size(IN#);
+      OUT#_is_avg_var = i[##OUT#_ind,3]>=0; # Tell if OUT#_avg and OUT#_var are already set
       OUT#_alpha = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_avg = crop(##OUT#_ind,2,1);
@@ -28969,6 +28970,12 @@ nn_lib :
     );
 
     nn_batchnorm_forward(OUT,IN) = (
+      !OUT#_is_avg_var?(
+        OUT#_avg = avg(IN#);
+        OUT#_std = sqrt(var(IN#) + nn_eps);
+        OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
+        OUT#_std_whds = resize(OUT#_std,OUT#_whds);
+      );
       OUT# = IN# - OUT#_avg_whds;
       OUT#/=OUT#_std_whds;
       OUT#_hat = OUT#;
@@ -29007,8 +29014,8 @@ nn_lib :
     );
 
     nn_batchnorm_update(P,O,learning_mode) = (
-      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,0.1);
-      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,0.1);
+      draw(##P#_ind,batch_#P#_avg,2,0,1,h##P#_ind,P#_is_avg_var?0.1:1);
+      draw(##P#_ind,batch_#P#_var,3,0,1,h##P#_ind,P#_is_avg_var?0.1:1);
 
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         const P#_ind_m = $""P#_m;
@@ -30922,7 +30929,7 @@ nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="learning_mode="$learning_mode
   if !isint(${$nout})
-    (1,0,0,1) r. 100%,{[${_${nin}_size}][3]} # alpha,beta,running_avg,running_var (for each channel)
+    (1,0,0,-1) r. 100%,{[${_${nin}_size}][3]} # alpha,beta,running_avg,running_var (for each channel)
     => $nout
   fi
   _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin"));"\
