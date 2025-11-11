@@ -14816,7 +14816,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   const char *misspelled = 0;
                   char *const posb = std::strchr(name,'[');
                   if (posb) *posb = 0; // Discard selection from the command name
-                  int dmin = 4;
+                  int dmin = 3;
                   // Look for a built-in command.
                   for (unsigned int l = 0; l<sizeof(builtin_command_names)/sizeof(char*); ++l) {
                     const char *const c = builtin_command_names[l];
