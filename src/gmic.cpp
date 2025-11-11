@@ -14811,27 +14811,29 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                         "Command 'input': Unknown filename '%s'.",
                         gmic_argument_text());
                 else {
-                  CImg<char>::string(filename).move_to(name);
-                  const unsigned int foff = (*name=='+' || *name=='-');
                   const char *misspelled = 0;
-                  char *const posb = std::strchr(name,'[');
-                  if (posb) *posb = 0; // Discard selection from the command name
-                  int dmin = 3;
-                  // Look for a built-in command.
-                  for (unsigned int l = 0; l<sizeof(builtin_command_names)/sizeof(char*); ++l) {
-                    const char *const c = builtin_command_names[l];
-                    if (c) {
-                      const int d = levenshtein(c,name.data() + foff);
-                      if (d<dmin) { dmin = d; misspelled = builtin_command_names[l]; }
+                  if (callstack.size()<2) {
+                    CImg<char>::string(filename).move_to(name);
+                    const unsigned int foff = (*name=='+' || *name=='-');
+                    char *const posb = std::strchr(name,'[');
+                    if (posb) *posb = 0; // Discard selection from the command name
+                    int dmin = 3;
+                    // Look for a built-in command.
+                    for (unsigned int l = 0; l<sizeof(builtin_command_names)/sizeof(char*); ++l) {
+                      const char *const c = builtin_command_names[l];
+                      if (c) {
+                        const int d = levenshtein(c,name.data() + foff);
+                        if (d<dmin) { dmin = d; misspelled = builtin_command_names[l]; }
+                      }
                     }
+                    // Look for a custom command.
+                    for (unsigned int i = 0; i<gmic_comslots; ++i)
+                      cimglist_for(command_names[i],l) {
+                        const char *const c = command_names[i][l].data();
+                        const int d = levenshtein(c + (*c=='+'?1:0),name.data() + foff);
+                        if (d<dmin) { dmin = d; misspelled = command_names[i][l].data(); }
+                      }
                   }
-                  // Look for a custom command.
-                  for (unsigned int i = 0; i<gmic_comslots; ++i)
-                    cimglist_for(command_names[i],l) {
-                      const char *const c = command_names[i][l].data();
-                      const int d = levenshtein(c + (*c=='+'?1:0),name.data() + foff);
-                      if (d<dmin) { dmin = d; misspelled = command_names[i][l].data(); }
-                    }
                   if (misspelled)
                     error(true,0,0,
                           "Unknown command or filename '%s'; did you mean '%s'?",
