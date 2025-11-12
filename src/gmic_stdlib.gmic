@@ -10368,7 +10368,7 @@ _select :
     fi
     =>[^] $nm
   }
-  if $w_norm0<0 w 0 else w[] -1,-1,$w_norm0 fi
+  if $w_norm0<0 w 0 elif {*} w[] -1,-1,$w_norm0 fi
   cursor[0] 1
 
 #@cli serialize : _datatype,_is_compressed={ 0:No | 1:Yes },_store_names={ 0:No | 1:Yes } : (+)
@@ -28972,7 +28972,7 @@ nn_lib :
     nn_batchnorm_forward(OUT,IN) = (
       !OUT#_is_avg_var?(
         OUT#_avg = avg(IN#);
-        OUT#_std = std(IN#);
+        OUT#_std = sqrt(var(IN#) + nn_eps);
         OUT#_avg_whds = resize(OUT#_avg,OUT#_whds);
         OUT#_std_whds = resize(OUT#_std,OUT#_whds);
       );
@@ -30252,7 +30252,8 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization }.
+#@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
 # 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
@@ -30266,7 +30267,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
                    isint(${8=1},0,3) && # boundary_conditions
                    isint(${9=3},0,3) && # learning_mode
                    ${10=0}>=0 && # weight_decay
-                   isint(${11=3},0,3) # initialization
+                   isint(${11=3},0,4) # initialization
                    "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
@@ -30293,6 +30294,8 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
       f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
@@ -30313,7 +30316,8 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Add a 'conv3d' layer (3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
 # 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
@@ -30327,7 +30331,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                    isint(${8=1},0,3) && # boundary_conditions
                    isint(${9=3},0,3) && # learning_mode
                    ${10=0}>=0 && # weight_decay
-                   isint(${11=3},0,3) # initialization
+                   isint(${11=3},0,4) # initialization
                    "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
@@ -30355,6 +30359,8 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
       f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
@@ -30496,7 +30502,8 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+# 4:Residual He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                isvarname(s1) && # out
@@ -30504,7 +30511,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                isint($3,1) && # nb_channels
                isint(${4=3},0,3) && # learning_mode
                ${5=0}>=0 && # weight_decay
-               isint(${6=3},0,3) # initialization
+               isint(${6=3},0,4) # initialization
                "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
@@ -30526,6 +30533,8 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
       f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
     fi
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
@@ -39774,14 +39783,13 @@ x_mandelbrot : skip ${1=0},${2=0.317},${3=0.03} check_display $0
       rm[0] mv. 0 # Validate new coordinates
     fi
     rm. # Delete latest rendering
-    if {*,C} # If 'C' key has been pressed
+    if {*,-C} # If 'C' key has been pressed
       if $1 e "Julia set, at c = ("{0,@0-1}")-("{0,@2-3}"), with c0 = ($2,$3)."
       else e "Mandelbrot set, at c = ("{0,@0-1}")-("{0,@2-3}")."
       fi
     fi
-    if !{*}" || "{*,ESC}" || "{*,Q} break fi
-    wait -1
-  while 1 rm w 0
+  while {*}" && "!{*,ESC}" && "!{*,Q}
+  rm w 0
 
 _x_mandelbrot_coords :
   if $1 (-2;-2;2;2) else (-2.1;-1.5;1.2;1.5) fi
@@ -43207,7 +43215,7 @@ fx_logo : skip "${1= }"
 #@gui : <small><samp>David Tschumperlé,\n Laboratoire GREYC (CNRS UMR 6072), Equipe Image,\n
 #@gui : 6 Bd du Maréchal Juin,\n 14050 Caen Cedex / France.</samp></small>"}
 #@gui : note = note{"\nYou can also"}
-#@gui : note = note{"<center><a href="https://bit.ly/kofi_gmic"><img src="data:image/png;base64,\
+#@gui : note = note{"<center><a href="https://ko-fi.com/gmic_eu"><img src="data:image/png;base64,\
 # iVBORw0KGgoAAAANSUhEUgAAAP4AAABACAYAAAA6VspUAAASHHpUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjapZpZlls5jobfuYpaAmeAyyEJ8pzeQ\
 # S+/P1CyK+30Q2V1KC0prq44YPgHRobzv/9zw7/4qUV6qE20j94jP3XUkSdvNH5+5ntOsb7n93PP97P06/VQv9dj5lLhtXx+1f69/8f19HOAz8vkXfvLQL\
 # q/H6xfPxjfGbL+NlD+vBRfkb+370DjO1DJnw/Sd4D52VbsQ+WvW1jfrdmPnejnX/Cnqr8u+2+/C9Gzxjwl51NSiTyX8l1A8X8tlMkb4TlzEwvmBr9Sea4\
