@@ -29459,6 +29459,10 @@ nn_lib :
       const OUT#_f_spectrum = OUT#_is_c?1:OUT#_spectrum;
       OUT#_gamma = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
+      OUT#_gamma_whds = resize(OUT#_gamma,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+      OUT#_beta_whds = resize(OUT#_beta,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
     );
 
     nn_layernorm_forward(OUT,IN) = (
@@ -29474,11 +29478,6 @@ nn_lib :
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
       OUT#_var_whds+=nn_eps;
       OUT#_hat/=sqrt(OUT#_var_whds);
-
-      OUT#_gamma_whds = resize(OUT#_gamma,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
-                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_beta_whds = resize(OUT#_beta,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
-                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
       OUT# = OUT#_hat*OUT#_gamma_whds;
       OUT#+=OUT#_beta_whds;
     );
@@ -30610,7 +30609,7 @@ nn_layernorm : check "s1 = ['$1']; s2 = ['$2'];
     (1,0) r. 100%,{[${_${nin}_size}][3]} # gamma,beta
     => $nout
   fi
-  _${nout}_forward="begin(nn_layernorm_init_forward("$nout,$nin"));"\
+  _${nout}_forward="begin(nn_layernorm_init_forward("$nout,$nin,1,1,0,0"));"\
                    "nn_layernorm_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_layernorm_init_backward("$nout,$nin"));"\
                     "nn_layernorm_backward("$nout,$nin");"\
