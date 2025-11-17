@@ -16025,68 +16025,6 @@ _match_histogram :
   }
   rm.
 
-#@cli match_icp : [reference_image],_precision>0,_transformation_variable
-#@cli : Transform selected set of d-dimensional vectors to match specified set of reference vectors, \
-# using ICP (*Iterative Closest Point*) algorithm.
-#@cli : A description of ICP is available at <https://en.wikipedia.org/wiki/Iterative_closest_point>.
-#@cli : Return the L2 alignment error.
-#@cli : Default values: 'precision=1e-2' and 'transformation_variable=(undefined)'.
-#@cli : sample lena,earth +match_icp[0] [1]
-match_icp : check ${"is_image_arg $1"}" && ${2=1e-2}>0" skip "${3=}"
-  e[^-1] "Match vector set$? with reference vector set $1, using ICP with precision $2.\n"
-  pass$1
-  foreach[^-1] {
-    w,h,d,s={w},{h},{d},{s}
-    pass. mv. 0 # [0]: reference set, [1]: current set
-    if "['$3']!=0" +store. img fi
-    match_pca. .. # Pre-normalize for better initial estimate
-
-    # Iterate ICP steps.
-    old_err=inf
-    repeat inf {
-
-      # For each vector, find nearest reference vector.
-      100%,100%,100%,4,"*
-        P = I(#1);
-        distmin = pmin = qmin = rmin = inf;
-        repeat (d#0,r,
-          repeat (h#0,q,
-            repeat (w#0,p,
-              dist = norm(I(#0,p,q,r) - P);
-              dist<distmin?(distmin = dist; pmin = p; qmin = q; rmin = r);
-            );
-          );
-        );
-        [ pmin,qmin,rmin,distmin ]"
-
-      s. c,-3
-      err:=is/whd rm. # Mean error
-      e "\r  > Iteration "$>": Error = "{_$err}
-      if !$err" || "abs($err-$old_err)<1e-3 rm. break fi
-      old_err=$err
-      +warp[0] .,0,0 rm..
-      _match_icp[-2,-1]
-      m*[-2,-1] r. $s,{h/$s},1,1,-1 permute. yzcx r. $w,$h,$d,$s,-1
-    }
-    k.
-    if "['$3']!=0" $img rv +_match_icp $3={^} rm[0,-2,-1] fi # Output linear transformation
-    u $err
-  }
-  rm.
-
-# Compute linear transformation between two sets of paired vectors.
-# [-2] : Set of vectors.
-# [-1] : Corresponding set of reference vectors.
-_match_icp :
-  N,s:=whd,s
-  permute. cxyz y. # Unrolled (i0_ref_k,i1_ref_k,...)
-  l.. { # Generate matrix for the linear system
-    r 1,{whd},1,100%,-1 permute cyxz 1,100%,1,1,1 a x
-    r 100%,{$s*$N},1,1 r {($s+1)^2},100%,1,1,0 r {$s*($s+1)},{($s+1)*$N},1,1,-1
-    s y rm[$s--1:{$s+1}] a y
-  }
-  solve. ..
-
 #@cli match_pca : [reference_image],_color_channels
 #@cli : Transfer mean and covariance matrix of specified vector-valued reference image to selected images.
 #@cli : Argument 'color channels' is the same as with command 'apply_channels'.
