@@ -14207,17 +14207,17 @@ eigen2tensor :
 # R<=180?255*abs(cos(c+200*(x/w-0.5)*(y/h-0.5))):850*(a%(0.1*(c+1)))"
 #@cli : $$
 
-#@cli icp : [reference],_affine_mode,_precision>0
+#@cli icp : [reference],_affine_mode,_precision>0,_iter_max>=0
 #@cli : Apply affine transformation on vector-valued points of selected images, to match specified set of reference \
 # vectors, using the ICP algorithm (*Iterative Closest Point*).
 #@cli : A description of ICP is available at <https://en.wikipedia.org/wiki/Iterative_closest_point>.
 #@cli : Argument 'affine_mode' tells about the type of affine transform applied. \
 # It can be: { 0:Free | 1:Rotation+Scaling | 2:Rotation-Only }.
-#@cli : Default values: 'affine_mode=0' and 'precision=1e-3'.
-icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
+#@cli : Default values: 'affine_mode=0', 'precision=1e-3' and 'iter_max=1000'.
+icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0 && isint(${4=1000},0)"
   s0,s1,s2=free,rotation+scaling,rotation-only
-  e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm, affine mode '"${s$2}"' "\
-         "and precision $3."
+  e[^-1] "Transform vector set$? to match reference set $1, with ICP algorithm, affine mode '"${s$2}"', "\
+         "precision $3 and $4 max iterations."
   sel=$[] pass$1 0 r. {whd},1,1,100%,-1 dim:=s
   +r. 1,1,1,100%,2 store. ref_avg if $2<2 ref_std:=id fi
   foreach[^-1] {
@@ -14235,6 +14235,7 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
     eval "
       const affine_mode = $2;
       const precision = $3;
+      const iter_max = $4;
       const dim = $dim;
       const nb = w#0;
       const dim1 = dim + 1;
@@ -14249,7 +14250,7 @@ icp : check ${"is_image_arg $1"}" && isint(${2=0},0,2) && ${3=1e-3}>0"
       R = crop(#1);
       ONE = vector(#nb,1);
 
-      repeat (1000,
+      repeat (iter_max,
         # Find nearest correspondences.
         Q = index(P,R,dim,0,1);
 
