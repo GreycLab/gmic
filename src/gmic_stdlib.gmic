@@ -30176,6 +30176,41 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
+#@cli nn_batchnorm : out,in,_learning_mode
+#@cli : Add a 'batchnorm' layer to the current network (simplified batchnorm).
+#@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
+#@cli : Default values: 'learning_mode=3'.
+nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
+                      isvarname(s1) && # out
+                      (isvarname(s2) || s2=='.') && # in
+                      isint(${3=3},0,3) # learning_mode
+                      "
+  net,out=$_nn_network,$1
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${net}_$in
+  learning_mode=$3
+
+  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=batchnorm,
+  _${nout}_size=${_${nin}_size}
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="learning_mode="$learning_mode
+  if !isint(${$nout})
+    (1,0,0,-1) r. 100%,{[${_${nin}_size}][3]} # gamma,beta,running_avg,running_var (for each channel)
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin"));"\
+                   "nn_batchnorm_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_batchnorm_init_backward("$nout,$nin"));"\
+                    "nn_batchnorm_backward("$nout,$nin");"\
+                    "end(nn_batchnorm_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _${net}_previous_layer=$out
+
 #@cli nn_check_layer : layer_name
 #@cli : Check that layer with specified name exists in the current network.
 nn_check_layer :
@@ -30866,41 +30901,6 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
     _${nout}_forward.="nn_nl_forward("$nout,$nin,$activation");"
     _${nout}_backward="nn_nl_backward("$nout,$nin,$activation");"
   fi
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
-
-#@cli nn_batchnorm : out,in,_learning_mode
-#@cli : Add a 'batchnorm' layer to the current network (simplified batchnorm).
-#@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
-#@cli : Default values: 'learning_mode=3'.
-nn_batchnorm : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
-                      (isvarname(s2) || s2=='.') && # in
-                      isint(${3=3},0,3) # learning_mode
-                      "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  learning_mode=$3
-
-  e[^-1] "[nn_lib] Add 'batchnorm' layer '"$out"' to network '"$net"', with input '"$in"'."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=batchnorm,
-  _${nout}_size=${_${nin}_size}
-  _${nout}_input=$in
-  _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="learning_mode="$learning_mode
-  if !isint(${$nout})
-    (1,0,0,-1) r. 100%,{[${_${nin}_size}][3]} # gamma,beta,running_avg,running_var (for each channel)
-    => $nout
-  fi
-  _${nout}_forward="begin(nn_batchnorm_init_forward("$nout,$nin"));"\
-                   "nn_batchnorm_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_batchnorm_init_backward("$nout,$nin"));"\
-                    "nn_batchnorm_backward("$nout,$nin");"\
-                    "end(nn_batchnorm_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
