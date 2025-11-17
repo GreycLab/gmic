@@ -30581,6 +30581,45 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
+#@cli nn_layernorm : out,in,normalizing_axes,_learning_mode
+#@cli : Add a 'layernorm' layer to the current network.
+#@cli : 'normalizing_axes' can be { x | y | z | c | xy | xz | xc | yz | yc | xyz | xyc | xzc | yzc | xyzc }.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
+#@cli : Default values: 'learning_mode=3'.
+nn_layernorm : check "s1 = ['$1']; s2 = ['$2'];
+                      isvarname(s1) && # out
+                      (isvarname(s2) || s2=='.') && # in
+                      isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
+                                  'xyz','xyc','xzc','yzc','xyzc') && # normalizing_axes
+                      isint(${4=3},0,3) # learning_mode
+                      "
+  net,out=$_nn_network,$1
+  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${net}_$in
+  normalizing_axes,learning_mode=${3,4}
+
+  e[^-1] "[nn_lib] Add 'layernorm' layer '"$out"' to network '"$net"', with input '"$in"' and "\
+         "normalizing axes '"$normalizing_axes"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=layernorm,
+  _${nout}_size=${_${nin}_size}
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="learning_mode="$learning_mode
+  if !isint(${$nout})
+    (1,0) r. 100%,{[${_${nin}_size}][3]} # gamma,beta
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_layernorm_init_forward("$nout,$nin"));"\
+                   "nn_layernorm_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_layernorm_init_backward("$nout,$nin"));"\
+                    "nn_layernorm_backward("$nout,$nin");"\
+                    "end(nn_layernorm_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _${net}_previous_layer=$out
+
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network saved as a .gmz file.
 #@cli : Neural network files can be only loaded in .gmz format.
@@ -30596,7 +30635,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
+      if isin('$type','conv2d','conv3d','fc','mp','batchnorm','layernorm')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31061,7 +31100,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','layernorm')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -31232,7 +31271,9 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','batchnorm') siz+={${net}_$name,whds} fi
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','layernorm')
+      siz+={${net}_$name,whds}
+    fi
   }
   u $siz
 
@@ -31294,7 +31335,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','trainer')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','layernorm','trainer')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31424,7 +31465,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','mp','batchnorm')
+    if isin('$type','conv2d','conv3d','fc','mp','batchnorm','layernorm')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
