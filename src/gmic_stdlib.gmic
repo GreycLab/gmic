@@ -29443,18 +29443,30 @@ nn_lib :
 
     # layernorm: Layer normalization.
     #--------------------------------
-    nn_layernorm_init_forward(OUT,IN) = (
+    nn_layernorm_init_forward(OUT,IN,is_x,is_y,is_z,is_c) = (
       const OUT#_ind = $""#OUT;
+      const OUT#_is_x = is_x;
+      const OUT#_is_y = is_y;
+      const OUT#_is_z = is_z;
+      const OUT#_is_c = is_c;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
+      const OUT#_f_width = OUT#_is_x?1:OUT#_width;
+      const OUT#_f_height = OUT#_is_y?1:OUT#_height;
+      const OUT#_f_depth = OUT#_is_z?1:OUT#_depth;
+      const OUT#_f_spectrum = OUT#_is_c?1:OUT#_spectrum;
       OUT#_alpha = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
     );
 
     nn_layernorm_forward(OUT,IN) = (
-      OUT# = expr('I = I; (I - avg(I))/(1e-8 + std(I))',w,h,d,s,IN#);
+      OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                        OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2);
+      OUT#_avg_whds = resize(OUT#_avg,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+                            OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+      OUT#-=OUT#_avg_whds;
     );
 
     # maxpool2d : 2D max pooling.
