@@ -29618,6 +29618,7 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
+      const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
       const OUT#_is_x = is_x;
       const OUT#_is_y = is_y;
       const OUT#_is_z = is_z;
@@ -29626,6 +29627,7 @@ nn_lib :
       const OUT#_f_height = OUT#_is_y?1:OUT#_height;
       const OUT#_f_depth = OUT#_is_z?1:OUT#_depth;
       const OUT#_f_spectrum = OUT#_is_c?1:OUT#_spectrum;
+      const OUT#_f_whds = OUT#_f_width*OUT#_f_height*OUT#_f_depth*OUT#_f_spectrum;
       OUT#_gamma = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_gamma_whds = resize(OUT#_gamma,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
@@ -29640,15 +29642,35 @@ nn_lib :
       OUT#_avg_whds = resize(OUT#_avg,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
       OUT#_hat = IN# - OUT#_avg_whds;
-      OUT#_var = resize(OUT#_hat^2, # average of squared differences with the input mean
-                        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                        OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2);
-      OUT#_var_whds = resize(OUT#_var,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+      OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
+                             OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                             OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)+=nn_eps);
+      OUT#_std_whds = resize(OUT#_std,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_var_whds+=nn_eps;
-      OUT#_hat/=sqrt(OUT#_var_whds);
+      OUT#_hat/=OUT#_std_whds;
       OUT# = OUT#_hat*OUT#_gamma_whds;
       OUT#+=OUT#_beta_whds;
+    );
+
+    nn_normalize_init_backward(OUT,IN) = (
+      batch_d#OUT#_gamma = vector(#size(OUT#_avg));
+      batch_d#OUT#_beta = vector(#size(OUT#_avg));
+    );
+
+    nn_normalize_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=0;
+      batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                  OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)*=(OUT#_whds/OUT#_f_whds));
+      batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                 OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)*=(OUT#_whds/OUT#_f_whds));
+    );
+
+    nn_normalize_end_backward(OUT) = (
+      merge(batch_d#OUT#_gamma,+);
+      merge(batch_d#OUT#_beta,+);
+      batch_d#OUT#_gamma/=nn_batch_size;
+      batch_d#OUT#_beta/=nn_batch_size;
     );
 
     # patchdown2d: 2D downscale by patch.
