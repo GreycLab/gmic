@@ -29623,29 +29623,40 @@ nn_lib :
       const OUT#_is_y = is_y;
       const OUT#_is_z = is_z;
       const OUT#_is_c = is_c;
-      const OUT#_f_width = OUT#_is_x?1:OUT#_width;
-      const OUT#_f_height = OUT#_is_y?1:OUT#_height;
-      const OUT#_f_depth = OUT#_is_z?1:OUT#_depth;
-      const OUT#_f_spectrum = OUT#_is_c?1:OUT#_spectrum;
+
+      # Dimensions of normalized feature.
+      const OUT#_f_width = OUT#_is_x?OUT#_width:1;
+      const OUT#_f_height = OUT#_is_y?OUT#_height:1;
+      const OUT#_f_depth = OUT#_is_z?OUT#_depth:1;
+      const OUT#_f_spectrum = OUT#_is_c?OUT#_spectrum:1;
       const OUT#_f_whds = OUT#_f_width*OUT#_f_height*OUT#_f_depth*OUT#_f_spectrum;
+
+      # Dimensions of complementary axes.
+      const OUT#_a_width = OUT#_is_x?1:OUT#_width;
+      const OUT#_a_height = OUT#_is_y?1:OUT#_height;
+      const OUT#_a_depth = OUT#_is_z?1:OUT#_depth;
+      const OUT#_a_spectrum = OUT#_is_c?1:OUT#_spectrum;
+      const OUT#_a_whds = OUT#_a_width*OUT#_a_height*OUT#_a_depth*OUT#_a_spectrum;
+      const OUT#_nb_features = OUT#_whds/OUT#_a_whds;
+
       OUT#_gamma = crop(##OUT#_ind,0,1);
       OUT#_beta = crop(##OUT#_ind,1,1);
-      OUT#_gamma_whds = resize(OUT#_gamma,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+      OUT#_gamma_whds = resize(OUT#_gamma,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_beta_whds = resize(OUT#_beta,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+      OUT#_beta_whds = resize(OUT#_beta,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
     );
 
     nn_normalize_forward(OUT,IN) = (
       OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                        OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2);
-      OUT#_avg_whds = resize(OUT#_avg,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+                        OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2);
+      OUT#_avg_whds = resize(OUT#_avg,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
       OUT#_hat = IN# - OUT#_avg_whds;
       OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                             OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)+=nn_eps);
-      OUT#_std_whds = resize(OUT#_std,OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,
+                             OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2)+=nn_eps);
+      OUT#_std_whds = resize(OUT#_std,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
       OUT#_hat/=OUT#_std_whds;
       OUT# = OUT#_hat*OUT#_gamma_whds;
@@ -29660,11 +29671,11 @@ nn_lib :
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#OUT#_tilde = d#OUT*OUT#_gamma_whds;
-      d#IN+=d#OUT#_tilde/OUT#_std_whds;
+      d#IN+=(d#OUT#_tilde)/OUT#_std_whds;
       batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                  OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)*=(OUT#_whds/OUT#_f_whds));
+                                  OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2)*=OUT#_nb_features);
       batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                 OUT#_f_width,OUT#_f_height,OUT#_f_depth,OUT#_f_spectrum,2)*=(OUT#_whds/OUT#_f_whds));
+                                 OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2)*=OUT#_nb_features);
     );
 
     nn_normalize_end_backward(OUT) = (
@@ -29672,6 +29683,41 @@ nn_lib :
       merge(batch_d#OUT#_beta,+);
       batch_d#OUT#_gamma/=nn_batch_size;
       batch_d#OUT#_beta/=nn_batch_size;
+    );
+
+    nn_normalize_update(P,O,learning_mode) = (
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        const P#_ind_m = $""P#_m;
+        learning_mode&1?(
+          d#P#_gamma_m = crop(##P#_ind_m,0,1);
+          nn_optimizer_#O#_update(P#_gamma,0);
+          draw(##P#_ind_m,d#P#_gamma_m,0,0,1,h##P#_ind);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
+        );
+      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
+        const P#_ind_m = $""P#_m;
+        const P#_ind_m2 = $""P#_m2;
+        learning_mode&1?(
+          d#P#_gamma_m = crop(##P#_ind_m,0,1);
+          d#P#_gamma_m2 = crop(##P#_ind_m2,0,1);
+          nn_optimizer_#O#_update(P#_gamma,0);
+          draw(##P#_ind_m,d#P#_gamma_m,0,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_gamma_m2,0,0,1,h##P#_ind_m2);
+        );
+        learning_mode&2?(
+          d#P#_beta_m = crop(##P#_ind_m,1,1);
+          d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
+          nn_optimizer_#O#_update(P#_beta,0);
+          draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind_m);
+          draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
+        );
+      );
+      learning_mode&1?draw(##P#_ind,P#_gamma,0,0,1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
     # patchdown2d: 2D downscale by patch.
@@ -30955,7 +31001,6 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   axes,learning_mode=${3,4}
   is_x,is_y,is_z,is_c:="s = ['"$axes"'];
     [ find(s,_'x')>=0, find(s,_'y')>=0, find(s,_'z')>=0, find(s,_'c')>=0 ]"
-
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "axes '"$axes"'."
   _${net}_layer_names.=$out,
