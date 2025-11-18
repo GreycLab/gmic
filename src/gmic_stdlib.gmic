@@ -29564,12 +29564,16 @@ nn_lib :
 
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_g_tilde = d#OUT*OUT#_gamma_whds;
-      OUT#_avg_g_tilde = resize(OUT#_g_tilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+      OUT#_gtilde = d#OUT*OUT#_gamma_whds;
+      OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                 OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2);
-      OUT#_avg_g_tilde_whds = resize(OUT#_avg_g_tilde,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
+      OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      d#IN+=(OUT#_g_tilde - OUT#_avg_g_tilde_whds)/OUT#_std_whds;
+      OUT#_avg_gtilde_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                    OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2);
+      OUT#_avg_gtilde_hat_whds = resize(OUT#_avg_gtilde_hat,OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,
+                                        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+      d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
 
       batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                   OUT#_a_width,OUT#_a_height,OUT#_a_depth,OUT#_a_spectrum,2)*=OUT#_f_whds);
