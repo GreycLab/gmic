@@ -29514,7 +29514,7 @@ nn_lib :
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
-      const OUT#_normalization_type = normalization_type; # 0: Avg/std, 1:RMS
+      const OUT#_normalization_type = normalization_type; # 0: Avg_std, 1:RMS
 
       # Dimensions of complementary axes.
       const OUT#_ca_width = w_ca;
@@ -29544,7 +29544,7 @@ nn_lib :
         OUT#_hat = IN#/OUT#_norm_whds;
         OUT# = OUT#_hat*OUT#_gamma_whds;
 
-      ):( # Avg/std-normalization
+      ):( # Avg_std-normalization
         OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                           OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
         OUT#_avg_whds = resize(OUT#_avg,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
@@ -29575,7 +29575,7 @@ nn_lib :
                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
         d#IN+=(d#OUT - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
 
-      ):( # Avg/std-normalization
+      ):( # Avg_std-normalization
         OUT#_gtilde = d#OUT*OUT#_gamma_whds;
         OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
@@ -30863,7 +30863,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg/std | 1:RMS },\
+#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
@@ -30896,7 +30896,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   nout,nin=${net}_$out,${net}_$in
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
   if $normalization_type learning_mode&=1 fi # Disable Beta when RMS-normalization is enabled
-  s0,s1=avg/std,RMS
+  s0,s1=avg_std,rms
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
   _${net}_layer_names.=$out,
@@ -30904,7 +30904,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="axes="$axes", normalization_type="$s{$normalization_type}", learning_mode="$learning_mode
+  _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", learning_mode="$learning_mode
 
   w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
