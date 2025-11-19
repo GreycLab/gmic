@@ -29505,8 +29505,8 @@ nn_lib :
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
 
-    # normalize: Variance/mean normalization.
-    #----------------------------------------
+    # normalize: Variance/mean or RMS normalization.
+    #-----------------------------------------------
     nn_normalize_init_forward(OUT,IN,normalization_type,w_ca,h_ca,d_ca,s_ca) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
@@ -29536,13 +29536,14 @@ nn_lib :
     );
 
     nn_normalize_forward(OUT,IN) = (
-      OUT#_normalization_type?( # L2-normalization
+      OUT#_normalization_type?( # RMS-normalization
         OUT#_norm = sqrt(resize(IN#^2,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
         OUT#_norm_whds = resize(OUT#_norm,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
         OUT#_hat = IN#/OUT#_norm_whds;
         OUT# = OUT#_hat*OUT#_gamma_whds;
+
       ):( # Avg/std-normalization
         OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                           OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
@@ -29567,7 +29568,7 @@ nn_lib :
 
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_normalization_type?( # L2-normalization
+      OUT#_normalization_type?( # RMS-normalization
         0;
       ):( # Avg/std-normalization
         OUT#_gtilde = d#OUT*OUT#_gamma_whds;
@@ -30856,7 +30857,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg/std | 1:L2 },\
+#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg/std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
@@ -30888,8 +30889,8 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
-  if $normalization_type learning_mode&=1 fi # Disable Beta when L2-normalization is enabled
-  s0,s1=avg/std,L2
+  if $normalization_type learning_mode&=1 fi # Disable Beta when RMS-normalization is enabled
+  s0,s1=avg/std,RMS
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
   _${net}_layer_names.=$out,
