@@ -29507,23 +29507,19 @@ nn_lib :
 
     # normalize: Linear normalization.
     #---------------------------------
-    nn_normalize_init_forward(OUT,IN,is_x,is_y,is_z,is_c) = (
+    nn_normalize_init_forward(OUT,IN,w_ca,h_ca,d_ca,s_ca) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
-      const OUT#_is_x = is_x;
-      const OUT#_is_y = is_y;
-      const OUT#_is_z = is_z;
-      const OUT#_is_c = is_c;
 
       # Dimensions of complementary axes.
-      const OUT#_ca_width = OUT#_is_x?1:OUT#_width;
-      const OUT#_ca_height = OUT#_is_y?1:OUT#_height;
-      const OUT#_ca_depth = OUT#_is_z?1:OUT#_depth;
-      const OUT#_ca_spectrum = OUT#_is_c?1:OUT#_spectrum;
+      const OUT#_ca_width = w_ca;
+      const OUT#_ca_height = h_ca;
+      const OUT#_ca_depth = d_ca;
+      const OUT#_ca_spectrum = s_ca;
       const OUT#_ca_whds = OUT#_ca_width*OUT#_ca_height*OUT#_ca_depth*OUT#_ca_spectrum;
 
       # Dimension of normalized feature.
@@ -30863,8 +30859,6 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   axes,learning_mode=${3,4}
-  is_x,is_y,is_z,is_c:="s = ['"$axes"'];
-    [ find(s,_'x')>=0, find(s,_'y')>=0, find(s,_'z')>=0, find(s,_'c')>=0 ]"
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "axes '"$axes"'."
   _${net}_layer_names.=$out,
@@ -30873,11 +30867,18 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="axes="$axes", learning_mode="$learning_mode
+
+  w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
+    dim = ["${_${nout}_size}"];
+    [ find(axes,_'x')>=0?1:dim[0],
+      find(axes,_'y')>=0?1:dim[1],
+      find(axes,_'z')>=0?1:dim[2],
+      find(axes,_'c')>=0?1:dim[2] ]"
   if !isint(${$nout})
-    (1,0) r. 100%,{s=[${_${nin}_size}];($is_x?1:s[0])*($is_y?1:s[1])*($is_z?1:s[2])*($is_c?1:s[3])} # gamma,beta
+    (1,0) r. 100%,{$w_ca*$h_ca*$d_ca*$s_ca} # gamma,beta
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$is_x,$is_y,$is_z,$is_c"));"\
+  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$w_ca,$h_ca,$d_ca,$s_ca"));"\
                    "nn_normalize_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
                     "nn_normalize_backward("$nout,$nin");"\
