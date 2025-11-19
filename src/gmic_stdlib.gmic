@@ -29532,7 +29532,7 @@ nn_lib :
         OUT#_beta = crop(##OUT#_ind,1,1);
         OUT#_beta_whds = resize(OUT#_beta,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                 OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      )
+      );
     );
 
     nn_normalize_forward(OUT,IN) = (
@@ -29568,8 +29568,7 @@ nn_lib :
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_normalization_type?( # L2-normalization
-        batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
+        0;
       ):( # Avg/std-normalization
         OUT#_gtilde = d#OUT*OUT#_gamma_whds;
         OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
@@ -29587,6 +29586,8 @@ nn_lib :
         batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
       );
+      batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
     );
 
     nn_normalize_end_backward(OUT) = (
@@ -30853,7 +30854,8 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_normalization_type,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
+#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg/std | 1:L2 },\
+# _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
 # a Layernorm, an InstanceNorm, a GroupNorm, or a RMSNorm.
@@ -30864,7 +30866,6 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 # according to the channel values.
 #@cli : - 'axes=xyz' means each input channel of the input image is normalized independently, \
 # according to all (x,y,z) pixel values.
-#@cli : 'normalization_type' can be { 0: Avg/std-normalization | 1: L2-normalization }.
 #@cli : When different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
 # 'N' groups.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
@@ -30874,7 +30875,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
-                      isbool(${4=0}) && # normalization_type &&
+                      isbool(${4=0}) && # normalization_type
                       isint(${5=0},0) && # group_x
                       isint(${6=0},0) && # group_y
                       isint(${7=0},0) && # group_z
