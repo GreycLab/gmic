@@ -29555,14 +29555,14 @@ nn_lib :
         OUT#_std_whds = resize(OUT#_std,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
         OUT#_hat/=OUT#_std_whds;
+        OUT# = OUT#_hat*OUT#_gamma_whds;
+        OUT#+=OUT#_beta_whds;
       );
-      OUT# = OUT#_hat*OUT#_gamma_whds;
-      OUT#+=OUT#_beta_whds;
     );
 
     nn_normalize_init_backward(OUT,IN) = (
-      batch_d#OUT#_gamma = vector(#size(OUT#_avg));
-      batch_d#OUT#_beta = vector(#size(OUT#_avg));
+      batch_d#OUT#_gamma = vector(##OUT#_ca_whds);
+      batch_d#OUT#_beta = vector(##OUT#_ca_whds);
     );
 
     nn_normalize_backward(OUT,IN) = (
@@ -29592,9 +29592,11 @@ nn_lib :
 
     nn_normalize_end_backward(OUT) = (
       merge(batch_d#OUT#_gamma,+);
-      merge(batch_d#OUT#_beta,+);
       batch_d#OUT#_gamma/=nn_batch_size;
-      batch_d#OUT#_beta/=nn_batch_size;
+      !OUT#_normalization_type?(
+        merge(batch_d#OUT#_beta,+);
+        batch_d#OUT#_beta/=nn_batch_size;
+      );
     );
 
     nn_normalize_update(P,O,learning_mode) = (
@@ -30886,6 +30888,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
+  if $normalization_type learning_mode&=1 fi # Disable Beta when L2-normalization is enabled
   s0,s1=avg/std,L2
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
