@@ -29507,13 +29507,14 @@ nn_lib :
 
     # normalize: Variance/mean normalization.
     #----------------------------------------
-    nn_normalize_init_forward(OUT,IN,w_ca,h_ca,d_ca,s_ca) = (
+    nn_normalize_init_forward(OUT,IN,normalization_type,w_ca,h_ca,d_ca,s_ca) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
+      const OUT#_normalization_type = normalization_type;
 
       # Dimensions of complementary axes.
       const OUT#_ca_width = w_ca;
@@ -29524,34 +29525,37 @@ nn_lib :
 
       # Dimension of normalized feature.
       const OUT#_f_whds = OUT#_whds/OUT#_ca_whds;
-
       OUT#_gamma = crop(##OUT#_ind,0,1);
-      OUT#_beta = crop(##OUT#_ind,1,1);
       OUT#_gamma_whds = resize(OUT#_gamma,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_beta_whds = resize(OUT#_beta,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                              OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+      !normalization_type?(
+        OUT#_beta = crop(##OUT#_ind,1,1);
+        OUT#_beta_whds = resize(OUT#_beta,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+      )
     );
 
     nn_normalize_forward(OUT,IN) = (
-      # OUT#_norm = sqrt(resize(IN#^2,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-      #                         OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
-      # OUT#_norm_whds = resize(OUT#_norm,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-      #                        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      # OUT#_hat = IN#/OUT#_norm_whds;
-      # OUT# = OUT#_hat*OUT#_gamma_whds;
-
-      OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                        OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-      OUT#_avg_whds = resize(OUT#_avg,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                             OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_hat = IN# - OUT#_avg_whds;
-      OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
-                             OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                             OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
-      OUT#_std_whds = resize(OUT#_std,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                             OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_hat/=OUT#_std_whds;
+      OUT#_normalization_type?( # L2-normalization
+        OUT#_norm = sqrt(resize(IN#^2,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                                OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
+        OUT#_norm_whds = resize(OUT#_norm,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+        OUT#_hat = IN#/OUT#_norm_whds;
+        OUT# = OUT#_hat*OUT#_gamma_whds;
+      ):( # Avg/std-normalization
+        OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                          OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+        OUT#_avg_whds = resize(OUT#_avg,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+        OUT#_hat = IN# - OUT#_avg_whds;
+        OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
+                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                               OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
+        OUT#_std_whds = resize(OUT#_std,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+        OUT#_hat/=OUT#_std_whds;
+      );
       OUT# = OUT#_hat*OUT#_gamma_whds;
       OUT#+=OUT#_beta_whds;
     );
@@ -29563,21 +29567,26 @@ nn_lib :
 
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_gtilde = d#OUT*OUT#_gamma_whds;
-      OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                               OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-      OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                                    OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      OUT#_avg_gtilde_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                   OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-      OUT#_avg_gtilde_hat_whds = resize(OUT#_avg_gtilde_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                                        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
+      OUT#_normalization_type?( # L2-normalization
+        batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
+      ):( # Avg/std-normalization
+        OUT#_gtilde = d#OUT*OUT#_gamma_whds;
+        OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+        OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+        OUT#_avg_gtilde_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                     OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+        OUT#_avg_gtilde_hat_whds = resize(OUT#_avg_gtilde_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                          OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+        d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
 
-      batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
-      batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
+        batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
+        batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                   OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
+      );
     );
 
     nn_normalize_end_backward(OUT) = (
@@ -30844,10 +30853,10 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
+#@cli nn_normalize : out,in,axes,_normalization_type,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
-# a Layernorm, an InstanceNorm, and a GroupNorm.
+# a Layernorm, an InstanceNorm, a GroupNorm, or a RMSNorm.
 #@cli : 'axes' defines the shape used to compute the mean/std of the normalization.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | xyz | xyc | xzc | yzc | xyzc }.
 #@cli : \nFor instance :
@@ -30855,33 +30864,36 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 # according to the channel values.
 #@cli : - 'axes=xyz' means each input channel of the input image is normalized independently, \
 # according to all (x,y,z) pixel values.
+#@cli : 'normalization_type' can be { 0: Avg/std-normalization | 1: L2-normalization }.
 #@cli : When different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
 # 'N' groups.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
-#@cli : Default values: 'learning_mode=3'.
+#@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
 nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
-                      isint(${4=0},0) && # group_x
-                      isint(${5=0},0) && # group_y
-                      isint(${6=0},0) && # group_z
-                      isint(${7=0},0) && # group_x
-                      isint(${8=3},0,3) # learning_mode
+                      isbool(${4=0}) && # normalization_type &&
+                      isint(${5=0},0) && # group_x
+                      isint(${6=0},0) && # group_y
+                      isint(${7=0},0) && # group_z
+                      isint(${8=0},0) && # group_x
+                      isint(${9=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  axes,group_x,group_y,group_z,group_c,learning_mode=${3-8}
+  axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
+  s0,s1=avg/std,L2
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "axes '"$axes"' and groups ("$group_x,$group_y,$group_z,$group_c")."
+         "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="axes="$axes", learning_mode="$learning_mode
+  _${nout}_properties="axes="$axes", normalization_type="$s{$normalization_type}", learning_mode="$learning_mode
 
   w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
@@ -30893,7 +30905,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
     (1,0) r. 100%,{$w_ca*$h_ca*$d_ca*$s_ca} # gamma,beta
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$w_ca,$h_ca,$d_ca,$s_ca"));"\
+  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$w_ca,$h_ca,$d_ca,$s_ca"));"\
                    "nn_normalize_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
                     "nn_normalize_backward("$nout,$nin");"\
