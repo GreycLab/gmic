@@ -30837,7 +30837,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_learning_mode
+#@cli nn_normalize : out,in,axes,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : 'axes' defines the shape used to compute the mean/std of the normalization.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | xyz | xyc | xzc | yzc | xyzc }.
@@ -30846,6 +30846,8 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 # according to the channel values.
 #@cli : - 'axes=xyz' means each input channel of the input image is normalized independently, \
 # according to all (x,y,z) pixel values.
+#@cli : When different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
+# 'N' groups.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
 #@cli : Default values: 'learning_mode=3'.
 nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
@@ -30853,14 +30855,18 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
-                      isint(${4=3},0,3) # learning_mode
+                      isin(${4=0},0) && # group_x
+                      isin(${5=0},0) && # group_y
+                      isin(${6=0},0) && # group_z
+                      isin(${7=0},0) && # group_x
+                      isint(${8=3},0,3) # learning_mode
                       "
   net,out=$_nn_network,$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
-  axes,learning_mode=${3,4}
-  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
-         "axes '"$axes"'."
+  axes,group_x,group_y,group_z,group_c,learning_mode=${3-8}
+  e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "axes '"$axes"' and groups ("$group_x,$group_y,$group_z,$group_c")."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
@@ -30870,10 +30876,10 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
 
   w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
-    [ find(axes,_'x')>=0?1:dim[0],
-      find(axes,_'y')>=0?1:dim[1],
-      find(axes,_'z')>=0?1:dim[2],
-      find(axes,_'c')>=0?1:dim[2] ]"
+    [ find(axes,_'x')>=0?1:$group_x?$group_x:dim[0],
+      find(axes,_'y')>=0?1:$group_y?$group_y:dim[1],
+      find(axes,_'z')>=0?1:$group_z?$group_z:dim[2],
+      find(axes,_'c')>=0?1:$group_c?$group_c:dim[2] ]"
   if !isint(${$nout})
     (1,0) r. 100%,{$w_ca*$h_ca*$d_ca*$s_ca} # gamma,beta
     => $nout
