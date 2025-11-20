@@ -28629,6 +28629,26 @@ nn_lib :
     nn_activation_zpsinz(z) = (z + 0.5*sin(2*pi*z));
     nn_activation_d_zpsinz(z) = (1 + pi*cos(2*pi*z));
 
+    # custom expression.
+    #-------------------
+    _nn_activation_custom(k) = (
+      !isvar(_nn_activation_custom_tab)?begin(
+        ref(expr('z = (x - 16384)/1024; z^2',32768),
+            _nn_activation_custom_tab);
+      );
+      size(k)?map(k,_nn_activation_custom_tab,1,1,1):_nn_activation_custom_tab[cut(k,0,32768)];
+    );
+
+    nn_activation_custom(z) = (
+      ref(round(1024*z+16384),_nn_custom_k);
+      _nn_activation_custom(_nn_custom_k);
+    );
+
+    nn_activation_d_custom(z) = (
+      ref(round(1024*z+16384),_nn_custom_k);
+      512*(_nn_activation_custom(_nn_custom_k + 1) - _nn_activation_custom(_nn_custom_k - 1));
+    );
+
     #---------
     # Trainer.
     #---------
