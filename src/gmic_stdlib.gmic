@@ -28912,7 +28912,7 @@ nn_lib :
 
     # conv2d: 2D convolutional layer.
     #--------------------------------
-    nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode) = (
+    nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $""#OUT;
       const OUT#_shrink = shrink;
       const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
@@ -28925,7 +28925,6 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
-      const OUT#_learning_mode = learning_mode;
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
@@ -29022,13 +29021,13 @@ nn_lib :
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
-    nn_conv2d_update(P,O) = (
-      nn_fc_update(#P,#O);
+    nn_conv2d_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
     );
 
     # conv3d: 3D convolutional layer.
     #--------------------------------
-    nn_conv3d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode) = (
+    nn_conv3d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $""#OUT;
       const OUT#_shrink = shrink;
       const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
@@ -29041,7 +29040,6 @@ nn_lib :
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
-      const OUT#_learning_mode = learning_mode;
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
@@ -29139,8 +29137,8 @@ nn_lib :
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
-    nn_conv3d_update(P,O) = (
-      nn_fc_update(#P,#O);
+    nn_conv3d_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
     );
 
     # crop : Crop layer.
@@ -29254,13 +29252,12 @@ nn_lib :
 
     # fc: Fully-connected layer.
     #---------------------------
-    nn_fc_init_forward(OUT,IN,learning_mode) = (
+    nn_fc_init_forward(OUT,IN) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = 1;
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = h##OUT#_ind;
-      const OUT#_learning_mode = learning_mode;
       OUT#_params = crop(##OUT#_ind,0,0,size(IN#),h##OUT#_ind);
       OUT#_biases = crop(##OUT#_ind,size(IN#),0,1,h##OUT#_ind);
     );
@@ -29293,15 +29290,15 @@ nn_lib :
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
-    nn_fc_update(P,O) = (
+    nn_fc_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         const P#_ind_m = $""P#_m;
-        P#_learning_mode&1?(
+        learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
           draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
         );
-        P#_learning_mode&2?(
+        learning_mode&2?(
           d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
           nn_optimizer_#O#_update(P#_biases,0);
           draw(##P#_ind_m,d#P#_biases_m,w##P#_ind - 1,0,1,h##P#_ind);
@@ -29309,14 +29306,14 @@ nn_lib :
       ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?( # rmsprop, adam, adamax
         const P#_ind_m = $""P#_m;
         const P#_ind_m2 = $""P#_m2;
-        P#_learning_mode&1?(
+        learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
           d#P#_params_m2 = crop(##P#_ind_m2,0,0,w##P#_ind - 1,h##P#_ind);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
           draw(##P#_ind_m,d#P#_params_m,0,0,w##P#_ind - 1,h##P#_ind);
           draw(##P#_ind_m2,d#P#_params_m2,0,0,w##P#_ind - 1,h##P#_ind);
         );
-        P#_learning_mode&2?(
+        learning_mode&2?(
           d#P#_biases_m = crop(##P#_ind_m,w##P#_ind - 1,0,1,h##P#_ind);
           d#P#_biases_m2 = crop(##P#_ind_m2,w##P#_ind - 1,0,1,h##P#_ind);
           nn_optimizer_#O#_update(P#_biases,0);
@@ -29324,8 +29321,8 @@ nn_lib :
           draw(##P#_ind_m2,d#P#_biases_m2,w##P#_ind - 1,0,1,h##P#_ind);
         );
       );
-      P#_learning_mode&1?draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
-      P#_learning_mode&2?draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
+      learning_mode&1?draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
     );
 
     # input: Input image or vector data.
@@ -29510,7 +29507,7 @@ nn_lib :
 
     # normalize: Variance/mean or RMS normalization.
     #-----------------------------------------------
-    nn_normalize_init_forward(OUT,IN,normalization_type,w_ca,h_ca,d_ca,s_ca,learning_mode) = (
+    nn_normalize_init_forward(OUT,IN,normalization_type,w_ca,h_ca,d_ca,s_ca) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29518,7 +29515,6 @@ nn_lib :
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
       const OUT#_normalization_type = normalization_type; # 0: Avg_std, 1:RMS
-      const OUT#_learning_mode = learning_mode;
 
       # Dimensions of complementary axes.
       const OUT#_ca_width = w_ca;
@@ -29610,15 +29606,15 @@ nn_lib :
       );
     );
 
-    nn_normalize_update(P,O) = (
+    nn_normalize_update(P,O,learning_mode) = (
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         const P#_ind_m = $""P#_m;
-        P#_learning_mode&1?(
+        learning_mode&1?(
           d#P#_gamma_m = crop(##P#_ind_m,0,1);
           nn_optimizer_#O#_update(P#_gamma,0);
           draw(##P#_ind_m,d#P#_gamma_m,0,0,1,h##P#_ind);
         );
-        P#_learning_mode&2?(
+        learning_mode&2?(
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           nn_optimizer_#O#_update(P#_beta,0);
           draw(##P#_ind_m,d#P#_beta_m,1,0,1,h##P#_ind);
@@ -29626,14 +29622,14 @@ nn_lib :
       ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?(
         const P#_ind_m = $""P#_m;
         const P#_ind_m2 = $""P#_m2;
-        P#_learning_mode&1?(
+        learning_mode&1?(
           d#P#_gamma_m = crop(##P#_ind_m,0,1);
           d#P#_gamma_m2 = crop(##P#_ind_m2,0,1);
           nn_optimizer_#O#_update(P#_gamma,0);
           draw(##P#_ind_m,d#P#_gamma_m,0,0,1,h##P#_ind_m);
           draw(##P#_ind_m2,d#P#_gamma_m2,0,0,1,h##P#_ind_m2);
         );
-        P#_learning_mode&2?(
+        learning_mode&2?(
           d#P#_beta_m = crop(##P#_ind_m,1,1);
           d#P#_beta_m2 = crop(##P#_ind_m2,1,1);
           nn_optimizer_#O#_update(P#_beta,0);
@@ -29641,8 +29637,8 @@ nn_lib :
           draw(##P#_ind_m2,d#P#_beta_m2,1,0,1,h##P#_ind_m2);
         );
       );
-      P#_learning_mode&1?draw(##P#_ind,P#_gamma,0,0,1,h##P#_ind);
-      P#_learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
+      learning_mode&1?draw(##P#_ind,P#_gamma,0,0,1,h##P#_ind);
+      learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
     # patchdown2d: 2D downscale by patch.
@@ -30261,7 +30257,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
     => $nout
   fi
   _${nout}_forward="begin(nn_conv2d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,\
-                   $shrink,$boundary_conditions,$learning_mode"));"\
+                   $shrink,$boundary_conditions"));"\
                    "nn_conv2d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
@@ -30326,7 +30322,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
     => $nout
   fi
   _${nout}_forward="begin(nn_conv3d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,$shrink,\
-                                                  $boundary_conditions,$learning_mode"));"\
+                                                  $boundary_conditions"));"\
                    "nn_conv3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv3d_backward("$nout,$nin");"\
@@ -30498,7 +30494,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
     if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
     => $nout
   fi
-  _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin,$learning_mode"));"\
+  _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin"));"\
                    "nn_fc_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_fc_backward("$nout,$nin");"\
@@ -30920,8 +30916,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
     r. 100%,{$w_ca*$h_ca*$d_ca*$s_ca} # gamma,beta (avg/std) or gamma (rms)
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,\
-                                                     $w_ca,$h_ca,$d_ca,$s_ca,$learning_mode"));"\
+  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$w_ca,$h_ca,$d_ca,$s_ca"));"\
                    "nn_normalize_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
                     "nn_normalize_backward("$nout,$nin");"\
@@ -31452,7 +31447,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     learning_mode=${_${net}_${name}_learning_mode}
 
     if isin('$type','conv2d','conv3d','fc','mp','normalize')
-      _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer");"
+      _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
       if $learning_mode
