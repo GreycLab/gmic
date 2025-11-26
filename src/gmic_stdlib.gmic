@@ -34551,9 +34551,10 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
     is_same_size={"res = 1; s = [ w#0,h#0 ]; for (k = 1, k<l && res, ++k, res = (s==[ w#k,h#k ]))"}
 
     if $is_volumetric +slices[0] 0 else sh[0] fi
-    if {*} w. -1,-1,1,0,{b}.{x} else w. ${fitscreen[]\ {[w,h]},30%},1,0,{b}.{x} fi
+    if {*} w. -1,-1,1,{b}.{x} else w. ${fitscreen[]\ {[w,h]},30%},1,{b}.{x} fi
     rm.
     nb_frames:=$is_volumetric?d:$!
+    is_fullscreen=0
 
     do
       if $is_volumetric
@@ -34563,8 +34564,8 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
         title={$frame,b}{`narg({$frame,x})?_'.':0`}{$frame,x}
         sh[$frame]
       fi
-      if $is_same_size w. -1,-1,1,0,$title
-      else w. {$scale*[${fitscreen[]\ {[w,h]}}]},1,0,$title
+      if $is_same_size w. -1,-1,1,$title
+      else w. {$scale*[${fitscreen[]\ {[w,h]}}]},1,$title
       fi
       rm.
 
@@ -34577,13 +34578,22 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
       fi
       wait $speed
 
-      # Decrease/Increase window size.
-      if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
-        w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+      is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+      if $is_ctrl
+        if {*,C}" || "{*,-D} # Decrease/Increase window size
+          is_fullscreen=0
+          w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}},-1,0
+        fi
+        if {*,-R} # Reset window size
+          is_fullscreen=0 scale=1
+          w[] {0,w},{0,h},-1,0
+        fi
+        if {*,-F} # Toggle fullscreen
+          is_fullscreen:=!$is_fullscreen scale=1
+          w[] ${"fitscreen[] "{round([{*,u,v}])}},1,$is_fullscreen
+        fi
       fi
 
-      # Reset window size.
-      if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "{*,R} w[] {0,w},{0,h} scale=1 wait -1 fi
       if {*,o} speed:=min(500,max(10,$speed-10*{*,o})) wait -1 fi
       if {*,SPACE}
         if $pause>=0 direction=$pause pause=-1
