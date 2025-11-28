@@ -30925,7 +30925,8 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", learning_mode="$learning_mode
+  _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
+                      "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
 
   w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
@@ -34550,9 +34551,10 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
     is_same_size={"res = 1; s = [ w#0,h#0 ]; for (k = 1, k<l && res, ++k, res = (s==[ w#k,h#k ]))"}
 
     if $is_volumetric +slices[0] 0 else sh[0] fi
-    if {*} w. -1,-1,1,0,{b}.{x} else w. ${fitscreen[]\ {[w,h]},30%},1,0,{b}.{x} fi
+    if {*} w. -1,-1,1,{b}.{x} else w. ${fitscreen[]\ {[w,h]},30%},1,{b}.{x} fi
     rm.
     nb_frames:=$is_volumetric?d:$!
+    is_fullscreen=0
 
     do
       if $is_volumetric
@@ -34562,8 +34564,8 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
         title={$frame,b}{`narg({$frame,x})?_'.':0`}{$frame,x}
         sh[$frame]
       fi
-      if $is_same_size w. -1,-1,1,0,$title
-      else w. {$scale*[${fitscreen[]\ {[w,h]}}]},1,0,$title
+      if $is_same_size w. -1,-1,1,$title
+      else w. {$scale*[${fitscreen[]\ {[w,h]}}]},1,$title
       fi
       rm.
 
@@ -34576,13 +34578,22 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
       fi
       wait $speed
 
-      # Decrease/Increase window size.
-      if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
-        w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+      is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
+      if $is_ctrl
+        if {*,C}" || "{*,-D} # Decrease/Increase window size
+          is_fullscreen=0
+          w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}},-1,0
+        fi
+        if {*,-R} # Reset window size
+          is_fullscreen=0 scale=1
+          w[] {0,[w,h]},-1,0
+        fi
+        if {*,-F} # Toggle fullscreen
+          is_fullscreen:=!$is_fullscreen scale=1
+          w[] ${"fitscreen[] "{0,round([w,h])},{($is_fullscreen?1:0.75)*min({*,u,v})},100%},1,$is_fullscreen
+        fi
       fi
 
-      # Reset window size.
-      if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "{*,R} w[] {0,w},{0,h} scale=1 wait -1 fi
       if {*,o} speed:=min(500,max(10,$speed-10*{*,o})) wait -1 fi
       if {*,SPACE}
         if $pause>=0 direction=$pause pause=-1
@@ -43402,7 +43413,7 @@ fx_logo : skip "${1= }"
 #@gui : Force re-Download from Scratch = _bool()
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/04/16</i>.</small>")
-gui_download_all_data :
+gui_download_all_data : check "isbool(${1=0})"
 
   # Fonts.
   l[] { input_cached gmic_fonts.gmz rm onfail rm }
@@ -43477,7 +43488,7 @@ _gui_download_all_data :
 #@gui : url = link("Mahvelous Mahvin","http://www.mahvin.com/")
 #@gui : note = note{"and"}
 #@gui : url = link{"David Revoy (Deevad)","http://www.davidrevoy.com/"}
-fx_gmicky :
+fx_gmicky : check "isint(${1=0},0)"
   rm
   if !$1 sp gmicky => "name(Gmicky)"
   elif $1==1 sp gmicky_mahvin => "name(Gmicky)"
@@ -43529,7 +43540,7 @@ fx_gmicky_preview :
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2025/11/21</b> : version <i>3.6.4</i> (Current stable).</span>\n
-##@gui : - <b>202X/XX/XX</b> : version <i>3.6.5_pre</i> (Current pre-release).\n
+#@gui : - <b>2025/11/22</b> : version <i>3.6.5_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
@@ -43849,7 +43860,8 @@ fx_whatsnew_preview : skip "$*"
 #@gui : Size = _choice("Shrink", "Expand", "Repeat [Memory Consuming!]")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_array_fade :
+fx_array_fade : check "isint(${1=2},1) && isint(${2=2},1) && inrange(${3=0},0,100) && inrange(${4=0},0,100) && "\
+                      "inrange(${5=80},0,100) && inrange(${6=90},0,100) && isint(${7=0},0,3) && isint(${8=0},0,2)"
   if $7&1 mirror x fi if $7>1 mirror y fi
   array_fade $1,$2,$5,$6,$8
   shift -$3%,-$4%,0,0,2
@@ -43867,7 +43879,7 @@ fx_array_fade_preview :
 #@gui : Crop (%) = int(0,0,100)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_array_mirror : skip ${7=0}
+fx_array_mirror :
   if $5==1 mirror x
   elif $5==2 mirror y
   elif $5==3 rotate 90
