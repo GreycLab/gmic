@@ -30264,8 +30264,15 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
                       "learning_mode="$learning_mode", weight_decay="$weight_decay
-  if !isint(${$nout})
-    {[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels
+
+  whds={[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
     if $initialization==1
       f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
     elif $initialization==2 # Lecun-initialization
@@ -30329,8 +30336,14 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
                       "weight_decay="$weight_decay
-  if !isint(${$nout})
-    {[${_${nin}_size}][3]*$kernel_size^3+1},$nb_channels
+  whds={[${_${nin}_size}][3]*$kernel_size^3+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
     if $initialization==1
       f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
     elif $initialization==2 # Lecun-initialization
@@ -30506,8 +30519,8 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   whds={prod(${_${nin}_size})+1},$nb_channels,1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
-      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}") "\
-                  "(should be ("{}")"
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
     fi
   else
     $whds
@@ -30941,9 +30954,16 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
       find(axes,_'y')>=0?1:$group_y?min($group_y,dim[1]):dim[1],
       find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
       find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
-  if !isint(${$nout})
+
+  whds={$normalization_type?2:1},{$w_ca*$h_ca*$d_ca*$s_ca},1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
     if $normalization_type (1) else (1,0) fi
-    r. 100%,{$w_ca*$h_ca*$d_ca*$s_ca} # gamma,beta (avg/std) or gamma (rms)
+    r. $whds # gamma,beta (avg/std) or gamma (rms)
     => $nout
   fi
   _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$w_ca,$h_ca,$d_ca,$s_ca"));"\
