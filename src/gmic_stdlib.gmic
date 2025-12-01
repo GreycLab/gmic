@@ -53409,6 +53409,45 @@ fx_noise_perlin :
 fx_spread :
   ac "spread $1,$2",$3,$4
 
+#@gui Offset Stripes : fx_offset_stripes, fx_offset_stripes(1)
+#@gui : Iterations = ~int(1,0,256)
+#@gui : Random Seed = ~int(0,0,65535)
+#@gui : Per-Channel Shift = ~bool()
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Horizontal Stripes:</b></small></span>")
+#@gui : Height (%) = ~float(10,0,100)
+#@gui : Random Shift Amplitude (%) = ~float(20,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Vertical Stripes:</b></small></span>")
+#@gui : Width (%) = ~float(10,0,100)
+#@gui : Random Shift Amplitude (%) = ~float(20,0,100)
+#@gui : sep = separator()
+#@gui : Boundary = ~choice(3,"Transparent","Nearest","Periodic","Mirror")
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGB [All]","RGB [Red]","RGB [Green]","RGB [Blue]","RGBA [Alpha]",
+#@gui : "Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [Luminance]",
+#@gui : "YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",
+#@gui : "YCbCr [Green Chrominance]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",
+#@gui : "Lab [b-Chrominance]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [Hue]",
+#@gui : "HSV [Saturation]","HSV [Value]","HSI [Intensity]","HSL [Lightness]","CMYK [Cyan]","CMYK [Magenta]",
+#@gui : "CMYK [Yellow]","CMYK [Key]","YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/12/01</i>.</small>")
+fx_offset_stripes :
+  ac "_fx_offset_stripes ${1-8}",$9,1
+
+_fx_offset_stripes :
+  iterations,random_seed,per_channel_shift,h_height,h_amp,v_width,v_amp,boundary_conditions=${1-8}
+  foreach {
+    if !$boundary_conditions to_a fi
+    srand $random_seed
+    repeat $iterations {
+      if $per_channel_shift s c fi
+      foreach { s y,-{max(1,round(h*$h_height%))} foreach { shift {$h_amp*g},0,0,0,$boundary_conditions } a y }
+      foreach { s x,-{max(1,round(w*$v_width%))} foreach { shift 0,{$v_amp*g},0,0,$boundary_conditions } a x }
+      if $per_channel_shift a c fi
+    }
+  }
+
 #@gui Old-Movie Stripes : fx_stripes_y, fx_stripes_y(1)
 #@gui : Frequency = ~float(10,0,100)
 #@gui : sep = separator()
