@@ -30502,8 +30502,15 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
-  if !isint(${$nout})
-    {prod(${_${nin}_size})+1},$nb_channels
+
+  whds={prod(${_${nin}_size})+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}") "\
+                  "(should be ("{}")"
+    fi
+  else
+    $whds
     if $initialization==1 # Identity
       f. "(x%h)==(y%(w - 1))"
     elif $initialization==2 # Lecun-initialization
