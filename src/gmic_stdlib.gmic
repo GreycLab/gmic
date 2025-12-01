@@ -31437,8 +31437,14 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
   #   optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax}, optimizer_params...;
   #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
   #
-  if !isint(${$nout}) (0,inf,inf,inf,inf,inf,inf) => $nout fi
-  r[$nout] {$nout,[max(w,8),max(h,3)]},1,1,0,0
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[8,3,1,1]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be (8,3,1,1)."
+    fi
+  else
+    (0,inf,inf,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout
+  fi
   nout_ind=${$nout}
 
   # Define optimizer and scheduler parameters.
