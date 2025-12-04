@@ -50595,7 +50595,7 @@ fx_vibrance :
 #@gui : Value Range = choice(1,"Cut","Normalize")
 #@gui : Kernel Multiplier = float(1,0,50)
 #@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+#@gui : Channel(s) = ~choice(2,"All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
 # "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
 # "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
 # "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
@@ -50606,7 +50606,7 @@ fx_vibrance :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/06/06</i>.</small>")
 fx_convolve : skip "${3=1}"
-  ac "_fx_convolve $1,$2,\"$3\",${4--5}",$-4
+  ac "_fx_convolve $1,$2,\"$3\",${4--5}",$6
 
 _fx_convolve :
   if $1 _fx_convolve$1[] else ($3) fi
@@ -52478,11 +52478,11 @@ __fx_dof_blur :
   }
   s. c,{-s+1} /[-2,-1] rm[0,1]
 
-#@gui Blur [Gaussian] : fx_gaussian_blur, fx_gaussian_blur(0)
-#@gui : XY-Amplitude = float(3,0,20)
-#@gui : X-Amplitude = ~float(0,0,20)
-#@gui : Y-Amplitude = ~float(0,0,20)
-#@gui : Boundary = choice(1,"Black","Nearest","Periodic","Mirror")
+#@gui Blur [Gaussian] : fx_blur_gaussian, fx_blur_gaussian(0)
+#@gui : XY-Amplitude (%) = float(3,0,50)
+#@gui : X-Amplitude (%) = ~float(0,0,50)
+#@gui : Y-Amplitude (%) = ~float(0,0,50)
+#@gui : Boundary = choice(3,"Transparent","Nearest","Periodic","Mirror")
 #@gui : sep = separator()
 #@gui : Channel(s) = ~choice(7,"All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
 # "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
@@ -52495,13 +52495,14 @@ __fx_dof_blur :
 #@gui : Value Action = choice("None","Cut","Normalize")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-_fx_gaussian_blur :
+_fx_blur_gaussian :
   b $1,$4
   if $2>0 repeat $! { l. { s y b $2,$4 a y } mv. 0 } fi
   if $3>0 repeat $! { l. { s x b $3,$4 a x } mv. 0 } fi
 
-fx_gaussian_blur :
-  ac "_fx_gaussian_blur $1,$2,$3,$4",$5,$6
+fx_blur_gaussian :
+  if !$4 to_a fi
+  ac "_fx_blur_gaussian $1,$2,$3,$4",$5,$6
 
 #@gui Blur [Glow] : fx_glow, fx_glow(0)
 #@gui : Amplitude = ~float(6,0,20)
@@ -52525,7 +52526,7 @@ fx_glow :
 #@gui : Orthogonal Radius (%) = ~float(0.5,0,25)
 #@gui : Angle = ~float(0,0,180)
 #@gui : Sharpness = ~float(0,0,500)
-#@gui : Boundary = choice(1,"Black","Nearest")
+#@gui : Boundary = choice(2,"Transparent","Nearest","Periodic","Mirror")
 #@gui : sep = separator()
 #@gui : Channel(s) = ~choice(7,"All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
 # "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
@@ -52539,6 +52540,7 @@ fx_glow :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
 fx_blur_linear :
+  if !$5 to_a fi
   ac "blur_linear $1%,$2%,$3,$5 sharpen $4",$6,$7
 
 #@gui Blur [Motion] : fx_blur_motion, fx_blur_motion_preview(0)
