@@ -58714,767 +58714,6 @@ fx_draw_whirl :
 fx_whirls :
   ac "whirls $1,$2,$3,$4",$5
 
-#@gui ____<b>Repair</b>
-#-----------------------
-
-#@gui Bayer Reconstruction : bayer2rgb, gui_no_preview
-#@gui : G/M Smoothness = _float(6,0,20)
-#@gui : R/B Smoothness (Principal) = _float(6,0,20)
-#@gui : R/B Smoothness (Secondary) = _float(4,0,20)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-
-#@gui Deinterlace : deinterlace, fx_deinterlace(0)
-#@gui : Algorithm = choice("Standard","Motion-Compensated")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_deinterlace :
-  deinterlace 0 skip ${^0}
-
-#@gui Inpaint [Holes] : fx_inpaint_holes, fx_inpaint_holes(0)
-#@gui : Maximal Area = float(4,1,512)
-#@gui : Tolerance = float(20,0,255)
-#@gui : Connectivity = choice(1,"Low","High")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/05/27</i>.</small>")
-fx_inpaint_holes :
-  inpaint_holes {$1^1.5},$2,$3
-
-#@gui Inpaint [Morphological] : fx_inpaint_morpho, fx_inpaint_morpho_preview(1)
-#@gui : Mask Color = _color(255,0,0,255)
-#@gui : Mask Dilation = _int(0,0,32)
-#@gui : sep = separator()
-#@gui : note = note{"<small><b>Note:</b> It is strongly suggested to apply this filter only on a selection
-#@gui : around the region to inpaint, to save computation time!</small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/11/25</i>.</small>")
-fx_inpaint_morpho :
-  foreach {
-    R=$1 G=$2 B=$3 A=$4
-    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
-    +round select_color. 0,{round([$R,$G,$B,$A])}
-    if $5 dilate. {1+2*$5} fi
-    inpaint_morpho.. [1]
-    rm.
-  }
-
-fx_inpaint_morpho_preview :
-  fx_inpaint_morpho ${1-4},{1+$5}
-
-#@gui Inpaint [Multi-Scale] : fx_inpaint_matchpatch, fx_inpaint_matchpatch_preview(1)
-#@gui : Number of Scales = int(0,0,16)
-#@gui : note = note{"<small>(Set <i>Number of scales</i> to <i>0</i> for automatic scale detection)</small>"}
-#@gui : Patch Size = int(9,1,64)
-#@gui : Number of Iterations per Scale = int(10,1,100)
-#@gui : Blend Size = int(5,0,32)
-#@gui : Allow Outer Blending = bool(1)
-#@gui : Mask Color = color(255,0,0,255)
-#@gui : Mask Dilation = int(0,0,32)
-#@gui : sep = separator()
-#@gui : Preview Progression While Running = _bool()
-#@gui : sep = separator()
-#@gui : note = note{"<small><b>Note:</b> Preview and final result may strongly differ.</small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/11/25</i>.</small>")
-fx_inpaint_matchpatch :
-  foreach {
-    nm={n} R=$6 G=$7 B=$8 A=$9
-    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
-    +round select_color. 0,{round([$R,$G,$B,$A])}
-    if $10 dilate. {1+2*$10} fi
-    if $11
-      visu_size=${fitscreen[]" "{0,[w,h]},25%,50%}
-      w1.. $visu_size,0,"[Preview] G'MIC: Inpaint [multi-scale]"
-    fi
-    srand 0 inpaint_matchpatch.. [1],${1-5}
-    rm. => $nm
-  }
-
-fx_inpaint_matchpatch_preview :
-  fx_inpaint_matchpatch ${1-9},{1+$10},0
-
-#@gui Inpaint [Patch-Based] : fx_inpaint_patch, fx_inpaint_patch_preview
-#@gui : Patch Size = _int(7,1,64)
-#@gui : Lookup Size = _float(16,1,32)
-#@gui : Lookup Factor = _float(0.1,0,1)
-#@gui : Blend Size = _float(1.2,0,5)
-#@gui : Blend Threshold = _float(0,0,1)
-#@gui : Blend Decay = _float(0.05,0,0.5)
-#@gui : Blend Scales = _int(10,1,20)
-#@gui : Allow Outer Blending = _bool(1)
-#@gui : Mask Color = _color(255,0,0,255)
-#@gui : Mask Dilation = _int(0,0,32)
-#@gui : Process by Blocks of Size = _choice("100%","75%","50%","25%","10%","5%","2%","1%")
-#@gui : sep = separator()
-#@gui : note = note("<small>A quick tutorial on how to use this filter can be found here:</small>")
-#@gui : url = link("G'MIC Inpainting tutorial on Patrick David's blog.",
-#@gui : "https://patdavid.net/2014/02/getting-around-in-gimp-gmic-inpainting.html")
-#@gui : sep = separator()
-#@gui : note = note("<small>Authors: <i>David Tschumperlé</i> and <i>Maxime Daisy</i>.
-#@gui :       Latest Update: <i>2015/11/25</i>.</small>")
-_fx_inpaint_patch :
-  foreach {
-    R=$9 G=$10 B=$11 A=$12
-    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
-    +round select_color. 0,{round([$R,$G,$B,$A])}
-    if $13 dilate. {1+2*$13} fi
-    inpaint.. [1],$1,{$1*$2},$3,1,{$4*$1},${5-8}
-    rm.
-  }
-
-fx_inpaint_patch :
-  foreach {
-    if $14
-      bs:=max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)
-      at "_fx_inpaint_patch $*",$bs,$bs,1,25%,25%,0,2
-    else _fx_inpaint_patch $*
-    fi
-  }
-
-fx_inpaint_patch_preview :
-  fx_inpaint_patch ${1-12},{1+$13},0
-
-#@gui Inpaint [Transport-Diffusion] : fx_inpaint_pde, fx_inpaint_pde_preview(1)
-#@gui : Smoothness (%) = float(75,0,100)
-#@gui : Regularization = choice(1,"Isotropic","Delaunay-Guided","Edge-Oriented")
-#@gui : Regularization Iterations = int(20,0,100)
-#@gui : Mask Color = _color(255,0,0,255)
-#@gui : Mask Dilation = _int(0,0,32)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/10</i>.</small>")
-fx_inpaint_pde :
-  foreach {
-    R=$4 G=$5 B=$6 A=$7
-    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
-    +select_color 0,$R,$G,$B,$A
-    if $8 dilate. {1+2*$8} fi
-    inpaint_pde.. [1],$1%,$2,$3
-    rm.
-  }
-  c 0,255
-
-fx_inpaint_pde_preview :
-  fx_inpaint_pde ${1-7},{1+$8}
-
-#@gui Red-Eye Attenuation : red_eye, red_eye
-#@gui : Threshold = float(75,0,100)
-#@gui : Smoothness = float(3.5,0,20)
-#@gui : Factor = float(0.1,0,1)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-
-#@gui Remove Hot Pixels : remove_hotpixels, remove_hotpixels(0)
-#@gui : Mask Size = int(3,3,20)
-#@gui : Threshold = float(10,0,200)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>Jérome Boulanger</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-
-#@gui Solidify : fx_solidify_td, fx_solidify_td(1)
-#@gui : Smoothness (%) = float(75,0,100)
-#@gui : Regularization = choice(1,"Isotropic","Delaunay-Guided","Edge-Oriented")
-#@gui : Regularization Iterations = int(20,0,100)
-#@gui : Dilation / Erosion = int(0,-20,20)
-#@gui : Colorspace = choice(1,"sRGB","Linear RGB")
-#@gui : sep = separator()
-#@gui : note = note{"<small><b>Note:</b>
-#@gui : This filter reconstructs transparent regions of an image using a transport-diffusion algorithm.
-#@gui : Useful only for images having an alpha-channel.
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/07</i>.</small>")
-fx_solidify_td :
-  foreach {
-    to_rgba sh 0,{s-2} if $5 srgb2rgb. fi rm.
-    if $4
-      . sh. 100% if $4>0 erode. {1+2*$4} else dilate. {1-2*$4} fi rm.
-      solidify. $1%,$2,$3
-      rv blend alpha
-    else
-      solidify $1%,$2,$3
-    fi
-    if $5 rgb2srgb. fi
-  }
-
-#@gui Smooth [Anisotropic] : fx_smooth_anisotropic, fx_smooth_anisotropic(0)
-#@gui : Amplitude = float(60,0,1000)
-#@gui : Sharpness = float(0.7,0,2)
-#@gui : Anisotropy = float(0.3,0,1)
-#@gui : Gradient Smoothness = float(0.6,0,10)
-#@gui : Tensor Smoothness = float(1.1,0,10)
-#@gui : Spatial Precision = float(0.8,0.1,2)
-#@gui : Angular Precision = float(30,1,180)
-#@gui : Value Precision = float(2,0.1,5)
-#@gui : Interpolation = choice(0,"Nearest Neighbor","Linear","Runge-Kutta")
-#@gui : Fast Approximation = bool(1)
-#@gui : Iterations = int(1,1,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_anisotropic :
-  ac "repeat $11 { smooth $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 }",$12 c 0,255
-
-#@gui Smooth [Antialias] : fx_smooth_antialias, fx_smooth_antialias(0)
-#@gui : Amplitude = float(5,0,100)
-#@gui : Edge Threshold (%) = float(10,0,100)
-#@gui : Smoothness = float(0.8,0,5)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/11/13</i>.</small>")
-fx_smooth_antialias :
-  foreach {
-    +diffusiontensors 0,1,1,$3,$3
-    +gradient_norm.. >=. $2% *[-2,-1]
-    smooth.. .,{$1^1/3},0.5,120,2,1 rm.
-  }
-
-#@gui Smooth [Bilateral] : fx_smooth_bilateral, fx_smooth_bilateral(0)
-#@gui : Spatial Variance = float(10,0,100)
-#@gui : Value Variance = float(7,0,100)
-#@gui : Iterations = int(2,1,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_bilateral : skip ${5=0},${6=0}
-  ac "repeat $3 { bilateral $1,$2 }",$4
-
-#@gui Denoise [CNN] : fx_denoise,fx_denoise_preview(0)
-#@gui : Automatic Noise Level Estimation = bool(1)
-#@gui : Noise Level (%) = float(50,0,100)_1
-#@gui : Opacity (%) = float(100,0,100)
-#@gui : Iterations = int(1,1,5)
-#@gui : Preview = bool(1)
-#@gui : sep = separator()
-#@gui : Update Neural Network = button()
-#@gui : sep = separator()
-#@gui : note = note{"<small>
-#@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
-#@gui : to denoise images. This filter does not take advantage of GPU computing, so expect it to be quite slow
-#@gui : if you don't have many CPU cores available.
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
-fx_denoise :
-  if $6 l[] {
-    delete ${-path_cache}gmic_denoise_cnn.gmz
-    input_cached gmic_denoise_cnn.gmz,2 rm
-  } fi
-  repeat $4 {
-    +denoise_cnn {$1?0:max(1,$2/2)},64
-    blend alpha,$3%
-  }
-
-fx_denoise_preview :
-  foreach {
-    r {min(w,256)},{min(h,256)},1,100%,0,0,0.5,0.5
-    if $5 fx_denoise $* fi
-  }
-  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{0}"
-
-#@gui Smooth [Guided] : fx_smooth_guided, fx_smooth_guided_preview(0)
-#@gui : Guide As = choice("Self","Top Layer","Bottom Layer")
-#@gui : Radius = int(5,1,100)
-#@gui : Smoothness = float(30,0,512)
-#@gui : Iterations = int(1,1,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/10/02</i>.</small>")
-fx_smooth_guided : skip ${6=0},${7=0}
-  if $1" && "!narg($_guide)
-    if $!<2 gui_warning_preview "Missing guide layer" return fi
-    store[{$1==1?0:-1}] _guide
-  fi
-  if !$1 # Self-guide
-    ac "repeat $4 { guided $2,$3 }",$5
-  elif $1==1 # Guide as top layer
-    ac "$_guide r. ..,..,1,100%,0,0,0.5,0.5 repeat $4 { guided[0] [1],$2,$3 } rm.",$5
-    if !narg($_is_preview) $_guide mv. 0 fi
-  else # Guide as bottom layer
-    ac "$_guide r. ..,..,1,100%,0,0,0.5,0.5 repeat $4 { guided[0] [1],$2,$3 } rm.",$5
-    if !narg($_is_preview) $_guide fi
-  fi
-
-fx_smooth_guided_preview :
-  if $1" && "!narg($_guide)
-    if $!<2 gui_warning_preview "Missing guide layer" return fi
-    store[{$1==1?0:-1}] _guide
-  fi
-  _is_preview=1
-  gui_split_preview "fx_smooth_guided $*",${-3--1}
-
-#@gui Smooth [Diffusion] : fx_smooth_diffusion, fx_smooth_diffusion(0)
-#@gui : Sharpness = float(0.7,0,2)
-#@gui : Anisotropy = float(0.3,0,1)
-#@gui : Gradient Smoothness = float(0.6,0,10)
-#@gui : Tensor Smoothness = float(1.1,0,10)
-#@gui : Time Step = float(15,5,50)
-#@gui : Iterations = int(8,1,100)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_diffusion :
-  ac "gui_parallel_overlap \"smooth $6,$1,$2,$3,$4,$5,0 c 0,255\",$8,$9",$7
-
-#@gui Smooth [Mean-Curvature] : fx_smooth_meancurvature, fx_smooth_meancurvature(0)
-#@gui : Time Step = float(30,5,50)
-#@gui : Iterations = int(4,1,30)
-#@gui : Keep Iterations as Different Layers = bool(false)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_meancurvature :
-  ac "gui_parallel_overlap \"meancurvature_flow $2,$1,$3 c 0,255\",$5,$6",$4
-
-#@gui Smooth [Median] : fx_smooth_median, fx_smooth_median(0)
-#@gui : Radius = int(3,1,20)
-#@gui : Threshold = float(255,0,255)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_smooth_median :
-  ac "median $1,$2",$3
-
-#@gui Smooth [NL-Means] : fx_smooth_nlmeans, fx_smooth_nlmeans(0)
-#@gui : Patch Size = float(4,0.5,10)
-#@gui : Spatial Bandwidth = int(4,3,13)
-#@gui : Tonal Bandwidth = float(10,1,50)
-#@gui : Patch Measure = choice(3,"Linf-Norm","L1-Norm","L2-Norm","Luminance","Lightness","RGB")
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>Jérôme Boulanger</i>.      Latest Update: <i>2015/07/01</i>.</small>")
-fx_smooth_nlmeans:
-  foreach {
-    if s==1 nlmeans $1,$2,$3,-_fx_smooth_nlmeans$4 # Handle separately grayscale images
-    else ac "gui_parallel_overlap \"nlmeans $1,$2,$3,-_fx_smooth_nlmeans$4\",$6,$7",$5
-    fi
-  }
-
-_fx_smooth_nlmeans0 : s c abs max
-_fx_smooth_nlmeans1 : s c abs +
-_fx_smooth_nlmeans2 : norm
-_fx_smooth_nlmeans3 : if s>=3 channels 0,2 luminance else norm fi
-_fx_smooth_nlmeans4 : if s>=3 channels 0,2 srgb2rgb rgb2lab channels 0 else norm fi
-_fx_smooth_nlmeans5 :
-
-#@gui Smooth [Patch-Based] : fx_smooth_patch, fx_smooth_patch(0)
-#@gui : Spatial Variance = float(10,0.1,200)
-#@gui : Patch Variance = float(10,0.1,200)
-#@gui : Patch Size = int(3,2,21)
-#@gui : Lookup Size = int(5,2,21)
-#@gui : Patch Smoothness = float(0,0,4)
-#@gui : Fast Approximation = bool(1)
-#@gui : Iterations = int(1,1,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_patch :
-  ac "gui_parallel_overlap \"repeat $7 { denoise $1,$2,$3,$4,$5,$6 } c 0,255\",$9,$10",$8
-
-#@gui Smooth [Patch-PCA] : fx_smooth_patchpca, fx_smooth_patchpca(0)
-#@gui : Strength = float(4,0,16)
-#@gui : Patch Size = int(7,2,21)
-#@gui : Lookup Size = int(11,2,21)
-#@gui : Spatial Sampling = int(7,1,16)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : note = note{"<small><b>Note:</b> Beware, this filter uses a very computationally intensive algorithm to
-#@gui : denoise images. So, do not complain too much if you have less than 8 cores available for the computation :)
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Authors: <i>David Tschumperlé</i> and <i>Jérome Boulanger</i>.
-#@gui :       Latest Update: <i>2016/03/24</i>.</small>")
-fx_smooth_patchpca :
-  ac "denoise_patchpca ${1-4} c 0,255",$5
-
-#@gui Smooth [Perona-Malik] : fx_smooth_peronamalik, fx_smooth_peronamalik(0)
-#@gui : K-Factor = float(20,0,255)
-#@gui : Time Step = float(5,5,50)
-#@gui : Iterations = int(5,1,30)
-#@gui : Keep Iterations as Different Layers = bool(false)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/11/26</i>.</small>")
-fx_smooth_peronamalik :
-  ac "gui_parallel_overlap \"peronamalik_flow $1,$3,$2,$4 c 0,255\",$6,$7",$5
-
-#@gui Smooth [Selective Gaussian] : fx_smooth_selective, fx_smooth_selective(0)
-#@gui : Amplitude = float(5,0,20)
-#@gui : Edges = float(0.5,0,2)
-#@gui : Scales = int(5,1,10)
-#@gui : Iterations = int(1,1,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_selective :
-  ac "gui_parallel_overlap \"repeat $4 { blur_selective $1,$2,$3 } c 0,255\",$6,$7",$5
-
-#@gui Smooth [Skin] : fx_smooth_skin, fx_smooth_skin_preview(1)
-#@gui : note = note("<small><b>Step 1:</b> Skin detection</small>")
-#@gui : Skin Estimation = choice(2,"None","Manual","Automatic")
-#@gui : Tolerance = float(0.5,0,1)
-#@gui : Smoothness = float(1,0,5)
-#@gui : Threshold = float(1,0,10)
-#@gui : Pre-Normalize Image = bool(1)
-#@gui : X-Coordinate [Manual] = float(50,0,100)
-#@gui : Y-Coordinate [Manual] = float(50,0,100)
-#@gui : Radius [Manual] = float(5,0,25)
-#@gui : sep = separator()
-#@gui : note = note("<small><b>Step 2:</b> Medium scale smoothing</small>")
-#@gui : Base Scale = float(2,0,10)
-#@gui : Fine Scale = float(0.2,0,0.8)
-#@gui : Smoothness = float(3,0,10)
-#@gui : Smoothness Type = choice(1,"Gaussian","Bilateral")
-#@gui : sep = separator()
-#@gui : note = note("<small><b>Step 3:</b> Details enhancement</small>")
-#@gui : Gain = float(0.05,0,0.5)
-#@gui : sep = separator()
-#@gui : Preview Data = choice{5,"Skin Mask","Base Scale","Medium Scale (Original)","Medium Scale (Smoothed)",
-#@gui : "Fine Scale","Result Image"}
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
-#@gui : sep = separator()
-#@gui : url = link("Click here for a video tutorial","http://www.youtube.com/watch?v=H8pQfq-ybCc")
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/12/20</i>.</small>")
-fx_smooth_skin :
-  foreach { split_opacity l[0] {
-    to_rgb
-
-    # Skin detection step.
-    if $5 +balance_gamma 128,128,128 else [0] fi
-    if !$1 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
-    M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
-
-    # Details smoothing step.
-    split_details[0] 4,$9%,$10%
-    +_fx_smooth_skin[2] $12,$11
-    j[2] .,0,0,0,0,1,.. rm[-2,-1]
-    *. {10^$13} + c 0,255
-  } a c }
-
-_fx_smooth_skin :
-  if !$1 b {$2/8}%
-  else
-    if $2>0
-      m,M:=im,iM n 0,255
-      repeat int($2/5) { bilateral 3%,{5*3} }
-      bilateral 3%,{($2%5)*3}
-      * {($M-$m)/255} + $m
-    fi
-  fi
-
-fx_smooth_skin_preview :
-  if !$14
-    gui_split_preview "if $5 balance_gamma 128,128,128 fi if !$1 f 1 elif $1==2 detect_skin $2 "\
-     "else detect_skin $2,$6%,$7%,$8% fi M:=iM b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
-  elif $14==1
-    gui_split_preview "b $9%",${-3--1}
-  elif $14==2
-    gui_split_preview "split_details 4,$9%,$10% k.. n 0,255",${-3--1}
-  elif $14==3
-    gui_split_preview "split_details 4,$9%,$10% k.. _fx_smooth_skin $12,$11 n 0,255",${-3--1}
-  elif $14==4
-    gui_split_preview "split_details 4,$9%,$10% k. n 0,255",${-3--1}
-  else
-    gui_split_preview "fx_smooth_skin $*",${-3--1}
-  fi
-
-  if $1==1
-    to_rgb
-    circle $6%,$7%,$8%,0.2,0,255,0
-    circle $6%,$7%,$8%,0.4,0xFFFFFFFF,0,255,0
-    line {$6-0.25*$8}%,{$7-0.25*$8}%,{$6+0.25*$8}%,{$7+0.25*$8}%,0.8,255,255,0
-    line {$6+0.25*$8}%,{$7-0.25*$8}%,{$6-0.25*$8}%,{$7+0.25*$8}%,0.8,255,255,0
-  fi
-
-#@gui Smooth [Thin Brush] : fx_smooth_anisotropic, fx_smooth_anisotropic(0)
-#@gui : Amplitude = float(60,0,1000)
-#@gui : Sharpness = float(0.9,0,2)
-#@gui : Anisotropy = float(0.64,0,1)
-#@gui : Gradient Smoothness = float(3.1,0,10)
-#@gui : Tensor Smoothness = float(1.10,0,10)
-#@gui : Spatial Precision = float(0.8,0.1,2)
-#@gui : Angular Precision = float(30,1,180)
-#@gui : Value Precision = float(2,0.1,5)
-#@gui : Interpolation = choice(0,"Nearest Neighbor","Linear","Runge-Kutta")
-#@gui : Fast Approximation = bool(1)
-#@gui : Iterations = int(1,1,10)
-#@gui : Channel(s) = choice("RGB","Luminance","Blue & Red chrominances","Blue chrominance","Red chrominance")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : note = note{"\n<small><b>Note: </b>This set of anisotropic smoothing parameters has been suggested
-#@gui : by PhotoComiX.</small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>PhotoComiX</i>.      Latest Update: <i>2010/26/12</i>.</small>")
-
-#@gui Smooth [Total Variation] : fx_smooth_tv, fx_smooth_tv(0)
-#@gui : Time Step = float(30,5,100)
-#@gui : Iterations = int(10,1,40)
-#@gui : Keep Iterations as Different Layers = bool(false)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_tv :
-  ac "gui_parallel_overlap \"tv_flow $2,$1,$3 c 0,255\",$5,$6",$4
-
-#@gui Smooth [Wavelets] : fx_smooth_haar, fx_smooth_haar(0)
-#@gui : Threshold = float(1,0,10)
-#@gui : Iterations = int(10,1,32)
-#@gui : Scales = int(10,2,10)
-#@gui : sep = separator()
-#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
-# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
-# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
-# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
-# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
-# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
-# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
-# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
-#@gui : sep = separator()
-#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
-#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>Jérome Boulanger and David Tschumperlé</i>.
-#@gui :       Latest Update: <i>2013/08/27</i>.</small>")
-fx_smooth_haar :
-  remove_opacity
-  ac "gui_parallel_overlap \"denoise_haar $1,$3,$2 c 0,255\",$5,$6",$4
-
-#@gui Upscale [CNN2x] : fx_scale2x_cnn, fx_scale2x_cnn_preview(0)
-#@gui : Sharpness = float(1.25,0,5)
-#@gui : sep = separator()
-#@gui : Update Neural Network = button()
-#@gui : sep = separator()
-#@gui : note = note{"<small>
-#@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
-#@gui : to upscale images. This filter does not take advantage of GPU computing, so expect it to be quite slow
-#@gui : if you don't have many CPU cores available.
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
-fx_scale2x_cnn :
-  scale2x_cnn $1
-
-fx_scale2x_cnn_preview :
-  if $2 l[] {
-    delete ${-path_cache}gmic_scale2x_cnn.gmz
-    input_cached gmic_scale2x_cnn.gmz,2 rm
-  } fi
-  rs 128,128,0
-  foreach {
-    gui_split_preview "scale2x_cnn $1",9,50,50
-  }
-
-#@gui Upscale [Diffusion] : fx_upscale_smart, fx_upscale_smart_preview(0)
-#@gui : Width = text("200%")
-#@gui : Height = text("200%")
-#@gui : Smoothness = float(2,0,20)
-#@gui : Anisotropy = float(0.4,0,1)
-#@gui : Sharpness = float(50,0,100)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_upscale_smart :
-  to_rgb upscale_smart $1,$2,1,$3,$4,$5 c 0,255
-
-fx_upscale_smart_preview :
-  repeat $! {
-    +r. $1,$2,1,1,0
-    if w<{-2,w}" || "h<{-2,h} # Test for downscaling
-      rm. /. 4
-      0 t. "Downscaling is\nnot allowed!",5,5,20,1,255 r. ..,..,1,1,0,0,0.5,0.5
-      -|[-2,-1]
-    else
-      z.. {50-50*{-2,w}/w}%,{50-50*{-2,h}/h}%,{50+50*{-2,w}/w}%,{50+50*{-2,h}/h}%
-      rm. fx_upscale_smart. $1,$2,$3,$4,$5 c. 0,255
-    fi
-  mv. 0 }
-
-#@gui Upscale [Scale2x] : fx_scalenx, fx_scalenx_preview(0)
-#@gui : Scaling Factor = choice("x 2","x 3","x 4","x 6","x 8","x 9","x 12","x 16","x 18","x 27")
-#@gui : Colorbase = choice(0,"RGB","YCbCr","Lab")
-#@gui : note = note{"\n<small><b>Note: </b>
-#@gui : This filter re-implements the scaling algorithm described at :
-#@gui : </small>"}
-#@gui : url = link("http://scale2x.sourceforge.net")
-#@gui : note = note{"<small>
-#@gui : This filter is useful for resizing images that have very few colors
-#@gui : (e.g. indexed images). It is generally useless for true colors images.
-#@gui : </small>"}
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
-fx_scalenx :
-  foreach {
-    split_opacity
-    if $2==1 rgb2ycbcr[0] round[0]
-    elif $2==2 rgb2lab8[0] round[0]
-    fi
-    if !$1 scale2x
-    elif $1==1 scale3x
-    elif $1==2 scale2x scale2x
-    elif $1==3 scale3x scale2x
-    elif $1==4 scale2x scale2x scale2x
-    elif $1==5 scale3x scale3x
-    elif $1==6 scale3x scale2x scale2x
-    elif $1==7 scale2x scale2x scale2x scale2x
-    elif $1==8 scale3x scale3x scale2x
-    elif $1==9 scale3x scale3x scale3x
-    fi
-    if $2==1 ycbcr2rgb[0]
-    elif $2==2 lab82rgb[0]
-    fi
-    a c
-  }
-
-fx_scalenx_preview :
-  z 40%,40%,60%,60%
-  fx_scalenx $1,$2
-
-#@gui Upscale [DCCI2x]: fx_scale_dcci2x, fx_scale_dcci2x_preview(0)
-#@gui : note = note("<i>Directional Cubic Convolution Interpolation</i>"), sep = separator()
-#@gui : Threshold = float(1.15,1,2)
-#@gui : Exponent = int(5,1,6)
-#@gui : Extend 1px = _bool()
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>Garagecoder</i>.      Latest Update : <i>2015/07/11</i>.</small>")
-#@gui : note = note{"\n<small><b>Note: </b>
-#@gui : This filter re-implements the scaling algorithm described at :
-#@gui : </small>"}
-#@gui : url = link("wikipedia.org","https://en.wikipedia.org/wiki/Directional_Cubic_Convolution_Interpolation")
-#@gui : note = note("<small>The algorithm is intended for enlarging images while avoiding</small>")
-#@gui : note = note("<small>artifacts, e.g. staircase artifacts.</small>")
-#@gui : note = note("\n<small>Threshold controls edge[lower] to texture[higher] balance.</small>")
-#@gui : note = note("<small>Exponent controls texture edge sharpness[higher].</small>")
-#@gui : note = note("<small>Warning: highly experimental...</small>")
-fx_scale_dcci2x : skip ${1=1.15},${2=5},${3=0}
-  foreach { split_opacity scale_dcci2x ${1-3} a c c 0,255 }
-
-fx_scale_dcci2x_preview :
-  z 25%,25%,75%,75% fx_scale_dcci2x $*
-
 #@gui ____<b>Rendering</b>
 #-------------------------
 
@@ -59508,6 +58747,9 @@ fx_render3d : skip ${14=1}
   }
 
 #@gui 2.5D Extrusion : fx_extrude25d,fx_extrude25d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Extrudes 2D shapes to simulate depth (2.5D).
+#@gui : "}, sep = separator()
 #@gui : Depth (%) = float(10,0,100)
 #@gui : Angle = point(80,60)_0
 #@gui : Shear (%) = float(25,0,100)
@@ -59604,6 +58846,9 @@ fx_extrude25d_preview :
   line 50%,50%,$angx%,$angy%,1,0xF0F0F0F0,255
 
 #@gui 3D Blocks : fx_blocks3d, fx_blocks3d(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Renders a field of 3D blocks based on image brightness.
+#@gui : "}, sep = separator()
 #@gui : Resolution = int(32,1,128)
 #@gui : Smoothness = float(0,0,40)
 #@gui : Elevation = float(4,-10,10)
@@ -59661,6 +58906,9 @@ fx_blocks3d :
   }
 
 #@gui 3D Colored Object : fx_coloredobject3d, fx_coloredobject3d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Renders a custom 3D colored object.
+#@gui : "}, sep = separator()
 #@gui : Type = choice{1,"Plane","Box","Pyramid","Ellipsoid","Torus","Gyroid","Weird","Cup"}
 #@gui : Color = color(128,128,128,255)
 #@gui : sep = separator()
@@ -59719,6 +58967,9 @@ _fx_coloredobject3d_preview_6 : weird3d 12 *3d. $1,$2,$3
 _fx_coloredobject3d_preview_7 : cup3d 64 *3d. $1,$2,$3
 
 #@gui 3D Elevation : fx_elevation3d, fx_elevation3d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Renders the image as a 3D terrain heightmap.
+#@gui : "}, sep = separator()
 #@gui : Factor = float(100,-1000,1000)
 #@gui : Smoothness = float(1,0,10)
 #@gui : sep = separator()
@@ -59760,6 +59011,9 @@ fx_elevation3d_preview :
   if $17 rm[0] fi
 
 #@gui 3D Extrusion : fx_extrude3d, fx_extrude3d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Extrudes the image into a 3D volume.
+#@gui : "}, sep = separator()
 #@gui : Depth = float(10,1,1024)
 #@gui : Resolution = int(512,1,1024)
 #@gui : Smoothness = float(0.6,0,3)
@@ -59797,6 +59051,9 @@ fx_extrude3d_preview :
   if $18 rm[0] fi
 
 #@gui 3D Image Object : fx_imageobject3d, fx_imageobject3d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Maps the image onto a 3D object.
+#@gui : "}, sep = separator()
 #@gui : Type = choice{1,"Plane","Cube","Pyramid","Sphere","Torus","Gyroid","Weird","Cup","Rubik"}
 #@gui : sep = separator()
 #@gui : Width = _int(1024,1,4096)
@@ -59845,6 +59102,9 @@ _fx_imageobject3d_preview_7 : cup3d 64 t3d. .. rm..
 _fx_imageobject3d_preview_8 : imagerubik3d 3,3,5,5
 
 #@gui 3D Lathing : fx_lathing3d, fx_lathing3d_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Creates a 3D object by rotating a profile curve (lathe).
+#@gui : "}, sep = separator()
 #@gui : Resolution = int(76,1,1024)
 #@gui : Smoothness = float(2,0,5)
 #@gui : Max Angle = float(361,0,361)
@@ -59883,6 +59143,9 @@ fx_lathing3d_preview :
   if $18 rm[0] fi
 
 #@gui 3D Mesh : fx_mesh3d, fx_mesh3d_preview(1) : *
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Overlay a rendering of a 3D mesh over the image.
+#@gui : "}, sep = separator()
 #@gui : 3D Mesh Filename = file("")
 #@gui : note = note{"(supported file formats are: <b>.obj</b>, <b>.off</b> and <b>.gmz</b>)."}
 #@gui : Old File = value("0")
@@ -60012,6 +59275,9 @@ fx_mesh3d_preview : skip "${1=},${2=}"
   fx_mesh3d $"*"
 
 #@gui 3D Random Objects : fx_random3d, fx_random3d(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates random 3D geometric shapes over the image.
+#@gui : "}, sep = separator()
 #@gui : Type = choice("Cube","Cone","Cylinder","Sphere","Torus")
 #@gui : Density = int(50,1,300)
 #@gui : Size = float(3,1,20)
@@ -60047,6 +59313,9 @@ _fx_random3d3 : sphere3d $1,2
 _fx_random3d4 : ($1) /. 3 torus3d $1,{^} rm..
 
 #@gui Algorithm A : fx_memoakten_algorithm_a,fx_memoakten_algorithm_a_preview(1)*
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates abstract art based on Memo Akten's Algorithm A.
+#@gui : "}, sep = separator()
 #@gui : Random Seed = ~int(0,0,65535)
 #@gui : Density of Initial Points (%) = ~float(20,0,100)
 #@gui : Rate of Primary Segments (%) = ~float(60,0,100)
@@ -60181,6 +59450,9 @@ fx_memoakten_algorithm_a :
   }
 
 #@gui Ball : fx_ball, fx_ball_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Renders a 3D sphere/ball.
+#@gui : "}, sep = separator()
 #@gui : Radius = ~int(200,1,1024)
 #@gui : Color = ~color(255,0,255)
 #@gui : Ambient Light = ~float(0.25,0,2)
@@ -60204,6 +59476,9 @@ fx_ball_preview :
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
 #@gui Circle Art : fx_circle_art, fx_circle_art
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Abstract rendering of spiraled circles.
+#@gui : "}, sep = separator()
 #@gui : Type = ~choice(1,"Random","Lissajous spiral")
 #@gui : Density = ~float(15,0,100)
 #@gui : Radius = ~float(0.5,0,1)
@@ -60264,6 +59539,9 @@ fx_circle_art :
   if $5 r 50%,50%,1,100%,2 fi
 
 #@gui Equation Plot [Parametric] : fx_equation_parametric, fx_equation_parametric
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Plots a parametric curve.
+#@gui : "}, sep = separator()
 #@gui : X(t) = text{"sin(t)*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)"}
 #@gui : Y(t) = text{"cos(t)*(exp(cos(t))-2*cos(4*t)-sin(t/12)^5)"}
 #@gui : Min-t = float(0,-1000,1000)
@@ -60288,6 +59566,9 @@ fx_equation_parametric :
   }
 
 #@gui Equation Plot [Y=f(X)] : fx_equation_plot, fx_equation_plot
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Plots a mathematical function y=f(x).
+#@gui : "}, sep = separator()
 #@gui : F(X) = text{"X*c+10*cos(X+c+u)"}
 #@gui : X-Min = float(-10,-100,100)
 #@gui : X-Max = float(10,-100,100)
@@ -60312,6 +59593,9 @@ fx_equation_plot :
   }
 
 #@gui Generate Random Portrait : fx_generate_random_portrait, fx_generate_random_portrait_preview(1)+
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a random face (StyleGAN).
+#@gui : "}, sep = separator()
 #@gui : Resolution (px) = _int(800,0,2048)
 #@gui : Update Portrait = button()
 #@gui : sep = separator()
@@ -60336,6 +59620,9 @@ fx_generate_random_portrait_preview :
   +portrait[] $1 o. $file_tmp mv. 0
 
 #@gui Gradient [Corners] : fx_corner_gradient, fx_corner_gradient
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a gradient from defined corner colors.
+#@gui : "}, sep = separator()
 #@gui : Color 1 (Up/Left Corner) = ~color(255,255,255,128)
 #@gui : Color 2 (Up/Right Corner) = ~color(255,0,0,255)
 #@gui : Color 3 (Bottom/Left Corner) = ~color(0,255,0,255)
@@ -60357,6 +59644,9 @@ fx_corner_gradient : skip ${17=0}
   }
 
 #@gui Gradient [Custom Shape] : fx_custom_gradient, fx_custom_gradient_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a gradient conforming to an input shape.
+#@gui : "}, sep = separator()
 #@gui : note = note("<small><b>Shape selection:</b></small>")
 #@gui : Select By = choice("Auto","Dark Pixels","Bright Pixels","Opaque Pixels")
 #@gui : Smoothness = float(0,0,10)
@@ -60464,6 +59754,9 @@ _fx_custom_gradient1 :
   fi
 
 #@gui Gradient [from Curve] : fx_gradient_from_curve, fx_gradient_from_curve_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Extract a color gradient that follows a curve.
+#@gui : "}, sep = separator()
 #@gui : Number of Control Points = int(2,2,6)
 #@gui : Starting Point (%) = point(0,0,0,1,255,0,0,-0)
 #@gui : Mid Point #1 (%) = point(20,20,0,1,255,179,0,-0)_0
@@ -60545,6 +59838,9 @@ _fx_gradient_from_curve :
   if $17 mirror x fi
 
 #@gui Gradient [Linear] : fx_linear_gradient, fx_linear_gradient
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a standard linear gradient.
+#@gui : "}, sep = separator()
 #@gui : Starting Color = ~color(0,0,0,255)
 #@gui : Ending Color = ~color(255,255,255,255)
 #@gui : Swap Colors = bool()
@@ -62126,6 +61422,767 @@ fx_twisted_rays :
     100%,100%,1,4 fc. $R,$G,$B,$A sh. 100% *. ... rm[-3,-1]
     blend alpha
   }
+
+#@gui ____<b>Repair</b>
+#-----------------------
+
+#@gui Bayer Reconstruction : bayer2rgb, gui_no_preview
+#@gui : G/M Smoothness = _float(6,0,20)
+#@gui : R/B Smoothness (Principal) = _float(6,0,20)
+#@gui : R/B Smoothness (Secondary) = _float(4,0,20)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+
+#@gui Deinterlace : deinterlace, fx_deinterlace(0)
+#@gui : Algorithm = choice("Standard","Motion-Compensated")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+fx_deinterlace :
+  deinterlace 0 skip ${^0}
+
+#@gui Inpaint [Holes] : fx_inpaint_holes, fx_inpaint_holes(0)
+#@gui : Maximal Area = float(4,1,512)
+#@gui : Tolerance = float(20,0,255)
+#@gui : Connectivity = choice(1,"Low","High")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/05/27</i>.</small>")
+fx_inpaint_holes :
+  inpaint_holes {$1^1.5},$2,$3
+
+#@gui Inpaint [Morphological] : fx_inpaint_morpho, fx_inpaint_morpho_preview(1)
+#@gui : Mask Color = _color(255,0,0,255)
+#@gui : Mask Dilation = _int(0,0,32)
+#@gui : sep = separator()
+#@gui : note = note{"<small><b>Note:</b> It is strongly suggested to apply this filter only on a selection
+#@gui : around the region to inpaint, to save computation time!</small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/11/25</i>.</small>")
+fx_inpaint_morpho :
+  foreach {
+    R=$1 G=$2 B=$3 A=$4
+    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
+    +round select_color. 0,{round([$R,$G,$B,$A])}
+    if $5 dilate. {1+2*$5} fi
+    inpaint_morpho.. [1]
+    rm.
+  }
+
+fx_inpaint_morpho_preview :
+  fx_inpaint_morpho ${1-4},{1+$5}
+
+#@gui Inpaint [Multi-Scale] : fx_inpaint_matchpatch, fx_inpaint_matchpatch_preview(1)
+#@gui : Number of Scales = int(0,0,16)
+#@gui : note = note{"<small>(Set <i>Number of scales</i> to <i>0</i> for automatic scale detection)</small>"}
+#@gui : Patch Size = int(9,1,64)
+#@gui : Number of Iterations per Scale = int(10,1,100)
+#@gui : Blend Size = int(5,0,32)
+#@gui : Allow Outer Blending = bool(1)
+#@gui : Mask Color = color(255,0,0,255)
+#@gui : Mask Dilation = int(0,0,32)
+#@gui : sep = separator()
+#@gui : Preview Progression While Running = _bool()
+#@gui : sep = separator()
+#@gui : note = note{"<small><b>Note:</b> Preview and final result may strongly differ.</small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/11/25</i>.</small>")
+fx_inpaint_matchpatch :
+  foreach {
+    nm={n} R=$6 G=$7 B=$8 A=$9
+    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
+    +round select_color. 0,{round([$R,$G,$B,$A])}
+    if $10 dilate. {1+2*$10} fi
+    if $11
+      visu_size=${fitscreen[]" "{0,[w,h]},25%,50%}
+      w1.. $visu_size,0,"[Preview] G'MIC: Inpaint [multi-scale]"
+    fi
+    srand 0 inpaint_matchpatch.. [1],${1-5}
+    rm. => $nm
+  }
+
+fx_inpaint_matchpatch_preview :
+  fx_inpaint_matchpatch ${1-9},{1+$10},0
+
+#@gui Inpaint [Patch-Based] : fx_inpaint_patch, fx_inpaint_patch_preview
+#@gui : Patch Size = _int(7,1,64)
+#@gui : Lookup Size = _float(16,1,32)
+#@gui : Lookup Factor = _float(0.1,0,1)
+#@gui : Blend Size = _float(1.2,0,5)
+#@gui : Blend Threshold = _float(0,0,1)
+#@gui : Blend Decay = _float(0.05,0,0.5)
+#@gui : Blend Scales = _int(10,1,20)
+#@gui : Allow Outer Blending = _bool(1)
+#@gui : Mask Color = _color(255,0,0,255)
+#@gui : Mask Dilation = _int(0,0,32)
+#@gui : Process by Blocks of Size = _choice("100%","75%","50%","25%","10%","5%","2%","1%")
+#@gui : sep = separator()
+#@gui : note = note("<small>A quick tutorial on how to use this filter can be found here:</small>")
+#@gui : url = link("G'MIC Inpainting tutorial on Patrick David's blog.",
+#@gui : "https://patdavid.net/2014/02/getting-around-in-gimp-gmic-inpainting.html")
+#@gui : sep = separator()
+#@gui : note = note("<small>Authors: <i>David Tschumperlé</i> and <i>Maxime Daisy</i>.
+#@gui :       Latest Update: <i>2015/11/25</i>.</small>")
+_fx_inpaint_patch :
+  foreach {
+    R=$9 G=$10 B=$11 A=$12
+    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
+    +round select_color. 0,{round([$R,$G,$B,$A])}
+    if $13 dilate. {1+2*$13} fi
+    inpaint.. [1],$1,{$1*$2},$3,1,{$4*$1},${5-8}
+    rm.
+  }
+
+fx_inpaint_patch :
+  foreach {
+    if $14
+      bs:=max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)
+      at "_fx_inpaint_patch $*",$bs,$bs,1,25%,25%,0,2
+    else _fx_inpaint_patch $*
+    fi
+  }
+
+fx_inpaint_patch_preview :
+  fx_inpaint_patch ${1-12},{1+$13},0
+
+#@gui Inpaint [Transport-Diffusion] : fx_inpaint_pde, fx_inpaint_pde_preview(1)
+#@gui : Smoothness (%) = float(75,0,100)
+#@gui : Regularization = choice(1,"Isotropic","Delaunay-Guided","Edge-Oriented")
+#@gui : Regularization Iterations = int(20,0,100)
+#@gui : Mask Color = _color(255,0,0,255)
+#@gui : Mask Dilation = _int(0,0,32)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/10</i>.</small>")
+fx_inpaint_pde :
+  foreach {
+    R=$4 G=$5 B=$6 A=$7
+    if !$A" && "(s==2" || "s==4) split_opacity +!=. 0 *[0,-1] a c R=0 G=0 B=0 fi # Purely transparent color
+    +select_color 0,$R,$G,$B,$A
+    if $8 dilate. {1+2*$8} fi
+    inpaint_pde.. [1],$1%,$2,$3
+    rm.
+  }
+  c 0,255
+
+fx_inpaint_pde_preview :
+  fx_inpaint_pde ${1-7},{1+$8}
+
+#@gui Red-Eye Attenuation : red_eye, red_eye
+#@gui : Threshold = float(75,0,100)
+#@gui : Smoothness = float(3.5,0,20)
+#@gui : Factor = float(0.1,0,1)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+
+#@gui Remove Hot Pixels : remove_hotpixels, remove_hotpixels(0)
+#@gui : Mask Size = int(3,3,20)
+#@gui : Threshold = float(10,0,200)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>Jérome Boulanger</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+
+#@gui Solidify : fx_solidify_td, fx_solidify_td(1)
+#@gui : Smoothness (%) = float(75,0,100)
+#@gui : Regularization = choice(1,"Isotropic","Delaunay-Guided","Edge-Oriented")
+#@gui : Regularization Iterations = int(20,0,100)
+#@gui : Dilation / Erosion = int(0,-20,20)
+#@gui : Colorspace = choice(1,"sRGB","Linear RGB")
+#@gui : sep = separator()
+#@gui : note = note{"<small><b>Note:</b>
+#@gui : This filter reconstructs transparent regions of an image using a transport-diffusion algorithm.
+#@gui : Useful only for images having an alpha-channel.
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/04/07</i>.</small>")
+fx_solidify_td :
+  foreach {
+    to_rgba sh 0,{s-2} if $5 srgb2rgb. fi rm.
+    if $4
+      . sh. 100% if $4>0 erode. {1+2*$4} else dilate. {1-2*$4} fi rm.
+      solidify. $1%,$2,$3
+      rv blend alpha
+    else
+      solidify $1%,$2,$3
+    fi
+    if $5 rgb2srgb. fi
+  }
+
+#@gui Smooth [Anisotropic] : fx_smooth_anisotropic, fx_smooth_anisotropic(0)
+#@gui : Amplitude = float(60,0,1000)
+#@gui : Sharpness = float(0.7,0,2)
+#@gui : Anisotropy = float(0.3,0,1)
+#@gui : Gradient Smoothness = float(0.6,0,10)
+#@gui : Tensor Smoothness = float(1.1,0,10)
+#@gui : Spatial Precision = float(0.8,0.1,2)
+#@gui : Angular Precision = float(30,1,180)
+#@gui : Value Precision = float(2,0.1,5)
+#@gui : Interpolation = choice(0,"Nearest Neighbor","Linear","Runge-Kutta")
+#@gui : Fast Approximation = bool(1)
+#@gui : Iterations = int(1,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_anisotropic :
+  ac "repeat $11 { smooth $1,$2,$3,$4,$5,$6,$7,$8,$9,$10 }",$12 c 0,255
+
+#@gui Smooth [Antialias] : fx_smooth_antialias, fx_smooth_antialias(0)
+#@gui : Amplitude = float(5,0,100)
+#@gui : Edge Threshold (%) = float(10,0,100)
+#@gui : Smoothness = float(0.8,0,5)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/11/13</i>.</small>")
+fx_smooth_antialias :
+  foreach {
+    +diffusiontensors 0,1,1,$3,$3
+    +gradient_norm.. >=. $2% *[-2,-1]
+    smooth.. .,{$1^1/3},0.5,120,2,1 rm.
+  }
+
+#@gui Smooth [Bilateral] : fx_smooth_bilateral, fx_smooth_bilateral(0)
+#@gui : Spatial Variance = float(10,0,100)
+#@gui : Value Variance = float(7,0,100)
+#@gui : Iterations = int(2,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_bilateral : skip ${5=0},${6=0}
+  ac "repeat $3 { bilateral $1,$2 }",$4
+
+#@gui Denoise [CNN] : fx_denoise,fx_denoise_preview(0)
+#@gui : Automatic Noise Level Estimation = bool(1)
+#@gui : Noise Level (%) = float(50,0,100)_1
+#@gui : Opacity (%) = float(100,0,100)
+#@gui : Iterations = int(1,1,5)
+#@gui : Preview = bool(1)
+#@gui : sep = separator()
+#@gui : Update Neural Network = button()
+#@gui : sep = separator()
+#@gui : note = note{"<small>
+#@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
+#@gui : to denoise images. This filter does not take advantage of GPU computing, so expect it to be quite slow
+#@gui : if you don't have many CPU cores available.
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
+fx_denoise :
+  if $6 l[] {
+    delete ${-path_cache}gmic_denoise_cnn.gmz
+    input_cached gmic_denoise_cnn.gmz,2 rm
+  } fi
+  repeat $4 {
+    +denoise_cnn {$1?0:max(1,$2/2)},64
+    blend alpha,$3%
+  }
+
+fx_denoise_preview :
+  foreach {
+    r {min(w,256)},{min(h,256)},1,100%,0,0,0.5,0.5
+    if $5 fx_denoise $* fi
+  }
+  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{0}"
+
+#@gui Smooth [Guided] : fx_smooth_guided, fx_smooth_guided_preview(0)
+#@gui : Guide As = choice("Self","Top Layer","Bottom Layer")
+#@gui : Radius = int(5,1,100)
+#@gui : Smoothness = float(30,0,512)
+#@gui : Iterations = int(1,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/10/02</i>.</small>")
+fx_smooth_guided : skip ${6=0},${7=0}
+  if $1" && "!narg($_guide)
+    if $!<2 gui_warning_preview "Missing guide layer" return fi
+    store[{$1==1?0:-1}] _guide
+  fi
+  if !$1 # Self-guide
+    ac "repeat $4 { guided $2,$3 }",$5
+  elif $1==1 # Guide as top layer
+    ac "$_guide r. ..,..,1,100%,0,0,0.5,0.5 repeat $4 { guided[0] [1],$2,$3 } rm.",$5
+    if !narg($_is_preview) $_guide mv. 0 fi
+  else # Guide as bottom layer
+    ac "$_guide r. ..,..,1,100%,0,0,0.5,0.5 repeat $4 { guided[0] [1],$2,$3 } rm.",$5
+    if !narg($_is_preview) $_guide fi
+  fi
+
+fx_smooth_guided_preview :
+  if $1" && "!narg($_guide)
+    if $!<2 gui_warning_preview "Missing guide layer" return fi
+    store[{$1==1?0:-1}] _guide
+  fi
+  _is_preview=1
+  gui_split_preview "fx_smooth_guided $*",${-3--1}
+
+#@gui Smooth [Diffusion] : fx_smooth_diffusion, fx_smooth_diffusion(0)
+#@gui : Sharpness = float(0.7,0,2)
+#@gui : Anisotropy = float(0.3,0,1)
+#@gui : Gradient Smoothness = float(0.6,0,10)
+#@gui : Tensor Smoothness = float(1.1,0,10)
+#@gui : Time Step = float(15,5,50)
+#@gui : Iterations = int(8,1,100)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_diffusion :
+  ac "gui_parallel_overlap \"smooth $6,$1,$2,$3,$4,$5,0 c 0,255\",$8,$9",$7
+
+#@gui Smooth [Mean-Curvature] : fx_smooth_meancurvature, fx_smooth_meancurvature(0)
+#@gui : Time Step = float(30,5,50)
+#@gui : Iterations = int(4,1,30)
+#@gui : Keep Iterations as Different Layers = bool(false)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_meancurvature :
+  ac "gui_parallel_overlap \"meancurvature_flow $2,$1,$3 c 0,255\",$5,$6",$4
+
+#@gui Smooth [Median] : fx_smooth_median, fx_smooth_median(0)
+#@gui : Radius = int(3,1,20)
+#@gui : Threshold = float(255,0,255)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+fx_smooth_median :
+  ac "median $1,$2",$3
+
+#@gui Smooth [NL-Means] : fx_smooth_nlmeans, fx_smooth_nlmeans(0)
+#@gui : Patch Size = float(4,0.5,10)
+#@gui : Spatial Bandwidth = int(4,3,13)
+#@gui : Tonal Bandwidth = float(10,1,50)
+#@gui : Patch Measure = choice(3,"Linf-Norm","L1-Norm","L2-Norm","Luminance","Lightness","RGB")
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>Jérôme Boulanger</i>.      Latest Update: <i>2015/07/01</i>.</small>")
+fx_smooth_nlmeans:
+  foreach {
+    if s==1 nlmeans $1,$2,$3,-_fx_smooth_nlmeans$4 # Handle separately grayscale images
+    else ac "gui_parallel_overlap \"nlmeans $1,$2,$3,-_fx_smooth_nlmeans$4\",$6,$7",$5
+    fi
+  }
+
+_fx_smooth_nlmeans0 : s c abs max
+_fx_smooth_nlmeans1 : s c abs +
+_fx_smooth_nlmeans2 : norm
+_fx_smooth_nlmeans3 : if s>=3 channels 0,2 luminance else norm fi
+_fx_smooth_nlmeans4 : if s>=3 channels 0,2 srgb2rgb rgb2lab channels 0 else norm fi
+_fx_smooth_nlmeans5 :
+
+#@gui Smooth [Patch-Based] : fx_smooth_patch, fx_smooth_patch(0)
+#@gui : Spatial Variance = float(10,0.1,200)
+#@gui : Patch Variance = float(10,0.1,200)
+#@gui : Patch Size = int(3,2,21)
+#@gui : Lookup Size = int(5,2,21)
+#@gui : Patch Smoothness = float(0,0,4)
+#@gui : Fast Approximation = bool(1)
+#@gui : Iterations = int(1,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_patch :
+  ac "gui_parallel_overlap \"repeat $7 { denoise $1,$2,$3,$4,$5,$6 } c 0,255\",$9,$10",$8
+
+#@gui Smooth [Patch-PCA] : fx_smooth_patchpca, fx_smooth_patchpca(0)
+#@gui : Strength = float(4,0,16)
+#@gui : Patch Size = int(7,2,21)
+#@gui : Lookup Size = int(11,2,21)
+#@gui : Spatial Sampling = int(7,1,16)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : note = note{"<small><b>Note:</b> Beware, this filter uses a very computationally intensive algorithm to
+#@gui : denoise images. So, do not complain too much if you have less than 8 cores available for the computation :)
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Authors: <i>David Tschumperlé</i> and <i>Jérome Boulanger</i>.
+#@gui :       Latest Update: <i>2016/03/24</i>.</small>")
+fx_smooth_patchpca :
+  ac "denoise_patchpca ${1-4} c 0,255",$5
+
+#@gui Smooth [Perona-Malik] : fx_smooth_peronamalik, fx_smooth_peronamalik(0)
+#@gui : K-Factor = float(20,0,255)
+#@gui : Time Step = float(5,5,50)
+#@gui : Iterations = int(5,1,30)
+#@gui : Keep Iterations as Different Layers = bool(false)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/11/26</i>.</small>")
+fx_smooth_peronamalik :
+  ac "gui_parallel_overlap \"peronamalik_flow $1,$3,$2,$4 c 0,255\",$6,$7",$5
+
+#@gui Smooth [Selective Gaussian] : fx_smooth_selective, fx_smooth_selective(0)
+#@gui : Amplitude = float(5,0,20)
+#@gui : Edges = float(0.5,0,2)
+#@gui : Scales = int(5,1,10)
+#@gui : Iterations = int(1,1,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_selective :
+  ac "gui_parallel_overlap \"repeat $4 { blur_selective $1,$2,$3 } c 0,255\",$6,$7",$5
+
+#@gui Smooth [Skin] : fx_smooth_skin, fx_smooth_skin_preview(1)
+#@gui : note = note("<small><b>Step 1:</b> Skin detection</small>")
+#@gui : Skin Estimation = choice(2,"None","Manual","Automatic")
+#@gui : Tolerance = float(0.5,0,1)
+#@gui : Smoothness = float(1,0,5)
+#@gui : Threshold = float(1,0,10)
+#@gui : Pre-Normalize Image = bool(1)
+#@gui : X-Coordinate [Manual] = float(50,0,100)
+#@gui : Y-Coordinate [Manual] = float(50,0,100)
+#@gui : Radius [Manual] = float(5,0,25)
+#@gui : sep = separator()
+#@gui : note = note("<small><b>Step 2:</b> Medium scale smoothing</small>")
+#@gui : Base Scale = float(2,0,10)
+#@gui : Fine Scale = float(0.2,0,0.8)
+#@gui : Smoothness = float(3,0,10)
+#@gui : Smoothness Type = choice(1,"Gaussian","Bilateral")
+#@gui : sep = separator()
+#@gui : note = note("<small><b>Step 3:</b> Details enhancement</small>")
+#@gui : Gain = float(0.05,0,0.5)
+#@gui : sep = separator()
+#@gui : Preview Data = choice{5,"Skin Mask","Base Scale","Medium Scale (Original)","Medium Scale (Smoothed)",
+#@gui : "Fine Scale","Result Image"}
+#@gui : sep = separator()
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
+#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
+#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
+#@gui : sep = separator()
+#@gui : url = link("Click here for a video tutorial","http://www.youtube.com/watch?v=H8pQfq-ybCc")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/12/20</i>.</small>")
+fx_smooth_skin :
+  foreach { split_opacity l[0] {
+    to_rgb
+
+    # Skin detection step.
+    if $5 +balance_gamma 128,128,128 else [0] fi
+    if !$1 channels. 0 f. 1 elif $1==2 detect_skin. $2 else detect_skin. $2,$6%,$7%,$8% fi
+    M:=iM b. $3% *. {$M/iM} *. $4 c. 0,1
+
+    # Details smoothing step.
+    split_details[0] 4,$9%,$10%
+    +_fx_smooth_skin[2] $12,$11
+    j[2] .,0,0,0,0,1,.. rm[-2,-1]
+    *. {10^$13} + c 0,255
+  } a c }
+
+_fx_smooth_skin :
+  if !$1 b {$2/8}%
+  else
+    if $2>0
+      m,M:=im,iM n 0,255
+      repeat int($2/5) { bilateral 3%,{5*3} }
+      bilateral 3%,{($2%5)*3}
+      * {($M-$m)/255} + $m
+    fi
+  fi
+
+fx_smooth_skin_preview :
+  if !$14
+    gui_split_preview "if $5 balance_gamma 128,128,128 fi if !$1 f 1 elif $1==2 detect_skin $2 "\
+     "else detect_skin $2,$6%,$7%,$8% fi M:=iM b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
+  elif $14==1
+    gui_split_preview "b $9%",${-3--1}
+  elif $14==2
+    gui_split_preview "split_details 4,$9%,$10% k.. n 0,255",${-3--1}
+  elif $14==3
+    gui_split_preview "split_details 4,$9%,$10% k.. _fx_smooth_skin $12,$11 n 0,255",${-3--1}
+  elif $14==4
+    gui_split_preview "split_details 4,$9%,$10% k. n 0,255",${-3--1}
+  else
+    gui_split_preview "fx_smooth_skin $*",${-3--1}
+  fi
+
+  if $1==1
+    to_rgb
+    circle $6%,$7%,$8%,0.2,0,255,0
+    circle $6%,$7%,$8%,0.4,0xFFFFFFFF,0,255,0
+    line {$6-0.25*$8}%,{$7-0.25*$8}%,{$6+0.25*$8}%,{$7+0.25*$8}%,0.8,255,255,0
+    line {$6+0.25*$8}%,{$7-0.25*$8}%,{$6-0.25*$8}%,{$7+0.25*$8}%,0.8,255,255,0
+  fi
+
+#@gui Smooth [Thin Brush] : fx_smooth_anisotropic, fx_smooth_anisotropic(0)
+#@gui : Amplitude = float(60,0,1000)
+#@gui : Sharpness = float(0.9,0,2)
+#@gui : Anisotropy = float(0.64,0,1)
+#@gui : Gradient Smoothness = float(3.1,0,10)
+#@gui : Tensor Smoothness = float(1.10,0,10)
+#@gui : Spatial Precision = float(0.8,0.1,2)
+#@gui : Angular Precision = float(30,1,180)
+#@gui : Value Precision = float(2,0.1,5)
+#@gui : Interpolation = choice(0,"Nearest Neighbor","Linear","Runge-Kutta")
+#@gui : Fast Approximation = bool(1)
+#@gui : Iterations = int(1,1,10)
+#@gui : Channel(s) = choice("RGB","Luminance","Blue & Red chrominances","Blue chrominance","Red chrominance")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : note = note{"\n<small><b>Note: </b>This set of anisotropic smoothing parameters has been suggested
+#@gui : by PhotoComiX.</small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>PhotoComiX</i>.      Latest Update: <i>2010/26/12</i>.</small>")
+
+#@gui Smooth [Total Variation] : fx_smooth_tv, fx_smooth_tv(0)
+#@gui : Time Step = float(30,5,100)
+#@gui : Iterations = int(10,1,40)
+#@gui : Keep Iterations as Different Layers = bool(false)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_tv :
+  ac "gui_parallel_overlap \"tv_flow $2,$1,$3 c 0,255\",$5,$6",$4
+
+#@gui Smooth [Wavelets] : fx_smooth_haar, fx_smooth_haar(0)
+#@gui : Threshold = float(1,0,10)
+#@gui : Iterations = int(10,1,32)
+#@gui : Scales = int(10,2,10)
+#@gui : sep = separator()
+#@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
+# "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
+# "YCbCr [Luminance]","YCbCr [Blue-Red Chrominances]","YCbCr [Blue Chrominance]","YCbCr [Red Chrominance]",\
+# "YCbCr [Green Chrominance]","Lab [All]","Lab [Lightness]","Lab [ab-Chrominances]","Lab [a-Chrominance]",\
+# "Lab [b-Chrominance]","Lch [All]","Lch [ch-Chrominances]","Lch [c-Chrominance]","Lch [h-Chrominance]","HSV [All]",\
+# "HSV [Hue]","HSV [Saturation]","HSV [Value]","HSI [All]","HSI [Intensity]","HSL [All]","HSL [Lightness]",\
+# "CMYK [All]","CYMK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
+# "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
+#@gui : sep = separator()
+#@gui : Parallel Processing = choice("Auto","One Thread","Two Threads","Four Threads","Eight Threads",
+#@gui : "Sixteen Threads"), Spatial Overlap = int(24,0,256)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>Jérome Boulanger and David Tschumperlé</i>.
+#@gui :       Latest Update: <i>2013/08/27</i>.</small>")
+fx_smooth_haar :
+  remove_opacity
+  ac "gui_parallel_overlap \"denoise_haar $1,$3,$2 c 0,255\",$5,$6",$4
+
+#@gui Upscale [CNN2x] : fx_scale2x_cnn, fx_scale2x_cnn_preview(0)
+#@gui : Sharpness = float(1.25,0,5)
+#@gui : sep = separator()
+#@gui : Update Neural Network = button()
+#@gui : sep = separator()
+#@gui : note = note{"<small>
+#@gui : <b><span color="#EE5500">Note:</span></b> This filter uses a convolutional neural network (CNN)
+#@gui : to upscale images. This filter does not take advantage of GPU computing, so expect it to be quite slow
+#@gui : if you don't have many CPU cores available.
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/13</i>.</small>")
+fx_scale2x_cnn :
+  scale2x_cnn $1
+
+fx_scale2x_cnn_preview :
+  if $2 l[] {
+    delete ${-path_cache}gmic_scale2x_cnn.gmz
+    input_cached gmic_scale2x_cnn.gmz,2 rm
+  } fi
+  rs 128,128,0
+  foreach {
+    gui_split_preview "scale2x_cnn $1",9,50,50
+  }
+
+#@gui Upscale [Diffusion] : fx_upscale_smart, fx_upscale_smart_preview(0)
+#@gui : Width = text("200%")
+#@gui : Height = text("200%")
+#@gui : Smoothness = float(2,0,20)
+#@gui : Anisotropy = float(0.4,0,1)
+#@gui : Sharpness = float(50,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+fx_upscale_smart :
+  to_rgb upscale_smart $1,$2,1,$3,$4,$5 c 0,255
+
+fx_upscale_smart_preview :
+  repeat $! {
+    +r. $1,$2,1,1,0
+    if w<{-2,w}" || "h<{-2,h} # Test for downscaling
+      rm. /. 4
+      0 t. "Downscaling is\nnot allowed!",5,5,20,1,255 r. ..,..,1,1,0,0,0.5,0.5
+      -|[-2,-1]
+    else
+      z.. {50-50*{-2,w}/w}%,{50-50*{-2,h}/h}%,{50+50*{-2,w}/w}%,{50+50*{-2,h}/h}%
+      rm. fx_upscale_smart. $1,$2,$3,$4,$5 c. 0,255
+    fi
+  mv. 0 }
+
+#@gui Upscale [Scale2x] : fx_scalenx, fx_scalenx_preview(0)
+#@gui : Scaling Factor = choice("x 2","x 3","x 4","x 6","x 8","x 9","x 12","x 16","x 18","x 27")
+#@gui : Colorbase = choice(0,"RGB","YCbCr","Lab")
+#@gui : note = note{"\n<small><b>Note: </b>
+#@gui : This filter re-implements the scaling algorithm described at :
+#@gui : </small>"}
+#@gui : url = link("http://scale2x.sourceforge.net")
+#@gui : note = note{"<small>
+#@gui : This filter is useful for resizing images that have very few colors
+#@gui : (e.g. indexed images). It is generally useless for true colors images.
+#@gui : </small>"}
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
+fx_scalenx :
+  foreach {
+    split_opacity
+    if $2==1 rgb2ycbcr[0] round[0]
+    elif $2==2 rgb2lab8[0] round[0]
+    fi
+    if !$1 scale2x
+    elif $1==1 scale3x
+    elif $1==2 scale2x scale2x
+    elif $1==3 scale3x scale2x
+    elif $1==4 scale2x scale2x scale2x
+    elif $1==5 scale3x scale3x
+    elif $1==6 scale3x scale2x scale2x
+    elif $1==7 scale2x scale2x scale2x scale2x
+    elif $1==8 scale3x scale3x scale2x
+    elif $1==9 scale3x scale3x scale3x
+    fi
+    if $2==1 ycbcr2rgb[0]
+    elif $2==2 lab82rgb[0]
+    fi
+    a c
+  }
+
+fx_scalenx_preview :
+  z 40%,40%,60%,60%
+  fx_scalenx $1,$2
+
+#@gui Upscale [DCCI2x]: fx_scale_dcci2x, fx_scale_dcci2x_preview(0)
+#@gui : note = note("<i>Directional Cubic Convolution Interpolation</i>"), sep = separator()
+#@gui : Threshold = float(1.15,1,2)
+#@gui : Exponent = int(5,1,6)
+#@gui : Extend 1px = _bool()
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>Garagecoder</i>.      Latest Update : <i>2015/07/11</i>.</small>")
+#@gui : note = note{"\n<small><b>Note: </b>
+#@gui : This filter re-implements the scaling algorithm described at :
+#@gui : </small>"}
+#@gui : url = link("wikipedia.org","https://en.wikipedia.org/wiki/Directional_Cubic_Convolution_Interpolation")
+#@gui : note = note("<small>The algorithm is intended for enlarging images while avoiding</small>")
+#@gui : note = note("<small>artifacts, e.g. staircase artifacts.</small>")
+#@gui : note = note("\n<small>Threshold controls edge[lower] to texture[higher] balance.</small>")
+#@gui : note = note("<small>Exponent controls texture edge sharpness[higher].</small>")
+#@gui : note = note("<small>Warning: highly experimental...</small>")
+fx_scale_dcci2x : skip ${1=1.15},${2=5},${3=0}
+  foreach { split_opacity scale_dcci2x ${1-3} a c c 0,255 }
+
+fx_scale_dcci2x_preview :
+  z 25%,25%,75%,75% fx_scale_dcci2x $*
 
 #@gui ____<b>Sequences</b>
 #-------------------------
