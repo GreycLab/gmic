@@ -1850,14 +1850,22 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
 
 // Macro for having 'get' or 'non-get' versions of G'MIC commands.
 // Set 'optim_inplace' to true, only for function implementations that act 'in-place'.
+#if gmic_pixel_type==half
+#define _gmic_apply(function,optim_inplace) \
+  images[uind].get_##function.move_to(images)
+#else
+#define _gmic_apply(function,optim_inplace) \
+  if (optim_inplace) \
+    CImg<gmic_pixel_type>(images[uind],false).function.move_to(images); /* Surprisingly faster */ \
+  else \
+    images[uind].get_##function.move_to(images)
+#endif
+
 #define gmic_apply(function,optim_inplace) { \
     uind = selection[l]; \
     gmic_check(images[uind]); \
     if (is_get) { \
-      if (optim_inplace) \
-        CImg<gmic_pixel_type>(images[uind],false).function.move_to(images); /* Surprisingly faster */ \
-      else \
-        images[uind].get_##function.move_to(images); \
+      _gmic_apply(function,optim_inplace); \
       image_names[uind].get_copymark().move_to(image_names); \
     } else images[uind].function; \
   }
