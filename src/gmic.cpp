@@ -11943,7 +11943,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             print(0,
                   "Store image%s as %svariable%s '%s'",
                   gmic_selection.data(),
-                  is_compressed?"compressed":"",
+                  is_compressed?"compressed ":"",
                   next?"s":"",
                   gmic_argument_text_printed() + (*argument=='0' || *argument=='1'?2:0));
 
