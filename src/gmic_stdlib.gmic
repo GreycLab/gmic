@@ -20684,43 +20684,12 @@ remove_hotpixels : check ${1=3}>0 skip ${2=10%}
 remove_pixels : check "$1>=0"
   e[^-1] "Remove $1 of the non-zero pixels in image$?."
   foreach {
-    +norm !=. 0
-    N:=is # Number of non-zero pixels
-    n:=round(ispercentage($1)?$N*$1:$1) # Number of pixels to remove
-    if $n<=0 rm. # No pixels to remove
-    elif $n>=$N rm. f 0 # All pixels to remove
-    elif $n>int($N/2) # More pixels to remove than to keep
-      remove_pixels. {$N-$n} ==. 0 *
-    else # Less pixels to remove than to keep
-      d:=d r 100%,{d*h},1,100%,-1 # Force image to be in 2D
+    # Extract zero-valued pixels.
+    1,1,1,4 eval.. "begin(N = 0; ret = I); norm(I)?(++N; da_push([u,x,y,z])); ret; end(set('N',N); da_freeze())"
+    N:=round(ispercentage($1)?$N*cut($1,0,1):$1)
 
-      # Retrieve coordinates of all non-zero pixels.
-      100%,1,1,1,x 1,{-2,h},1,1,y +[-2,-1] 1 r[-2,-1] ..,.
-      *[-2,-1] ... rm...
-      y[-2,-1] a[-2,-1] x discard. y,0
-
-      # Generate a 1xN vector with at least n non-zero pixels.
-      do
-        1,100%,1,1 rand. 0,{h} <=. {$n*1.25}
-        if is>=$n break else rm. fi
-      while 1
-
-      # Generate a 1xn vector of coordinates to 'remove'.
-      r. 2 *[-2,-1] discard. y,0
-      i.. 1,100% rand.. 0,1 a[-2,-1] x sort. +,y
-      rows. 0,{$n-1} -. 1 z. 1,3
-
-      # Set those pixels to 0 using a 3D object.
-      i.. ({'CImg3d'},{h},{h})
-      1,100%,1,1,1 1,100%,1,1,y a[-2,-1] x
-      3,100% 1,100%,1,1,1 y[-5--1] a[-5--1] y
-      if s#0<=3 j3d.. .,0,0,0,1,0,0,0,0
-      else [0],[0],1,1,1 j3d. ..,0,0,0,1,0,0,0,0 *[0,-1]
-      fi
-      rm.
-
-      r 100%,{h/$d},$d,100%,-1 # Resize to original dimension (eventually 3D)
-    fi
+    # Remove subset of this pixel set.
+    sort. +,y r. 1,$N,1,100%,0 eval. "begin(ret = I); I(#-2,i1,i2,i3) = 0; ret" rm.
   }
 
 #@cli rolling_guidance : std_deviation_s[%]>=0,std_deviation_r[%]>=0,_precision>=0

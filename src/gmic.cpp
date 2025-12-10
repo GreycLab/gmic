@@ -105,8 +105,8 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
                                   l,img._width,img._height,img._depth,img._spectrum,img._data,
                                   error_message.data());
     siz+=img.size() - 8;
-    g_nbv+=cimg::float2uint((float)img[6]);
-    g_nbp+=cimg::float2uint((float)img[7]);
+    g_nbv+=cimg::float2uint(img[6]);
+    g_nbp+=cimg::float2uint(img[7]);
   }
 
   CImg<T> res(1,siz + 8);
@@ -115,11 +115,11 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   *(ptrd++) = (T)('C' + 0.5f); *(ptrd++) = (T)('I' + 0.5f); // Create object header
   *(ptrd++) = (T)('m' + 0.5f); *(ptrd++) = (T)('g' + 0.5f);
   *(ptrd++) = (T)('3' + 0.5f); *(ptrd++) = (T)('d' + 0.5f);
-  *(ptrd++) = (T)cimg::uint2float(g_nbv);
-  *(ptrd++) = (T)cimg::uint2float(g_nbp);
+  *(ptrd++) = cimg::uint2float(g_nbv,(T)0);
+  *(ptrd++) = cimg::uint2float(g_nbp,(T)0);
   cimglist_for(images,l) { // Merge object points
     const CImg<T>& img = images[l];
-    const unsigned int nbv = cimg::float2uint((float)img[6]);
+    const unsigned int nbv = cimg::float2uint(img[6]);
     std::memcpy(ptrd,img._data + 8,3*nbv*sizeof(T));
     ptrd+=3*nbv;
     ptrs[l] = img._data + 8 + 3*nbv;
@@ -127,15 +127,15 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   ulongT poff = 0;
   cimglist_for(images,l) { // Merge object primitives
     const unsigned int
-      nbv = cimg::float2uint((float)images[l][6]),
-      nbp = cimg::float2uint((float)images[l][7]);
+      nbv = cimg::float2uint(images[l][6]),
+      nbp = cimg::float2uint(images[l][7]);
     for (unsigned int p = 0; p<nbp; ++p) {
       const unsigned int
-        nbi = cimg::float2uint((float)*(ptrs[l]++)),
+        nbi = cimg::float2uint(*(ptrs[l]++)),
         _nbi = nbi<5?nbi:nbi==5?2:nbi/3;
-      *(ptrd++) = (T)cimg::uint2float(nbi);
+      *(ptrd++) = cimg::uint2float(nbi,(T)0);
       for (unsigned int i = 0; i<_nbi; ++i)
-        *(ptrd++) = (T)cimg::uint2float(cimg::float2uint((float)*(ptrs[l]++)) + poff);
+        *(ptrd++) = cimg::uint2float(cimg::float2uint(*(ptrs[l]++)) + poff,(T)0);
       for (unsigned int i = nbi - _nbi; i; --i)
         *(ptrd++) = *(ptrs[l]++);
     }
@@ -143,15 +143,15 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   }
   ulongT voff = 0;
   cimglist_for(images,l) { // Merge object colors
-    const unsigned int nbc = cimg::float2uint((float)images[l][7]);
+    const unsigned int nbc = cimg::float2uint(images[l][7]);
     for (unsigned int c = 0; c<nbc; ++c)
       if (*(ptrs[l])==(T)-128) {
         *(ptrd++) = *(ptrs[l]++);
         const unsigned int
-          w = (unsigned int)cimg::float2uint((float)*(ptrs[l]++)),
+          w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
           h = (unsigned int)*(ptrs[l]++),
           s = (unsigned int)*(ptrs[l]++);
-        if (!h && !s) { *(ptrd++) = (T)cimg::uint2float((unsigned int)(w + voff)); *(ptrd++) = 0; *(ptrd++) = 0; }
+        if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
         else {
           *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
           const ulongT whs = (ulongT)w*h*s;
@@ -163,15 +163,15 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
   }
   voff = 0;
   cimglist_for(images,l) { // Merge object opacities
-    const unsigned int nbo = cimg::float2uint((float)images[l][7]);
+    const unsigned int nbo = cimg::float2uint(images[l][7]);
     for (unsigned int o = 0; o<nbo; ++o)
       if (*(ptrs[l])==(T)-128) {
         *(ptrd++) = *(ptrs[l]++);
         const unsigned int
-          w = (unsigned int)cimg::float2uint((float)*(ptrs[l]++)),
+          w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
           h = (unsigned int)*(ptrs[l]++),
           s = (unsigned int)*(ptrs[l]++);
-        if (!h && !s) { *(ptrd++) = (T)cimg::uint2float((unsigned int)(w + voff)); *(ptrd++) = 0; *(ptrd++) = 0; }
+        if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
         else {
           *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
           const ulongT whs = (ulongT)w*h*s;
@@ -1687,7 +1687,7 @@ CImg<T>& rotate_CImg3d(const CImg<t>& rot) {
     throw CImgInstanceException(_cimg_instance
                                 "rotate_CImg3d(): image instance is not a CImg3d (%s).",
                                 cimg_instance,error_message.data());
-  const unsigned int nbv = cimg::float2uint((float)(*this)[6]);
+  const unsigned int nbv = cimg::float2uint((*this)[6]);
   const T *ptrs = data() + 8;
   const float
     a = (float)rot(0,0), b = (float)rot(1,0), c = (float)rot(2,0),
@@ -1719,7 +1719,7 @@ CImg<T>& scale_CImg3d(const float sx, const float sy, const float sz) {
     throw CImgInstanceException(_cimg_instance
                                 "scale_CImg3d(): image instance is not a CImg3d (%s).",
                                 cimg_instance,error_message.data());
-  const unsigned int nbv = cimg::float2uint((float)(*this)[6]);
+  const unsigned int nbv = cimg::float2uint((*this)[6]);
   T *ptrd = data() + 8;
   for (unsigned int j = 0; j<nbv; ++j) { *(ptrd++)*=(T)sx; *(ptrd++)*=(T)sy; *(ptrd++)*=(T)sz; }
   return *this;
@@ -1735,7 +1735,7 @@ CImg<T>& shift_CImg3d(const float tx, const float ty, const float tz) {
     throw CImgInstanceException(_cimg_instance
                                 "shift_CImg3d(): image instance is not a CImg3d (%s).",
                                 cimg_instance,error_message.data());
-  const unsigned int nbv = cimg::float2uint((float)(*this)[6]);
+  const unsigned int nbv = cimg::float2uint((*this)[6]);
   T *ptrd = data() + 8;
   for (unsigned int j = 0; j<nbv; ++j) { *(ptrd++)+=(T)tx; *(ptrd++)+=(T)ty; *(ptrd++)+=(T)tz; }
   return *this;
@@ -9817,12 +9817,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     else gmic_save_tiff("int32",cimg_int32)
                       else gmic_save_tiff("uint64",cimg_uint64)
                         else gmic_save_tiff("int64",cimg_int64)
-                          else gmic_save_tiff("float32",cimg_float32)
-                            else gmic_save_tiff("float64",cimg_float64)
-                              else error(true,0,0,
-                                         "Command 'output': File '%s', invalid "
-                                         "specified pixel type '%s'.",
-                                         _filename.data(),stype);
+#if cimg_is_float16==1
+                          else gmic_save_tiff("float16",cimg_float16)
+#endif
+                            else gmic_save_tiff("float32",cimg_float32)
+                              else gmic_save_tiff("float64",cimg_float64)
+                                else error(true,0,0,
+                                           "Command 'output': File '%s', invalid "
+                                           "specified pixel type '%s'.",
+                                           _filename.data(),stype);
 
           } else if (!std::strcmp(uext,"gif")) {
 
@@ -11943,7 +11946,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             print(0,
                   "Store image%s as %svariable%s '%s'",
                   gmic_selection.data(),
-                  is_compressed?"compressed":"",
+                  is_compressed?"compressed ":"",
                   next?"s":"",
                   gmic_argument_text_printed() + (*argument=='0' || *argument=='1'?2:0));
 
@@ -14866,8 +14869,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (g_list.size()==1) {
             if (g_list[0].is_CImg3d(false))
               std::fprintf(cimg::output()," (%u vertices, %u primitives).",
-                           cimg::float2uint((float)g_list(0,6)),
-                           cimg::float2uint((float)g_list(0,7)));
+                           cimg::float2uint(g_list(0,6)),
+                           cimg::float2uint(g_list(0,7)));
             else
               std::fprintf(cimg::output()," (1 image %dx%dx%dx%d).",
                            g_list[0].width(),g_list[0].height(),
