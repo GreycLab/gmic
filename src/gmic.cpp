@@ -9817,12 +9817,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     else gmic_save_tiff("int32",cimg_int32)
                       else gmic_save_tiff("uint64",cimg_uint64)
                         else gmic_save_tiff("int64",cimg_int64)
-                          else gmic_save_tiff("float32",cimg_float32)
-                            else gmic_save_tiff("float64",cimg_float64)
-                              else error(true,0,0,
-                                         "Command 'output': File '%s', invalid "
-                                         "specified pixel type '%s'.",
-                                         _filename.data(),stype);
+#if cimg_is_float16==1
+                          else gmic_save_tiff("float16",cimg_float16)
+#endif
+                            else gmic_save_tiff("float32",cimg_float32)
+                              else gmic_save_tiff("float64",cimg_float64)
+                                else error(true,0,0,
+                                           "Command 'output': File '%s', invalid "
+                                           "specified pixel type '%s'.",
+                                           _filename.data(),stype);
 
           } else if (!std::strcmp(uext,"gif")) {
 

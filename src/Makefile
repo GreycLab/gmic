@@ -454,7 +454,7 @@ opencv: # Default: With OpenCV support
 	$(STRIP) gmic$(EXE)
 
 half: # Using float16 rather than float32 to store images
-	$(MAKE) "CFLAGS+=$(MANDATORY_CFLAGS) $(OPT_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) -Dcimg_use_half -I/usr/include/OpenEXR -Dgmic_pixel_type=half" \
+	$(MAKE) "CFLAGS+=$(MANDATORY_CFLAGS) $(OPT_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(OPENMP_CFLAGS) $(X11_CFLAGS) $(OPENEXR_CFLAGS) -I/usr/include/OpenEXR -Dgmic_pixel_type=half" \
 	        "LIBS+=gmic.o $(MANDATORY_LIBS) $(OPT_LIBS) $(PARALLEL_LIBS) $(OPENMP_LIBS) $(X11_LIBS) $(OPENEXR_LIBS)" gmic.o _cli
 
 native: # Optimized with architecture-specific flags, with OpenCV support
