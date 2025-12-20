@@ -502,7 +502,7 @@ displayless:
 
 # CLI (shared)
 #--------------
-cli_shared:
+cli_shared: lib
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli
 	$(STRIP) gmic$(EXE)
 
@@ -546,7 +546,7 @@ libcgmic_files:
 	fi
 	@echo " done!"
 
-libcgmic.so: libcgmic.o
+libcgmic.so: libcgmic.o libgmic.o
 	ar rcs libcgmic.a libcgmic.o
 ifeq ($(OS),Darwin)
 	$(CXX) -dynamiclib -o libcgmic.$(SOVERSION).dylib -install_name $(USR)/lib/libcgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
@@ -569,8 +569,8 @@ endif
 libcgmic.o: gmic_libc.cpp CImg.h gmic_libc.h gmic.h
 	$(CXX) -o libcgmic.o -c gmic_libc.cpp -Dgmic_core $(PIC) $(CFLAGS)
 
-use_libcgmic: use_libcgmic.c gmic_libc.h
-	$(CC) -std=c99 -o use_libcgmic use_libcgmic.c -lcgmic $(LIBS)
+use_libcgmic: use_libcgmic.c gmic_libc.h libcgmic.so
+	$(CC) -std=c99 -o use_libcgmic use_libcgmic.c -L. -lcgmic $(LIBS)
 
 # libcgmic (static)
 #-------------------
