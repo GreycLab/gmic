@@ -30073,6 +30073,7 @@ nn_add :
          (!is_num0 || !is_num1 || (is_in2 && !is_num2) || (is_in3 && !is_num3))"
   net,out=$_nn_network,$1
   nb_inputs:=2+!!narg($4)+!!narg($5)
+  check "isint($nb_inputs,2,4)"
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   if '$4'=='.' in2=${_${net}_previous_layer} else in2=$4 fi
@@ -30084,9 +30085,17 @@ nn_add :
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if $nb_inputs>2" && "!$isnum2 nn_check_layer $in2 out_size=${_${nin2}_size} else nin2=$in2 fi
   if $nb_inputs>3" && "!$isnum3 nn_check_layer $in3 out_size=${_${nin3}_size} else nin3=$in3 fi
-  if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+  if !$isnum0 check [${_${nin0}_size}]==[$out_size] fi
+  if !$isnum1 check [${_${nin1}_size}]==[$out_size] fi
+  if $nb_inputs>2" && "!$isnum2 check [${_${nin2}_size}]==[$out_size] fi
+  if $nb_inputs>3" && "!$isnum3 check [${_${nin3}_size}]==[$out_size] fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  if $nb_inputs==2 s_in="'"$in0"' and '"$in1"'"
+  elif $nb_inputs==3 s_in="'"$in0"', '"$in1"' and '"$in2"'"
+  else s_in="'"$in0"', '"$in1"', '"$in2"' and '"$in3"'"
+  fi
+  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$s_in"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
