@@ -345,6 +345,9 @@ MAGICK_LIBS = $(shell pkg-config --libs GraphicsMagick++ || echo -lGraphicsMagic
 # (http://www.openexr.com/)
 OPENEXR_CFLAGS = -Dcimg_use_openexr $(shell pkg-config --cflags OpenEXR || echo -I$(PREFIX)/$(INCLUDE)/OpenEXR)
 OPENEXR_LIBS = $(shell pkg-config --libs OpenEXR || echo -lIlmImf -lHalf)
+ifdef IS_GCC
+OPENEXR_CFLAGS += -Wno-class-memaccess
+endif
 
 # Enable Fast Fourier Transforms, using the FFTW3 library.
 # (http://www.fftw.org/)
@@ -454,7 +457,7 @@ opencv: # Default: With OpenCV support
 	$(STRIP) gmic$(EXE)
 
 half: # Using float16 rather than float32 to store images: HIGHLY EXPERIMENTAL, DO NOT EXPECT MUCH FROM THAT!
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Wno-class-memaccess -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
 double: # Using float64 rather than float32 to store images
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=double" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
