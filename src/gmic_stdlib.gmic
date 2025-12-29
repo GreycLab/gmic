@@ -30054,26 +30054,36 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,in1
+#@cli nn_add : out,in0,in1,_in2,_in3
 #@cli : Add an 'add' layer to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
-nn_add : check "s_out = ['$1'];
-                s_in0 = ['$2'];
-                s_in1 = ['$3'];
-                is_num0 = isnum(s_in0);
-                is_num1 = isnum(s_in1);
-                isvarname(s_out) && # out
-                (isvarname(s_in0) || s_in0=='.' || is_num0) && # in0
-                (isvarname(s_in1) || s_in1=='.' || is_num1) && # in1
-                (!is_num0 || !is_num1)"
+nn_add :
+  check "s_out = ['$1']; s_in0 = ['$2']; s_in1 = ['$3']; s_in2 = ['${4=}']; s_in3 = ['${5=}'];
+         is_in2 = s_in2!=0;
+         is_in3 = s_in3!=0;
+         is_num0 = isnum(s_in0);
+         is_num1 = isnum(s_in1);
+         is_num2 = isnum(s_in2);
+         is_num3 = isnum(s_in3);
+         isvarname(s_out) && # out
+         (isvarname(s_in0) || s_in0=='.' || is_num0) && # in0
+         (isvarname(s_in1) || s_in1=='.' || is_num1) && # in1
+         (!is_in2 || (is_in2 && (isvarname(s_in1) || s_in1=='.' || is_num1))) && # in2
+         (!is_in3 || (is_in3 && (isvarname(s_in3) || s_in3=='.' || is_num3))) && # in3
+         (!is_num0 || !is_num1 || (is_in2 && !is_num2) || (is_in3 && !is_num3))"
   net,out=$_nn_network,$1
+  nb_inputs:=2+!!narg($4)+!!narg($5)
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  isnum0,isnum1:=isnum($in0),isnum($in1)
+  if '$4'=='.' in2=${_${net}_previous_layer} else in2=$4 fi
+  if '$5'=='.' in3=${_${net}_previous_layer} else in3=$5 fi
+  nout,nin0,nin1,nin2,nin3=${net}_$out,${net}_$in0,${net}_$in1,${net}_$in2,${net}_$in3
+  isnum0,isnum1,isnum2,isnum3:=isnum($in0),isnum($in1),isnum($in2),isnum($in3)
   out_size=
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
+  if $nb_inputs>2" && "!$isnum2 nn_check_layer $in2 out_size=${_${nin2}_size} else nin2=$in2 fi
+  if $nb_inputs>3" && "!$isnum3 nn_check_layer $in3 out_size=${_${nin3}_size} else nin3=$in3 fi
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
