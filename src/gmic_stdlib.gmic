@@ -30585,6 +30585,18 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
+#@cli nn_init : _network_name
+#@cli : Initialize new network with specified name, and select it as the current one.
+#@cli : Default value: 'network_name=nn'.
+nn_init : check "isvarname(['$1'])"
+  e[^-1] "[nn_lib] Initialize new network '$1'."
+  _nn_init $1
+
+_nn_init : # Init new network
+  _nn_network=$1
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_previous_layer=
+  _$1_init="nn_init $1\n"
+
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
@@ -30907,20 +30919,13 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
 nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
   if narg("$1")
     if narg($_$1_init) _nn_network=$1 # Network already exists
-    else _nn_network $1 # New network -> initialize it
+    else _nn_init $1 # New network -> initialize it
     fi
   else
-    if !narg(${_nn_network}) _nn_network nn fi # Init default network
+    if !narg(${_nn_network}) _nn_init nn fi # Init default network
     noarg
   fi
   u ${_nn_network}
-
-_nn_network : # Init new network
-  _nn_network=$1
-  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_previous_layer=
-  _$1_init="nn_network ${1--1}\n"
-
-nn_init : nn_network "$1" # For backward compatibility
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' (nonlinearity) layer to the current network.
