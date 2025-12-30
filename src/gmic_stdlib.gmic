@@ -30096,7 +30096,7 @@ nn_add :
          (!is_in2 || (is_in2 && (isvarname(s_in1) || s_in1=='.' || is_num1))) && # in2
          (!is_in3 || (is_in3 && (isvarname(s_in3) || s_in3=='.' || is_num3))) && # in3
          (!is_num0 || !is_num1 || (is_in2 && !is_num2) || (is_in3 && !is_num3))"
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   nb_inputs:=2+!!narg($4)+!!narg($5)
   check "isint($nb_inputs,2,4)"
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
@@ -30151,7 +30151,7 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                    (isvarname(s3) || s3=='.') && # in1
                    isin(s4,'x','y','z','c') # axis
                    "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -30181,7 +30181,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -30209,7 +30209,7 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -30234,7 +30234,7 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
 nn_check_layer :
   if !isvarname(['"$1"'])
     error[0--3] "Command '$0': Invalid layer name '$1'."
-  elif narg(${_${_nn_network}_$1_size})!=4" && "narg(${_$1_size})!=4
+  elif narg(${_${-nn_network}_$1_size})!=4" && "narg(${_$1_size})!=4
     error[0--3] "Command '$0': Layer with name '$1' does not exist."
   fi
 
@@ -30245,7 +30245,7 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                   isvarname(s2) && # out1
                   (isvarname(s3) || s3=='.') # in
                   "
-  net,out0,out1=$_nn_network,${1,2}
+  net,out0,out1=${-nn_network},${1,2}
   if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
 
@@ -30286,7 +30286,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
                    ${10=0}>=0 && # weight_decay
                    isint(${11=3},0,4) # initialization
                    "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
@@ -30357,7 +30357,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                    ${10=0}>=0 && # weight_decay
                    isint(${11=3},0,4) # initialization
                    "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
@@ -30416,7 +30416,7 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
                  min(isint([${3-10}])) && # x0,y0,z0,c0,x1,y1,z1,c1
                  isint(${11=0},0,3) # boundary_conditions
                  "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
@@ -30448,7 +30448,7 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      (isvarname(s3) || s3=='.') && # in1
                      isint(${4=2},0) # metric
                      "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -30479,7 +30479,7 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -30509,7 +30509,7 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
                     (isvarname(s2) || s2=='.') && # in
                     inrange($3,0,1,1,0) # dropout_rate
                     "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   dropout_rate=$3
@@ -30542,7 +30542,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                ${5=0}>=0 && # weight_decay
                isint(${6=3},0,4) # initialization
                "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
@@ -30585,15 +30585,6 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
-#@cli nn_init : network_name
-#@cli : Initialize new network with specified name, and select it as the current one.
-nn_init : check "isvarname(['$1'])"
-  e[^-1] "[nn_lib] Initialize new network '$1'."
-  _nn_network,net=$1
-  _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
-   _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_${net}_previous_layer=
-  _${net}_init="$0 ${1--1}\n"
-
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
@@ -30604,7 +30595,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
                   isint(${4=1},1) && # depth
                   isint(${5=1},1) # spectrum
                   "
-  net,out=$_nn_network,$1 nout=${net}_$out
+  net,out=${-nn_network},$1 nout=${net}_$out
   width,height,depth,spectrum=${2-5}
 
   e[^-1] "[nn_lib] Add input '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")."
@@ -30629,7 +30620,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
   l[] {
-    "$1" run {t} rm. net=$_nn_network
+    "$1" run {t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
@@ -30653,7 +30644,7 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      (isvarname(s2) || s2=='.') && # in0
                      (isvarname(s3) || s3=='.') && # in1
                      "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -30678,7 +30669,7 @@ nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                                      (isvarname(s3) || isnum($3)) && # ground_truth
                                      isnum(${4=1}) # weight
                                      "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
@@ -30708,7 +30699,7 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                               (isvarname(s3) || isnum($3)) && # ground_truth
                               isnum(${4=1}) # weight
                               "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
@@ -30738,7 +30729,7 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                      (isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
                      "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
@@ -30769,7 +30760,7 @@ nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                        isint(${4=1},0) && # metric
                        isnum(${5=1}) # weight
                        "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,metric,weight=${3-5}
@@ -30799,7 +30790,7 @@ nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                                       (isvarname(s3) || isnum($3)) && # ground_truth
                                       isnum(${4=1}) # weight
                                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   ground_truth,weight=${3-4}
@@ -30828,7 +30819,7 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size,is_maxabs=${3-4}
@@ -30858,7 +30849,7 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size,is_maxabs=${3-4}
@@ -30887,7 +30878,7 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -30910,6 +30901,26 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_init.="$0 ${1--1}\n"
   _${net}_previous_layer=$out
 
+#@cli nn_network : _network_name
+#@cli : Get/set current network name, and initialize/select network if it does not already exist.
+#@cli : This command returns the name of the current selected network.
+nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
+  if narg("$1")
+    if narg($_$1_init) _nn_network=$1 # Network already exists
+    else _nn_network $1 # New network -> initialize it
+    fi
+  else
+    if !narg(${_nn_network}) _nn_network nn fi # Init default network
+    noarg
+  fi
+  u ${_nn_network}
+
+_nn_network : # Init new network
+  _nn_network,net=$1
+  _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
+   _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_${net}_previous_layer=
+  _${net}_init="$0 ${1--1}\n"
+
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' (nonlinearity) layer to the current network.
 #@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | sqr | sqrt | \
@@ -30920,7 +30931,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
                (isvarname(s2) || s2=='.') && # in
                isvarname(s3) # activation
                "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   activation=$3
@@ -30976,7 +30987,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${8=0},0) && # group_x
                       isint(${9=3},0,3) # learning_mode
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
@@ -31028,7 +31039,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -31061,7 +31072,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -31094,7 +31105,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -31123,7 +31134,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   patch_size=$3
@@ -31147,7 +31158,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_print
 #@cli : Print info on current neural network.
 nn_print :
-  net=$_nn_network
+  net=${-nn_network}
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
 
   e[^-1] "[nn_lib] Print info on neural network '"$net"'."
@@ -31195,7 +31206,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
                    isvarname(s1) && # out
                    (isvarname(s2) || s2=='.') # in
                    "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
 
@@ -31222,7 +31233,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
                     isint(${5=1},1) && # depth
                     isint(${6=1},1) # spectrum
                     "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   width,height,depth,spectrum=${3-6}
@@ -31256,7 +31267,7 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
                    ${6=100%}>0 && # spectrum
                    isint(${7=3},-1,6) # interpolation
                    "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   if ispercentage($3) width:=max(1,round([${_${nin}_size}][1]*$3)) else width=$3 fi
@@ -31291,7 +31302,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
                 ${6=100%}>0 && # depth
                 ${7=100%}>0 # spectrum
                 "
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   if ispercentage($4) width:=max(1,round([${_${nin}_size}][0]*$4)) else width=$4 fi
@@ -31323,24 +31334,16 @@ nn_save : check "s1 = ['$1'];
                  find(s1,'.gmz')==size(s1) - 4 && # filename
                  isbool(${2=1}) # include_trainer_data
                  "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
   __nn_store $2 o[$sel,-1] "$1" rm.
   is_change 0
 
-#@cli nn_select : _network_name
-#@cli : Select network with specified name as the current one.
-nn_select : check "s1 = ['$1'];
-                   isvarname(s1) # network_name
-                   "
-  _nn_network=$1
-  e[^-1] "[nn_lib] Select '"$_nn_network"' as the current network."
-
 #@cli nn_size
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
-  net=$_nn_network
+  net=${-nn_network}
   e[^-1] "[nn_lib] Return size of network '"$net"'."
   siz=0
   repeat narg(${_${net}_layer_names})-1 {
@@ -31361,7 +31364,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                   isin(s4,'x','y','z','c') && # axis
                   isint($5,1)
                   "
-  net,out0,out1=$_nn_network,${1,2}
+  net,out0,out1=${-nn_network},${1,2}
   if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
   axis,size0=${4-5}
@@ -31391,7 +31394,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                    isvarname(s1) && # variable_name
                    isbool(${2=1}) # include_trainer_data
                    "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 +store[$sel,-1] "$1" rm.
@@ -31400,13 +31403,13 @@ nn_store : check "s1 = ['$1'];
                   isvarname(s1) && # variable_name
                   isbool(${2=1}) # include_trainer_data
                   "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 store[$sel,-1] "$1"
 
 __nn_store :
-  net=$_nn_network
+  net=${-nn_network}
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
@@ -31430,7 +31433,7 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
   if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
@@ -31470,7 +31473,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
                     isin(s3,'sgd','rmsprop','adam','adamax') &&
                     isin(s5,'constant','linear','exponential','adaptive')"
              skip "${4=},${6=}"
-  net,out=$_nn_network,$1
+  net,out=${-nn_network},$1
   if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${net}_$in
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
@@ -31567,8 +31570,9 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
 #@cli nn_varname : layer_name
 #@cli : Return the variable name used in the math evaluator to store the output of the specified layer name.
 nn_varname : check "isvarname(['$1'])"
-  if narg(${_$1_size}) u $1
-  elif narg(${_${_nn_network}_$1_size}) u ${_nn_network}_$1
+  if narg(${_$1_size}) u $1 return fi
+  net=${-nn_network}
+  if narg(${_${net}_$1_size}) u ${net}_$1
   else error[0--3] "Command '$0': Layer with name '$1' does not exist."
   fi
 
