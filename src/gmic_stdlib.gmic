@@ -30233,9 +30233,9 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Check that layer with specified name exists in the current network.
 nn_check_layer :
   if !isvarname(['"$1"'])
-    error[0--3] "Command 'nn_check_layer': Invalid layer name '$1'."
+    error[0--3] "Command '$0': Invalid layer name '$1'."
   elif narg(${_${_nn_network}_$1_size})!=4
-    error[0--3] "Command 'nn_check_layer': Layer with name '$1' does not exist."
+    error[0--3] "Command '$0': Layer with name '$1' does not exist."
   fi
 
 #@cli nn_clone : out0,out1,in
@@ -31562,6 +31562,14 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
 
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nin,$optimizer,$scheduler"));"
+
+#@cli nn_varname : layer_name
+#@cli : Return the variable name used in the math evaluator to store the output of the specified layer name.
+nn_varname : check "isvarname(['$1'])"
+  if narg(${_$1_size}) u $1
+  elif narg(${_${_nn_network}_$1_size}) u ${_nn_network}_$1
+  else error[0--3] "Command '$0': Layer with name '$1' does not exist."
+  fi
 
 #----------------------------------
 #
