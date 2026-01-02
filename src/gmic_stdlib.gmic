@@ -29237,7 +29237,7 @@ nn_lib :
 
     nn_distance_forward(OUT,IN0,IN1) = (
       OUT#_delta = IN0# - IN1#;
-      OUT# = [ OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2 ];
+      OUT# = [ (OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2)/size(IN#) ];
     );
 
     nn_distance_backward(OUT,IN0,IN1) = (
@@ -30007,14 +30007,14 @@ nn_lib :
 
     # mse : Mean-squared error.
     #--------------------------
-    nn_loss_mse_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_mse_init_forward(OUT,IN,weight) = (
+      const OUT#_fact = weight/size(IN#);
       batch_#OUT = 0;
     );
 
     nn_loss_mse_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm(OUT#_delta)^2*(OUT#_weight/size(IN#));
+      OUT#_single = norm(OUT#_delta)^2*OUT#_fact;
       batch_#OUT+=OUT#_single;
     );
 
@@ -30026,20 +30026,20 @@ nn_lib :
 
     nn_loss_mse_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=2*OUT#_weight*OUT#_delta;
+      d#IN+=OUT#_delta*(2*OUT#_fact);
     );
 
     # normp : p-norm.
     #-----------------
-    nn_loss_normp_init_forward(OUT,metric,weight) = (
+    nn_loss_normp_init_forward(OUT,IN,metric,weight) = (
       const OUT#_metric = metric;
-      const OUT#_weight = weight;
+      const OUT#_fact = weight/size(IN#);
       batch_#OUT = 0;
     );
 
     nn_loss_normp_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm#OUT#_metric(OUT#_delta)*(OUT#_weight/size(IN#));
+      OUT#_single = norm#OUT#_metric(OUT#_delta)*OUT#_fact;
       batch_#OUT+=OUT#_single;
     );
 
@@ -30052,13 +30052,13 @@ nn_lib :
     nn_loss_normp_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
       OUT#_metric==2?( # L2
-        d#IN+=OUT#_delta/(OUT# + nn_eps)*OUT#_weight;
+        d#IN+=OUT#_delta*(OUT#_fact/(OUT# + nn_eps));
       ):OUT#_metric==1?( # L1
-        d#IN+=sign(OUT#_delta)*OUT#_weight;
+        d#IN+=sign(OUT#_delta)*OUT#_fact;
       ):OUT#_metric>1?( # Lp with p>1
-        d#IN+=(OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
+        d#IN+=(OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
       ):( # Lp with 0<p<1
-        d#IN+=OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
+        d#IN+=OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
       );
     );
 
@@ -30761,7 +30761,7 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
   _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
@@ -30792,7 +30792,7 @@ nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", metric="$metric", weight="$weight
-  _${nout}_loss="begin(nn_loss_normp_init_forward("$nout,$metric,$weight"));"\
+  _${nout}_loss="begin(nn_loss_normp_init_forward("$nout,$nin,$metric,$weight"));"\
                 "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_normp_end_forward("$nout"));"
   _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
