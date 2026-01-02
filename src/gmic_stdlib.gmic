@@ -30106,10 +30106,10 @@ nn_add :
   net,out=${-nn_network},$1
   nb_inputs:=2+!!narg($4)+!!narg($5)
   check "isint($nb_inputs,2,4)"
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  if '$4'=='.' in2=${_${net}_previous_layer} else in2=$4 fi
-  if '$5'=='.' in3=${_${net}_previous_layer} else in3=$5 fi
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  if '$4'=='.' in2=$_nn_previous_layer else in2=$4 fi
+  if '$5'=='.' in3=$_nn_previous_layer else in3=$5 fi
   nout,nin0,nin1,nin2,nin3=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1},${nn_varname\ $in2},${nn_varname\ $in3}
   isnum0,isnum1,isnum2,isnum3:=isnum($in0),isnum($in1),isnum($in2),isnum($in3)
   out_size=
@@ -30148,7 +30148,7 @@ nn_add :
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_append : out,in0,in1,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
@@ -30159,8 +30159,8 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                    isin(s4,'x','y','z','c') # axis
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   axis=$4
   ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
@@ -30178,7 +30178,7 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_avgpool2d : out,in,_patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
@@ -30189,7 +30189,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) # patch_size
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -30206,7 +30206,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_avgpool3d : out,in,patch_size>1
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
@@ -30217,7 +30217,7 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) # patch_size
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -30234,7 +30234,7 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_check_layer : layer_name
 #@cli : Check that layer with specified name exists in the current network.
@@ -30253,7 +30253,7 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                   (isvarname(s3) || s3=='.') # in
                   "
   net,out0,out1=${-nn_network},${1,2}
-  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
@@ -30269,7 +30269,7 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out0
+  _nn_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
@@ -30294,7 +30294,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
                    isint(${11=3},0,4) # initialization
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -30340,7 +30340,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
@@ -30365,7 +30365,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                    isint(${11=3},0,4) # initialization
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -30411,7 +30411,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_crop : out,in,x0,y0,z0,c0,x1,y1,z1,c1,_boundary_conditions
 #@cli : Add a 'crop' layer to the current network.
@@ -30424,7 +30424,7 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
                  isint(${11=0},0,3) # boundary_conditions
                  "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
@@ -30444,7 +30444,7 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_distance : out,in0,in1,_metric={ 0:Squared-L2 | p>0:Lp-norm }
 #@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
@@ -30456,8 +30456,8 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      isint(${4=2},0) # metric
                      "
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   check prod(${_${nin0}_size})==prod(${_${nin1}_size})
   metric=$4
@@ -30476,7 +30476,7 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_div : out,in0,in1
 #@cli : Add a 'div' layer to the current network.
@@ -30487,8 +30487,8 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
   out_size=
@@ -30507,7 +30507,7 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
@@ -30517,7 +30517,7 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
                     inrange($3,0,1,1,0) # dropout_rate
                     "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   dropout_rate=$3
 
@@ -30534,7 +30534,7 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
@@ -30551,7 +30551,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                isint(${6=3},0,4) # initialization
                "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
@@ -30591,7 +30591,7 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
@@ -30602,7 +30602,7 @@ nn_init : check "isvarname(['$1'])"
 
 _nn_init : # Init new network
   _nn_network=$1
-  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_previous_layer=
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update=
   _$1_init="nn_init $1\n"
 
 #@cli nn_input : out,width,_height,_depth,_spectrum
@@ -30627,7 +30627,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network (saved as a .gmz file).
@@ -30665,8 +30665,8 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      (isvarname(s3) || s3=='.') && # in1
                      "
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
@@ -30677,7 +30677,7 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nin0,$nin1"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
@@ -30690,7 +30690,7 @@ nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                                      isnum(${4=1}) # weight
                                      "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
@@ -30707,7 +30707,7 @@ nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'crossentropy' loss to the current network (cross entropy).
@@ -30720,7 +30720,7 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                               isnum(${4=1}) # weight
                               "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
@@ -30737,7 +30737,7 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_mse : out,in,_ground_truth,_weight
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
@@ -30750,7 +30750,7 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                      isnum(${4=1}) # weight
                      "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
@@ -30767,7 +30767,7 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_normp : out,in,ground_truth,_metric>0,_weight
 #@cli : Add a 'normp' loss to the current network (||out - ground_truth||_metric).
@@ -30781,7 +30781,7 @@ nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                        isnum(${5=1}) # weight
                        "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,metric,weight=${3-5}
 
@@ -30798,7 +30798,7 @@ nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_softmax_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
@@ -30811,7 +30811,7 @@ nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                                       isnum(${4=1}) # weight
                                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
@@ -30828,7 +30828,7 @@ nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
@@ -30840,7 +30840,7 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isbool(${4=0}) # is_maxabs
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,is_maxabs=${3-4}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
@@ -30858,7 +30858,7 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
@@ -30870,7 +30870,7 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isbool(${4=0}) # is_maxabs
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,is_maxabs=${3-4}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
@@ -30888,7 +30888,7 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_mul : out,in0,in1
 #@cli : Add a 'mul' layer to the current network.
@@ -30899,8 +30899,8 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
   out_size=
@@ -30919,7 +30919,7 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_network : _network_name
 #@cli : Get/set current network name (and initialize network if it does not already exist).
@@ -30946,7 +30946,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
                isvarname(s3) # activation
                "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   activation=$3
 
@@ -30971,7 +30971,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
@@ -31002,7 +31002,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${9=3},0,3) # learning_mode
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
   if $normalization_type learning_mode&=1 fi # Disable Beta when RMS-normalization is enabled
@@ -31044,7 +31044,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchdown2d : out,in,_patch_size>1
 #@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the current network.
@@ -31055,7 +31055,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                         isint(${3=2},2) # patch_size
                         "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -31077,7 +31077,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchdown3d : out,in,_patch_size>1
 #@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the current network.
@@ -31088,7 +31088,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                         isint(${3=2},2) # patch_size
                         "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -31110,7 +31110,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchup2d : out,in,_patch_size>1
 #@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
@@ -31121,7 +31121,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) # patch_size
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -31139,7 +31139,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchup3d : out,in,_patch_size>1
 #@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
@@ -31150,7 +31150,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) # patch_size
                       "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
@@ -31168,7 +31168,7 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_print
 #@cli : Print info on current network.
@@ -31222,7 +31222,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
                    (isvarname(s2) || s2=='.') # in
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
@@ -31235,7 +31235,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
@@ -31249,7 +31249,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
                     isint(${6=1},1) # spectrum
                     "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   width,height,depth,spectrum=${3-6}
 
@@ -31268,7 +31268,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
 #@cli : Add a 'resize' layer to the current network.
@@ -31283,7 +31283,7 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
                    isint(${7=3},-1,6) # interpolation
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   if ispercentage($3) width:=max(1,round([${_${nin}_size}][1]*$3)) else width=$3 fi
   if ispercentage($4) height:=max(1,round([${_${nin}_size}][1]*$4)) else height=$4 fi
@@ -31304,7 +31304,7 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_run : out,in,"command",_width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0
 #@cli : Add a 'run' layer to the current network.
@@ -31318,7 +31318,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
                 ${7=100%}>0 # spectrum
                 "
   net,out=${-nn_network},$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   if ispercentage($4) width:=max(1,round([${_${nin}_size}][0]*$4)) else width=$4 fi
   if ispercentage($5) height:=max(1,round([${_${nin}_size}][1]*$5)) else height=$5 fi
@@ -31339,7 +31339,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-2},\"$3\",${4--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_save : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Save current network as a .gmz file.
@@ -31380,7 +31380,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                   isint($5,1)
                   "
   net,out0,out1=${-nn_network},${1,2}
-  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
   axis,size0=${4-5}
   ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
@@ -31400,7 +31400,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out0
+  _nn_previous_layer=$out0
 
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Store current network into a variable.
@@ -31449,8 +31449,8 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
   out_size=
@@ -31469,7 +31469,7 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_trainer : out,in,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
@@ -31489,7 +31489,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
                     isin(s5,'constant','linear','exponential','adaptive')"
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
