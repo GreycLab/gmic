@@ -29227,27 +29227,28 @@ nn_lib :
 
     # distance : Distance between two inputs.
     #----------------------------------------
-    nn_distance_init_forward(OUT,metric) = (
+    nn_distance_init_forward(OUT,IN,metric) = (
       const OUT#_width = 1;
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
       const OUT#_metric = metric;
+      const OUT#_fact = 1/size(IN#);
     );
 
     nn_distance_forward(OUT,IN0,IN1) = (
       OUT#_delta = IN0# - IN1#;
-      OUT# = [ (OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2) ];
+      OUT# = [ (OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2)*OUT#_fact ];
     );
 
     nn_distance_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
       !OUT#_metric?( # L2-squared
-        d#IN0+=2*OUT#_delta;
+        d#IN0+=OUT#_delta*(2*OUT#_fact);
       ):OUT#_metric==2?( # L2
-        d#IN0+=OUT#_delta/(OUT#[0] + nn_eps);
+        d#IN0+=OUT#_delta/(OUT#[0] + nn_eps)*OUT#_fact;
       ):( # L
-        d#IN0+=(abs(OUT#_delta)/(OUT#[0] + nn_eps))^(OUT#_metric - 1)*sign(OUT#_delta);
+        d#IN0+=(abs(OUT#_delta)/(OUT#[0] + nn_eps))^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
       );
       d#IN1+=-d#IN0;
     );
