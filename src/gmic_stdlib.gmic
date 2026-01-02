@@ -29972,8 +29972,8 @@ nn_lib :
     nn_loss_binary_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_epsiloned1 = vmax(1 - IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_binary_crossentropy_end_forward(OUT) = (
@@ -29996,8 +29996,8 @@ nn_lib :
 
     nn_loss_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_crossentropy_end_forward(OUT) = (
@@ -30056,7 +30056,7 @@ nn_lib :
 
     nn_loss_l2_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=OUT#_delta*(OUT#_weight/sqrt(OUT#_single^2 + nn_eps));
+      d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
     );
 
     # mse : Mean-squared error.
@@ -30092,8 +30092,8 @@ nn_lib :
 
     nn_loss_softmax_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_softmax))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_softmax));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_softmax_crossentropy_end_forward(OUT) = (
