@@ -29244,13 +29244,18 @@ nn_lib :
     nn_distance_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
       !OUT#_metric?( # L2-squared
-        d#IN0+=OUT#_delta*(2*OUT#_fact);
+        OUT#_tmp = OUT#_delta*(2*OUT#_fact);
       ):OUT#_metric==2?( # L2
-        d#IN0+=OUT#_delta/(OUT#[0] + nn_eps)*OUT#_fact;
-      ):( # L
-        d#IN0+=(abs(OUT#_delta)/(OUT#[0] + nn_eps))^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
+        OUT#_tmp = OUT#_delta/(OUT#[0] + nn_eps)*OUT#_fact;
+      ):OUT#_metric==1?( # L1
+        OUT#_tmp = sign(OUT#_delta)*OUT#_fact;
+      ):OUT#_metric>1?( # Lp with p>1
+        OUT#_tmp = (OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
+      ):( # Lp with 0<p<1
+        OUT#_tmp = OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_fact;
       );
-      d#IN1+=-d#IN0;
+      d#IN0+=OUT#_tmp;
+      d#IN1-=OUT#_tmp;
     );
 
     # dropout : Spatial dropout (cancel whole channels).
