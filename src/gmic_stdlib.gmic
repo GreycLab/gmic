@@ -30083,6 +30083,31 @@ nn_lib :
       d#IN+=OUT#_delta*(2*OUT#_weight);
     );
 
+    # smoothl1 : Smooth L1-norm.
+    #----------------------------
+    nn_loss_smoothl1_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      const OUT#_beta = 1e-3;
+      batch_#OUT = 0;
+    );
+
+    nn_loss_smoothl1_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = sqrt(norm2(OUT#_delta) + OUT#_beta^2);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_smoothl1_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_smoothl1_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=OUT#_delta*(OUT#_weight/OUT#_single);
+    );
+
     # softmax_crossentropy : Softmax + cross entropy.
     #------------------------------------------------
     nn_loss_softmax_crossentropy_init_forward(OUT,weight) = (
@@ -30847,6 +30872,36 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
   _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_smoothl1 : out,in,_ground_truth,_weight
+#@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_smoothl1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                          isvarname(s1) && # out
+                          (isvarname(s2) || s2=='.') && # in
+                          (isvarname(s3) || isnum($3)) && # ground_truth
+                          isnum(${4=1}) # weight
+                          "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
+
+  e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_smoothl1,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_smoothl1_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
