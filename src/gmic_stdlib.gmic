@@ -30011,6 +30011,54 @@ nn_lib :
       d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
     );
 
+    # l1 : L1-norm.
+    #--------------
+    nn_loss_l1_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      batch_#OUT = 0;
+    );
+
+    nn_loss_l1_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm1(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_l1_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_l1_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=sign(OUT#_delta)*OUT#_weight;
+    );
+
+    # l2 : L2-norm.
+    #--------------
+    nn_loss_l2_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      batch_#OUT = 0;
+    );
+
+    nn_loss_l2_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_l2_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_l2_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=OUT#_delta*(OUT#_weight/sqrt(OUT#_single^2 + nn_eps));
+    );
+
     # mse : Mean-squared error.
     #--------------------------
     nn_loss_mse_init_forward(OUT,IN,weight) = (
@@ -30020,8 +30068,8 @@ nn_lib :
 
     nn_loss_mse_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm(OUT#_delta)^2*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = norm(OUT#_delta)^2;
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_mse_end_forward(OUT) = (
@@ -30033,39 +30081,6 @@ nn_lib :
     nn_loss_mse_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta*(2*OUT#_weight);
-    );
-
-    # normp : p-norm.
-    #-----------------
-    nn_loss_normp_init_forward(OUT,IN,metric,weight) = (
-      const OUT#_metric = metric;
-      const OUT#_weight = weight/size(IN#);
-      batch_#OUT = 0;
-    );
-
-    nn_loss_normp_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm#OUT#_metric(OUT#_delta)*OUT#_weight;
-      batch_#OUT+=OUT#_single;
-    );
-
-    nn_loss_normp_end_forward(OUT) = (
-      merge(batch_#OUT,+);
-      batch_#OUT/=nn_batch_size;
-      OUT# = batch_#OUT;
-    );
-
-    nn_loss_normp_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      OUT#_metric==2?( # L2
-        d#IN+=OUT#_delta*(OUT#_weight^2/(OUT#_single + nn_eps));
-      ):OUT#_metric==1?( # L1
-        d#IN+=sign(OUT#_delta)*OUT#_weight;
-      ):OUT#_metric>1?( # Lp with p>1
-        d#IN+=(OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
-      ):( # Lp with 0<p<1
-        d#IN+=OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
-      );
     );
 
     # softmax_crossentropy : Softmax + cross entropy.
@@ -30746,6 +30761,66 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
+#@cli nn_loss_l1 : out,in,_ground_truth,_weight
+#@cli : Add a 'l1' loss to the current network (L1-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_l1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    isnum(${4=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
+
+  e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_l1,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_l1_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_l1_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_l1_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_l1_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_l2 : out,in,_ground_truth,_weight
+#@cli : Add a 'l2' loss to the current network (L2-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_l2 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    isnum(${4=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
+
+  e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_l2,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_l2_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_l2_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_l2_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_l2_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
 #@cli nn_loss_mse : out,in,_ground_truth,_weight
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
@@ -30772,37 +30847,6 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
   _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
-  _${net}_loss.=${_${nout}_loss}
-  _${net}_backward..=${_${nout}_backward}
-  _nn_previous_layer=$out
-
-#@cli nn_loss_normp : out,in,ground_truth,_metric>0,_weight
-#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_metric).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
-#@cli : Default values: 'metric=1' and 'weight=1'.
-nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                       isvarname(s1) && # out
-                       (isvarname(s2) || s2=='.') && # in
-                       (isvarname(s3) || isnum($3)) && # ground_truth
-                       isint(${4=1},0) && # metric
-                       isnum(${5=1}) # weight
-                       "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,metric,weight=${3-5}
-
-  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$net"', with input '"$in"', "\
-         "ground truth '"$ground_truth"', metric "$metric" and weight "$weight"."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_normp,
-  _${nout}_size=1,1,1,1
-  _${nout}_input=$in
-  _${nout}_properties="ground_truth="$ground_truth", metric="$metric", weight="$weight
-  _${nout}_loss="begin(nn_loss_normp_init_forward("$nout,$nin,$metric,$weight"));"\
-                "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
-                "end(nn_loss_normp_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
