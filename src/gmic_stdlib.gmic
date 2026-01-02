@@ -30059,6 +30059,31 @@ nn_lib :
       d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
     );
 
+    # lp : Lp-norm.
+    #--------------
+    nn_loss_lp_init_forward(OUT,IN,p,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      const OUT#_p = p;
+      batch_#OUT = 0;
+    );
+
+    nn_loss_lp_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm#OUT#_p(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_lp_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_lp_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=(abs(OUT#_delta) + eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+    );
+
     # mse : Mean-squared error.
     #--------------------------
     nn_loss_mse_init_forward(OUT,IN,weight) = (
@@ -30842,6 +30867,37 @@ nn_loss_l2 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                 "nn_loss_l2_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_l2_end_forward("$nout"));"
   _${nout}_backward="nn_loss_l2_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_lp : out,in,_ground_truth,_p>0,_weight
+#@cli : Add a 'lp' loss to the current network (Lp-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'p=1.5' and 'weight=1'.
+nn_loss_lp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    ${4=1.5}>0 && # p
+                    isnum(${5=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,p,weight=${3-5}
+
+  e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_lp,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", p="$p", weight="$weight
+  _${nout}_loss="begin(nn_loss_lp_init_forward("$nout,$nin,$p,$weight"));"\
+                "nn_loss_lp_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_lp_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_lp_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
