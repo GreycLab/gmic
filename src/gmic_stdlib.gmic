@@ -9986,6 +9986,31 @@ _print : skip ${1=},${3=}
   foreach { => ${image_name$>} } # Set back original images names
   is_change 0
 
+#@cli random_patches : _nb_patches>0,_patch_size>0
+#@cli : Generate a set of square color patches containing random geometric shapes, returned as a volumetric image.
+#@cli : Default values: 'nb_patches=16' and 'patch_size=64'.
+#@cli : $ random_patches 16,64 split z append_tiles ,
++random_patches : check "isint(${1=16},1) && isint(${2=64},1)"
+  e[^-1] "Generate set of $1 $2x$2 random RGB patches."
+  l[] {
+    repeat $1 {
+
+      # Create colored background.
+      size:=v($2,1.25*$2)
+      {v(2,30)},1,1,5,"[ u($size),u($size),g,g,g ]" rbf. $size,$size *. {u(80)} +. {u(255)} c. 0,255
+
+      # Draw random polygons.
+      repeat v(5,30) {
+        {g<0?2:v(2,8)},1,1,2,"begin(f = u($size/2); x = u($size); y = u($size)); [ g,g ]*f + [x,y]" permute. cxyz
+        R,G,B,A:=u([255,255,255]),u(0.25,1)
+        if h==2 thickline.. {^},{v(1,5)},$A,$R,$G,$B else polygon.. .,$A,$R,$G,$B fi
+        rm.
+      }
+      rs. $2
+    }
+    a z
+  }
+
 #@cli random_pattern : _width>0,_height>0,_min_detail_level>=0
 #@cli : Insert a new RGB image of specified size at the end of the image list, rendered with a random pattern.
 #@cli : Default values: 'width=height=512' and 'min_detail_level=2'.
