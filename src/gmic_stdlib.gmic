@@ -10010,10 +10010,24 @@ _print : skip ${1=},${3=}
       # Add random textures.
       repeat v(5) {
         tsize:=ceil(u(0.01,0.75)*$size)
-        if v $tsize,$tsize,1,1,"begin(U = unitnorm([ g,g ]); M = v(2,w/3); M2 = M/2); ((dot([x,y],U))%M)<M2"
-        else {ceil([$tsize,$tsize]*u(0.01,0.2))},1,1,1 r. $tsize,$tsize,1,1,4,0,0.5,0.5 distance. 1,{v(2)} lt. 50%
+        if v
+          $tsize,$tsize,1,1,"begin(U = unitnorm([ g,g ]); M = v(2,w/3); M2 = M/2); ((dot([x,y],U))%M)<M2"
+        else
+          $tsize,$tsize,1,1,"begin(
+              siz = ceil(u(0.05,0.25)*w); siz2 = round(siz/2);
+              offx = v(siz); offy = v(siz);
+              const mode = "{v}";
+              radius = u(0.1,siz2 - 0.5);
+              R = rot(u(180°));
+            );
+            P = R*[x,y];
+            x = P[0] + offx; y = P[1] + offy;
+            cx = round(x,siz,-1) + siz2;
+            cy = round(y,siz,-1) + siz2;
+            d = norm(x + 0.5 - cx,y + 0.5 - cy);
+            mode?(d<radius):(d>radius)"
         fi
-        rotate. {u(90)},1,0
+        100%,100%,1,1 ellipse. 50%,50%,{u(30,50)}%,{u(10,50)}%,{u(180)},1,1 *[-2,-1]
         100%,100%,1,3,[${-rgb}]
         j... .,{u(-10,110)}%,{u(-10,110)}%,0,0,{u(0.25,1)},.. rm[-2,-1]
       }
