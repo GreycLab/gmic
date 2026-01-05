@@ -716,9 +716,9 @@ reference : skip "${2=}"
 "'ceil()', 'cos()', 'cosh()', 'cut()', 'deg2rad()', 'erf()', 'erfinv()', 'exp()', 'fact()', 'fibo()', 'floor()', "\
 "'frac()', 'gamma()', 'gauss()', 'gcd()', 'hypot()', 'int()', 'isconst()', 'isfinite()', 'isnan()', 'isnum()', "\
 "'isinf()', 'isint()', 'isbool()', 'isexpr()', 'isfile()', 'isdir()', 'isin()', 'kth()', 'lcm()', 'log()', 'log2()', "\
-"'log10()', 'max()', 'maxabs()', 'med()', 'min()', 'minabs()', 'narg()', 'prod()', 'rad2deg()', "\
-"'rol()' (left bit rotation), 'ror()' (right bit rotation), 'round()', 'sign()', 'sin()', 'sinc()', 'sinh()', "\
-"'sqrt()', 'std()', 'srand(_seed)', 'sum()', 'tan()', 'tanh()', 'var()', 'xor()'."\n\
+"'log10()', 'logit()', 'max()', 'maxabs()', 'med()', 'min()', 'minabs()', 'narg()', 'prod()', 'rad2deg()', "\
+"'rol()' (left bit rotation), 'ror()' (right bit rotation), 'round()', 'sign()', 'sigmoid()', 'sin()', 'sinc()', "\
+"'sinh()', 'sqrt()', 'std()', 'srand(_seed)', 'sum()', 'tan()', 'tanh()', 'var()', 'xor()'."\n\
 \n\
 "* 'cov(A,B,_avgA,_avgB)' estimates the covariance between vectors 'A' and 'B' (estimated averages of these vectors "\
 "may be specified as arguments)."\n\
@@ -9986,6 +9986,61 @@ _print : skip ${1=},${3=}
   foreach { => ${image_name$>} } # Set back original images names
   is_change 0
 
+#@cli random_patches : _nb_patches>0,_patch_size>0
+#@cli : Generate a set of square color patches containing random geometric shapes, returned as a volumetric image.
+#@cli : Default values: 'nb_patches=16' and 'patch_size=64'.
+#@cli : $ random_patches 16,64 split z append_tiles ,
++random_patches : check "isint(${1=16},1) && isint(${2=64},1)"
+  e[^-1] "Generate set of $1 $2x$2 random RGB patches."
+  l[] {
+    repeat $1 {
+
+      # Create colored background.
+      size:=v($2,1.25*$2)
+      {v(2,30)},1,1,5,"[ u($size),u($size),g,g,g ]" rbf. $size,$size *. {u(80)} +. {u(255)} c. 0,255
+
+      # Draw random polygons.
+      repeat v(5,30) {
+        {g<0?2:v(2,8)},1,1,2,"begin(f = u($size/2); x = u($size); y = u($size)); [ g,g ]*f + [x,y]" permute. cxyz
+        R,G,B,A:=u([255,255,255]),u(0.25,1)
+        if h==2 thickline.. {^},{v(0,5)},$A,$R,$G,$B else polygon.. .,$A,$R,$G,$B fi
+        rm.
+      }
+
+      # Add random textures.
+      repeat v(5) {
+        tsize:=ceil(u(0.01,0.75)*$size)
+        if v
+          $tsize,$tsize,1,1,"begin(U = unitnorm([ g,g ]); M = v(2,w/3); M2 = M/2); ((dot([x,y],U))%M)<M2"
+        else repeat inf {
+          $tsize,$tsize,1,1,"begin(
+              siz = ceil(u(0.05,0.25)*w);
+              siz2 = round(siz/2);
+              offx = v(siz); offy = v(siz);
+              white_on_black = v;
+              const norm_type = "{v(1,2)}";
+              radius = u(0.1,siz2 - 0.5);
+              R = rot(u(180°));
+            );
+            P = R*[x,y];
+            x = P[0] + offx; y = P[1] + offy;
+            cx = round(x,siz,-1) + siz2;
+            cy = round(y,siz,-1) + siz2;
+            d = normnorm_type(x + 0.5 - cx,y + 0.5 - cy);
+            white_on_black?(d<radius):(d>radius)"
+          if inrange(ia,0.25,0.75) break fi
+          rm.
+        }
+        fi
+        100%,100%,1,1 ellipse. 50%,50%,{u(30,50)}%,{u(5,50)}%,{u(180)},1,1 *[-2,-1]
+        100%,100%,1,3,[${-rgb}]
+        j... .,{u(-10,110)}%,{u(-10,110)}%,0,0,{u(0.25,1)},.. rm[-2,-1]
+      }
+      rs. $2
+    }
+    a z
+  }
+
 #@cli random_pattern : _width>0,_height>0,_min_detail_level>=0
 #@cli : Insert a new RGB image of specified size at the end of the image list, rendered with a random pattern.
 #@cli : Default values: 'width=height=512' and 'min_detail_level=2'.
@@ -10932,7 +10987,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.6.6').
+# $1 = version number (e.g. '3.6.7').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -11004,15 +11059,17 @@ update_color_presets_html : check "isbool(${1=0})"
   jpeg_quality=70 # Set JPEG quality of output images
   thumb_width=230 # Set thumbnail width
   thumb_height=90 # Set mini thumbnail height
-  categories=creative,picturefx,pixlsus,abigailgonzalez,alexjordan,berat,editingcorp,ericellerbrock,inavision,jtsemple,\
-             kylerholland,ohadperetz,shamoonabbasi,toddblankenship,youssefhossam,others,\
-             bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_new,negative_old,print,colorslide
+  categories=creative,picturefx,pixlsus,abigailgonzalez,alexjordan,berat,debrup_travel_films,editingcorp,\
+             ericellerbrock,inavision,jtsemple,kylerholland,ohadperetz,shamoonabbasi,toddblankenship,\
+             youssefhossam,others,bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_\
+             new,negative_old,print,colorslide
   category_names="Creative Pack",\
                  "PictureFX",\
                  "PIXLS.US",\
                  "Abigail Gonzalez's CLUTs",\
                  "Alex Jordan's CLUTs",\
                  "Berat's CLUTs",\
+                 "Debrup Travel & Films",\
                  "EditingCorp",\
                  "Eric Ellerbrock's CLUTs",\
                  "InAvision's CLUTs",\
@@ -11038,6 +11095,7 @@ update_color_presets_html : check "isbool(${1=0})"
                    "Abigail Gonzalez",\
                    "Alex Jordan",\
                    "Berat",\
+                   "Debrup Travel & Films",\
                    "EditingCorp",\
                    "Eric Ellerbrock",\
                    "InAvision",\
@@ -11063,6 +11121,7 @@ update_color_presets_html : check "isbool(${1=0})"
                        "https://www.abigailgonzalez.com/",\
                        "https://freshluts.com/users/1",\
                        "https://freshluts.com/users/10185",\
+                       "https://youtu.be/c8zV6Wcgv8E?si=AOcvpSHCzDeGpXwZ",\
                        "https://www.editingcorp.com/free-hand-picked-luts-for-cinematic-color-grading/",\
                        "https://www.facebook.com/eric.ellerbrockom",\
                        "https://freshluts.com/users/64078",\
@@ -12834,7 +12893,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=363,364,365,366,$_version
+  versions=363,364,365,366,367,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -15148,29 +15207,32 @@ brightness : check "isnum($1)"
   foreach { im,iM:=im,iM + {$1*($iM-$im)%} cut $im,$iM }
 
 #@cli clut : "clut_name",_resolution>0,_cut_and_round={ 0:No | 1:Yes }
-#@cli : Insert one of the 1149 pre-defined CLUTs at the end of the image list.\n
-#@cli : 'clut_name' can be { 12_years_a_slave | 1917 | 2-strip-process | 60s | 60s_faded | 60s_faded_alt | 7drk_21 | \
-# action_magenta_01 | action_red_01 | ad_astra | adventure_1453 | agfa_apx_100 | agfa_apx_25 | agfa_precisa_100 | \
-# agfa_ultra_color_100 | agfa_vista_200 | agressive_highligjtes_recovery_5 | aladdin | alberto_street | alien_green | \
-# ampio | amstragram | amstragram+ | analog_film_1 | analogfx_anno_1870_color | analogfx_old_style_i | \
-# analogfx_old_style_ii | analogfx_old_style_iii | analogfx_sepia_color | analogfx_soft_sepia_i | \
-# analogfx_soft_sepia_ii | anime | ant-man | apocalypse_this_very_moment | aqua | aqua_and_orange_dark | aquaman | \
-# arabica_12 | asistas | atomic_pink | atusa | autumn | autumn_leaves | ava_614 | avalanche | avengers_endgame | \
-# azrael_93 | baby_driver | bad_boys_for_life | basuco | bboyz_2 | bc_darkum | beach_aqua_orange | \
-# beach_faded_analog | beati | beauty_and_the_beast | berlin_sky | bisogno | black_and_white | black_panther | \
-# black_star | black_white_01 | black_white_02 | black_white_03 | black_white_04 | black_white_05 | black_white_06 | \
-# blade_runner | bleach_bypass | bleachbypass_1 | bleachbypass_2 | bleachbypass_3 | bleachbypass_4 | \
+#@cli : Insert one of the 1189 pre-defined CLUTs at the end of the image list.\n
+#@cli : 'clut_name' can be { 12_years_a_slave | 1917 | 2-strip-process | 400_ft | 60s | 60s_faded | 60s_faded_alt | \
+# 7drk_21 | action_magenta_01 | action_red_01 | ad_astra | adventure_1453 | aerospace | agfa_apx_100 | agfa_apx_25 | \
+# agfa_precisa_100 | agfa_ultra_color_100 | agfa_vista_200 | agressive_highligjtes_recovery_5 | airdrop | aladdin | \
+# alberto_street | alien_green | ampio | amstragram | amstragram+ | analog_film_1 | analogfx_anno_1870_color | \
+# analogfx_old_style_i | analogfx_old_style_ii | analogfx_old_style_iii | analogfx_sepia_color | \
+# analogfx_soft_sepia_i | analogfx_soft_sepia_ii | anime | ant-man | apocalypse_this_very_moment | aqua | \
+# aqua_and_orange_dark | aquaman | arabica_12 | asistas | atomic_pink | atusa | autumn | autumn_leaves | ava_614 | \
+# avalanche | avengers_endgame | azrael_93 | baby_driver | bad_boys_for_life | basuco | bboyz_2 | bc_darkum | \
+# beach_aqua_orange | beach_faded_analog | beati | beauty_and_the_beast | berlin_sky | bisogno | black_and_white | \
+# black_panther | black_star | black_white_01 | black_white_02 | black_white_03 | black_white_04 | black_white_05 | \
+# black_white_06 | blade_runner | bleach_bypass | bleachbypass_1 | bleachbypass_2 | bleachbypass_3 | bleachbypass_4 | \
 # bleech_bypass_green | bleech_bypass_yellow_01 | blue_cold_fade | blue_dark | blue_house | blue_ice | blue_love_39 | \
 # blue_mono | blue_shadows_01 | bluearchitecture | bluehour | blues | bob_ford | bohemian_rhapsody | bombshell | \
 # bourbon_64 | boyado | bright_green_01 | bright_teal_orange | bright_warm | brightgreen | brown_mobster | brownbm | \
 # brownish | bw_1 | bw_10 | bw_2 | bw_3 | bw_4 | bw_5 | bw_6 | bw_7 | bw_8 | bw_9 | bw_but_yellow | byers_11 | \
-# calidum | candlelight | captain_marvel | caribe | chemical_168 | chrome_01 | cineblue | cinebm_4k | cinema | \
-# cinema_2 | cinema_3 | cinema_4 | cinema_5 | cinema_noir | cinematic-1 | cinematic-10 | cinematic-2 | cinematic-3 | \
-# cinematic-4 | cinematic-5 | cinematic-6 | cinematic-7 | cinematic-8 | cinematic-9 | cinematic_01 | cinematic_02 | \
-# cinematic_03 | cinematic_04 | cinematic_05 | cinematic_06 | cinematic_07 | cinematic_for_flog | cinematic_forest | \
-# cinematic_lady_bird | cinematic_mexico | city | city_7 | city_dust | city_of_god | classic_films_01 | \
-# classic_films_02 | classic_films_03 | classic_films_04 | classic_films_05 | classic_teal_and_orange | clayton_33 | \
-# clear | clear_teal_fade | clouseau_54 | cobi_3 | coffee_44 | cold_clear_blue | cold_clear_blue_1 | cold_ice | \
+# calidum | candlelight | captain_marvel | caribe | chemical_168 | chrome_01 | cine-1 | cine-10 | cine-11 | cine-12 | \
+# cine-13 | cine-14 | cine-15 | cine-16 | cine-17 | cine-18 | cine-19 | cine-2 | cine-20 | cine-21 | cine-22 | \
+# cine-23 | cine-24 | cine-25 | cine-26 | cine-27 | cine-28 | cine-29 | cine-3 | cine-30 | cine-4 | cine-5 | cine-6 | \
+# cine-7 | cine-8 | cine-9 | cineblue | cinebm_4k | cinema | cinema_2 | cinema_3 | cinema_4 | cinema_5 | \
+# cinema_noir | cinematic-1 | cinematic-10 | cinematic-2 | cinematic-3 | cinematic-4 | cinematic-5 | cinematic-6 | \
+# cinematic-7 | cinematic-8 | cinematic-9 | cinematic_01 | cinematic_02 | cinematic_03 | cinematic_04 | \
+# cinematic_05 | cinematic_06 | cinematic_07 | cinematic_for_flog | cinematic_forest | cinematic_lady_bird | \
+# cinematic_mexico | city | city_7 | city_dust | city_of_god | classic_films_01 | classic_films_02 | \
+# classic_films_03 | classic_films_04 | classic_films_05 | classic_teal_and_orange | clayton_33 | clear | \
+# clear_teal_fade | clouseau_54 | cobi_3 | coffee_44 | cold_clear_blue | cold_clear_blue_1 | cold_ice | \
 # cold_simplicity_2 | coldchrome | color_rich | colore | colorful_0209 | colornegative | conflict_01 | contrail_35 | \
 # contrast_with_highlights_protection | contrasty_afternoon | contrasty_green | convold | cosa | creed_2 | \
 # crispautumn | crispromance | crispwarm | crispwinter | cross_process_cp_130 | cross_process_cp_14 | \
@@ -15248,39 +15310,39 @@ brightness : check "isnum($1)"
 # lateafternoonwanderlust | latesunset | lavark | lc_1 | lc_10 | lc_2 | lc_3 | lc_4 | lc_5 | lc_6 | lc_7 | lc_8 | \
 # lc_9 | lenox_340 | levex | life_giving_tree | light | light_blown | litore | little_women | logan | lomo | \
 # lomography_redscale_100 | lomography_x-pro_slide_200 | london_nights | longbeachmorning | loro | lotta | louetta | \
-# low_contrast_blue | low_key_01 | lucky_64 | lushgreen | lushgreensummer | mad_max_fury_road | maesky | \
-# magenta_day | magenta_day_01 | magenta_dream | magenta_yellow | magentacoffee | magichour | marriage_story | \
-# matrix | mckinnon_75 | memories | mercato | metropolis | milo_5 | minimalistcaffeination | modern_film | \
-# modern_films_01 | modern_films_02 | modern_films_03 | modern_films_04 | modern_films_05 | modern_films_06 | \
-# modern_films_07 | molti | mono_2 | mono_tinted | monochrome | monochrome_1 | monochrome_2 | moody_1 | moody_10 | \
-# moody_2 | moody_3 | moody_4 | moody_5 | moody_6 | moody_7 | moody_8 | moody_9 | moonlight | moonlight_01 | \
-# moonlight_2 | moonrise | morning_6 | morroco_16 | mostly_blue | mother! | motus | moviz_1 | moviz_10 | moviz_11 | \
-# moviz_12 | moviz_13 | moviz_14 | moviz_15 | moviz_16 | moviz_17 | moviz_18 | moviz_19 | moviz_2 | moviz_20 | \
-# moviz_21 | moviz_22 | moviz_23 | moviz_24 | moviz_25 | moviz_26 | moviz_27 | moviz_28 | moviz_29 | moviz_3 | \
-# moviz_30 | moviz_31 | moviz_32 | moviz_33 | moviz_34 | moviz_35 | moviz_36 | moviz_37 | moviz_38 | moviz_39 | \
-# moviz_4 | moviz_40 | moviz_41 | moviz_42 | moviz_43 | moviz_44 | moviz_45 | moviz_46 | moviz_47 | moviz_48 | \
-# moviz_5 | moviz_6 | moviz_7 | moviz_8 | moviz_9 | mucca | mute_shift | muted_01 | muted_fade | mysticpurplesunset | \
-# nah | natural_vivid | naturalboost | negative | nemesis | neon_770 | neutral | neutral_pump | neutral_teal_orange | \
-# neutral_warm_fade | newspaper | night_01 | night_02 | night_03 | night_04 | night_05 | night_blade_4 | \
-# night_king_141 | night_spy | night_view | nightfromday | nightlife | nigrum | no_time_to_die | nostalgiahoney | \
-# nostalgic | nw-1 | nw-10 | nw-2 | nw-3 | nw-4 | nw-5 | nw-6 | nw-7 | nw-8 | nw-9 | old_west | once_upon_a_time | \
-# once_upon_a_time_in_hollywood | onda | only_red | only_red_and_blue | operation_yellow | orange_dark_4 | \
-# orange_dark_7 | orange_dark_look | orange_tone | orange_underexposed | orangeandblue | oranges | padre | paladin | \
-# paladin_1875 | parasite | partia | pasadena_21 | passing_by | perso | picola | pink_fade | \
-# pirates_of_the_caribbean | pitaya_15 | pmcinematic_01 | pmcinematic_02 | pmcinematic_03 | pmcinematic_04 | \
-# pmcinematic_05 | pmcinematic_06 | pmcinematic_07 | pmnight_01 | pmnight_02 | pmnight_03 | pmnight_04 | pmnight_05 | \
-# polaroid_664 | polaroid_665 | polaroid_665_+ | polaroid_665_++ | polaroid_665_- | polaroid_665_-- | \
-# polaroid_665_negative | polaroid_665_negative_+ | polaroid_665_negative_- | polaroid_665_negative_hc | \
-# polaroid_667 | polaroid_669 | polaroid_669_+ | polaroid_669_++ | polaroid_669_+++ | polaroid_669_- | \
-# polaroid_669_-- | polaroid_669_cold | polaroid_669_cold_+ | polaroid_669_cold_- | polaroid_669_cold_-- | \
-# polaroid_672 | polaroid_690 | polaroid_690_+ | polaroid_690_++ | polaroid_690_- | polaroid_690_-- | \
-# polaroid_690_cold | polaroid_690_cold_+ | polaroid_690_cold_++ | polaroid_690_cold_- | polaroid_690_cold_-- | \
-# polaroid_690_warm | polaroid_690_warm_+ | polaroid_690_warm_++ | polaroid_690_warm_- | polaroid_690_warm_-- | \
-# polaroid_polachrome | polaroid_px-100uv+_cold | polaroid_px-100uv+_cold_+ | polaroid_px-100uv+_cold_++ | \
-# polaroid_px-100uv+_cold_+++ | polaroid_px-100uv+_cold_- | polaroid_px-100uv+_cold_-- | polaroid_px-100uv+_warm | \
-# polaroid_px-100uv+_warm_+ | polaroid_px-100uv+_warm_++ | polaroid_px-100uv+_warm_+++ | polaroid_px-100uv+_warm_- | \
-# polaroid_px-100uv+_warm_-- | polaroid_px-680 | polaroid_px-680_+ | polaroid_px-680_++ | polaroid_px-680_- | \
-# polaroid_px-680_-- | polaroid_px-680_cold | polaroid_px-680_cold_+ | polaroid_px-680_cold_++ | \
+# low_altitude | low_contrast_blue | low_key_01 | lucky_64 | lushgreen | lushgreensummer | mad_max_fury_road | \
+# maesky | magenta_day | magenta_day_01 | magenta_dream | magenta_yellow | magentacoffee | magichour | \
+# marriage_story | matrix | mckinnon_75 | memories | mercato | metropolis | milo_5 | minimalistcaffeination | \
+# modern_film | modern_films_01 | modern_films_02 | modern_films_03 | modern_films_04 | modern_films_05 | \
+# modern_films_06 | modern_films_07 | molti | mono_2 | mono_tinted | monochrome | monochrome_1 | monochrome_2 | \
+# moody_1 | moody_10 | moody_2 | moody_3 | moody_4 | moody_5 | moody_6 | moody_7 | moody_8 | moody_9 | moonlight | \
+# moonlight_01 | moonlight_2 | moonrise | morning_6 | morroco_16 | mostly_blue | mother! | motus | moviz_1 | \
+# moviz_10 | moviz_11 | moviz_12 | moviz_13 | moviz_14 | moviz_15 | moviz_16 | moviz_17 | moviz_18 | moviz_19 | \
+# moviz_2 | moviz_20 | moviz_21 | moviz_22 | moviz_23 | moviz_24 | moviz_25 | moviz_26 | moviz_27 | moviz_28 | \
+# moviz_29 | moviz_3 | moviz_30 | moviz_31 | moviz_32 | moviz_33 | moviz_34 | moviz_35 | moviz_36 | moviz_37 | \
+# moviz_38 | moviz_39 | moviz_4 | moviz_40 | moviz_41 | moviz_42 | moviz_43 | moviz_44 | moviz_45 | moviz_46 | \
+# moviz_47 | moviz_48 | moviz_5 | moviz_6 | moviz_7 | moviz_8 | moviz_9 | mucca | mute_shift | muted_01 | \
+# muted_fade | mysticpurplesunset | nah | natural_01 | natural_02 | natural_03 | natural_vivid | naturalboost | \
+# negative | nemesis | neon_770 | neutral | neutral_pump | neutral_teal_orange | neutral_warm_fade | newspaper | \
+# night_01 | night_02 | night_03 | night_04 | night_05 | night_blade_4 | night_king_141 | night_spy | night_view | \
+# nightfromday | nightlife | nigrum | no_time_to_die | nostalgiahoney | nostalgic | nw-1 | nw-10 | nw-2 | nw-3 | \
+# nw-4 | nw-5 | nw-6 | nw-7 | nw-8 | nw-9 | old_west | once_upon_a_time | once_upon_a_time_in_hollywood | onda | \
+# only_red | only_red_and_blue | operation_yellow | orange_dark_4 | orange_dark_7 | orange_dark_look | orange_tone | \
+# orange_underexposed | orangeandblue | oranges | padre | paladin | paladin_1875 | parasite | partia | pasadena_21 | \
+# passing_by | perso | picola | pink_fade | pirates_of_the_caribbean | pitaya_15 | pmcinematic_01 | pmcinematic_02 | \
+# pmcinematic_03 | pmcinematic_04 | pmcinematic_05 | pmcinematic_06 | pmcinematic_07 | pmnight_01 | pmnight_02 | \
+# pmnight_03 | pmnight_04 | pmnight_05 | polaroid_664 | polaroid_665 | polaroid_665_+ | polaroid_665_++ | \
+# polaroid_665_- | polaroid_665_-- | polaroid_665_negative | polaroid_665_negative_+ | polaroid_665_negative_- | \
+# polaroid_665_negative_hc | polaroid_667 | polaroid_669 | polaroid_669_+ | polaroid_669_++ | polaroid_669_+++ | \
+# polaroid_669_- | polaroid_669_-- | polaroid_669_cold | polaroid_669_cold_+ | polaroid_669_cold_- | \
+# polaroid_669_cold_-- | polaroid_672 | polaroid_690 | polaroid_690_+ | polaroid_690_++ | polaroid_690_- | \
+# polaroid_690_-- | polaroid_690_cold | polaroid_690_cold_+ | polaroid_690_cold_++ | polaroid_690_cold_- | \
+# polaroid_690_cold_-- | polaroid_690_warm | polaroid_690_warm_+ | polaroid_690_warm_++ | polaroid_690_warm_- | \
+# polaroid_690_warm_-- | polaroid_polachrome | polaroid_px-100uv+_cold | polaroid_px-100uv+_cold_+ | \
+# polaroid_px-100uv+_cold_++ | polaroid_px-100uv+_cold_+++ | polaroid_px-100uv+_cold_- | polaroid_px-100uv+_cold_-- | \
+# polaroid_px-100uv+_warm | polaroid_px-100uv+_warm_+ | polaroid_px-100uv+_warm_++ | polaroid_px-100uv+_warm_+++ | \
+# polaroid_px-100uv+_warm_- | polaroid_px-100uv+_warm_-- | polaroid_px-680 | polaroid_px-680_+ | polaroid_px-680_++ | \
+# polaroid_px-680_- | polaroid_px-680_-- | polaroid_px-680_cold | polaroid_px-680_cold_+ | polaroid_px-680_cold_++ | \
 # polaroid_px-680_cold_++_alt | polaroid_px-680_cold_- | polaroid_px-680_cold_-- | polaroid_px-680_warm | \
 # polaroid_px-680_warm_+ | polaroid_px-680_warm_++ | polaroid_px-680_warm_- | polaroid_px-680_warm_-- | \
 # polaroid_px-70 | polaroid_px-70_+ | polaroid_px-70_++ | polaroid_px-70_+++ | polaroid_px-70_- | polaroid_px-70_-- | \
@@ -15291,7 +15353,7 @@ brightness : check "isnum($1)"
 # polaroid_time_zero_expired_--- | polaroid_time_zero_expired_cold | polaroid_time_zero_expired_cold_- | \
 # polaroid_time_zero_expired_cold_-- | polaroid_time_zero_expired_cold_--- | portrait | portrait_1 | portrait_10 | \
 # portrait_2 | portrait_3 | portrait_4 | portrait_5 | portrait_6 | portrait_7 | portrait_8 | portrait_9 | \
-# progressen | protect_highlights_01 | prussian_blue | pseudogrey | purple | purple_2 | quraqqq_12 | randas | \
+# progressen | protect_highlights_01 | prussian_blue | pseudogrey | purple | purple_2 | quraqqq_12 | radar | randas | \
 # red_afternoon_01 | red_day_01 | red_dream_01 | redblueyellow | reds | reds_oranges_yellows | reeve_38 | remy_24 | \
 # rest_33 | retro | retro_brown_01 | retro_magenta_01 | retro_summer_3 | retro_yellow_01 | rocketman | \
 # rollei_ir_400 | rollei_ortho_25 | rollei_retro_100_tonal | rollei_retro_80s | rotate_muted | rotate_vibrant | \
@@ -15305,9 +15367,9 @@ brightness : check "isnum($1)"
 # star_wars_the_rise_of_skywalker | strano | street | stringa | studio_skin_tone_shaper | subtle_blue | \
 # subtle_green | subtle_yellow | sully | summer | summer_alt | sunlight_love_11 | sunlightlove | sunny | sunny_alt | \
 # sunny_rich | sunny_warm | sunset | sunset_aqua_orange | sunset_intense_violet_blue | sunset_violet_mood | \
-# super_warm | super_warm_rich | sutro_fx | sweet_bubblegum | sweet_gelatto | taşdemirrr_1 | taiga | tarraco | \
-# teal-orange_for_flog | teal_fade | teal_moonlight | tealmagentagold | tealorange | tealorange_1 | tealorange_2 | \
-# tealorange_3 | technicalfx_backlight_filter | teigen_28 | tenet | tensiongreen_1 | tensiongreen_2 | \
+# super_warm | super_warm_rich | sutro_fx | sweet_bubblegum | sweet_gelatto | taşdemirrr_1 | taiga | take_off | \
+# tarraco | teal-orange_for_flog | teal_fade | teal_moonlight | tealmagentagold | tealorange | tealorange_1 | \
+# tealorange_2 | tealorange_3 | technicalfx_backlight_filter | teigen_28 | tenet | tensiongreen_1 | tensiongreen_2 | \
 # tensiongreen_3 | tensiongreen_4 | terra_4 | the_dark_knight | the_darkest_hour | the_gentelmen | \
 # the_grand_budapest_hotel | the_hurt_locker | the_irishman | the_lighthouse | the_lobster | the_martian | \
 # the_matrices | the_revenant | the_shape_of_water | the_social_network | the_two_popes | the_way_back | \
@@ -15320,9 +15382,9 @@ brightness : check "isnum($1)"
 # violet_taste | vireo_37 | vita | vivid | vubes | war_for_the_planet_of_the_apes | warm | warm_dark_contrasty | \
 # warm_fade | warm_fade_1 | warm_highlight | warm_neutral | warm_sunset_red | warm_teal | warm_vintage | \
 # warm_yellow | wavefire | waves | well_see | western | western_6 | westernlut_2 | westernlut_2_13 | whiter_whites | \
-# winterlighthouse | wipe | wolf_of_wall_street | wonder_woman | wooden_gold_20 | x-men_dark_phoenix | yangabuz_8 | \
-# yellow_55b | yellow_film_01 | yellowstone | you_can_do_it | zed_32 | zeke_39 | zilverfx_bw_solarization | \
-# zilverfx_infrared | zilverfx_vintage_bw | zombieland_double_tap }
+# wingspan | winterlighthouse | wipe | wolf_of_wall_street | wonder_woman | wooden_gold_20 | x-men_dark_phoenix | \
+# yangabuz_8 | yellow_55b | yellow_film_01 | yellowstone | you_can_do_it | zed_32 | zeke_39 | \
+# zilverfx_bw_solarization | zilverfx_infrared | zilverfx_vintage_bw | zombieland_double_tap }
 #@cli : Default values: 'resolution=33' and 'cut_and_round=1'.
 #@cli : $ clut summer clut alien_green,17 clut orange_dark4,48
 +clut : check "isint(${2=33},1) && isbool(${3=1})"
@@ -16253,12 +16315,12 @@ oklab2rgb :
   foreach {
     split_opacity to_rgb[0]
     f[0] "
-     l = (i0 + 0.3963377774*i1 + 0.2158037573*i2)^3;
-     m = (i0 - 0.1055613458*i1 - 0.0638541728*i2)^3;
-     s = (i0 - 0.0894841775*i1 - 1.2914855480*i2)^3;
-     [ 4.0767245293*l - 3.3072168827*m + 0.2307590544*s,
-       -1.2681437731*l + 2.6093323231*m - 0.3411344290*s,
-       -0.0041119885*l - 0.7034763098*m + 1.7068625689*s ]"
+      l = (i0 + 0.3963377774*i1 + 0.2158037573*i2)^3;
+      m = (i0 - 0.1055613458*i1 - 0.0638541728*i2)^3;
+      s = (i0 - 0.0894841775*i1 - 1.2914855480*i2)^3;
+      [ 4.0767416621*l - 3.3077115913*m + 0.2309699292*s,
+        -1.2684380046*l + 2.6097574011*m - 0.3413193965*s,
+        -0.0041960863*l - 0.7034186147*m + 1.7076147010*s ]"
     * 255 a c
   }
 
@@ -17016,9 +17078,9 @@ rgb2oklab :
   foreach {
     split_opacity to_rgb[0] /[0] 255
     f[0] "
-      l = cbrt(0.4121656120*R + 0.5362752080*G + 0.0514575653*B);
-      m = cbrt(0.2118591070*R + 0.6807189584*G + 0.1074065790*B);
-      s = cbrt(0.0883097947*R + 0.2818474174*G + 0.6302613616*B);
+      l = cbrt(0.4122214708*R + 0.5363325363*G + 0.0514459929*B);
+      m = cbrt(0.2119034982*R + 0.6806995451*G + 0.1073969566*B);
+      s = cbrt(0.0883024619*R + 0.2817188376*G + 0.6299787005*B);
       [ 0.2104542553*l + 0.7936177850*m - 0.0040720468*s,
         1.9779984951*l - 2.4285922050*m + 0.4505937099*s,
         0.0259040371*l + 0.7827717662*m - 0.8086757660*s ]"
@@ -28808,8 +28870,8 @@ nn_lib :
     # Network layers.
     #----------------
 
-    # add: Add two inputs.
-    #---------------------
+    # add: Add two/three or four inputs.
+    #------------------------------------
     nn_add_init_forward(OUT,IN) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -28821,10 +28883,35 @@ nn_lib :
       OUT# = IN0# + IN1#;
     );
 
+    nn_add_forward(OUT,IN0,IN1,IN2) = (
+      OUT# = IN0# + IN1# + IN2#;
+    );
+
+    nn_add_forward(OUT,IN0,IN1,IN2,IN3) = (
+      OUT# = IN0# + IN1# + IN2# + IN3#;
+    );
+
     nn_add_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
       size(IN0#)?(d#IN0+=d#OUT);
       size(IN1#)?(d#IN1+=d#OUT);
+    );
+
+    nn_add_backward(OUT,IN0,IN1,IN2) = (
+      nn_define_backward(IN0#,IN1#);
+      nn_define_backward(IN2#);
+      size(IN0#)?(d#IN0+=d#OUT);
+      size(IN1#)?(d#IN1+=d#OUT);
+      size(IN2#)?(d#IN2+=d#OUT);
+    );
+
+    nn_add_backward(OUT,IN0,IN1,IN2,IN3) = (
+      nn_define_backward(IN0#,IN1#);
+      nn_define_backward(IN2#,IN3#);
+      size(IN0#)?(d#IN0+=d#OUT);
+      size(IN1#)?(d#IN1+=d#OUT);
+      size(IN2#)?(d#IN2+=d#OUT);
+      size(IN3#)?(d#IN3+=d#OUT);
     );
 
     # append: Append two inputs as a new output.
@@ -29195,29 +29282,35 @@ nn_lib :
 
     # distance : Distance between two inputs.
     #----------------------------------------
-    nn_distance_init_forward(OUT,metric) = (
+    nn_distance_init_forward(OUT,IN,metric) = (
       const OUT#_width = 1;
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
       const OUT#_metric = metric;
+      const OUT#_weight = 1/size(IN#);
     );
 
     nn_distance_forward(OUT,IN0,IN1) = (
       OUT#_delta = IN0# - IN1#;
-      OUT# = [ OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2 ];
+      OUT# = [ (OUT#_metric>0?norm#OUT#_metric(OUT#_delta):norm(OUT#_delta)^2)*OUT#_weight ];
     );
 
     nn_distance_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#,IN1#);
       !OUT#_metric?( # L2-squared
-        d#IN0+=2*OUT#_delta;
+        OUT#_tmp = OUT#_delta*(2*OUT#_weight);
       ):OUT#_metric==2?( # L2
-        d#IN0+=OUT#_delta/(OUT#[0] + nn_eps);
-      ):( # L
-        d#IN0+=(abs(OUT#_delta)/(OUT#[0] + nn_eps))^(OUT#_metric - 1)*sign(OUT#_delta);
+        OUT#_tmp = OUT#_delta/(OUT#[0] + nn_eps)*OUT#_weight;
+      ):OUT#_metric==1?( # L1
+        OUT#_tmp = sign(OUT#_delta)*OUT#_weight;
+      ):OUT#_metric>1?( # Lp with p>1
+        OUT#_tmp = (OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
+      ):( # Lp with 0<p<1
+        OUT#_tmp = OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
       );
-      d#IN1+=-d#IN0;
+      d#IN0+=OUT#_tmp;
+      d#IN1-=OUT#_tmp;
     );
 
     # dropout : Spatial dropout (cancel whole channels).
@@ -29934,8 +30027,8 @@ nn_lib :
     nn_loss_binary_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_epsiloned1 = vmax(1 - IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_binary_crossentropy_end_forward(OUT) = (
@@ -29958,8 +30051,8 @@ nn_lib :
 
     nn_loss_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_crossentropy_end_forward(OUT) = (
@@ -29973,17 +30066,90 @@ nn_lib :
       d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
     );
 
+    # l1 : L1-norm.
+    #--------------
+    nn_loss_l1_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      batch_#OUT = 0;
+    );
+
+    nn_loss_l1_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm1(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_l1_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_l1_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=sign(OUT#_delta)*OUT#_weight;
+    );
+
+    # l2 : L2-norm.
+    #--------------
+    nn_loss_l2_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      batch_#OUT = 0;
+    );
+
+    nn_loss_l2_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_l2_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_l2_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
+    );
+
+    # lp : Lp-norm.
+    #--------------
+    nn_loss_lp_init_forward(OUT,IN,p,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      const OUT#_p = p;
+      batch_#OUT = 0;
+    );
+
+    nn_loss_lp_forward(OUT,IN,TRUTH) = (
+      OUT#_delta = IN# - TRUTH;
+      OUT#_single = norm#OUT#_p(OUT#_delta);
+      batch_#OUT+=OUT#_single*OUT#_weight;
+    );
+
+    nn_loss_lp_end_forward(OUT) = (
+      merge(batch_#OUT,+);
+      batch_#OUT/=nn_batch_size;
+      OUT# = batch_#OUT;
+    );
+
+    nn_loss_lp_backward(OUT,IN,TRUTH) = (
+      nn_define_backward(IN#);
+      d#IN+=(abs(OUT#_delta) + eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+    );
+
     # mse : Mean-squared error.
     #--------------------------
-    nn_loss_mse_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_mse_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
       batch_#OUT = 0;
     );
 
     nn_loss_mse_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm(OUT#_delta)^2/size(IN#)*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = norm(OUT#_delta)^2;
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_mse_end_forward(OUT) = (
@@ -29994,40 +30160,33 @@ nn_lib :
 
     nn_loss_mse_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=2*OUT#_weight*OUT#_delta;
+      d#IN+=OUT#_delta*(2*OUT#_weight);
     );
 
-    # normp : p-norm.
-    #-----------------
-    nn_loss_normp_init_forward(OUT,metric,weight) = (
-      const OUT#_metric = metric;
-      const OUT#_weight = weight;
+    # smoothl1 : Smooth L1-norm.
+    #---------------------------
+    nn_loss_smoothl1_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
+      const OUT#_beta = 1e-3;
       batch_#OUT = 0;
     );
 
-    nn_loss_normp_forward(OUT,IN,TRUTH) = (
+    nn_loss_smoothl1_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH;
-      OUT#_single = norm#OUT#_metric(OUT#_delta)/size(IN#)*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_sqrt_delta2_beta2 = sqrt(OUT#_delta^2 + OUT#_beta^2);
+      OUT#_single = sum(OUT#_sqrt_delta2_beta2);
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
-    nn_loss_normp_end_forward(OUT) = (
+    nn_loss_smoothl1_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
       OUT# = batch_#OUT;
     );
 
-    nn_loss_normp_backward(OUT,IN,TRUTH) = (
+    nn_loss_smoothl1_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      OUT#_metric==2?( # L2
-        d#IN+=OUT#_delta/(OUT# + nn_eps)*OUT#_weight;
-      ):OUT#_metric==1?( # L1
-        d#IN+=sign(OUT#_delta)*OUT#_weight;
-      ):OUT#_metric>1?( # Lp with p>1
-        d#IN+=(OUT# + nn_eps)^(1/OUT#_metric - 1)*abs(OUT#_delta)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
-      ):( # Lp with 0<p<1
-        d#IN+=OUT#^(1/OUT#_metric - 1)*(abs(OUT#_delta) + nn_eps)^(OUT#_metric - 1)*sign(OUT#_delta)*OUT#_weight;
-      );
+      d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
     );
 
     # softmax_crossentropy : Softmax + cross entropy.
@@ -30039,8 +30198,8 @@ nn_lib :
 
     nn_loss_softmax_crossentropy_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_softmax))*OUT#_weight;
-      batch_#OUT+=OUT#_single;
+      OUT#_single = -sum(TRUTH*log(OUT#_softmax));
+      batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
     nn_loss_softmax_crossentropy_end_forward(OUT) = (
@@ -30054,36 +30213,69 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,in1
+#@cli nn_add : out,in0,in1,_in2,_in3
 #@cli : Add an 'add' layer to the current network.
-#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum3 = isnum($3);
-                isvarname(s1) && # out
-                (isvarname(s2) || s2=='.' || isnum2) && # in0
-                (isvarname(s3) || s3=='.' || isnum3) && # in1
-                (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+#@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
+nn_add :
+  check "s_out = ['$1']; s_in0 = ['$2']; s_in1 = ['$3']; s_in2 = ['${4=}']; s_in3 = ['${5=}'];
+         is_in2 = s_in2!=0;
+         is_in3 = s_in3!=0;
+         is_num0 = isnum(s_in0);
+         is_num1 = isnum(s_in1);
+         is_num2 = isnum(s_in2);
+         is_num3 = isnum(s_in3);
+         isvarname(s_out) && # out
+         (isvarname(s_in0) || s_in0=='.' || is_num0) && # in0
+         (isvarname(s_in1) || s_in1=='.' || is_num1) && # in1
+         (!is_in2 || (is_in2 && (isvarname(s_in1) || s_in1=='.' || is_num1))) && # in2
+         (!is_in3 || (is_in3 && (isvarname(s_in3) || s_in3=='.' || is_num3))) && # in3
+         (!is_num0 || !is_num1 || (is_in2 && !is_num2) || (is_in3 && !is_num3))"
+  net,out=${-nn_network},$1
+  nb_inputs:=2+!!narg($4)+!!narg($5)
+  check "isint($nb_inputs,2,4)"
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  if '$4'=='.' in2=$_nn_previous_layer else in2=$4 fi
+  if '$5'=='.' in3=$_nn_previous_layer else in3=$5 fi
+  nout,nin0,nin1,nin2,nin3=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1},${nn_varname\ $in2},${nn_varname\ $in3}
+  isnum0,isnum1,isnum2,isnum3:=isnum($in0),isnum($in1),isnum($in2),isnum($in3)
   out_size=
-  isnum0,isnum1:=isnum($in0),isnum($in1)
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
-  if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+  if $nb_inputs>2" && "!$isnum2 nn_check_layer $in2 out_size=${_${nin2}_size} else nin2=$in2 fi
+  if $nb_inputs>3" && "!$isnum3 nn_check_layer $in3 out_size=${_${nin3}_size} else nin3=$in3 fi
+  if !$isnum0 check [${_${nin0}_size}]==[$out_size] fi
+  if !$isnum1 check [${_${nin1}_size}]==[$out_size] fi
+  if $nb_inputs>2" && "!$isnum2 check [${_${nin2}_size}]==[$out_size] fi
+  if $nb_inputs>3" && "!$isnum3 check [${_${nin3}_size}]==[$out_size] fi
+  if $nb_inputs==2 s_in="'"$in0"' and '"$in1"'"
+  elif $nb_inputs==3 s_in="'"$in0"', '"$in1"' and '"$in2"'"
+  else s_in="'"$in0"', '"$in1"', '"$in2"' and '"$in3"'"
+  fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$s_in"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
-  _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_add_init_forward("$nout,${nin$isnum0}"));"\
-                   "nn_add_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
+  if $nb_inputs==2 _${nout}_input=$in0,$in1
+  elif $nb_inputs==3 _${nout}_input=$in0,$in1,$in2
+  else _${nout}_input=$in0,$in1,$in2,$in3
+  fi
+  _${nout}_forward="begin(nn_add_init_forward("$nout,${nin$isnum0}"));"
+  if $nb_inputs==2
+    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1");"
+    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
+  elif $nb_inputs==3
+    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1,$nin2");"
+    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1,$nin2");"
+  else
+    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1,$nin2,$nin3");"
+    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1,$nin2,$nin3");"
+  fi
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_append : out,in0,in1,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
@@ -30093,10 +30285,10 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                    (isvarname(s3) || s3=='.') && # in1
                    isin(s4,'x','y','z','c') # axis
                    "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   axis=$4
   ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
   check s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];s0[$ind_axis]=s1[$ind_axis]=-1;s0==s1
@@ -30113,7 +30305,7 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_avgpool2d : out,in,_patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
@@ -30123,9 +30315,9 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'avgpool2d' layer '"$out"' to network '"$net"', with input '"$in"' and "\
@@ -30141,7 +30333,7 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_avgpool3d : out,in,patch_size>1
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
@@ -30151,9 +30343,9 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'avgpool3d' layer '"$out"' to network '"$net"', with input '"$in"' and "\
@@ -30169,15 +30361,15 @@ nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_check_layer : layer_name
 #@cli : Check that layer with specified name exists in the current network.
 nn_check_layer :
   if !isvarname(['"$1"'])
-    error[0--3] "Command 'nn_check_layer': Invalid layer name '$1'."
-  elif narg(${_${_nn_network}_$1_size})!=4
-    error[0--3] "Command 'nn_check_layer': Layer with name '$1' does not exist."
+    error[0--3] "Command '$0': Invalid layer name '$1'."
+  elif narg(${_${-nn_network}_$1_size})!=4" && "narg(${_$1_size})!=4
+    error[0--3] "Command '$0': Layer with name '$1' does not exist."
   fi
 
 #@cli nn_clone : out0,out1,in
@@ -30187,8 +30379,8 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                   isvarname(s2) && # out1
                   (isvarname(s3) || s3=='.') # in
                   "
-  net,out0,out1=$_nn_network,${1,2}
-  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  net,out0,out1=${-nn_network},${1,2}
+  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
@@ -30204,7 +30396,7 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out0
+  _nn_previous_layer=$out0
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
@@ -30228,9 +30420,9 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
                    ${10=0}>=0 && # weight_decay
                    isint(${11=3},0,4) # initialization
                    "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30275,7 +30467,7 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
@@ -30299,9 +30491,9 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
                    ${10=0}>=0 && # weight_decay
                    isint(${11=3},0,4) # initialization
                    "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30346,7 +30538,7 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_crop : out,in,x0,y0,z0,c0,x1,y1,z1,c1,_boundary_conditions
 #@cli : Add a 'crop' layer to the current network.
@@ -30358,9 +30550,9 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
                  min(isint([${3-10}])) && # x0,y0,z0,c0,x1,y1,z1,c1
                  isint(${11=0},0,3) # boundary_conditions
                  "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
@@ -30379,10 +30571,10 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_distance : out,in0,in1,_metric={ 0:Squared-L2 | p>0:Lp-norm }
-#@cli : Add a 'distance' layer to the current network (distance between two inputs, with specified metric).
+#@cli : Add a 'distance' layer to the current network (averaged distance between two inputs, with specified metric).
 #@cli : Default value: 'metric=2'.
 nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      isvarname(s1) && # out
@@ -30390,11 +30582,11 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      (isvarname(s3) || s3=='.') && # in1
                      isint(${4=2},0) # metric
                      "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi nn_check_layer $in0
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi nn_check_layer $in1
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  check [${_${nin0}_size}]==[${_${nin1}_size}]
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+  check prod(${_${nin0}_size})==prod(${_${nin1}_size})
   metric=$4
   s0,s1="squared-L2 norm","L$4"
 
@@ -30405,13 +30597,13 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in0,$in1
   _${nout}_properties="metric="${s{$metric>0}}
-  _${nout}_forward="begin(nn_distance_init_forward("$nout,$metric"));"\
+  _${nout}_forward="begin(nn_distance_init_forward("$nout,$nin0,$metric"));"\
                    "nn_distance_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_distance_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_div : out,in0,in1
 #@cli : Add a 'div' layer to the current network.
@@ -30421,12 +30613,12 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  out_size=
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
+  out_size=
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
@@ -30436,13 +30628,13 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_div_init_forward("$out,${nin$isnum0}"));"\
+  _${nout}_forward="begin(nn_div_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_div_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
@@ -30451,10 +30643,11 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
                     (isvarname(s2) || s2=='.') && # in
                     inrange($3,0,1,1,0) # dropout_rate
                     "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   dropout_rate=$3
+
   e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "dropout rate "$dropout_rate"."
   _${net}_layer_names.=$out,
@@ -30468,7 +30661,7 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
@@ -30484,9 +30677,9 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
                ${5=0}>=0 && # weight_decay
                isint(${6=3},0,4) # initialization
                "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
@@ -30525,16 +30718,19 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
-#@cli nn_init : network_name
+#@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
+#@cli : Default value: 'network_name=nn'.
 nn_init : check "isvarname(['$1'])"
   e[^-1] "[nn_lib] Initialize new network '$1'."
-  _nn_network,net=$1
-  _${net}_layer_names,_${net}_layer_types,_${net}_trainer_data,\
-   _${net}_forward,_${net}_loss,_${net}_backward,_${net}_update,_${net}_previous_layer=
-  _${net}_init="$0 ${1--1}\n"
+  _nn_init $1
+
+_nn_init : # Init new network
+  _nn_network=$1
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update=
+  _$1_init="nn_init $1\n"
 
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
@@ -30546,7 +30742,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
                   isint(${4=1},1) && # depth
                   isint(${5=1},1) # spectrum
                   "
-  net,out=$_nn_network,$1 nout=${net}_$out
+  net,out=${-nn_network},$1 nout=${net}_$out
   width,height,depth,spectrum=${2-5}
 
   e[^-1] "[nn_lib] Add input '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")."
@@ -30558,11 +30754,11 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network (saved as a .gmz file).
-#@cli : Neural network files can be only loaded in .gmz format.
+#@cli : Network files can be only loaded in '.gmz' format.
 #@cli : Default value: 'include_trainer_data=1'.
 +nn_load : check "s1 = ['$1'];
                   find(s1,'.gmz')==size(s1) - 4 && # filename
@@ -30571,7 +30767,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
   l[] {
-    "$1" run {t} rm. net=$_nn_network
+    "$1" run {t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
@@ -30592,13 +30788,14 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Add a 'add' loss to the current network (sum of losses).
 nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                      isvarname(s1) && # out
-                     (isvarname(s2) || s2=='.') && # in0
-                     (isvarname(s3) || s3=='.') && # in1
+                     (isvarname(s2) || s2=='.' || isnum(s2)) && # in0
+                     (isvarname(s3) || s3=='.' || isnum(s3)) # in1
+                     (!isnum(s2) || !isnum(s3))
                      "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
@@ -30608,20 +30805,21 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nin0,$nin1"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_binary_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
 nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                                      isvarname(s1) && # out
                                      (isvarname(s2) || s2=='.') && # in
-                                     isvarname(s3) && # ground_truth
+                                     (isvarname(s3) || isnum($3)) && # ground_truth
                                      isnum(${4=1}) # weight
                                      "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30637,20 +30835,21 @@ nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'crossentropy' loss to the current network (cross entropy).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                               isvarname(s1) && # out
                               (isvarname(s2) || s2=='.') && # in
-                              isvarname(s3) && # ground_truth
+                              (isvarname(s3) || isnum($3)) && # ground_truth
                               isnum(${4=1}) # weight
                               "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30666,20 +30865,112 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
-#@cli nn_loss_mse : out,in,ground_truth,_weight
-#@cli : Add a 'mse' loss to the current network (mean-squared error).
+#@cli nn_loss_l1 : out,in,_ground_truth,_weight
+#@cli : Add a 'l1' loss to the current network (L1-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_loss_l1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    isnum(${4=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
+
+  e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_l1,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_l1_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_l1_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_l1_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_l1_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_l2 : out,in,_ground_truth,_weight
+#@cli : Add a 'l2' loss to the current network (L2-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_l2 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    isnum(${4=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
+
+  e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_l2,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_l2_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_l2_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_l2_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_l2_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_lp : out,in,_ground_truth,_p>0,_weight
+#@cli : Add a 'lp' loss to the current network (Lp-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'p=1.5' and 'weight=1'.
+nn_loss_lp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    ${4=1.5}>0 && # p
+                    isnum(${5=1}) # weight
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,p,weight=${3-5}
+
+  e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=loss_lp,
+  _${nout}_size=1,1,1,1
+  _${nout}_input=$in
+  _${nout}_properties="ground_truth="$ground_truth", p="$p", weight="$weight
+  _${nout}_loss="begin(nn_loss_lp_init_forward("$nout,$nin,$p,$weight"));"\
+                "nn_loss_lp_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_lp_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_lp_backward("$nout,$nin,$ground_truth");"
+  _${net}_loss.=${_${nout}_loss}
+  _${net}_backward..=${_${nout}_backward}
+  _nn_previous_layer=$out
+
+#@cli nn_loss_mse : out,in,_ground_truth,_weight
+#@cli : Add a 'mse' loss to the current network (mean-squared error).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                      isvarname(s1) && # out
                      (isvarname(s2) || s2=='.') && # in
-                     isvarname(s3) && # ground_truth
+                     (isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
                      "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
   e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"', "\
@@ -30689,56 +30980,57 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
   _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
-#@cli nn_loss_normp : out,in,ground_truth,_metric>0,_weight
-#@cli : Add a 'normp' loss to the current network (||out - ground_truth||_metric).
-#@cli : Default values: 'metric=1' and 'weight=1'.
-nn_loss_normp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                       isvarname(s1) && # out
-                       (isvarname(s2) || s2=='.') && # in
-                       isvarname(s3) && # ground_truth
-                       isint(${4=1},0) && # metric
-                       isnum(${5=1}) # weight
-                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
-  ground_truth,metric,weight=${3-5}
+#@cli nn_loss_smoothl1 : out,in,_ground_truth,_weight
+#@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : Default value: 'weight=1'.
+nn_loss_smoothl1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                          isvarname(s1) && # out
+                          (isvarname(s2) || s2=='.') && # in
+                          (isvarname(s3) || isnum($3)) && # ground_truth
+                          isnum(${4=1}) # weight
+                          "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  ground_truth,weight=${3-4}
 
-  e[^-1] "[nn_lib] Add normp loss '"$out"' to network '"$net"', with input '"$in"', "\
-         "ground truth '"$ground_truth"', metric "$metric" and weight "$weight"."
+  e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
+         "ground truth '"$ground_truth"' and weight "$weight"."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_normp,
+  _${net}_layer_types.=loss_smoothl1,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
-  _${nout}_properties="ground_truth="$ground_truth", metric="$metric", weight="$weight
-  _${nout}_loss="begin(nn_loss_normp_init_forward("$nout,$metric,$weight"));"\
-                "nn_loss_normp_forward("$nout,$nin,$ground_truth");"\
-                "end(nn_loss_normp_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_normp_backward("$nout,$nin,$ground_truth");"
+  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
+  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
+                "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_smoothl1_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_loss_softmax_crossentropy : out,in,ground_truth,_weight
 #@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
+#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
                                       isvarname(s1) && # out
                                       (isvarname(s2) || s2=='.') && # in
-                                      isvarname(s3) && # ground_truth
+                                      (isvarname(s3) || isnum($3)) && # ground_truth
                                       isnum(${4=1}) # weight
                                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   ground_truth,weight=${3-4}
 
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
@@ -30754,7 +31046,7 @@ nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
@@ -30765,9 +31057,9 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,is_maxabs=${3-4}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
 
@@ -30784,7 +31076,7 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
@@ -30795,9 +31087,9 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,is_maxabs=${3-4}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
 
@@ -30814,7 +31106,7 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_mul : out,in0,in1
 #@cli : Add a 'mul' layer to the current network.
@@ -30824,12 +31116,12 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  out_size=
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
+  out_size=
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
@@ -30845,7 +31137,21 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
+
+#@cli nn_network : _network_name
+#@cli : Get/set current network name (and initialize network if it does not already exist).
+#@cli : This command returns the name of the current selected network.
+nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
+  if narg("$1")
+    if narg($_$1_init) _nn_network=$1 # Network already exists
+    else _nn_init $1 # New network -> initialize it
+    fi
+  else
+    if !narg(${_nn_network}) _nn_init nn fi # Init default network
+    noarg
+  fi
+  u ${_nn_network}
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' (nonlinearity) layer to the current network.
@@ -30857,9 +31163,9 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
                (isvarname(s2) || s2=='.') && # in
                isvarname(s3) # activation
                "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   activation=$3
 
   e[^-1] "[nn_lib] Add 'nl' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -30883,7 +31189,7 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
@@ -30913,12 +31219,13 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
                       isint(${8=0},0) && # group_x
                       isint(${9=3},0,3) # learning_mode
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
   if $normalization_type learning_mode&=1 fi # Disable Beta when RMS-normalization is enabled
   s0,s1=avg_std,rms
+
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
   _${net}_layer_names.=$out,
@@ -30955,7 +31262,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchdown2d : out,in,_patch_size>1
 #@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the current network.
@@ -30965,9 +31272,9 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'patchdown2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -30988,7 +31295,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchdown3d : out,in,_patch_size>1
 #@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the current network.
@@ -30998,9 +31305,9 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'patchdown3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -31021,7 +31328,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchup2d : out,in,_patch_size>1
 #@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
@@ -31031,9 +31338,9 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -31050,7 +31357,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_patchup3d : out,in,_patch_size>1
 #@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
@@ -31060,9 +31367,9 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size=$3
 
   e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -31079,15 +31386,15 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_print
-#@cli : Print info on current neural network.
+#@cli : Print info on current network.
 nn_print :
-  net=$_nn_network
+  net=${-nn_network}
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
 
-  e[^-1] "[nn_lib] Print info on neural network '"$net"'."
+  e[^-1] "[nn_lib] Print info on network '"$net"'."
   v 0 e " * Network name: "$b$net$n
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -31102,7 +31409,7 @@ nn_print :
       repeat narg($input) {
         in=${arg0\ $>,$input}
         if isnum($in) input_siz.=1
-        else input_siz.=$sep${_${net}_${in}_size}
+        else nin=${nn_varname\ $in} input_siz.=$sep${_${nin}_size}
         fi
         sep=" and "
       }
@@ -31132,9 +31439,9 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
                    isvarname(s1) && # out
                    (isvarname(s2) || s2=='.') # in
                    "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
   _${net}_layer_names.=$out,
@@ -31146,7 +31453,7 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
@@ -31159,9 +31466,9 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
                     isint(${5=1},1) && # depth
                     isint(${6=1},1) # spectrum
                     "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   width,height,depth,spectrum=${3-6}
 
   e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$net"', with input '"$in"' "\
@@ -31179,7 +31486,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
 #@cli : Add a 'resize' layer to the current network.
@@ -31193,9 +31500,9 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
                    ${6=100%}>0 && # spectrum
                    isint(${7=3},-1,6) # interpolation
                    "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   if ispercentage($3) width:=max(1,round([${_${nin}_size}][1]*$3)) else width=$3 fi
   if ispercentage($4) height:=max(1,round([${_${nin}_size}][1]*$4)) else height=$4 fi
   if ispercentage($5) depth:=max(1,round([${_${nin}_size}][2]*$5)) else depth=$5 fi
@@ -31215,7 +31522,7 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_run : out,in,"command",_width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0
 #@cli : Add a 'run' layer to the current network.
@@ -31228,9 +31535,9 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
                 ${6=100%}>0 && # depth
                 ${7=100%}>0 # spectrum
                 "
-  net,out=$_nn_network,$1
-  if '$2'=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   if ispercentage($4) width:=max(1,round([${_${nin}_size}][0]*$4)) else width=$4 fi
   if ispercentage($5) height:=max(1,round([${_${nin}_size}][1]*$5)) else height=$5 fi
   if ispercentage($6) depth:=max(1,round([${_${nin}_size}][2]*$6)) else depth=$6 fi
@@ -31250,7 +31557,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1-2},\"$3\",${4--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_save : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Save current network as a .gmz file.
@@ -31260,24 +31567,16 @@ nn_save : check "s1 = ['$1'];
                  find(s1,'.gmz')==size(s1) - 4 && # filename
                  isbool(${2=1}) # include_trainer_data
                  "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
   __nn_store $2 o[$sel,-1] "$1" rm.
   is_change 0
 
-#@cli nn_select : _network_name
-#@cli : Select network with specified name as the current one.
-nn_select : check "s1 = ['$1'];
-                   isvarname(s1) # network_name
-                   "
-  _nn_network=$1
-  e[^-1] "[nn_lib] Select '"$_nn_network"' as the current network."
-
 #@cli nn_size
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
-  net=$_nn_network
+  net=${-nn_network}
   e[^-1] "[nn_lib] Return size of network '"$net"'."
   siz=0
   repeat narg(${_${net}_layer_names})-1 {
@@ -31298,8 +31597,8 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                   isin(s4,'x','y','z','c') && # axis
                   isint($5,1)
                   "
-  net,out0,out1=$_nn_network,${1,2}
-  if '$3'=='.' in=${_${net}_previous_layer} else in=$3 fi nn_check_layer $in
+  net,out0,out1=${-nn_network},${1,2}
+  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
   nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
   axis,size0=${4-5}
   ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
@@ -31319,7 +31618,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out0
+  _nn_previous_layer=$out0
 
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Store current network into a variable.
@@ -31328,7 +31627,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
                    isvarname(s1) && # variable_name
                    isbool(${2=1}) # include_trainer_data
                    "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 +store[$sel,-1] "$1" rm.
@@ -31337,13 +31636,13 @@ nn_store : check "s1 = ['$1'];
                   isvarname(s1) && # variable_name
                   isbool(${2=1}) # include_trainer_data
                   "
-  net=$_nn_network
+  net=${-nn_network}
   s0,s1=""," (include training data)"
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 store[$sel,-1] "$1"
 
 __nn_store :
-  net=$_nn_network
+  net=${-nn_network}
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
@@ -31367,12 +31666,12 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)"
-  net,out=$_nn_network,$1
-  if '$2'=='.' in0=${_${net}_previous_layer} else in0=$2 fi
-  if '$3'=='.' in1=${_${net}_previous_layer} else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${net}_$in0,${net}_$in1
-  out_size=
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
   isnum0,isnum1:=isnum($in0),isnum($in1)
+  out_size=
   if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
@@ -31388,7 +31687,7 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; isnum2 = isnum($2); isnum
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _${net}_previous_layer=$out
+  _nn_previous_layer=$out
 
 #@cli nn_trainer : out,in,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
@@ -31407,9 +31706,9 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
                     isin(s3,'sgd','rmsprop','adam','adamax') &&
                     isin(s5,'constant','linear','exponential','adaptive')"
              skip "${4=},${6=}"
-  net,out=$_nn_network,$1
-  if ['${2=.}']=='.' in=${_${net}_previous_layer} else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${net}_$in
+  net,out=${-nn_network},$1
+  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
   # Trainer matrix has size 8x3, and is organized as follow:
@@ -31500,6 +31799,18 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
 
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nin,$optimizer,$scheduler"));"
+
+#@cli nn_varname : layer_name
+#@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
+nn_varname :
+  if isvarname(['"${1=}"'])
+    net=${-nn_network}
+    if narg(${_${net}_$1_size}) u ${net}_$1
+    elif narg(${_$1_size}) u $1
+    else error[0--3] "Command '$0': Layer with name '$1' does not exist."
+    fi
+  else u "$1"
+  fi
 
 #----------------------------------
 #
@@ -43356,7 +43667,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.6</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.7</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -43388,7 +43699,7 @@ fx_gmicky_preview :
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2025/12/29</b> : version <i>3.6.6</i> (Current stable).</span>\n
-##@gui : - <b>2026/XX/XX</b> : version <i>3.6.7_pre</i> (Current pre-release).\n
+#@gui : - <b>2026/01/05</b> : version <i>3.6.7_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
@@ -47641,240 +47952,243 @@ fx_balance_gamma :
 
 #@gui Color Presets : fx_color_presets, fx_color_presets_preview(1)+
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# Applies various predefined color grading presets.
-#@gui : "}, sep = separator()
-#@gui : LUTs Pack = ~choice{21,"Abigail Gonzalez (21)","Alex Jordan (81)","Berat (10)","Cinematic (8)",
-#@gui : "Cinematic Travel (29)","Creative Pack (33)","EditingCorp (60)","Eric Ellerbrock (14)",
-#@gui : "FilterGrade Cinematic (8)","Hollywood Movies (74)","InAvision (15)","J.T. Semple (14)","Kyler Holland (10)",
-#@gui : "Lutify.Me (7)","Michael Ezra (2)","Moviz (48)","Ohad Peretz (7)","Olivio Sarikas (19)","ON1 Photography (90)",
-#@gui : "PictureFX (25)","Pixelmator (45)","PIXLS.US (31)","Purple11 (12)","RocketStock (35)","Shamoon Abbasi (25)",
-#@gui : "SmallHD Movie Look (7)","Todd Blankenship (13)","Youssef Hossam (5)","Others (69)"}
+# Applies various predefined color grading presets.\
+# "}, sep = separator()
+#@gui : LUTs Pack = ~choice{22,"Abigail Gonzalez (21)","Alex Jordan (81)","Berat (10)","Cinematic (8)",\
+# "Cinematic Travel (29)","Creative Pack (33)","Debrup Travel & Films (30)","EditingCorp (60)","Eric Ellerbrock (14)",\
+# "FilterGrade Cinematic (8)","Hollywood Movies (74)","InAvision (15)","J.T. Semple (14)","Kyler Holland (10)",\
+# "Lutify.Me (7)","Michael Ezra (2)","Moviz (48)","Ohad Peretz (7)","Olivio Sarikas (19)","ON1 Photography (90)",\
+# "PictureFX (25)","Pixelmator (45)","PIXLS.US (31)","Purple11 (12)","RocketStock (35)","Shamoon Abbasi (25)",\
+# "SmallHD Movie Look (7)","Todd Blankenship (13)","Youssef Hossam (5)","Others (69)"}
 
 ##### Abigail Gonzales
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Blade Runner","Blue House","Blue Ice","Caribe","Cinema","Cinema 2","Cinema 3","Cinema 4","Cinema 5",
-#@gui : "Cinema Noir","Cinematic for Flog","Day4Nite","Eterna for Flog","Filmic","Fuji HDR",
-#@gui : "Golden Gate","Matrix","Monochrome 1","Monochrome 2","Old West","Science Fiction"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Blade Runner","Blue House","Blue Ice","Caribe","Cinema","Cinema 2","Cinema 3","Cinema 4","Cinema 5",\
+# "Cinema Noir","Cinematic for Flog","Day4Nite","Eterna for Flog","Filmic","Fuji HDR",\
+# "Golden Gate","Matrix","Monochrome 1","Monochrome 2","Old West","Science Fiction"}_0
 
 ##### Alex Jordan
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Action Magenta 01","Action Red 01","Adventure 1453","Aggressive Highlights Recovery 5",
-#@gui : "Bleech Bypass Green","Bleech Bypass Yellow 01","Blue Dark","Blue Shadows 01","Bright Green 01",
-#@gui : "Brownish","Colorful 0209","Conflict 01","Contrast with Highlights Protection","Contrasty Afternoon",
-#@gui : "Contrasty Green","Cross Process CP 130","Cross Process CP 14","Cross Process CP 15",
-#@gui : "Cross Process CP 16","Cross Process CP 18","Cross Process CP 3","Cross Process CP 4",
-#@gui : "Cross Process CP 6","Dark Green 02","Dark Green 1","Dark Place 01","Dream 1","Dream 85",
-#@gui : "Faded Retro 01","Faded Retro 02","Film 0987","Film 9879","Film Highlight Contrast","Flat 30",
-#@gui : "Green 2025","Green Action","Green Afternoon","Green Conflict","Green Day 01","Green Day 02",
-#@gui : "Green G09","Green Indoor","Green Light","Harsh Day","Harsh Sunset","Highlights Protection",
-#@gui : "Indoor Blue","Low Contrast Blue","Low Key 01","Magenta Day","Magenta Day 01","Magenta Dream",
-#@gui : "Memories","Moonlight 01","Mostly Blue","Muted 01","Night 01","Only Red","Only Red and Blue",
-#@gui : "Operation Yellow","Orange Dark 4","Orange Dark 7","Orange Dark Look","Orange Underexposed",
-#@gui : "Protect Highlights 01","Red Afternoon 01","Red Day 01","Red Dream 01","Retro Brown 01",
-#@gui : "Retro Magenta 01","Retro Yellow 01","Saturated Blue","Smart Contrast","Subtle Blue",
-#@gui : "Subtle Green","Yellow 55B","Yellow Film 01"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Action Magenta 01","Action Red 01","Adventure 1453","Aggressive Highlights Recovery 5",\
+# "Bleech Bypass Green","Bleech Bypass Yellow 01","Blue Dark","Blue Shadows 01","Bright Green 01",\
+# "Brownish","Colorful 0209","Conflict 01","Contrast with Highlights Protection","Contrasty Afternoon",\
+# "Contrasty Green","Cross Process CP 130","Cross Process CP 14","Cross Process CP 15",\
+# "Cross Process CP 16","Cross Process CP 18","Cross Process CP 3","Cross Process CP 4",\
+# "Cross Process CP 6","Dark Green 02","Dark Green 1","Dark Place 01","Dream 1","Dream 85",\
+# "Faded Retro 01","Faded Retro 02","Film 0987","Film 9879","Film Highlight Contrast","Flat 30",\
+# "Green 2025","Green Action","Green Afternoon","Green Conflict","Green Day 01","Green Day 02",\
+# "Green G09","Green Indoor","Green Light","Harsh Day","Harsh Sunset","Highlights Protection",\
+# "Indoor Blue","Low Contrast Blue","Low Key 01","Magenta Day","Magenta Day 01","Magenta Dream",\
+# "Memories","Moonlight 01","Mostly Blue","Muted 01","Night 01","Only Red","Only Red and Blue",\
+# "Operation Yellow","Orange Dark 4","Orange Dark 7","Orange Dark Look","Orange Underexposed",\
+# "Protect Highlights 01","Red Afternoon 01","Red Day 01","Red Dream 01","Retro Brown 01",\
+# "Retro Magenta 01","Retro Yellow 01","Saturated Blue","Smart Contrast","Subtle Blue",\
+# "Subtle Green","Yellow 55B","Yellow Film 01"}_0
 
 ##### Berat
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Brown BM","Cine Blue","Cine BM4k","Golden Time","Green and Orange","Monochrome","Sevsuz","Sunlight Love",
-#@gui : "Western","Western Lut 2"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Brown BM","Cine Blue","Cine BM4k","Golden Time","Green and Orange","Monochrome","Sevsuz","Sunlight Love",\
+# "Western","Western Lut 2"}_0
 
 ##### Cinematic
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Deep","Dimension","Enchanted","Flavin","Frosted","Shine","Ultra Water","Wipe"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Deep","Dimension","Enchanted","Flavin","Frosted","Shine","Ultra Water","Wipe"}_0
 
 ##### Cinematic Travel
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Blue Cold Fade","Bright Teal Orange","Bright Warm","Clear Teal Fade","Cold Clear Blue","Cold Clear Blue 1",
-#@gui : "Deep Blue","Deep Dark Warm","Deep High Contrast","Deep Teal Fade","Deep Warm Fade","Faded Green",
-#@gui : "Greenish Contrasty","Greenish Fade","Greenish Fade 1","Hard Teal Orange","Neutral Teal Orange",
-#@gui : "Neutral Warm Fade","Smooth Clear","Smooth Green Orange","Smooth Teal Orange","Teal Fade","Very Warm Greenish",
-#@gui : "Warm Dark Contrasty","Warm Fade","Warm Fade 1","Warm Neutral","Warm Sunset Red","Warm Teal"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Blue Cold Fade","Bright Teal Orange","Bright Warm","Clear Teal Fade","Cold Clear Blue","Cold Clear Blue 1",\
+# "Deep Blue","Deep Dark Warm","Deep High Contrast","Deep Teal Fade","Deep Warm Fade","Faded Green",\
+# "Greenish Contrasty","Greenish Fade","Greenish Fade 1","Hard Teal Orange","Neutral Teal Orange",\
+# "Neutral Warm Fade","Smooth Clear","Smooth Green Orange","Smooth Teal Orange","Teal Fade","Very Warm Greenish",\
+# "Warm Dark Contrasty","Warm Fade","Warm Fade 1","Warm Neutral","Warm Sunset Red","Warm Teal"}_0
 
 ##### Creative Pack
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Anime","Bleach Bypass 1","Bleach Bypass 2","Bleach Bypass 3","Bleach Bypass 4","Candle Light",
-#@gui : "Color Negative","Crisp Warm","Crip Winter","Drop Blues","Edgy Ember","Fall Colors","Foggy Night",
-#@gui : "Futuristic Bleak 1","Futuristic Bleak 2","Futuristic Bleak 3","Futuristic Bleak 4","Horror Blue",
-#@gui : "Late Sunset","Moonlight","Night From Day","Red Blue Yellow","Smokey","Soft Warming","Teal Magenta Gold",
-#@gui : "Teal Orange","Teal Orange 1","Teal Orange 2","Teal Orange 3","Tension Green 1","Tension Green 2",
-#@gui : "Tension Green 3","Tension Green 4"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Anime","Bleach Bypass 1","Bleach Bypass 2","Bleach Bypass 3","Bleach Bypass 4","Candle Light",\
+# "Color Negative","Crisp Warm","Crip Winter","Drop Blues","Edgy Ember","Fall Colors","Foggy Night",\
+# "Futuristic Bleak 1","Futuristic Bleak 2","Futuristic Bleak 3","Futuristic Bleak 4","Horror Blue",\
+# "Late Sunset","Moonlight","Night From Day","Red Blue Yellow","Smokey","Soft Warming","Teal Magenta Gold",\
+# "Teal Orange","Teal Orange 1","Teal Orange 2","Teal Orange 3","Tension Green 1","Tension Green 2",\
+# "Tension Green 3","Tension Green 4"}_0
+
+##### Debrup Travel & Films
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Cine-1","Cine-2","Cine-3","Cine-4","Cine-5","Cine-6","Cine-7","Cine-8","Cine-9","Cine-10","Cine-11","Cine-12",\
+# "Cine-13","Cine-14","Cine-15","Cine-16","Cine-17","Cine-18","Cine-19","Cine-20","Cine-21","Cine-22","Cine-23",\
+# "Cine-24","Cine-25","Cine-26","Cine-27","Cine-28","Cine-29","Cine-30"}_0
 
 #### EditingCorp
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Ampio","Asistas","Atusa","Basuco","Beati","Bisogno","Boyado","Calidum","Colore","Convold","Cosa","Culor",
-#@gui : "Dimmer","Ensaya","Falua","Farkling","Fatos","Fezzle","Filo","Foresta","Huesio","Husmes","Huyan","Ideo",
-#@gui : "Jarklin","Lavark","Levex","Litore","Loro","Lotta","Maesky","Mercato","Molti","Motus","Mucca","Nigrum","Onda",
-#@gui : "Padre","Partia","Perso","Picola","Randas","Satid","Scala","Scrittle","Seges","Selor","Sensum","Sino","Soldi",
-#@gui : "Strano","Stringa","Tirare","Tutto","Upglow","Valize","Valsky","Vita","Vubes","Wavefire"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Ampio","Asistas","Atusa","Basuco","Beati","Bisogno","Boyado","Calidum","Colore","Convold","Cosa","Culor",\
+# "Dimmer","Ensaya","Falua","Farkling","Fatos","Fezzle","Filo","Foresta","Huesio","Husmes","Huyan","Ideo",\
+# "Jarklin","Lavark","Levex","Litore","Loro","Lotta","Maesky","Mercato","Molti","Motus","Mucca","Nigrum","Onda",\
+# "Padre","Partia","Perso","Picola","Randas","Satid","Scala","Scrittle","Seges","Selor","Sensum","Sino","Soldi",\
+# "Strano","Stringa","Tirare","Tutto","Upglow","Valize","Valsky","Vita","Vubes","Wavefire"}_0
 
 ##### Eric Ellerbrock
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Avalanche","Black Star","Helios","Hydracore","Hypnosis","Killstreak","Nemesis","Night Blade 4",
-#@gui : "Paladin","Seringe 4","Serpent","Terra 4","Victory","Yellowstone"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Avalanche","Black Star","Helios","Hydracore","Hypnosis","Killstreak","Nemesis","Night Blade 4",\
+# "Paladin","Seringe 4","Serpent","Terra 4","Victory","Yellowstone"}_0
 
 ##### FilterGrade Cinematic
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Cine Basic","Cine Bright","Cine Cold","Cine Drama","Cine Teal Orange 1","Cine Teal Orange 2",
-#@gui : "Cine Vibrant","Cine Warm"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Cine Basic","Cine Bright","Cine Cold","Cine Drama","Cine Teal Orange 1","Cine Teal Orange 2",\
+# "Cine Vibrant","Cine Warm"}_0
 
 ##### Hollywood Movies
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "12 Years a Slave","1917","Ad Astra","Aladdin","Ant-Man","Aquaman","Avengers Endgame","Baby Driver",
-#@gui : "Bad Boys for Life","Beauty and the Beast","Black Panther","Bohemian Rhapsody","Bombshell","Captain Marvel",
-#@gui : "City of God","Creed 2","Doctor Strange","Dunkirk","Fight Club","Ford v Ferrari","Green Book","Greyhound",
-#@gui : "Inception","I Tonya","Jojo Rabbit","Joker ","Jumanji The Next Level","Jurassic World Fallen Kingdom",
-#@gui : "Justice League","Kingsman The Golden Circle","Knives Out","La La Land","Little Women","Logan",
-#@gui : "Mad Max Fury Road","Marriage Story","Moonlight","Mother!","No Time to Die","Once Upon a Time in Hollywood",
-#@gui : "Parasite","Pirates of the Caribbean","Rocketman","Separation","Sicario","Spider-Man Far From Home",
-#@gui : "Spotlight","Star Wars The Rise of Skywalker","Sully","TENET","The Darkest Hour","The Dark Knight",
-#@gui : "The Gentelmen","The Grand Budapest Hotel","The Hurt Locker","The Irishman","The Lighthouse","The Lobster",
-#@gui : "The Martian","The Revenant","The Shape of Water","The Social Network","The Two Popes","The Way Back",
-#@gui : "Thor Ragnarok","Top Gun Maverick","Uncut Gems","Underwater","Venom","War for the Planet of the Apes",
-#@gui : "Wolf of Wall Street","Wonder Woman","X-Men Dark Phoenix","Zombieland Double Tap"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "12 Years a Slave","1917","Ad Astra","Aladdin","Ant-Man","Aquaman","Avengers Endgame","Baby Driver",\
+# "Bad Boys for Life","Beauty and the Beast","Black Panther","Bohemian Rhapsody","Bombshell","Captain Marvel",\
+# "City of God","Creed 2","Doctor Strange","Dunkirk","Fight Club","Ford v Ferrari","Green Book","Greyhound",\
+# "Inception","I Tonya","Jojo Rabbit","Joker ","Jumanji The Next Level","Jurassic World Fallen Kingdom",\
+# "Justice League","Kingsman The Golden Circle","Knives Out","La La Land","Little Women","Logan",\
+# "Mad Max Fury Road","Marriage Story","Moonlight","Mother!","No Time to Die","Once Upon a Time in Hollywood",\
+# "Parasite","Pirates of the Caribbean","Rocketman","Separation","Sicario","Spider-Man Far From Home",\
+# "Spotlight","Star Wars The Rise of Skywalker","Sully","TENET","The Darkest Hour","The Dark Knight",\
+# "The Gentelmen","The Grand Budapest Hotel","The Hurt Locker","The Irishman","The Lighthouse","The Lobster",\
+# "The Martian","The Revenant","The Shape of Water","The Social Network","The Two Popes","The Way Back",\
+# "Thor Ragnarok","Top Gun Maverick","Uncut Gems","Underwater","Venom","War for the Planet of the Apes",\
+# "Wolf of Wall Street","Wonder Woman","X-Men Dark Phoenix","Zombieland Double Tap"}_0
 
 ##### InAvision
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "7Drk21","BC Darkum","Brown Mobster","Cold Ice","Dark Man X","Film GB-19","Formula B","Gremerta",
-#@gui : "Hitman","J. Wick 21","London Nights","Louetta","Nightlife","VFB 21","Vintage Mob"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "7Drk21","BC Darkum","Brown Mobster","Cold Ice","Dark Man X","Film GB-19","Formula B","Gremerta",\
+# "Hitman","J. Wick 21","London Nights","Louetta","Nightlife","VFB 21","Vintage Mob"}_0
 
 ##### J.T. Semple
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Bright Green","Crisp Romance","Crushin","Frosted Beach Picnic","Just Peachy","Late Afternoon Wanderlust",
-#@gui : "Lush Green Summer","Magenta Coffee","Minimalist Caffeination","Mystic Purple Sunset","Nostalgia Honey",
-#@gui : "Spring Morning","Toasted Garden","Winter Lighthouse"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Bright Green","Crisp Romance","Crushin","Frosted Beach Picnic","Just Peachy","Late Afternoon Wanderlust",\
+# "Lush Green Summer","Magenta Coffee","Minimalist Caffeination","Mystic Purple Sunset","Nostalgia Honey",\
+# "Spring Morning","Toasted Garden","Winter Lighthouse"}_0
 
 ##### Kyler Holland
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "KH 1","KH 2","KH 3","KH 4","KH 5","KH 6","KH 7","KH 8","KH 9","KH 10"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "KH 1","KH 2","KH 3","KH 4","KH 5","KH 6","KH 7","KH 8","KH 9","KH 10"}_0
 
 ##### Lutify.Me
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Hackmanite","Herderite","Heulandite","Hiddenite","Hilutite","Howlite","Hypersthene"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Hackmanite","Herderite","Heulandite","Hiddenite","Hilutite","Howlite","Hypersthene"}_0
 
 ##### Michael Ezra
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Deep Skin Tones 2","Deep Skin Tones 3"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Deep Skin Tones 2","Deep Skin Tones 3"}_0
 
 ##### Moviz
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Moviz 1","Moviz 2","Moviz 3","Moviz 4","Moviz 5","Moviz 6","Moviz 7","Moviz 8","Moviz 9","Moviz 10",
-#@gui : "Moviz 11","Moviz 12","Moviz 13","Moviz 14","Moviz 15","Moviz 16","Moviz 17","Moviz 18","Moviz 19","Moviz 20",
-#@gui : "Moviz 21","Moviz 22","Moviz 23","Moviz 24","Moviz 25","Moviz 26","Moviz 27","Moviz 28","Moviz 29","Moviz 30",
-#@gui : "Moviz 31","Moviz 32","Moviz 33","Moviz 34","Moviz 35","Moviz 36","Moviz 37","Moviz 38","Moviz 39","Moviz 40",
-#@gui : "Moviz 41","Moviz 42","Moviz 43","Moviz 44","Moviz 45","Moviz 46","Moviz 47","Moviz 48"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Moviz 1","Moviz 2","Moviz 3","Moviz 4","Moviz 5","Moviz 6","Moviz 7","Moviz 8","Moviz 9","Moviz 10",\
+# "Moviz 11","Moviz 12","Moviz 13","Moviz 14","Moviz 15","Moviz 16","Moviz 17","Moviz 18","Moviz 19","Moviz 20",\
+# "Moviz 21","Moviz 22","Moviz 23","Moviz 24","Moviz 25","Moviz 26","Moviz 27","Moviz 28","Moviz 29","Moviz 30",\
+# "Moviz 31","Moviz 32","Moviz 33","Moviz 34","Moviz 35","Moviz 36","Moviz 37","Moviz 38","Moviz 39","Moviz 40",\
+# "Moviz 41","Moviz 42","Moviz 43","Moviz 44","Moviz 45","Moviz 46","Moviz 47","Moviz 48"}_0
 
 ##### Ohad Peretz
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Cold Simplicity 2","D and O 1","Retro Summer 3","Subtle Yellow","Teal Moonlight","True Colors 8",
-#@gui : "Vintage Warmth 1"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Cold Simplicity 2","D and O 1","Retro Summer 3","Subtle Yellow","Teal Moonlight","True Colors 8",\
+# "Vintage Warmth 1"}_0
 
 #### Olivio Sarikas
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Analog Film 1","Atomic Pink","Beach Aqua Orange","Beach Faded Analog","BW but Yellow","City Dust",
-#@gui : "Dark Orange Teal","Day to Night King's Blue","DuoTone Blue Red","Faded Pink-ish","Flat Blue Moon",
-#@gui : "Honey Light","Infrared - Dust Pink","Neutral Pump","Shade King's Ink","Sunset Aqua Orange",
-#@gui : "Sunset Intense Violet Blue","Sunset Violet Mood","Violet Taste"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Analog Film 1","Atomic Pink","Beach Aqua Orange","Beach Faded Analog","BW but Yellow","City Dust",\
+# "Dark Orange Teal","Day to Night King's Blue","DuoTone Blue Red","Faded Pink-ish","Flat Blue Moon",\
+# "Honey Light","Infrared - Dust Pink","Neutral Pump","Shade King's Ink","Sunset Aqua Orange",\
+# "Sunset Intense Violet Blue","Sunset Violet Mood","Violet Taste"}_0
 
 ##### ON1 Photography
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "2-Strip Process","Aqua","Aqua and Orange Dark","Berlin Sky","Blues",
-#@gui : "Black & White-1","Black & White-2","Black & White-3","Black & White-4","Black & White-5",
-#@gui : "Black & White-6","Black & White-7","Black & White-8","Black & White-9","Black & White-10","Chrome 01",
-#@gui : "Cinematic-1","Cinematic-2","Cinematic-3","Cinematic-4","Cinematic-5","Cinematic-6","Cinematic-7",
-#@gui : "Cinematic-8","Cinematic-9","Cinematic-10","Classic Teal and Orange","Earth Tone Boost","Fade to Green",
-#@gui : "Film Print 01","Film Print 02","French Comedy","Green Blues","Green Yellow","Landscape-1","Landscape-2",
-#@gui : "Landscape-3","Landscape-4","Landscape-5","Landscape-6","Landscape-7","Landscape-8","Landscape-9",
-#@gui : "Landscape-10","Lifestyle & Commercial-1","Lifestyle & Commercial-2","Lifestyle & Commercial-3",
-#@gui : "Lifestyle & Commercial-4","Lifestyle & Commercial-5","Lifestyle & Commercial-6","Lifestyle & Commercial-7",
-#@gui : "Lifestyle & Commercial-8","Lifestyle & Commercial-9","Lifestyle & Commercial-10","Moody-1","Moody-2",
-#@gui : "Moody-3","Moody-4","Moody-5","Moody-6","Moody-7","Moody-8","Moody-9","Moody-10","Nature & Wildlife-1",
-#@gui : "Nature & Wildlife-2","Nature & Wildlife-3","Nature & Wildlife-4","Nature & Wildlife-5","Nature & Wildlife-6",
-#@gui : "Nature & Wildlife-7","Nature & Wildlife-8","Nature & Wildlife-9","Nature & Wildlife-10","Oranges","Portrait-1",
-#@gui : "Portrait-2","Portrait-3","Portrait-4","Portrait-5","Portrait-6","Portrait-7","Portrait-8","Portrait-9",
-#@gui : "Portrait10","Purple","Reds","Reds Oranges Yellows","Studio Skin Tone Shaper","Vintage Chrome"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "2-Strip Process","Aqua","Aqua and Orange Dark","Berlin Sky","Blues",\
+# "Black & White-1","Black & White-2","Black & White-3","Black & White-4","Black & White-5",\
+# "Black & White-6","Black & White-7","Black & White-8","Black & White-9","Black & White-10","Chrome 01",\
+# "Cinematic-1","Cinematic-2","Cinematic-3","Cinematic-4","Cinematic-5","Cinematic-6","Cinematic-7",\
+# "Cinematic-8","Cinematic-9","Cinematic-10","Classic Teal and Orange","Earth Tone Boost","Fade to Green",\
+# "Film Print 01","Film Print 02","French Comedy","Green Blues","Green Yellow","Landscape-1","Landscape-2",\
+# "Landscape-3","Landscape-4","Landscape-5","Landscape-6","Landscape-7","Landscape-8","Landscape-9",\
+# "Landscape-10","Lifestyle & Commercial-1","Lifestyle & Commercial-2","Lifestyle & Commercial-3",\
+# "Lifestyle & Commercial-4","Lifestyle & Commercial-5","Lifestyle & Commercial-6","Lifestyle & Commercial-7",\
+# "Lifestyle & Commercial-8","Lifestyle & Commercial-9","Lifestyle & Commercial-10","Moody-1","Moody-2",\
+# "Moody-3","Moody-4","Moody-5","Moody-6","Moody-7","Moody-8","Moody-9","Moody-10","Nature & Wildlife-1",\
+# "Nature & Wildlife-2","Nature & Wildlife-3","Nature & Wildlife-4","Nature & Wildlife-5","Nature & Wildlife-6",\
+# "Nature & Wildlife-7","Nature & Wildlife-8","Nature & Wildlife-9","Nature & Wildlife-10","Oranges","Portrait-1",\
+# "Portrait-2","Portrait-3","Portrait-4","Portrait-5","Portrait-6","Portrait-7","Portrait-8","Portrait-9",\
+# "Portrait10","Purple","Reds","Reds Oranges Yellows","Studio Skin Tone Shaper","Vintage Chrome"}_0
 
 ##### Picture FX
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "AnalogFX - Anno 1870 Color","AnalogFX - Old Style I","AnalogFX - Old Style II","AnalogFX - Old Style III",
-#@gui : "AnalogFX - Sepia Color","AnalogFX - Soft Sepia I","AnalogFX - Soft Sepia II",
-#@gui : "PictureFX - Faux Infrared B&W1","PictureFX - Faux Infrared Color P2","PictureFX - Faux Infrared Color P3",
-#@gui : "PictureFX - Faux Infrared R0a","PictureFX - Faux Infrared R0b","PictureFX - Faux Infrared YP1",
-#@gui : "GoldFX - Bright Spring Breeze","GoldFX - Bright Summer Heat","GoldFX - Hot Summer Heat",
-#@gui : "GoldFX - Perfect Sunset 01min","GoldFX - Perfect Sunset 05min","GoldFX - Perfect Sunset 10min",
-#@gui : "GoldFX - Spring Breeze","GoldFX - Summer Heat",
-#@gui : "TechnicalFX - Backlight Filter","ZilverFX - B&W Solarization","ZilverFX - InfraRed",
-#@gui : "ZilverFX - Vintage B&W"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "AnalogFX - Anno 1870 Color","AnalogFX - Old Style I","AnalogFX - Old Style II","AnalogFX - Old Style III",\
+# "AnalogFX - Sepia Color","AnalogFX - Soft Sepia I","AnalogFX - Soft Sepia II",\
+# "PictureFX - Faux Infrared B&W1","PictureFX - Faux Infrared Color P2","PictureFX - Faux Infrared Color P3",\
+# "PictureFX - Faux Infrared R0a","PictureFX - Faux Infrared R0b","PictureFX - Faux Infrared YP1",\
+# "GoldFX - Bright Spring Breeze","GoldFX - Bright Summer Heat","GoldFX - Hot Summer Heat",\
+# "GoldFX - Perfect Sunset 01min","GoldFX - Perfect Sunset 05min","GoldFX - Perfect Sunset 10min",\
+# "GoldFX - Spring Breeze","GoldFX - Summer Heat",\
+# "TechnicalFX - Backlight Filter","ZilverFX - B&W Solarization","ZilverFX - InfraRed",\
+# "ZilverFX - Vintage B&W"}_0
 
 ##### Pixelmator
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Black & White 01","Black & White 02","Black & White 03","Black & White 04","Black & White 05",\
-# "Black & White 06",
-#@gui : "Cinematic 01","Cinematic 02","Cinematic 03","Cinematic 04","Cinematic 05","Cinematic 06","Cinematic 07",
-#@gui : "Classic Films 01","Classic Films 02","Classic Films 03","Classic Films 04","Classic Films 05",
-#@gui : "Landscape 01","Landscape 02","Landscape 03","Landscape 04","Landscape 05",
-#@gui : "Modern Films 01","Modern Films 02","Modern Films 03","Modern Films 04","Modern Films 05","Modern Films 06",\
-# "Modern Films 07",
-#@gui : "Night 01","Night 02","Night 03","Night 04","Night 05",
-#@gui : "Urban 01","Urban 02","Urban 03","Urban 04","Urban 05",
-#@gui : "Vintage 01","Vintage 02","Vintage 03","Vintage 04","Vintage 05"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Black & White 01","Black & White 02","Black & White 03","Black & White 04","Black & White 05",\
+# "Black & White 06","Cinematic 01","Cinematic 02","Cinematic 03","Cinematic 04","Cinematic 05",\
+# "Cinematic 06","Cinematic 07","Classic Films 01","Classic Films 02","Classic Films 03","Classic Films 04",\
+# "Classic Films 05","Landscape 01","Landscape 02","Landscape 03","Landscape 04","Landscape 05",\
+# "Modern Films 01","Modern Films 02","Modern Films 03","Modern Films 04","Modern Films 05","Modern Films 06",\
+# "Modern Films 07","Night 01","Night 02","Night 03","Night 04","Night 05","Urban 01","Urban 02","Urban 03",\
+# "Urban 04","Urban 05","Vintage 01","Vintage 02","Vintage 03","Vintage 04","Vintage 05"}_0
 
 ##### PIXLS.US
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Amstragram","Amstragram+","Autumn","Cinematic Lady Bird","Cinematic Mexico","Dark Blues in Sunlight",
-#@gui : "Delicatessen","Expired 69","Faded Look","Faded Print","Hypressen","Magenta Yellow","Metropolis",
-#@gui : "Modern Film","Newspaper","Night Spy","Progressen","Prussian Blue","Seventies Magazine","Street",
-#@gui : "Sweet Bubblegum","Sweet Gelatto","Taiga","Tarraco","Unknown","Uzbek Bukhara","Uzbek Marriage",
-#@gui : "Uzbek Samarcande","Velvetia","Warm Vintage","Whiter Whites"}_2
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Amstragram","Amstragram+","Autumn","Cinematic Lady Bird","Cinematic Mexico","Dark Blues in Sunlight",\
+# "Delicatessen","Expired 69","Faded Look","Faded Print","Hypressen","Magenta Yellow","Metropolis",\
+# "Modern Film","Newspaper","Night Spy","Progressen","Prussian Blue","Seventies Magazine","Street",\
+# "Sweet Bubblegum","Sweet Gelatto","Taiga","Tarraco","Unknown","Uzbek Bukhara","Uzbek Marriage",\
+# "Uzbek Samarcande","Velvetia","Warm Vintage","Whiter Whites"}_2
 
 ##### Purple11
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Going for a Walk","Good Morning","Nah","Once Upon a Time","Passing By","Serenity",
-#@gui : "Smooth Sailing","Undeniable","Undeniable 2","Urban Cowboy","We'll See","You Can Do It"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Going for a Walk","Good Morning","Nah","Once Upon a Time","Passing By","Serenity",\
+# "Smooth Sailing","Undeniable","Undeniable 2","Urban Cowboy","We'll See","You Can Do It"}_0
 
 ##### RocketStock
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Arabica 12","Ava 614","Azrael 93","Bourbon 64","Byers 11","Chemical 168","Clayton 33","Clouseau 54",
-#@gui : "Cobi 3","Contrail 35","Cubicle 99","Django 25","Domingo 145","Faded 47","Folger 50","Fusion 88",
-#@gui : "Hyla 68","Korben 214","Lenox 340","Lucky 64","McKinnon 75","Milo 5","Neon 770","Paladin 1875","Pasadena 21",
-#@gui : "Pitaya 15","Reeve 38","Remy 24","Sprocket 231","Teigen 28","Trent 18","Tweed 71","Vireo 37","Zed 32",
-#@gui : "Zeke 39"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Arabica 12","Ava 614","Azrael 93","Bourbon 64","Byers 11","Chemical 168","Clayton 33","Clouseau 54",\
+# "Cobi 3","Contrail 35","Cubicle 99","Django 25","Domingo 145","Faded 47","Folger 50","Fusion 88",\
+# "Hyla 68","Korben 214","Lenox 340","Lucky 64","McKinnon 75","Milo 5","Neon 770","Paladin 1875","Pasadena 21",\
+# "Pitaya 15","Reeve 38","Remy 24","Sprocket 231","Teigen 28","Trent 18","Tweed 71","Vireo 37","Zed 32",\
+# "Zeke 39"}_0
 
 ##### Shamoon Abbasi
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "City 7","Coffee 44","Date 39","Day for Night","Denoise Simple 40","Desert Gold 37","Directions 23",
-#@gui : "Drop Green Tint 14","Elegance 38","Golden Night Softner 43","Golden Sony 37","Green 15","Happyness 133",
-#@gui : "HLG 1","Industrial 33","Morning 6","Morroco 16","Night King 141","Rest 33","Shadow King 39","Spy 29",
-#@gui : "Thriller 2","Turkiest 42","Vintage 163","Wooden Gold 20"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "City 7","Coffee 44","Date 39","Day for Night","Denoise Simple 40","Desert Gold 37","Directions 23",\
+# "Drop Green Tint 14","Elegance 38","Golden Night Softner 43","Golden Sony 37","Green 15","Happyness 133",\
+# "HLG 1","Industrial 33","Morning 6","Morroco 16","Night King 141","Rest 33","Shadow King 39","Spy 29",\
+# "Thriller 2","Turkiest 42","Vintage 163","Wooden Gold 20"}_0
 
 ##### SmallHD Movie Look
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Apocalypse This Very Moment","B-Boyz 2","Bob Ford","Life Giving Tree","Moonrise","Saving Private Damon",
-#@gui : "The Matrices"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Apocalypse This Very Moment","B-Boyz 2","Bob Ford","Life Giving Tree","Moonrise","Saving Private Damon",\
+# "The Matrices"}_0
 
 ##### Todd Blankenship
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Blue Architecture","Blue Hour","Cold Chrome","Crisp Autumn","Dark And Somber","Hard Boost",
-#@gui : "Long Beach Morning","Lush Green","Magic Hour","Natural Boost","Orange And Blue","Soft Black And White",
-#@gui : "Waves"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Blue Architecture","Blue Hour","Cold Chrome","Crisp Autumn","Dark And Somber","Hard Boost",\
+# "Long Beach Morning","Lush Green","Magic Hour","Natural Boost","Orange And Blue","Soft Black And White",\
+# "Waves"}_0
 
 ##### Youssef Hossam
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Cinematic Forest","City","Darkness","Hallowen Dark","Sea"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Cinematic Forest","City","Darkness","Hallowen Dark","Sea"}_0
 
 ##### Others
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "60's","60's (faded)","60's (faded alt)","Alien green","Black & White","Bleach bypass","Blue mono",
-#@gui : "Cinematic-01","Cinematic-02","Cinematic-03",
-#@gui : "Color (rich)","Faded","Faded (alt)","Faded (analog)","Faded (extreme)","Faded (vivid)","Expired (fade)",
-#@gui : "Expired (polaroid)","Extreme","Fade","Faux infrared","Golden","Golden (bright)","Golden (fade)",
-#@gui : "Golden (mono)","Golden (vibrant)","Green mono","Hong Kong","Instant-C","K-Tone Vintage Kodachrome",
-#@gui : "Light (blown)","Lomo","Mono tinted","Muted fade",
-#@gui : "Mute shift","Natural (vivid)","Nostalgic","Orange tone","Pink fade","Purple","Retro","Rotate (muted)",
-#@gui : "Rotate (vibrant)","Rotated","Rotated (crush)","Smooth crome-ish","Smooth fade","Soft fade","Solarize color",
-#@gui : "Solarized color2","Summer","Summer (alt)","Sunny","Sunny (alt)","Sunny (warm)","Sunny (rich)","Super warm",
-#@gui : "Super warm (rich)","Sutro FX","Vibrant","Vibrant (alien)","Vibrant (contrast)","Vibrant (crome-ish)",
-#@gui : "Vintage","Vintage (alt)","Vintage (brighter)","Warm","Warm (highlight)","Warm (yellow)"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "60's","60's (faded)","60's (faded alt)","Alien green","Black & White","Bleach bypass","Blue mono",\
+# "Cinematic-01","Cinematic-02","Cinematic-03",\
+# "Color (rich)","Faded","Faded (alt)","Faded (analog)","Faded (extreme)","Faded (vivid)","Expired (fade)",\
+# "Expired (polaroid)","Extreme","Fade","Faux infrared","Golden","Golden (bright)","Golden (fade)",\
+# "Golden (mono)","Golden (vibrant)","Green mono","Hong Kong","Instant-C","K-Tone Vintage Kodachrome",\
+# "Light (blown)","Lomo","Mono tinted","Muted fade",\
+# "Mute shift","Natural (vivid)","Nostalgic","Orange tone","Pink fade","Purple","Retro","Rotate (muted)",\
+# "Rotate (vibrant)","Rotated","Rotated (crush)","Smooth crome-ish","Smooth fade","Soft fade","Solarize color",\
+# "Solarized color2","Summer","Summer (alt)","Sunny","Sunny (alt)","Sunny (warm)","Sunny (rich)","Super warm",\
+# "Super warm (rich)","Sutro FX","Vibrant","Vibrant (alien)","Vibrant (contrast)","Vibrant (crome-ish)",\
+# "Vintage","Vintage (alt)","Vintage (brighter)","Warm","Warm (highlight)","Warm (yellow)"}_0
 
 #@gui : Thumbnail Size = int(512,0,1024)_1
 #@gui : sep = separator()
@@ -47886,9 +48200,9 @@ fx_balance_gamma :
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Normalize Colors = choice("None","Pre-Normalize","Post-Normalize","Both")
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
+#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",\
+# "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",\
+# "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
 #@gui : Preview Split = point(50,50,0,0,200,200,200,0,10)_0
 #@gui : sep = value(0)_2+
 #@gui : sep = separator()
@@ -48001,6 +48315,67 @@ fx_balance_gamma :
 # vEgUE1OyEJphaRmRG5Hy/BuI/r/ARF1j+11CIUt0azKqNyKiLuXllxYzKhLoFGaObBMK91rMgCy+1qW8OL12DYUKV5SMFqBdDyagnr0CABMDAn8PoMTEz\
 # MyMjIzM4OA1ZpTBAh9iMBgVlOlYFApVCfwDpbUmiFdSYzcAAAAASUVORK5CYII=">  <a href="https://rawpedia.rawtherapee.c\
 # om/Film_Simulation">RawTherapee Film Simulation</a></center>"}
+
+#@gui : sep = value(0)_0+
+#@gui : note = note{"<center><img src="data:image/png;base64,\
+# iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAATEElEQVRYhY1WabBcR3Xu7fbdZ595+6qnp6fF1mLJyLKxvCR4gTJO2RCHUBAqxVKACSRVK\
+# UKqQpwQEpIUqaSSmJBKIKQw4GwQFtsYx7Zsgy3J+yZLT5b09jdvljt3v7e3/BhLkS0bcqrr1Lk93dNfn/P1OQd+5ot3uq7ruJZtmLZtGbquaVjXqEERxp\
+# hgjDEOw6BYLEopNU2DDCc4AZibqTKJozDOYUYIV0yDEAIA+vqcIAAAAEqpN+jzP8+fJ6/bf95SKaVSKs/zguvWarVep7u8vKyAKLsDVs3JQGoa5YzoaZ4\
+# pBBwBIX4djjcIhPAcjvPtC4VACCFSSAEA+jAFkAgAkHFm27amQBgGJ4+vfuGP7xgbGb3/3ntvvfU9raQngvjm99y2aXSaDJbHyxVN5vznwLkAVt94U2T4\
+# 8ne8y6Q6pZQQQjVNwxhjjAk0LCNLU4PqXqv9+5/7bNDtrCwuuo7zzFOPRF735AsvPvSDHz773NMcsD27dsCcQUwgAAjCvj43+gLOhvINAT0vNq9FjaCzU\
+# YIAACABAABKAEAcRq7rcpZ3vfby4hKSQsPQtZ2KU4IJx2VnGDrPvfLMjtM7FNEMTlPAIIQAqL6+wDdAKXW+PrtGnTcAAIq8btvZ/0EKGLoBhYQKtJobie\
+# 9ZtiUESJK4TMuiYFAppQZhayGFwoJWLATC7PzQXHj7N43dhcvIazCVOuce3CcWAGkUV8ql5599DihhmDqUQimRpTGq6uHpRadI/upjH4HTozYSXR046k2\
+# gnH/8G3jzVtQm59x7/s8QQiCkZZgAgIceeghAKKVkaappGjdyI+gw4d/xzg/e+I4D6+0wzjeE5kL2Rih9cD/nQb2poHObz5FOQqCUiiXQNJdnnV1X7sYA\
+# BqlHONJ1sbtUwQm8bf/ugWEtjf3p4QpnI0WuXej8cwkGXMDoN8yfv5Gos3JuCikAgLQsLUgjq1QeqU4WZLZry+zTS80sBR0e1Fzn8GJSe+nVR1/tDnEwv\
+# Oek2rlv2+SWX3j7t+LN+QY6exuhlAJQQgghVBBCzFLXIiRUB6+5YRIYM4iVVF40q5tHCh+54qIJ2eu+8Mi3/uex1S4fFAsnF1/8+TguPPitPIr6E+DsE0\
+# NnuelTLFI/0sTs+PQNn/t0Or9YrhqtyDux0Hp6vrevTi8r4GYz/LXrr33+gf/avXXrW934LQ2poAJQvWYAqfoGPnDtjZQSSqmmYUop1TAhRCPEIQ6FuWM\
+# aMmDOpsGn7/5vy9JdqxwZymEbA4PF4vTbHJ0OYrX9E18pN6YV4OA8TvwfOaTqZ5k+wyE4a19QxcBrhOkHS6qz7AGon9kyuGFLP/R5BY8MTlzzp3esLTVZ\
+# 3qsDs43Lperg/NJCK4zhbB1O1RIYqbcQAH/BUED2dX+QfhGViitF++CUkgAALHiJEeCaVsISAHftvToK+eig3s67BmRLQWF807Chh5N7rtBCaSV5aunnO\
+# PH6HPM60rxphT9fIymlEvLCmwlTWZwIRiId6lJBYgKAPcnr2khF2d+5b+HYqdWbL7841mGa9zqm/abn/f/l3Hry6vGXHcfRdd1xnEqlgqlmWKbtFGqEh4\
+# ZeKo0mgbIMevSeb2tV09GChGFtsPSpHcPX7drPrruuPrgTevF6croZSIAR0ogACmMsmTRNUzCuJDcMgzGW5zmlFGPMOZdSSikJIZxzIQRCSErJOccYkyR\
+# JLMvCGEME4iSiXDdNE0oBC1MyitdOeZ2ORzTx06OHc6iIlCNUXWKEB7fX3GsOFMZ2J1ASR5jOCB8y4iTxgmB1fU1Iqet60POllJapr6+v67qu67rneZxz\
+# TdOEEH3WM8b6+IQQnHMAAL707ddUKhXbtg3TQADallUpODxLT3ttwrhtEAmkYWu1wYrnd+JOcNXsyPQN75u5+Tfx0CBKY59xphthHslEIAiHh4YwxL7vC\
+# yEAVG7B8Xu+YRgQwjRNpZQQQsaYEIIxlmVZH0Sfx0opzjmBQEVhEMVhrVYbbAyMDQ36nfYLR4/MzV1qpD5ypUk0Gaq5mUsG3j8w7tiX7trcEyDXDdBKWN\
+# UpKT1HqB3nFYz8Xliv1gaqVc/rrjabEMJmHLu2o5QSQhiGoet6EARKqVKpFPl+nucIIYxxnud5niuleJaROAjLtappWwCAoNcNDNpeXYnarUQwYlFkA9e\
+# hjtD8zupFM2PDRbuFiN5rmxpURgkoyvyNhGgq0YGtNASzKFQIzExOUU2DGonjmHMBIcQYJ0nS6/Usy7Jtu91uW7oOLxCEEBkZHdJNm1BN0zTXsW1dO+O1\
+# eRQAFiOLMJAFsdB0p1qvmqbZZdkggy29BGEDwBTlvcTAFtcM3vVD3qgPQgjjMKzWa4ZGelEsOQdSpVmmlMIYU0yyOFFKGRrt++a1HogQCKGmaYZhEM/zX\
+# AWrdq1YLFZcGwHoNZs6VDCHaZxXTbdaaRDXoUhJySfGR1faAdVYw+hkFAUJ9HVTGkACSRI941mcxYorBGCjXveCk3ES+r2oUChwzpMksW3bMIz+a4IQ9P\
+# nUJ5AQQghBCCEaJmEYAgSFELaGoeTtjXVNCiD95om10z+Y17xe2dLD4y/csnXL0Jape3vRTZNz2uZac3VNtNjcFVeHB3Zhv1gYL6yvrikhHcvq9Xq265Q\
+# LRUJIoz6Upmm/U4/jOE1TCKEQQggOABBCAAAwxlJKAACllNjFUqVSsm3bcmwFoB/4mkYoy4jUvO5y+vBPAM55LqtIGw+jpaOHtm4sFZM178GVpcMnrxwG\
+# 7H3v9KERojUnrJSt/Nhq7pCCCTyWsuFa8cSrvYh3TMPIsiRJQS6QRJgiAHmmIFRKEYyVUkpKBCEiRApBOs0NJIXIcsGYjrXm4pJrWnkara+36gOz+EMfN\
+# UxSM0wdpypXa62Xtw7eELdJ++Cts58eQ6zXm9qcd7r1xuDq+rEiByYXp5pnRocncQhGaha1x3iwIDOhUpFnOVMQU41zlSZpuVztJ8N+sCCE/diRyPNNjF\
+# XOBeOuaXU2WmXDVJomkxUfuzzNC+Wx+SQaHR3zC079wIEl6nDJkjhyEB/cvHMyFUUTMsAXH3/C1w19ZBZD6nVDreEAlk2Pj5w60U7ThFJL100JFEREAFU\
+# oFNIk6edDIUQ/cXPOOecEAJllCYQKIaRjQggJQx8AkCQbj7z05MtPvSARBFDRHOREd7gKEaVSIJCkNjAi+v0jz11ZGfGQd/iBQwduuk54nmvVY9rjXqsU\
+# YM8/GXGU5Uw3DaAky1OogFAAYAokh0oRCAjBAGClFMeIIYgnN88qJSACmGq2bepUO3H8RZ0iHmQ7Ji9abi4N02oY9LCFWK4RRBXKscpSDQBp/vbtt9/y6\
+# +8UabO1/KrWKJHRrabMs8yDjkXnn6rOP13Q0BLWgEYExinngGcEKqgAywVAAoB+3yMRhpgghCFCkBCkABRC5mkcNps87LYPPXpooGjCdvKBT+791Wt+2a\
+# 5OD5TqG2pNmaW3D9WqhCZV0+J2JO25g9vD08umWezixsisvbzalkRMzc78+Gv/dPi7d37g1usPumbZdgMhWnFMNN0mOI4CKSBARs7yftHoF1dCSP+TpFG\
+# PKJvqOkWAItTrdiyDYgTmDl4V6fj5b96lgL4daBSHOQHuoI7S7AUPjkrj4CV1/J/Xii98PsnNieHG/NEXUe63FcgWWw2Laq79j4892+7El95YM4uDQa4k\
+# 1CSEURQpCSRiECqM8blC1u9AOOdIspwARRFESirOmivLrmkAJQZGdxC9QDbX5OZyXra8IbKpWm1g84mm3szU2w9sN3Cef/ITDCnoRhnrFF2rKSGCIGVJ/\
+# ZJLGwObrMT45pPHTj/xqNbraRn3Wu1ut6sgNGwrzrMkiRjLAJAYQ4whAH1a58TvrZYNY2O96bquWysYnseIqnSJNaBFsOht2js9eFG08hIsSK+y46XpLU\
+# Mz9o21BjWs3sRInumFlC7rYdHAq47lrAa8m+um3FD63E3v7d3112g9//aDT39x54Rp7jdQpLmmFxpA5WWkEqwBpQTnQoiciX53xhgjBa68pVeIZfDUXW+\
+# RM34L6GJs78yEUbjvyD2P//jep8BPmGGzrIfAQ1LL5+YuW+s1e2dO/+4f/t7HP/5xEfrDwO4ILpnf80OFEZY+MV1sOhPb9sT5yydbq4eeeGXHVZPNLswS\
+# jgxNhnkAAEU4jmMAgKZpUrA0TRUAGGO8ZdvbEikIxYZlZl663l6fMvC2rQMyRSWXDu3Y9+xLT0kuXSUBBYKL9vpCGrSBIT714d+YGxu0LRMLmsaEyXR18\
+# RjAWthpqSxmANkmbS2cCdJsrRXdsm/EY0YoYOyvRZ7vJbnKUoIRVCoM/DAKEcJSSs/zyILPRkZmBgp61O22lpcgMvZPXWRSm5UabDWmQP/KV+6mjJG0GR\
+# bMkLBt5qhlmGNWwdk+zgQPlKR5aNhGvNrbOH3MaQyDNIcgEzK3TGN4YiwKkhdX2seePNzYffXh48uGyDJCLa2INSONfN7PjVyknCGIdYJJa+HJ5ROs4VQ\
+# wxp1WOy/reWGop/Rx6Af+WvuBH/3H3X9vIzElwS4At43QKQMNDIxohSG098ozH35vIxk+HntDjtZoNFhnJZE5gAaIYC9PDCAK1bppL7qZuv/J07cf4N3F\
+# eccumvV6zaUbQTeO4zxnAEJENEqpREQIgQcsXC8WIONpGjRGy4kIj58+PjAxgsfHXXv05POPIFU2RaJTUKMuA/EQNYpDg6DD+S3Xk007FhSwDFqmMEr5Y\
+# /d8iyWR1+mGfhjHvkh8RWy9aAZrzSMnlq7aPDYxudnHBHGx3DwTeR5LY8GZkoIQZFDKsrTVXCcMm4Irx6UuwFHau3R0bCXcmH/iPj9xl+ZX3/1bXxgdnD\
+# C8bqt1slQdLaeRnBzihQqCenj5xSxFG6tLM9MTNMrrlapVnyyZWPq+z1A3j10NhynP8rhSdpbDxjfuP/rRD206dGI54yAXEYY0z7hpW5ViUULodzbiNEN\
+# Kkizno1U3CTdqhUrPA7CtGARuKrZNTd9z713Pf+lBh4O3v/t9c3MzOcVl2zwhM9xeZ7ax6/gZzdH3TE230iwuVVSWLnXSSBc1EUUZWuoGw3Nj5dIo9LE+\
+# PtW+/5k7H3zqioM7aB6vhqnNswRT3TAMgiO/1wvCKE4AIoQQuHlkyMnWM3soVcSQ+UC1knXXkiC47U/+9b4ffu/pI4f87prgHEAAEAUKAgH6L+KeH/1g6\
+# 9wWDSsdAwxhVqj95Ot/891/uLM4UFvrpYteZ//szOryCsRoz+7tbo7++f4H50rux247+HCbm4rDobECiJZP+xnfEIo60GzlvYqlY113SqVSs90Z1NLNg4\
+# U0Y1AIBUl55KKdF++8/vqbrr/xVy67/KpqdSDo+r7XM2x7cnriL/78S5fu25fnMSbEsu0wSQlhCjmf+/LfTaBsYKzc6iFk6BUELIeEMvuXex7fMlT78cL\
+# idbu2PPzUCX+9WQPijK9ZJo8jGkR5kkcYaBwMwSsmK1wvdGI5SMOSZXQSYGMwNDk3sOfmZrs5MzN92WX78zTMk7BRLSVhZNZKQIpauQABB0Kajs2FIpqu\
+# AT/RKt//7sNB6/j937rrwRdePjg7uWWsPu8FreU2KtfKoAOAdBSuzk63XtmY3L3tp48c3XP1vhMLnXxt/ujpVZjg9998JZ4q6lmWK5E7FMTIXfbyoNvZd\
+# smB4tS2aqUQ9ZpERJPDVV2DSZpyCJIodixD5IlIY1OnSZRYbjFJ8xQajJOktzY2MLz/2oM3/dI1ztg0JLTabC9HzYVXz4xMNBZPp545e5HNGhP0y//28M\
+# FtY8H6Sl1thCEbHyocmB46tLyOp/ZdpyPF/RWK5LHldiq1scGqPTiF7WIS9zrrK73OxtrqysrycpJneZ6ZmoaUgJyxNIVAIQjTJKOY1FlHMyt3fPpDP3v\
+# 8cDcVOlJGpbJnIG9c9rbxnXtrm/YuPXuk1eny+PQHD+64dv/OA7t3PPfS8YdOrV09OXPS89rdeD7ouYBgP1bjk+PDW/dxarea66MVkwedx555KU2yzdPT\
+# m2bmNL2Yc5hnIk/S0OvGQU8wnjNGdYqxZhg6y1LXMqgiPz103/w9X9MNEZ45dfTIA889++LCyqmNxW+gTkzqm4a3XWUOVpbbaxsbq0ZWvnHX5qsvv2RXq\
+# fjZ7z9alVTVy44st9sbcKpWiDPRs0d3b5+9ZLqS+t4zR352arXXTgQAGBK6ZXbb1VcenNsyUyraBcemmiJUL5QqQgilBEtDA8GXX3z2e9/5d9Y6owxRhT\
+# q3bArNhaADDXvAXU8FhLxHB97lFswzqyJ65clO2vzbD9+Cs/JC75myO/qZr95VLgwV3dIGS+Fko1bCUQB0KGU3ikf2Xn/F3j1f/cs/socbca9nYAQ4j2M\
+# mAVAIAwWx4pphpBmHGlUsx5ATCS7eOuJ7goP0dDP6zLVjdaLffVyur5zpEPPihrG9rpta6wyZRN08MY2MFdveQjFY/vztv/Moqo+bJVO3/uDrf2bOn9GH\
+# C/8L/iyrdSr9/U8AAAAASUVORK5CYII=">  <a href="https://youtu.be/c8zV6Wcgv8E?si=RHkpzzzYnklbeSji">\
+# Debrup Travel & Films</a></center>"}
 
 #@gui : sep = value(0)_0+
 #@gui : note = note{"<center><img src="data:image/png;base64,\
@@ -48417,13 +48792,13 @@ fx_balance_gamma :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.
 #@gui :         Latest Update: <i>2023/06/01</i>.</small>")
 fx_color_presets :
-  category=${arg0\ $1,abigailgonzalez,alexjordan,berat,cinematic,cinematic_travel,creative,editingcorp,ericellerbrock,\
-                       filtergrade,hollywood,inavision,jtsemple,kylerholland,lutifyme,michaelezra,moviz,ohadperetz,\
-                       oliviosarikas,on1,picturefx,pixelmator,pixlsus,purple11,rocketstock,shamoonabbasi,smallhd,\
-                       toddblankenship,youssefhossam,others}
+  category=${arg0\ $1,abigailgonzalez,alexjordan,berat,cinematic,cinematic_travel,creative,debrup_travel_films,\
+                      editingcorp,ericellerbrock,filtergrade,hollywood,inavision,jtsemple,kylerholland,lutifyme,\
+                      michaelezra,moviz,ohadperetz,oliviosarikas,on1,picturefx,pixelmator,pixlsus,purple11,\
+                      rocketstock,shamoonabbasi,smallhd,toddblankenship,youssefhossam,others}
   presets=${-_fx_cluts_$category}
-  index:=arg(1+$1,${2-30})
-  thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${31-38}
+  index:=arg(1+$1,${2-31})
+  thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${32-39}
 
   if $normalize==1" || "$normalize==3 # Pre-normalization
     foreach { split_opacity balance_gamma[0] , a c }
@@ -48463,9 +48838,9 @@ fx_color_presets :
 
 fx_color_presets_preview :
   _is_preview=1
-  index:=arg(1+$1,${2-30})
+  index:=arg(1+$1,${2-31})
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
-  else gui_split_preview "fx_color_presets $*",${39-41}
+  else gui_split_preview "fx_color_presets $*",${40-42}
   fi
   u "{$1}{$2}_"{2*!$1}\
     "{$3}_"{2*($1==1)}\
@@ -48496,9 +48871,10 @@ fx_color_presets_preview :
     "{$28}_"{2*($1==26)}\
     "{$29}_"{2*($1==27)}\
     "{$30}_"{2*($1==28)}\
-    "{$31}_"{1+!$index}\
-    "{$32}{$33}{$34}{$35}{$36}{$37}{$38}{$39}{$40,$41}"\
-    "{0}_"{2*($1!=28)}\
+    "{$31}_"{2*($1==29)}\
+    "{$32}_"{1+!$index}\
+    "{$33}{$34}{$35}{$36}{$37}{$38}{$39}{$40}{$41,$42}"\
+    "{0}_"{2*($1!=29)}\
     "{0}_"{2*!$1}\
     "{0}_"{2*($1==1)}\
     "{0}_"{2*($1==2)}\
@@ -48527,6 +48903,7 @@ fx_color_presets_preview :
     "{0}_"{2*($1==25)}\
     "{0}_"{2*($1==26)}\
     "{0}_"{2*($1==27)}\
+    "{0}_"{2*($1==28)}\
     "{0}"
 
 _fx_cluts_abigailgonzalez :
@@ -48566,6 +48943,11 @@ _fx_cluts_creative :
     dropblues,edgyember,fallcolors,foggynight,futuristicbleak_1,futuristicbleak_2,futuristicbleak_3,futuristicbleak_4,\
     horrorblue,latesunset,moonlight,nightfromday,redblueyellow,smokey,softwarming,tealmagentagold,tealorange,\
     tealorange_1,tealorange_2,tealorange_3,tensiongreen_1,tensiongreen_2,tensiongreen_3,tensiongreen_4
+
+_fx_cluts_debrup_travel_films :
+  u cine-1,cine-2,cine-3,cine-4,cine-5,cine-6,cine-7,cine-8,cine-9,cine-10,cine-11,cine-12,cine-13,cine-14,cine-15,\
+    cine-16,cine-17,cine-18,cine-19,cine-20,cine-21,cine-22,cine-23,cine-24,cine-25,cine-26,cine-27,cine-28,cine-29,\
+    cine-30
 
 _fx_cluts_editingcorp :
   u ampio,asistas,atusa,basuco,beati,bisogno,boyado,calidum,colore,convold,cosa,culor,dimmer,ensaya,falua,farkling,\
@@ -50062,107 +50444,106 @@ fx_sepia :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Emulates the look of various analog film stocks.
 #@gui : "}, sep = separator()
-#@gui : Category = ~choice{"Black & White (25)","Instant [Consumer] (54)","Instant [Pro] (68)","Fuji XTrans III (15)",
-#@gui : "Negative [Color] (13)","Negative [New] (39)","Negative [Old] (44)","Print Films (12)","Slide [Color] (26)"}
+#@gui : Category = ~choice{"Black & White (25)","Instant [Consumer] (54)","Instant [Pro] (68)","Fuji XTrans III (15)",\
+# "Negative [Color] (13)","Negative [New] (39)","Negative [Old] (44)","Print Films (12)","Slide [Color] (26)"}
 
 ##### Black & White
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Agfa APX 100","Agfa APX 25","Fuji Neopan 1600","Fuji Neopan Acros 100","Ilford Delta 100",
-#@gui : "Ilford Delta 3200","Ilford Delta 400","Ilford FP4 Plus 125","Ilford HP5 Plus 400","Ilford HPS 800",
-#@gui : "Ilford Pan F Plus 50","Ilford XP2","Kodak BW 400 CN","Kodak HIE (HS Infra)","Kodak T-Max 100",
-#@gui : "Kodak T-Max 3200","Kodak T-Max 400","Kodak Tri-X 400","Polaroid 664","Polaroid 667","Polaroid 672",
-#@gui : "Rollei IR 400","Rollei Ortho 25","Rollei Retro 100 Tonal","Rollei Retro 80s"}_2
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Agfa APX 100","Agfa APX 25","Fuji Neopan 1600","Fuji Neopan Acros 100","Ilford Delta 100",\
+# "Ilford Delta 3200","Ilford Delta 400","Ilford FP4 Plus 125","Ilford HP5 Plus 400","Ilford HPS 800",\
+# "Ilford Pan F Plus 50","Ilford XP2","Kodak BW 400 CN","Kodak HIE (HS Infra)","Kodak T-Max 100",\
+# "Kodak T-Max 3200","Kodak T-Max 400","Kodak Tri-X 400","Polaroid 664","Polaroid 667","Polaroid 672",\
+# "Rollei IR 400","Rollei Ortho 25","Rollei Retro 100 Tonal","Rollei Retro 80s"}_2
 
 ##### Instant [Consumer]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Polaroid PX-100UV+ Cold --","Polaroid PX-100UV+ Cold -","Polaroid PX-100UV+ Cold",
-#@gui : "Polaroid PX-100UV+ Cold +","Polaroid PX-100UV+ Cold ++","Polaroid PX-100UV+ Cold +++",
-#@gui : "Polaroid PX-100UV+ Warm --","Polaroid PX-100UV+ Warm -","Polaroid PX-100UV+ Warm",
-#@gui : "Polaroid PX-100UV+ Warm +","Polaroid PX-100UV+ Warm ++","Polaroid PX-100UV+ Warm +++",
-#@gui : "Polaroid PX-680 --","Polaroid PX-680 -","Polaroid PX-680","Polaroid PX-680 +","Polaroid PX-680 ++",
-#@gui : "Polaroid PX-680 Cold --","Polaroid PX-680 Cold -","Polaroid PX-680 Cold","Polaroid PX-680 Cold +",
-#@gui : "Polaroid PX-680 Cold ++","Polaroid PX-680 Cold ++a","Polaroid PX-680 Warm --","Polaroid PX-680 Warm -",
-#@gui : "Polaroid PX-680 Warm","Polaroid PX-680 Warm +","Polaroid PX-680 Warm ++","Polaroid PX-70 --",
-#@gui : "Polaroid PX-70 -","Polaroid PX-70","Polaroid PX-70 +","Polaroid PX-70 ++","Polaroid PX-70 +++",
-#@gui : "Polaroid PX-70 Cold --","Polaroid PX-70 Cold -","Polaroid PX-70 Cold","Polaroid PX-70 Cold +",
-#@gui : "Polaroid PX-70 Cold ++","Polaroid PX-70 Warm --","Polaroid PX-70 Warm -","Polaroid PX-70 Warm",
-#@gui : "Polaroid PX-70 Warm +","Polaroid PX-70 Warm ++","Polaroid Time Zero (Expired) ---",
-#@gui : "Polaroid Time Zero (Expired) --","Polaroid Time Zero (Expired) -","Polaroid Time Zero (Expired)",
-#@gui : "Polaroid Time Zero (Expired) +","Polaroid Time Zero (Expired) ++","Polaroid Time Zero (Expired) Cold ---",
-#@gui : "Polaroid Time Zero (Expired) Cold --","Polaroid Time Zero (Expired) Cold -",
-#@gui : "Polaroid Time Zero (Expired) Cold"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Polaroid PX-100UV+ Cold --","Polaroid PX-100UV+ Cold -","Polaroid PX-100UV+ Cold",\
+# "Polaroid PX-100UV+ Cold +","Polaroid PX-100UV+ Cold ++","Polaroid PX-100UV+ Cold +++",\
+# "Polaroid PX-100UV+ Warm --","Polaroid PX-100UV+ Warm -","Polaroid PX-100UV+ Warm",\
+# "Polaroid PX-100UV+ Warm +","Polaroid PX-100UV+ Warm ++","Polaroid PX-100UV+ Warm +++",\
+# "Polaroid PX-680 --","Polaroid PX-680 -","Polaroid PX-680","Polaroid PX-680 +","Polaroid PX-680 ++",\
+# "Polaroid PX-680 Cold --","Polaroid PX-680 Cold -","Polaroid PX-680 Cold","Polaroid PX-680 Cold +",\
+# "Polaroid PX-680 Cold ++","Polaroid PX-680 Cold ++a","Polaroid PX-680 Warm --","Polaroid PX-680 Warm -",\
+# "Polaroid PX-680 Warm","Polaroid PX-680 Warm +","Polaroid PX-680 Warm ++","Polaroid PX-70 --",\
+# "Polaroid PX-70 -","Polaroid PX-70","Polaroid PX-70 +","Polaroid PX-70 ++","Polaroid PX-70 +++",\
+# "Polaroid PX-70 Cold --","Polaroid PX-70 Cold -","Polaroid PX-70 Cold","Polaroid PX-70 Cold +",\
+# "Polaroid PX-70 Cold ++","Polaroid PX-70 Warm --","Polaroid PX-70 Warm -","Polaroid PX-70 Warm",\
+# "Polaroid PX-70 Warm +","Polaroid PX-70 Warm ++","Polaroid Time Zero (Expired) ---",\
+# "Polaroid Time Zero (Expired) --","Polaroid Time Zero (Expired) -","Polaroid Time Zero (Expired)",\
+# "Polaroid Time Zero (Expired) +","Polaroid Time Zero (Expired) ++","Polaroid Time Zero (Expired) Cold ---",\
+# "Polaroid Time Zero (Expired) Cold --","Polaroid Time Zero (Expired) Cold -",\
+# "Polaroid Time Zero (Expired) Cold"}_0
 
 ##### Instant [Pro]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Fuji FP-100c --","Fuji FP-100c -","Fuji FP-100c","Fuji FP-100c (alt)","Fuji FP-100c +","Fuji FP-100c ++",
-#@gui : "Fuji FP-100c ++a","Fuji FP-100c +++",
-#@gui : "Fuji FP-100c Cool --","Fuji FP-100c Cool -","Fuji FP-100c Cool","Fuji FP-100c Cool +","Fuji FP-100c Cool ++",
-#@gui : "Fuji FP-100c Negative --","Fuji FP-100c Negative -","Fuji FP-100c Negative","Fuji FP-100c Negative +",
-#@gui : "Fuji FP-100c Negative ++","Fuji FP-100c Negative ++a","Fuji FP-100c Negative +++",
-#@gui : "Fuji FP-3000b --","Fuji FP-3000b -","Fuji FP-3000b","Fuji FP-3000b +","Fuji FP-3000b ++","Fuji FP-3000b +++",
-#@gui : "Fuji FP-3000b HC","Fuji FP-3000b Negative --","Fuji FP-3000b Negative -","Fuji FP-3000b Negative",
-#@gui : "Fuji FP-3000b Negative +","Fuji FP-3000b Negative ++","Fuji FP-3000b Negative +++",
-#@gui : "Fuji FP-3000b Negative Early","Polaroid 665 --","Polaroid 665 -","Polaroid 665","Polaroid 665 +",
-#@gui : "Polaroid 665 ++","Polaroid 665 Negative -","Polaroid 665 Negative","Polaroid 665 Negative +",
-#@gui : "Polaroid 665 Negative HC","Polaroid 669 --","Polaroid 669 -","Polaroid 669","Polaroid 669 +",
-#@gui : "Polaroid 669 ++","Polaroid 669 +++","Polaroid 669 Cold --","Polaroid 669 Cold -","Polaroid 669 Cold",
-#@gui : "Polaroid 669 Cold +","Polaroid 690 --","Polaroid 690 -","Polaroid 690","Polaroid 690 +","Polaroid 690 ++",
-#@gui : "Polaroid 690 Cold --","Polaroid 690 Cold -","Polaroid 690 Cold","Polaroid 690 Cold +","Polaroid 690 Cold ++",
-#@gui : "Polaroid 690 Warm --","Polaroid 690 Warm -","Polaroid 690 Warm","Polaroid 690 Warm +","Polaroid 690 Warm ++"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Fuji FP-100c --","Fuji FP-100c -","Fuji FP-100c","Fuji FP-100c (alt)","Fuji FP-100c +","Fuji FP-100c ++",\
+# "Fuji FP-100c ++a","Fuji FP-100c +++",\
+# "Fuji FP-100c Cool --","Fuji FP-100c Cool -","Fuji FP-100c Cool","Fuji FP-100c Cool +","Fuji FP-100c Cool ++",\
+# "Fuji FP-100c Negative --","Fuji FP-100c Negative -","Fuji FP-100c Negative","Fuji FP-100c Negative +",\
+# "Fuji FP-100c Negative ++","Fuji FP-100c Negative ++a","Fuji FP-100c Negative +++",\
+# "Fuji FP-3000b --","Fuji FP-3000b -","Fuji FP-3000b","Fuji FP-3000b +","Fuji FP-3000b ++","Fuji FP-3000b +++",\
+# "Fuji FP-3000b HC","Fuji FP-3000b Negative --","Fuji FP-3000b Negative -","Fuji FP-3000b Negative",\
+# "Fuji FP-3000b Negative +","Fuji FP-3000b Negative ++","Fuji FP-3000b Negative +++",\
+# "Fuji FP-3000b Negative Early","Polaroid 665 --","Polaroid 665 -","Polaroid 665","Polaroid 665 +",\
+# "Polaroid 665 ++","Polaroid 665 Negative -","Polaroid 665 Negative","Polaroid 665 Negative +",\
+# "Polaroid 665 Negative HC","Polaroid 669 --","Polaroid 669 -","Polaroid 669","Polaroid 669 +",\
+# "Polaroid 669 ++","Polaroid 669 +++","Polaroid 669 Cold --","Polaroid 669 Cold -","Polaroid 669 Cold",\
+# "Polaroid 669 Cold +","Polaroid 690 --","Polaroid 690 -","Polaroid 690","Polaroid 690 +","Polaroid 690 ++",\
+# "Polaroid 690 Cold --","Polaroid 690 Cold -","Polaroid 690 Cold","Polaroid 690 Cold +","Polaroid 690 Cold ++",\
+# "Polaroid 690 Warm --","Polaroid 690 Warm -","Polaroid 690 Warm","Polaroid 690 Warm +","Polaroid 690 Warm ++"}_0
 
 #### Fuji XTrans III
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Acros","Acros+G","Acros+R","Acros+Ye","Astia","Classic Chrome","Mono","Mono+G","Mono+R","Mono+Ye",
-#@gui : "Pro Neg Hi","Pro Neg Std","Provia","Sepia","Velvia"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Acros","Acros+G","Acros+R","Acros+Ye","Astia","Classic Chrome","Mono","Mono+G","Mono+R","Mono+Ye",\
+# "Pro Neg Hi","Pro Neg Std","Provia","Sepia","Velvia"}_0
 
 ##### Negative [Color]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Agfa Ultra Color 100","Agfa Vista 200","Fuji Superia 200","Fuji Superia HG 1600","Fuji Superia Reala 100",
-#@gui : "Fuji Superia X-Tra 800","Kodak Ektar 100","Kodak Elite 100 XPRO","Kodak Elite Color 200",
-#@gui : "Kodak Elite Color 400","Kodak Portra 160 NC","Kodak Portra 160 VC","Lomography Redscale 100"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Agfa Ultra Color 100","Agfa Vista 200","Fuji Superia 200","Fuji Superia HG 1600","Fuji Superia Reala 100",\
+# "Fuji Superia X-Tra 800","Kodak Ektar 100","Kodak Elite 100 XPRO","Kodak Elite Color 200",\
+# "Kodak Elite Color 400","Kodak Portra 160 NC","Kodak Portra 160 VC","Lomography Redscale 100"}_0
 
 ##### Negative [New]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Fuji 160C -","Fuji 160C","Fuji 160C +","Fuji 160C ++",
-#@gui : "Fuji 400H -","Fuji 400H","Fuji 400H +","Fuji 400H ++",
-#@gui : "Fuji 800Z -","Fuji 800Z","Fuji 800Z +","Fuji 800Z ++",
-#@gui : "Fuji Ilford HP5 -","Fuji Ilford HP5","Fuji Ilford HP5 +","Fuji Ilford HP5 ++",
-#@gui : "Kodak Portra 160 -","Kodak Portra 160","Kodak Portra 160 +","Kodak Portra 160 ++",
-#@gui : "Kodak Portra 400 -","Kodak Portra 400","Kodak Portra 400 +","Kodak Portra 400 ++",
-#@gui : "Kodak Portra 800 -","Kodak Portra 800","Kodak Portra 800 +","Kodak Portra 800 ++","Kodak Portra 800 HC",
-#@gui : "Kodak T-MAX 3200 -","Kodak T-MAX 3200","Kodak T-MAX 3200 +","Kodak T-MAX 3200 ++","Kodak T-MAX 3200 (alt)",
-#@gui : "Kodak TRI-X 400 -","Kodak TRI-X 400","Kodak TRI-X 400 +","Kodak TRI-X 400 ++","Kodak TRI-X 400 (alt)"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Fuji 160C -","Fuji 160C","Fuji 160C +","Fuji 160C ++",\
+# "Fuji 400H -","Fuji 400H","Fuji 400H +","Fuji 400H ++",\
+# "Fuji 800Z -","Fuji 800Z","Fuji 800Z +","Fuji 800Z ++",\
+# "Fuji Ilford HP5 -","Fuji Ilford HP5","Fuji Ilford HP5 +","Fuji Ilford HP5 ++",\
+# "Kodak Portra 160 -","Kodak Portra 160","Kodak Portra 160 +","Kodak Portra 160 ++",\
+# "Kodak Portra 400 -","Kodak Portra 400","Kodak Portra 400 +","Kodak Portra 400 ++",\
+# "Kodak Portra 800 -","Kodak Portra 800","Kodak Portra 800 +","Kodak Portra 800 ++","Kodak Portra 800 HC",\
+# "Kodak T-MAX 3200 -","Kodak T-MAX 3200","Kodak T-MAX 3200 +","Kodak T-MAX 3200 ++","Kodak T-MAX 3200 (alt)",\
+# "Kodak TRI-X 400 -","Kodak TRI-X 400","Kodak TRI-X 400 +","Kodak TRI-X 400 ++","Kodak TRI-X 400 (alt)"}_0
 
 ##### Negative [Old]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Fuji Ilford Delta 3200 -","Fuji Ilford Delta 3200","Fuji Ilford Delta 3200 +","Fuji Ilford Delta 3200 ++",
-#@gui : "Fuji Neopan 1600 -","Fuji Neopan 1600","Fuji Neopan 1600 +","Fuji Neopan 1600 ++",
-#@gui : "Fuji Superia 100 -","Fuji Superia 100","Fuji Superia 100 +","Fuji Superia 100 ++",
-#@gui : "Fuji Superia 400 -","Fuji Superia 400","Fuji Superia 400 +","Fuji Superia 400 ++",
-#@gui : "Fuji Superia 800 -","Fuji Superia 800","Fuji Superia 800 +","Fuji Superia 800 ++",
-#@gui : "Fuji Superia 1600 -","Fuji Superia 1600","Fuji Superia 1600 +","Fuji Superia 1600 ++",
-#@gui : "Kodak Portra 160 NC -","Kodak Portra 160 NC","Kodak Portra 160 NC +","Kodak Portra 160 NC ++",
-#@gui : "Kodak Portra 160 VC -","Kodak Portra 160 VC","Kodak Portra 160 VC +","Kodak Portra 160 VC ++",
-#@gui : "Kodak Portra 400 NC -","Kodak Portra 400 NC","Kodak Portra 400 NC +","Kodak Portra 400 NC ++",
-#@gui : "Kodak Portra 400 UC -","Kodak Portra 400 UC","Kodak Portra 400 UC +","Kodak Portra 400 UC ++",
-#@gui : "Kodak Portra 400 VC -","Kodak Portra 400 VC","Kodak Portra 400 VC +","Kodak Portra 400 VC ++"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Fuji Ilford Delta 3200 -","Fuji Ilford Delta 3200","Fuji Ilford Delta 3200 +","Fuji Ilford Delta 3200 ++",\
+# "Fuji Neopan 1600 -","Fuji Neopan 1600","Fuji Neopan 1600 +","Fuji Neopan 1600 ++",\
+# "Fuji Superia 100 -","Fuji Superia 100","Fuji Superia 100 +","Fuji Superia 100 ++",\
+# "Fuji Superia 400 -","Fuji Superia 400","Fuji Superia 400 +","Fuji Superia 400 ++",\
+# "Fuji Superia 800 -","Fuji Superia 800","Fuji Superia 800 +","Fuji Superia 800 ++",\
+# "Fuji Superia 1600 -","Fuji Superia 1600","Fuji Superia 1600 +","Fuji Superia 1600 ++",\
+# "Kodak Portra 160 NC -","Kodak Portra 160 NC","Kodak Portra 160 NC +","Kodak Portra 160 NC ++",\
+# "Kodak Portra 160 VC -","Kodak Portra 160 VC","Kodak Portra 160 VC +","Kodak Portra 160 VC ++",\
+# "Kodak Portra 400 NC -","Kodak Portra 400 NC","Kodak Portra 400 NC +","Kodak Portra 400 NC ++",\
+# "Kodak Portra 400 UC -","Kodak Portra 400 UC","Kodak Portra 400 UC +","Kodak Portra 400 UC ++",\
+# "Kodak Portra 400 VC -","Kodak Portra 400 VC","Kodak Portra 400 VC +","Kodak Portra 400 VC ++"}_0
 
 ##### Print Films
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Fuji 3510 (Constlclip)","Fuji 3510 (Constlmap)","Fuji 3510 (Cuspclip)",
-#@gui : "Fuji 3513 (Constlclip)","Fuji 3513 (Constlmap)","Fuji 3513 (Cuspclip)",
-#@gui : "Kodak 2383 (Constlclip)","Kodak 2383 (Constlmap)","Kodak 2383 (Cuspclip)",
-#@gui : "Kodak 2393 (Constlclip)","Kodak 2393 (Constlmap)","Kodak 2393 (Cuspclip)"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Fuji 3510 (Constlclip)","Fuji 3510 (Constlmap)","Fuji 3510 (Cuspclip)",\
+# "Fuji 3513 (Constlclip)","Fuji 3513 (Constlmap)","Fuji 3513 (Cuspclip)",\
+# "Kodak 2383 (Constlclip)","Kodak 2383 (Constlmap)","Kodak 2383 (Cuspclip)",\
+# "Kodak 2393 (Constlclip)","Kodak 2393 (Constlmap)","Kodak 2393 (Cuspclip)"}_0
 
 #### Slide [Color]
-#@gui : Preset = ~choice{1,"All [Collage]","None",
-#@gui : "Agfa Precisa 100","Fuji Astia 100F","Fuji FP 100C","Fuji Provia 100F","Fuji Provia 400F","Fuji Provia 400X",
-#@gui : "Fuji Sensia 100","Fuji Superia 200 XPRO","Fuji Velvia 50","Generic Fuji Astia 100","Generic Fuji Provia 100",
-#@gui : "Generic Fuji Velvia 100","Generic Kodachrome 64","Generic Kodak Ektachrome 100 VS",
-#@gui : "Kodak E-100 GX Ektachrome 100","Kodak Ektachrome 100 VS","Kodak Elite Chrome 200","Kodak Elite Chrome 400",
-#@gui : "Kodak Elite ExtraColor 100","Kodak Kodachrome 200","Kodak Kodachrome 25","Kodak Kodachrome 64",
-#@gui : "Lomography X-Pro Slide 200",
-#@gui : "Polaroid 669","Polaroid 690","Polaroid Polachrome"}_0
+#@gui : Preset = ~choice{1,"All [Collage]","None",\
+# "Agfa Precisa 100","Fuji Astia 100F","Fuji FP 100C","Fuji Provia 100F","Fuji Provia 400F","Fuji Provia 400X",\
+# "Fuji Sensia 100","Fuji Superia 200 XPRO","Fuji Velvia 50","Generic Fuji Astia 100","Generic Fuji Provia 100",\
+# "Generic Fuji Velvia 100","Generic Kodachrome 64","Generic Kodak Ektachrome 100 VS",\
+# "Kodak E-100 GX Ektachrome 100","Kodak Ektachrome 100 VS","Kodak Elite Chrome 200","Kodak Elite Chrome 400",\
+# "Kodak Elite ExtraColor 100","Kodak Kodachrome 200","Kodak Kodachrome 25","Kodak Kodachrome 64",\
+# "Lomography X-Pro Slide 200","Polaroid 669","Polaroid 690","Polaroid Polachrome"}_0
 
 #@gui : Thumbnail Size = int(512,0,1024)_1
 #@gui : sep = separator()
