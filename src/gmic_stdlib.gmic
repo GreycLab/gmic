@@ -28556,7 +28556,6 @@ nn_lib :
     );
 
     nn_define_backward(IN) = (!isvar(d#IN) && !isnum(#IN)?(d#IN = vector(#size(IN#))));
-    nn_define_backward(IN0,IN1) = (nn_define_backward(IN0#); nn_define_backward(IN1#));
     nn_display(L) = display(L#,L#_width,L#_height,L#_depth,L#_spectrum);
     nn_display(L,M) = display(L#,M#_width,M#_height,M#_depth,M#_spectrum);
     nn_store(N,L) = store(N#,L#,L#_width,L#_height,L#_depth,L#_spectrum);
@@ -28893,26 +28892,21 @@ nn_lib :
     );
 
     nn_add_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#,IN1#);
-      size(IN0#)?(d#IN0+=d#OUT);
-      size(IN1#)?(d#IN1+=d#OUT);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=d#OUT);
     );
 
     nn_add_backward(OUT,IN0,IN1,IN2) = (
-      nn_define_backward(IN0#,IN1#);
-      nn_define_backward(IN2#);
-      size(IN0#)?(d#IN0+=d#OUT);
-      size(IN1#)?(d#IN1+=d#OUT);
-      size(IN2#)?(d#IN2+=d#OUT);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=d#OUT);
+      size(IN2#)?(nn_define_backward(IN2#); d#IN2+=d#OUT);
     );
 
     nn_add_backward(OUT,IN0,IN1,IN2,IN3) = (
-      nn_define_backward(IN0#,IN1#);
-      nn_define_backward(IN2#,IN3#);
-      size(IN0#)?(d#IN0+=d#OUT);
-      size(IN1#)?(d#IN1+=d#OUT);
-      size(IN2#)?(d#IN2+=d#OUT);
-      size(IN3#)?(d#IN3+=d#OUT);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=d#OUT);
+      size(IN2#)?(nn_define_backward(IN2#); d#IN2+=d#OUT);
+      size(IN3#)?(nn_define_backward(IN3#); d#IN3+=d#OUT);
     );
 
     # append: Append two inputs as a new output.
@@ -29276,9 +29270,8 @@ nn_lib :
     );
 
     nn_div_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#,IN1#);
-      size(IN0#)?(d#IN0+=d#OUT/OUT#_nonzero_IN1);
-      size(IN1#)?(d#IN1+=-d#OUT*IN0#/OUT#_nonzero_IN1^2);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT/OUT#_nonzero_IN1);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT*IN0#/OUT#_nonzero_IN1^2);
     );
 
     # distance : Distance between two inputs.
@@ -29558,9 +29551,8 @@ nn_lib :
     );
 
     nn_mul_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#,IN1#);
-      size(IN0#)?(d#IN0+=IN1#*d#OUT);
-      size(IN1#)?(d#IN1+=IN0#*d#OUT);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=IN1#*d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=IN0#*d#OUT);
     );
 
     # nl: Non-linearity.
@@ -30003,9 +29995,8 @@ nn_lib :
     );
 
     nn_sub_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#,IN1#);
-      size(IN0#)?(d#IN0+=d#OUT);
-      size(IN1#)?(d#IN1+=-d#OUT);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT);
     );
 
     #----------------
@@ -30039,8 +30030,10 @@ nn_lib :
     );
 
     nn_loss_binary_crossentropy_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
+      );
     );
 
     # crossentropy : Cross-entropy.
@@ -30063,8 +30056,10 @@ nn_lib :
     );
 
     nn_loss_crossentropy_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
+      );
     );
 
     # l1 : L1-norm.
@@ -30087,8 +30082,10 @@ nn_lib :
     );
 
     nn_loss_l1_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=sign(OUT#_delta)*OUT#_weight;
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=sign(OUT#_delta)*OUT#_weight;
+      );
     );
 
     # l2 : L2-norm.
@@ -30111,8 +30108,10 @@ nn_lib :
     );
 
     nn_loss_l2_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
+      );
     );
 
     # lp : Lp-norm.
@@ -30136,8 +30135,10 @@ nn_lib :
     );
 
     nn_loss_lp_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=(abs(OUT#_delta) + eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=(abs(OUT#_delta) + eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+      );
     );
 
     # mse : Mean-squared error.
@@ -30160,8 +30161,10 @@ nn_lib :
     );
 
     nn_loss_mse_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=OUT#_delta*(2*OUT#_weight);
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=OUT#_delta*(2*OUT#_weight);
+      );
     );
 
     # smoothl1 : Smooth L1-norm.
@@ -30186,8 +30189,10 @@ nn_lib :
     );
 
     nn_loss_smoothl1_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
+      );
     );
 
     # softmax_crossentropy : Softmax + cross entropy.
@@ -30210,8 +30215,10 @@ nn_lib :
     );
 
     nn_loss_softmax_crossentropy_backward(OUT,IN,TRUTH) = (
-      nn_define_backward(IN#);
-      d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
+      size(IN#)?(
+        nn_define_backward(IN#);
+        d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
+      );
     );"
 
 #@cli nn_add : out,in0,in1,_in2,_in3
