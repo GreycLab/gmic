@@ -30009,51 +30009,51 @@ nn_lib :
       OUT# = IN0# + IN1#;
     );
 
-    # binary_crossentropy : Binary cross-entropy.
-    #--------------------------------------------
-    nn_loss_binary_crossentropy_init_forward(OUT,weight) = (
+    # bce : Binary cross-entropy.
+    #----------------------------
+    nn_loss_bce_init_forward(OUT,weight) = (
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
 
-    nn_loss_binary_crossentropy_forward(OUT,IN,TRUTH) = (
+    nn_loss_bce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_epsiloned1 = vmax(1 - IN#,nn_eps);
       OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
-    nn_loss_binary_crossentropy_end_forward(OUT) = (
+    nn_loss_bce_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
       OUT# = batch_#OUT;
     );
 
-    nn_loss_binary_crossentropy_backward(OUT,IN,TRUTH) = (
+    nn_loss_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
       d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
     );
 
-    # crossentropy : Cross-entropy.
-    #------------------------------
-    nn_loss_crossentropy_init_forward(OUT,weight) = (
+    # ce : Cross-entropy.
+    #--------------------
+    nn_loss_ce_init_forward(OUT,weight) = (
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
 
-    nn_loss_crossentropy_forward(OUT,IN,TRUTH) = (
+    nn_loss_ce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_single = -sum(TRUTH*log(OUT#_epsiloned));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
-    nn_loss_crossentropy_end_forward(OUT) = (
+    nn_loss_ce_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
       OUT# = batch_#OUT;
     );
 
-    nn_loss_crossentropy_backward(OUT,IN,TRUTH) = (
+    nn_loss_ce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
       d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
     );
@@ -30181,26 +30181,26 @@ nn_lib :
       d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
     );
 
-    # softmax_crossentropy : Softmax + cross entropy.
+    # softmaxce : Softmax + cross entropy.
     #------------------------------------------------
-    nn_loss_softmax_crossentropy_init_forward(OUT,weight) = (
+    nn_loss_softmaxce_init_forward(OUT,weight) = (
       const OUT#_weight = weight;
       batch_#OUT = 0;
     );
 
-    nn_loss_softmax_crossentropy_forward(OUT,IN,TRUTH) = (
+    nn_loss_softmaxce_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),nn_eps);
       OUT#_single = -sum(TRUTH*log(OUT#_softmax));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
-    nn_loss_softmax_crossentropy_end_forward(OUT) = (
+    nn_loss_softmaxce_end_forward(OUT) = (
       merge(batch_#OUT,+);
       batch_#OUT/=nn_batch_size;
       OUT# = batch_#OUT;
     );
 
-    nn_loss_softmax_crossentropy_backward(OUT,IN,TRUTH) = (
+    nn_loss_softmaxce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
@@ -30801,16 +30801,16 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_binary_crossentropy : out,in,ground_truth,_weight
-#@cli : Add a 'binary_crossentropy' loss to the current network (binary cross entropy).
+#@cli nn_loss_bce : out,in,ground_truth,_weight
+#@cli : Add a 'bce' loss to the current network (binary cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                                     isvarname(s1) && # out
-                                     (isvarname(s2) || s2=='.') && # in
-                                     (isvarname(s3) || isnum($3)) && # ground_truth
-                                     isnum(${4=1}) # weight
-                                     "
+nn_loss_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                     isvarname(s1) && # out
+                     (isvarname(s2) || s2=='.') && # in
+                     (isvarname(s3) || isnum($3)) && # ground_truth
+                     isnum(${4=1}) # weight
+                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
@@ -30819,28 +30819,28 @@ nn_loss_binary_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_binary_crossentropy,
+  _${net}_layer_types.=loss_bce,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_binary_crossentropy_init_forward("$nout,$weight"));"\
-                "nn_loss_binary_crossentropy_forward("$nout,$nin,$ground_truth");"\
-                "end(nn_loss_binary_crossentropy_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_binary_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_loss="begin(nn_loss_bce_init_forward("$nout,$weight"));"\
+                "nn_loss_bce_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_bce_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_bce_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_crossentropy : out,in,ground_truth,_weight
-#@cli : Add a 'crossentropy' loss to the current network (cross entropy).
+#@cli nn_loss_ce : out,in,ground_truth,_weight
+#@cli : Add a 'ce' loss to the current network (cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                              isvarname(s1) && # out
-                              (isvarname(s2) || s2=='.') && # in
-                              (isvarname(s3) || isnum($3)) && # ground_truth
-                              isnum(${4=1}) # weight
-                              "
+nn_loss_ce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    (isvarname(s3) || isnum($3)) && # ground_truth
+                    isnum(${4=1}) # weight
+                    "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
@@ -30849,14 +30849,14 @@ nn_loss_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_crossentropy,
+  _${net}_layer_types.=loss_ce,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_crossentropy_init_forward("$nout,$weight"));"\
-                "nn_loss_crossentropy_forward("$nout,$nin,$ground_truth");"\
-                "end(nn_loss_crossentropy_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_loss="begin(nn_loss_ce_init_forward("$nout,$weight"));"\
+                "nn_loss_ce_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_ce_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_ce_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
@@ -31012,16 +31012,16 @@ nn_loss_smoothl1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_softmax_crossentropy : out,in,ground_truth,_weight
-#@cli : Add a 'softmax_crossentropy' loss to the current network (softmax followed by cross entropy).
+#@cli nn_loss_softmaxce : out,in,ground_truth,_weight
+#@cli : Add a 'softmaxce' loss to the current network (softmax followed by cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                                      isvarname(s1) && # out
-                                      (isvarname(s2) || s2=='.') && # in
-                                      (isvarname(s3) || isnum($3)) && # ground_truth
-                                      isnum(${4=1}) # weight
-                                      "
+nn_loss_softmaxce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
+                           isvarname(s1) && # out
+                           (isvarname(s2) || s2=='.') && # in
+                           (isvarname(s3) || isnum($3)) && # ground_truth
+                           isnum(${4=1}) # weight
+                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
@@ -31030,14 +31030,14 @@ nn_loss_softmax_crossentropy : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=loss_softmax_crossentropy,
+  _${net}_layer_types.=loss_softmaxce,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_softmax_crossentropy_init_forward("$nout,$weight"));"\
-                "nn_loss_softmax_crossentropy_forward("$nout,$nin,$ground_truth");"\
-                "end(nn_loss_softmax_crossentropy_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_softmax_crossentropy_backward("$nout,$nin,$ground_truth");"
+  _${nout}_loss="begin(nn_loss_softmaxce_init_forward("$nout,$weight"));"\
+                "nn_loss_softmaxce_forward("$nout,$nin,$ground_truth");"\
+                "end(nn_loss_softmaxce_end_forward("$nout"));"
+  _${nout}_backward="nn_loss_softmaxce_backward("$nout,$nin,$ground_truth");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
