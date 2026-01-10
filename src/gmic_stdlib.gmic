@@ -29430,6 +29430,54 @@ nn_lib :
       ref(d#OUT,d#IN);
     );
 
+    # linear: Linear transform.
+    #--------------------------
+    nn_linear_init_forward(OUT,IN,axis) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_axis = axis;
+      const OUT#_width = OUT#_axis==_'x'?h##OUT#_ind:IN#_width;
+      const OUT#_height = OUT#_axis==_'y'?h##OUT#_ind:IN#_height;
+      const OUT#_depth = OUT#_axis==_'z'?h##OUT#_ind:IN#_depth;
+      const OUT#_spectrum = OUT#_axis==_'c'?h##OUT#_ind:IN#_spectrum;
+      const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
+      const OUT#_nbcols = OUT#_whds/(w##OUT#_ind - 1);
+      OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,h##OUT#_ind);
+      OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,h##OUT#_ind);
+      OUT#_biases_whds = resize(OUT#_biases,OUT#_whds,1);
+    );
+
+    nn_linear_forward(OUT,IN) = (
+      OUT#_axis==_'x'?(OUT#_permute_fwd = permute(IN#,'yzcx')):
+      OUT#_axis==_'y'?(OUT#_permute_fwd = permute(IN#,'xzcy')):
+      OUT#_axis==_'z'?(OUT#_permute_fwd = permute(IN#,'xycz')):
+      ref(IN#,OUT#_permute_fwd);
+      OUT# = mul(OUT#_params,OUT#_permute_fwd,OUT#_nbcols);
+      OUT#+=OUT#_biases_whds;
+    );
+
+    nn_linear_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+      batch_d#OUT#_biases = vector(#size(OUT#_biases));
+    );
+
+    nn_linear_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
+      d#OUT#_params = mul(d#OUT,IN#,size(IN#));
+      d#OUT#_biases = d#OUT;
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+      batch_d#OUT#_biases+=d#OUT#_biases;
+    );
+
+    nn_linear_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      merge(batch_d#OUT#_biases,+);
+      batch_d#OUT#_params/=nn_batch_size;
+      batch_d#OUT#_biases/=nn_batch_size;
+    );
+
     # maxpool2d : 2D max pooling.
     #----------------------------
     nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
@@ -30818,35 +30866,36 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_linear : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
+#@cli nn_linear : out,in,nb_channels>0,_axis={ x | y | z | c},_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'linear' layer to the current network.
-#@cli : The linear transformation is performed on the whole set of vector-valued pixels of the input image.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
-#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+#@cli : Default value: 'axis=c', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_linear : check "s1 = ['$1']; s2 = ['$2'];
                    isvarname(s1) && # out
                    (isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
-                   isint(${4=3},0,3) && # learning_mode
-                   ${5=0}>=0 && # weight_decay
-                   isint(${6=3},0,4) # initialization
+                   isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
+                   isint(${5=3},0,3) && # learning_mode
+                   ${6=0}>=0 && # weight_decay
+                   isint(${7=3},0,4) # initialization
                    "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  nb_channels,learning_mode,weight_decay,initialization=${3-6}
+  nb_channels,axis,learning_mode,weight_decay,initialization=${3-7}
 
-  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels."
+  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
+         "and axis '"$axis"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=linear,
-  _${nout}_size:=s=[${_${nin}_size}];s[3]=$nb_channels;s
+  _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="axis="$axis", learning_mode="$learning_mode", weight_decay="$weight_decay
 
-  whds={[${_${nin}_size}][3]+1},$nb_channels,1,1
+  whds={k=indexof(_'$axis',_'x',_'y',_'z',_'c');[${_${nin}_size}][k]+1},$nb_channels,1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -30866,7 +30915,7 @@ nn_linear : check "s1 = ['$1']; s2 = ['$2'];
     1,100% j.. .,100% rm. # Set biases to 0
     => $nout
   fi
-  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin"));"\
+  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin,$axis"));"\
                    "nn_linear_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_linear_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_linear_backward("$nout,$nin");"\
