@@ -335,7 +335,7 @@ reference : skip "${2=}"
   l { reference_begin_$1 reference_header_$1 onfail }
   _section "Usage"
   _text \
-"~~~\ngmic [command1 [arg1_1,arg1_2,..]] .. [commandN [argN_1,argN_2,..]]\n~~~"\n\n\
+"~~~\ngmic [command_1 [arg_1_1,arg_1_2,..]] .. [command_N [arg_N_1,arg_N_2,..]]\n~~~"\n\n\
 "`gmic` is the open-source interpreter of the G'MIC language, a scripting programming "\
 "language dedicated to the design of possibly complex image processing pipelines and operators."\n\
 "It can be used to convert, manipulate, filter and visualize image datasets made of one or "\
@@ -2782,8 +2782,8 @@ _display : skip ${1=},${3=}
                  {$setting_3d_focale*$fact},$setting_3d_light,$_specl3d,$_specs3d,$area_3d_is_motion
             g. xy,1 !=[-2,-1] 0 or[-2,-1]
             100%,100%,1,3
-            fc. ${"arg "$setting_3d_outline_mode,\
-                "\"0,0,0\",\"128,128,128\",\"255,0,0\",\"0,128,0\",\"0,0,255\",\"255,255,255\""}
+            fc. ${arg\ $setting_3d_outline_mode,\
+                  \"0,0,0\",\"128,128,128\",\"255,0,0\",\"0,128,0\",\"0,0,255\",\"255,255,255\"}
             j[area_3d_view] .,0,0,0,0,0.5,..
             rm[-2,-1]
           fi
@@ -7865,7 +7865,7 @@ gmd2html : skip "${1=}"
 
   # Embed with header and footer if needed.
   if $embed_html
-    section_title=${"arg "$embed_html",Reference,Tutorial,News"}
+    section_title=${arg\ $embed_html,Reference,Tutorial,News}
     foreach {
       nm={b} nm0=${nm$>}
       if ['${title$>}']!=0 title=${title$>} else title=$nm0 fi
@@ -11148,7 +11148,7 @@ update_color_presets_html : check "isbool(${1=0})"
 
   nb_presets=0
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
+    category=${arg0\ $>,$categories}
     presets=${-_fx_cluts_$category}
     nb_presets+=narg({/$presets})
   }
@@ -11192,7 +11192,7 @@ update_color_presets_html : check "isbool(${1=0})"
   # Generate color grading data and rendering on each input sample.
   ind_preset=0
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
+    category=${arg0\ $>,$categories}
     presets=${-_fx_cluts_$category}
 
     e $_vt100_g"\n  * Category ""#"{1+$>}": "$_vt100_b$category"\n"$_vt100_n
@@ -11200,7 +11200,7 @@ update_color_presets_html : check "isbool(${1=0})"
     createdir $category/clut
 
     repeat narg({/$presets}) {
-      preset=${arg\ {1+$>},$presets}
+      preset=${arg0\ $>,$presets}
       e "    - "$preset
       clut $preset,64 to_rgb.
 
@@ -11260,7 +11260,7 @@ update_color_presets_html : check "isbool(${1=0})"
   e "\n  * Generate html code.\n"
 
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
+    category=${arg0\ $>,$categories}
     arg0 $>,$category_names
     category_name=${}
     presets=${-_fx_cluts_$category}
@@ -11343,7 +11343,7 @@ update_color_presets_html : check "isbool(${1=0})"
 "            <td style=\"width: 50%\">Select category:"\n\
 "              <ul>\n"')
       repeat narg($categories) {
-        _category=${arg\ {1+$>},$categories}
+        _category=${arg0\ $>,$categories}
         arg0 $>,$category_names
         _category_name=${}
 
@@ -11415,7 +11415,7 @@ update_color_presets_html : check "isbool(${1=0})"
         "          <tr><td><b>Reference Image</b></td><td colspan=\"3\"></td></tr>"\n\n')
 
       repeat narg({/$presets}) {
-        preset=${arg\ {1+$>},$presets}
+        preset=${arg0\ $>,$presets}
 
         ('$preset') replace_seq. 39,"92,92,39" preset_esc={t} rm.
         _title $preset title=${}
@@ -17372,7 +17372,7 @@ to_colormode : check "isint(${1=0},0,4)"
   if $err foreach {
     if !s||s>4 error[0--5] "Command '$0': Image ["$>"] is not a G,GA,RGB or RGBA image ("{s}" channels)." fi
   } fi
-  ss=${"arg "$s",gray,graya,rgb,rgba"}
+  ss=${arg\ $s,gray,graya,rgb,rgba}
   e[^-1] "Force image$? to be in "{`uppercase(['$ss'])`}" mode."
   to_$ss
 
@@ -22271,7 +22271,7 @@ plot2value :
 #@cli : $ 3000,2 rand 0,400 +pointcloud 0 dilate[-1] 3
 #@cli : $ 3000,2 rand 0,400 {w} {w},3 rand[-1] 0,255 append y +pointcloud 0 dilate[-1] 3
 pointcloud : check "${1=0}<=3 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
-  e[^-1] "Convert image$? to point clouds, in "${arg\ 2+($1>=0)*$1-($1<0),{-$1}-opacity,binary,cumulative,labeling}\
+  e[^-1] "Convert image$? to point clouds, in "${arg0\ 1+($1>=0)*$1-($1<0),{-$1}-opacity,binary,cumulative,labeling}\
          " mode, with dimensions $2x$3x$4."
   foreach {
     nm={n}
@@ -28446,7 +28446,7 @@ _exec_out :
 #@cli : The status value is set with the corresponding error message.
 #@cli : $ image.jpg +local blur -3 onfail mirror x done
 
-#@cli parallel : _wait_threads,"command1","command2",... : (+)
+#@cli parallel : _wait_threads,"command_1","command_2",... : (+)
 #@cli : Execute specified commands in parallel, each in a different thread.
 #@cli : Parallel threads share the list of images.
 #@cli : 'wait_threads' can be { 0:When current environment ends | 1:Immediately }.
@@ -35944,13 +35944,13 @@ alert : skip "${1=[G'MIC Alert]},${2=This is an alert box.},${3=OK}"
     w$disp 0 rm u $clicked
   }
 
-#@cli arg : n>=1,_arg1,...,_argN
-#@cli : Return the n-th argument of the specified argument list.
-arg : check "isint($1,1)"
+#@cli arg1 : n>=1,_arg_1,...,_arg_N
+#@cli : Return the n-th argument of the specified argument list (where 'n' goes from '1' to 'N').
+arg1 : check "isint($1,1)"
   $=arg u ${arg{1+($1)}}
 
-#@cli arg0 : n>=0,_arg0,...,_argN
-#@cli : Return the n-th argument of the specified argument list (where 'n' starts from '0').
+#@cli arg0 : n>=0,_arg_0,...,_arg_N
+#@cli : Return the n-th argument of the specified argument list (where 'n' goes from '0' to 'N').
 arg0 : check "isint($1,0)"
   $=arg u ${arg{2+($1)}}
 
@@ -37206,7 +37206,7 @@ name2color :
 #@cli : 'mode' can be { 0:All indices (default) | 1:Lowest index | 2:Highest index | \
 # 3:All indices (case insensitive) | 4:Lowest index (case insensitive) | 5:Highest index (case insensitive)}
 
-#@cli narg : arg1,arg2,...,argN
+#@cli narg : arg_1,arg_2,...,arg_N
 #@cli : Return number of specified arguments.
 narg :
   u $#
@@ -37594,8 +37594,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     all_eur,all_usd,all_charged_eur,all_charged_usd,asep_eur,asep_usd=
     repeat $nb_months {
       edate:=y=date(0);m=date(1)-1-$>;while(m<=0,--y;m+=12);100*y+m
-      s_month=${"arg "$edate%100",January,February,March,April,May,June,July,August,\
-                                  September,October,November,December"}
+      s_month=${arg\ $edate%100,January,February,March,April,May,June,July,August,September,October,November,December}
       s_year:=int($edate/100)
       month_eur,month_charged_eur,month_usd,month_charged_usd,msep_eur,msep_usd=
       nb_sponsors=0
@@ -49547,9 +49546,9 @@ fx_curves_interactive :
   repeat 5 { __xcc_C$>=0,0,100,100 }
   if $4==$1 l[] { ($5) s -,-1 repeat $! { __xcc_C$>={$>,^} } rm } fi
   if $3 # Apply transformation from previously defined curves
-    _xcc_colorbase=${arg\ {$4+1},rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr} x_color_curves last
+    _xcc_colorbase=${arg0\ $4,rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr} x_color_curves last
   else # Run interactive curve builder
-    x_color_curves ${arg\ {$1+1},rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr}
+    x_color_curves ${arg0\ $1,rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr}
     u "{$1}{$2}{$3}{$1}{"$__xcc_C0,-1,$__xcc_C1,-1,$__xcc_C2,-1,$__xcc_C3,-1,$__xcc_C4"}"
   fi
   if $2 # Add HaldCLUT layer
@@ -53199,7 +53198,7 @@ _fx_zoom_v2 :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/08/02</i>.</small>")
 fx_simulate_grain :
-  __fx_simulate_grain ${arg\ {1+$1},${-_fx_simulate_grain}},${2-11},0,0
+  __fx_simulate_grain ${arg0\ $1,${-_fx_simulate_grain}},${2-11},0,0
 
 _fx_simulate_grain :
   u orwo_np20,kodak_tmax400,kodak_tmax3200,kodak_trix1600,unknown
@@ -53208,7 +53207,7 @@ fx_simulate_grain_preview :
   gui_split_preview "_fx_simulate_grain_preview $*",$-2
 
 _fx_simulate_grain_preview :
-  __fx_simulate_grain ${arg\ {1+$1},${-_fx_simulate_grain}},${2-13}
+  __fx_simulate_grain ${arg0\ $1,${-_fx_simulate_grain}},${2-13}
 
 __fx_simulate_grain :
   bm0=alpha bm1=grainmerge bm2=hardlight bm3=overlay bm4=softlight bm5=alpha
@@ -56308,7 +56307,7 @@ fx_split_colors : skip ${2=0}
 fx_split_colors_preview :
   foreach {
     +fx_split_colors ${1-4} drgba
-    foreach { to ${arg\ {1+!!$>},"Original","#"$>},1,1,43,7,1,255 }
+    foreach { to ${arg0\ !!$>,"Original","#"$>},1,1,43,7,1,255 }
     frame xy,1,0 frame xy,3,255 to_rgba append_tiles ,
   }
 
@@ -60757,7 +60756,7 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
       fi
 
       * 255 mod 256
-      if $21 ${"arg $21,hsi8,hsl8,hsv8,lab8"}2rgb fi # Convert to RGB colors
+      if $21 ${arg\ $21,hsi8,hsl8,hsv8,lab8}2rgb fi # Convert to RGB colors
     fi
 
     rs $_size
@@ -63768,7 +63767,7 @@ fx_gmic_demos :
   coms=2048,blobs,bouncing,connect4,fire,fireworks,fisheye,fourier,hanoi,histogram,hough,jawbreaker,landscape,life,\
        light,mandelbrot,metaballs3d,minesweeper,minimal_path,pacman,paint,plasma,quantize_rgb,reflection3d,\
        rubber3d,shadebobs,spline,starfield3d,tetris,tictactoe,waves,whirl
-  com=${arg\ {1+$1},$coms}
+  com=${arg0\ $1,$coms}
   if $!>0 sel=0 else sel= fi
   +l[$sel] { m "foo : x_"$com foo rm um foo }
 
