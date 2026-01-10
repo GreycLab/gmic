@@ -29444,16 +29444,16 @@ nn_lib :
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,h##OUT#_ind);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,h##OUT#_ind);
       OUT#_biases_whds = resize(OUT#_biases,OUT#_whds,1);
-      OUT#_axis==_'x'?(OUT#_permutation_pre = 'yzcx'; OUT#_permutation_post = 'cxyz'):
-      OUT#_axis==_'y'?(OUT#_permutation_pre = 'xzcy'; OUT#_permutation_post = 'xcyz'):
-      OUT#_axis==_'z'?(OUT#_permutation_pre = 'xycz'; OUT#_permutation_post = 'xycz');
+      OUT#_axis==_'x'?(OUT#_permutation = 'yzcx'; OUT#_inv_permutation = 'cxyz'):
+      OUT#_axis==_'y'?(OUT#_permutation = 'xzcy'; OUT#_inv_permutation = 'xcyz'):
+      OUT#_axis==_'z'?(OUT#_permutation = 'xycz'; OUT#_inv_permutation = 'xycz');
     );
 
     nn_linear_forward(OUT,IN) = (
-      OUT#_axis==_'c'?ref(IN#,OUT#_pre):(OUT#_pre = permute(IN#,OUT#_permutation_pre));
-      OUT#_pre2 = mul(OUT#_params,OUT#_pre,OUT#_nbcols);
-      OUT#_pre2+=OUT#_biases_whds;
-      OUT#_axis==_'c'?ref(OUT#_pre2,OUT#):(OUT# = permute(OUT#_pre2,OUT#_permutation_post));
+      OUT#_axis==_'c'?ref(IN#,OUT#_step1):(OUT#_step1 = permute(IN#,OUT#_permutation));
+      OUT#_step2 = mul(OUT#_params,OUT#_step1,OUT#_nbcols);
+      OUT#_step2+=OUT#_biases_whds;
+      OUT#_axis==_'c'?ref(OUT#_step2,OUT#):(OUT# = permute(OUT#_step2,OUT#_inv_permutation));
     );
 
     nn_linear_init_backward(OUT,IN,weight_decay) = (
@@ -29464,6 +29464,9 @@ nn_lib :
 
     nn_linear_backward(OUT,IN) = (
       nn_define_backward(IN#);
+      OUT#_axis==_'c'?ref(d#OUT,d#OUT#_step1):(d#OUT#_step1 = permute(IN#,OUT#_permutation));
+      d#OUT#_step2 = mul(transpose(OUT#_params,h##OUT#_ind),d#OUT_step1,OUT#_nbcols);
+#      d#IN+=mul(transpose(OUT#_params,h##OUT#_ind),d#OUT_pre,
 #      d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
 #      d#OUT#_params = mul(d#OUT,IN#,size(IN#));
 #      d#OUT#_biases = d#OUT;
