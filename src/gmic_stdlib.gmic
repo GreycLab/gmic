@@ -28539,7 +28539,7 @@ nn_lib :
       const nn_optimizer_rmsprop = 1;
       const nn_optimizer_adam = 2;
       const nn_optimizer_adamax = 3;
-      nn_is_train = 0;
+      nn_is_training = 0;
     );
 
     begin_t(
@@ -28695,7 +28695,7 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
-      nn_is_train = 1;
+      nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
       nn_clip_gradient_min = 0;
       nn_clip_gradient_max = inf;
@@ -29319,7 +29319,7 @@ nn_lib :
     );
 
     nn_dropout_forward(OUT,IN) = (
-      OUT#_dropout_rate && nn_is_train?(
+      OUT#_dropout_rate && nn_is_training?(
         OUT#_dropout_channels = vector(##OUT#_spectrum);
         fill(OUT#_dropout_channels,u>=OUT#_dropout_rate);
         OUT#_dropout_fact = 1/(1 - OUT#_dropout_rate);
@@ -29334,7 +29334,7 @@ nn_lib :
 
     nn_dropout_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_dropout_rate && nn_is_train?(
+      OUT#_dropout_rate && nn_is_training?(
         d#IN+=d#OUT*OUT#_dropout_mask;
       ):(
         d#IN+=d#OUT;
@@ -29597,18 +29597,18 @@ nn_lib :
 
     # noise: Perturb input with noise.
     #---------------------------------
-    nn_noise_init_forward(OUT,IN,amplitude,noise_type,train_only) = (
+    nn_noise_init_forward(OUT,IN,amplitude,noise_type,training_only) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_amplitude = amplitude;
       const OUT#_noise_type = noise_type;
-      const OUT#_train_only = train_only;
+      const OUT#_training_only = training_only;
     );
 
     nn_noise_forward(OUT,IN) = (
-      OUT#_train_only && !nn_is_train?(
+      OUT#_training_only && !nn_is_training?(
         OUT# = IN#;
       ):(
         srand();
@@ -31268,22 +31268,22 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_noise : out,in,_amplitude,_noise_type,_train_only={ 0:No | 1:Yes }
+#@cli nn_noise : out,in,_amplitude,_noise_type,_training_only={ 0:No | 1:Yes }
 #@cli : Add a 'noise' layer to the current network.
 #@cli : 'noise_type' can be { 0:Gaussian | 1:Uniform | 2:Salt&pepper | 3:Poisson | 4:Rice }.
-#@cli : If 'train_only' is set, the noise is applied on the input only during the network training phase.
-#@cli : Default value: 'amplitude=0.1', 'noise_type=0' and 'train_only=1'.
+#@cli : If 'training_only' is set, the noise is applied on the input only during the network training phase.
+#@cli : Default value: 'amplitude=0.1', 'noise_type=0' and 'training_only=1'.
 nn_noise : check "s1 = ['$1']; s2 = ['$2'];
                   isvarname(s1) && # out
                   (isvarname(s2) || s2=='.') && # in
                   ${3=0.1}>=0 && # amplitude
                   isint(${4=0},0,4) && # noise_type
-                  isbool(${5=1}) # train_only
+                  isbool(${5=1}) # training_only
                   "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  amplitude,noise_type,train_only=${3-5}
+  amplitude,noise_type,training_only=${3-5}
   s0,s1,s2,s3,s4=gaussian,uniform,salt&pepper,poisson,rice
   e[^-1] "[nn_lib] Add 'noise' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "amplitude "$amplitude" and "${s$noise_type}" noise."
@@ -31291,8 +31291,8 @@ nn_noise : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_layer_types.=noise,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
-  _${nout}_properties="amplitude="$amplitude", noise_type="${s$noise_type}", train_only="$train_only
-  _${nout}_forward="begin(nn_noise_init_forward("$nout,$nin,$amplitude,$noise_type,$train_only"));"\
+  _${nout}_properties="amplitude="$amplitude", noise_type="${s$noise_type}", training_only="$training_only
+  _${nout}_forward="begin(nn_noise_init_forward("$nout,$nin,$amplitude,$noise_type,$training_only"));"\
                    "nn_noise_forward("$nout,$nin");"
   _${nout}_backward="nn_noise_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
