@@ -30818,6 +30818,64 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_linear : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add a 'linear' layer to the current network.
+#@cli : The linear transformation is performed on the whole set of vector-valued pixels of the input image.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+# 4:Residual He-initialization }.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_linear : check "s1 = ['$1']; s2 = ['$2'];
+                   isvarname(s1) && # out
+                   (isvarname(s2) || s2=='.') && # in
+                   isint($3,1) && # nb_channels
+                   isint(${4=3},0,3) && # learning_mode
+                   ${5=0}>=0 && # weight_decay
+                   isint(${6=3},0,4) # initialization
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nb_channels,learning_mode,weight_decay,initialization=${3-6}
+
+  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=linear,
+  _${nout}_size:=s=[${_${nin}_size}];s[3]=$nb_channels;s
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="axis="$axis", learning_mode="$learning_mode", weight_decay="$weight_decay
+
+  whds={[${_${nin}_size}][3]+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1 # Identity
+      f. "(x%h)==(y%(w - 1))"
+    elif $initialization==2 # Lecun-initialization
+      f. "g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "g*sqrt(0.002/(w - 1))"
+    fi
+    1,100% j.. .,100% rm. # Set biases to 0
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin"));"\
+                   "nn_linear_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_linear_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_linear_backward("$nout,$nin");"\
+                    "end(nn_linear_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network (saved as a .gmz file).
 #@cli : Network files can be only loaded in '.gmz' format.
@@ -31535,6 +31593,7 @@ nn_permute : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   permutation=$3
   k=${indexof\ $permutation,$permutations}
   inv_permutation=${arg0\ $k,$inv_permutations}
+
   e[^-1] "[nn_lib] Add 'permute' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and permutation '"$permutation"'."
   _${net}_layer_names.=$out,
