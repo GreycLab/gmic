@@ -1564,7 +1564,7 @@ reference_end_pdf :
     it ../../src/gmic_stdlib.gmic +parse_cli. list loc=${}
     parse_cli html
     repeat narg($loc) {
-      command=${"arg "1+$>","$loc}
+      command=${arg0\ $>,$loc}
       l[] { if ['$command'][0]!=_'_' it $command.html fi onfail }
     }
     sort_list +,n
@@ -11261,7 +11261,7 @@ update_color_presets_html : check "isbool(${1=0})"
 
   repeat narg($categories) {
     category=${arg\ {1+$>},$categories}
-    arg {1+$>},$category_names
+    arg0 $>,$category_names
     category_name=${}
     presets=${-_fx_cluts_$category}
     x 0,"rm -f "$category/clut/"*.cube"
@@ -11344,15 +11344,15 @@ update_color_presets_html : check "isbool(${1=0})"
 "              <ul>\n"')
       repeat narg($categories) {
         _category=${arg\ {1+$>},$categories}
-        arg {1+$>},$category_names
+        arg0 $>,$category_names
         _category_name=${}
 
-        arg {1+$>},$category_authors_url
+        arg0 $>,$category_authors_url
         if isnum(${}) _category_author_url_start= _category_author_url_end=
         else _category_author_url_start="<a href=\""${}"\">" _category_author_url_end="</a>"
         fi
 
-        arg {1+$>},$category_authors
+        arg0 $>,$category_authors
         if isnum(${}) _category_author=""
         else _category_author=$_category_author_url_start${}$_category_author_url_end
         fi
@@ -11593,7 +11593,7 @@ update_gallery_html : check "isbool(${1=0})"
     html.=${html_menu}"          <div class=\"gallery_grid\">\n"
 
     repeat $nb_commands {
-      command=${"arg "1+$>,$commands}
+      command=${arg0\ $>,$commands}
       is_stylization:=['$command']=='_gallery_stylization'
 
       e $_vt100_m"    - Command '"$_vt100_b$command$_vt100_n"' ["{1+$>}/$nb_commands"]."
@@ -27406,7 +27406,7 @@ sprite3d :
 #@cli : $ torus3d 100,20 image.jpg rescale2d[-1] ,64 100%,100% gaussian[-1] 30%,30% *[-1] 255 append[-2,-1] c \
 # +sprites3d[0] [1],1 display_rgba[-2]
 sprites3d : check ${is_image_arg\ $1} skip ${2=0}
-  e[^-1] "Convert image$? as 3D sprites clouds, using sprite $1 ("${"arg {1+!$2},with,without"}" alpha-channel)."
+  e[^-1] "Convert image$? as 3D sprites clouds, using sprite $1 ("${arg0\ {!$2},with,without}" alpha-channel)."
   repeat $! {
     if !{$>,i(0,7)} continue fi # Do nothing if 3D object is empty
     pass$1 0
@@ -35953,11 +35953,6 @@ arg : check "isint($1,1)"
 #@cli : Return the n-th argument of the specified argument list (where 'n' starts from '0').
 arg0 : check "isint($1,0)"
   $=arg u ${arg{2+($1)}}
-
-#@cli arg2img : argument_1,...,argument_N
-#@cli : Split specified list of arguments and return each as a new image (as a null-terminated string).
-arg2img :
-  $=arg repeat $# { arg=${arg{1+$>}} ({'$arg'},0) => $arg }
 
 #@cli arg2var : variable_name,argument_1,...,argument_N
 #@cli : For each i in [1...N], set 'variable_name$i=argument_i'.
@@ -63897,8 +63892,8 @@ fx_intarsia :
     ('"</table>\n</td><td>"')
 
     # Render result and overview images.
-    starting=${"arg {1+$5},\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\""}
-    label=${"arg {1+$6},Row,Column"}
+    starting=${arg0\ $5,\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\"}
+    label=${arg0\ $6,Row,Column}
     if $6 dir0="T &#8594; B" dir1="B &#8594; T" else dir0="L &#8594; R" dir1="R &#8594; L" fi
     dir:=arg(1+2*$5+$6,0,0,1,0,0,1,1,1)
 
