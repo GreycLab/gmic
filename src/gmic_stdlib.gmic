@@ -29479,6 +29479,10 @@ nn_lib :
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
+    nn_linear_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    );
+
     # maxpool2d : 2D max pooling.
     #----------------------------
     nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
@@ -30941,7 +30945,7 @@ nn_linear : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','normalize')
+      if isin('$type','conv2d','conv3d','fc','linear','normalize')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31691,7 +31695,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -31856,7 +31860,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       siz+={${net}_$name,whds}
     fi
   }
@@ -31920,7 +31924,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -32058,7 +32062,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
