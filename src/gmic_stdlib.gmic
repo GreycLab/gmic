@@ -31287,14 +31287,14 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
                       "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
 
-  w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
+  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
     [ find(axes,_'x')>=0?1:$group_x?min($group_x,dim[0]):dim[0],
       find(axes,_'y')>=0?1:$group_y?min($group_y,dim[1]):dim[1],
       find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
       find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
 
-  whds={$normalization_type?1:2},{$w_ca*$h_ca*$d_ca*$s_ca},1,1
+  whds={$normalization_type?1:2},{$ca_w*$ca_h*$ca_d*$ca_s},1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -31305,7 +31305,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
     r. $whds # gamma,beta (avg/std) or gamma (rms)
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$w_ca,$h_ca,$d_ca,$s_ca"));"\
+  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$ca_w,$ca_h,$ca_d,$ca_s"));"\
                    "nn_normalize_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
                     "nn_normalize_backward("$nout,$nin");"\
