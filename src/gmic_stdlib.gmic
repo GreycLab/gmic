@@ -883,7 +883,7 @@ reference : skip "${2=}"
 "* Function 'index(A,P,nb_channelsP,_dithering,_map_colors)' returns the indexed version "\
 "of the image 'A' by the colormap 'P'. "\
 "This is the math evaluator analog to command ''index''."\n\
-"* Function 'permute(A,wA,hA,dA,sA,permutation_string)' returns a permuted version of the image 'A' "\
+"* Function 'permute(A,wA,hA,dA,sA,permutation)' returns a permuted version of the image 'A' "\
 "(of size '(wA,hA,dA,sA)', seen as a vector of size 'wA*hA*dA*sA'). "\
 "This is the math evaluator analog to command ''permute''."\n\
 "* Function 'mirror(A,wA,hA,dA,sA,axes_string)' returns a mirrored version of the image 'A' "\
@@ -18147,7 +18147,7 @@ _montage :
 #@cli : $ image.jpg +mirror y +mirror[0] c
 #@cli : $ image.jpg +mirror x +mirror y append_tiles 2,2
 
-#@cli permute : permutation_string : (+)
+#@cli permute : permutation : (+)
 #@cli : Permute selected image axes by specified permutation.
 #@cli : 'permutation' is a combination of the character set {x|y|z|c},
 #@cli : e.g. 'xycz', 'cxyz', ...
@@ -29881,6 +29881,24 @@ nn_lib :
       d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
+    # permute: Axes permutation.
+    #---------------------------
+    nn_permute_init_forward(OUT,IN,w,h,d,s) = (
+      const OUT#_width = w;
+      const OUT#_height = h;
+      const OUT#_depth = d;
+      const OUT#_spectrum = s;
+    );
+
+    nn_permute_forward(OUT,IN,permutation) = (
+      OUT# = permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,'permutation#');
+    );
+
+    nn_permute_backward(OUT,IN,inv_permutation) = (
+      nn_define_backward(IN#);
+      d#IN+=permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,'inv_permutation#');
+    );
+
     # rename: Rename input.
     #----------------------
     nn_rename_init_forward(OUT,IN) = (
@@ -31231,7 +31249,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
   u ${_nn_network}
 
 #@cli nn_nl : out,in,_activation
-#@cli : Add a 'nl' (nonlinearity) layer to the current network.
+#@cli : Add a 'nl' layer (nonlinearity) to the current network.
 #@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | sqr | sqrt | \
 # swish | tanh }.
 #@cli : Default value: 'activation=leakyrelu'.
@@ -31374,7 +31392,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchdown2d : out,in,_patch_size>1
-#@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the current network.
+#@cli : Add a 'patchdown2d' layer (2D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                         isvarname(s1) && # out
@@ -31407,7 +31425,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchdown3d : out,in,_patch_size>1
-#@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the current network.
+#@cli : Add a 'patchdown3d' layer (3D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                         isvarname(s1) && # out
@@ -31440,7 +31458,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchup2d : out,in,_patch_size>1
-#@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
+#@cli : Add a 'patchup2d' layer (2D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
@@ -31469,7 +31487,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchup3d : out,in,_patch_size>1
-#@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
+#@cli : Add a 'patchup3d' layer (3D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
@@ -31492,6 +31510,42 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                    "nn_patchup3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchup3d_init_backward("$nout,$nin,$patch_size"));"\
                     "nn_patchup3d_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_permute : out,in,permutation
+#@cli : Add a 'permute' layer (axes permutation) to the current network.
+nn_permute : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    isin(s3,'xyzc','xycz','xzyc','xzcy','xcyz','xczy', # permutation
+                            'yxzc','yxcz','yzxc','yzcx','ycxz','yczx',
+                            'zxyc','zxcy','zyxc','zycx','zcxy','zcyx',
+                            'cxyz','cxzy','cyxz','cyzx','czxy','czyx')
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  permutations=xyzc,xycz,xzyc,xzcy,xcyz,xczy,yxzc,yxcz,yzxc,yzcx,ycxz,yczx,\
+               zxyc,zxcy,zyxc,zycx,zcxy,zcyx,cxyz,cxzy,cyxz,cyzx,czxy,czyx
+  inv_permutations=xyzc,xycz,xzyc,xcyz,xzcy,xczy,yxzc,yxcz,zxyc,cxyz,zxcy,cxzy,\
+                   yzxc,ycxz,zyxc,cyxz,zcxy,czxy,yzcx,yczx,zycx,cyzx,zcyx,czyx
+  permutation=$3
+  k=${indexof\ $permutation,$permutations}
+  inv_permutation=${arg0\ $k,$inv_permutations}
+  e[^-1] "[nn_lib] Add 'permute' layer '"$out"' to network '"$net"', with input '"$in"' "\
+         "and permutation '"$permutation"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=permute,
+  _${nout}_size:=s=[${_${nin}_size}];mode='$permutation';res=vector4();\
+                 fill(res,k,s[indexof(mode[k],_'x',_'y',_'z',_'c')]);res
+  _${nout}_input=$in
+  _${nout}_properties="permutation="$permutation
+  _${nout}_forward="begin(nn_permute_init_forward("$nout,$nin,${_${nout}_size}"));"\
+                   "nn_permute_forward("$nout,$nin,$permutation");"
+  _${nout}_backward="nn_permute_backward("$nout,$nin,$inv_permutation");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -36443,6 +36497,12 @@ img2str :
 #@cli : Default value: 'line_separator= '.
 img2text : skip "${1= }"
   +l { s y s -,0 y x if $!>1 i[1--2] ('"$1"') fi a x u {0,t} rm }
+
+#@cli indexof : string,_arg_0,...,_arg_N
+#@cli : Return the lowest index 'i' such that 'arg_i==string'.
+#@cli : If no 'arg_i' matches, '-1' is returned.
+indexof :
+  $=arg repeat $# { if ['${arg{2+$>}}']==['$1'] u $> return fi } u -1
 
 #@cli is_mesh3d
 #@cli : Return 1 if all of the selected images are 3D meshes, 0 otherwise.
