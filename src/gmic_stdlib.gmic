@@ -29434,7 +29434,7 @@ nn_lib :
     #--------------------------
     nn_linear_init_forward(OUT,IN,axis) = (
       const OUT#_ind = $""#OUT;
-      const OUT#_axis = axis;
+      const OUT#_axis = _'axis#';
       const OUT#_width = OUT#_axis==_'x'?h##OUT#_ind:IN#_width;
       const OUT#_height = OUT#_axis==_'y'?h##OUT#_ind:IN#_height;
       const OUT#_depth = OUT#_axis==_'z'?h##OUT#_ind:IN#_depth;
@@ -29462,7 +29462,7 @@ nn_lib :
     );
 
     nn_linear_forward(OUT,IN) = (
-      OUT#_is_permutation?(OUT#_S1 = permute(IN#,OUT#_permutation)):ref(IN#,OUT#_S1):
+      OUT#_is_permutation?(OUT#_S1 = permute(IN#,OUT#_permutation)):ref(IN#,OUT#_S1);
       OUT#_S2 = mul(OUT#_params,OUT#_S1,OUT#_nbcols);
       OUT#_S2+=OUT#_biases_whds;
       OUT#_is_permutation?(OUT# = permute(OUT#_S2,OUT#_inv_permutation)):ref(OUT#_S2,OUT#);
@@ -29477,10 +29477,10 @@ nn_lib :
     nn_linear_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_is_permutation?(d#OUT#_S2 = permute(d#OUT,OUT#_permutation)):ref(d#OUT,d#OUT#_S2);
-      d#OUT#_S1 = mul(transpose(OUT#_params,h##OUT#_ind),d#OUT_S2,OUT#_nbcols);
-      OUT#_is_permutation?(d#IN = permute(d#OUT_S1,OUT#_inv_permutation)):ref(d#IN,d#OUT#_S1);
+      d#OUT#_S1 = mul(transpose(OUT#_params,h##OUT#_ind),d#OUT#_S2,OUT#_nbcols);
+      OUT#_is_permutation?(d#IN+=permute(d#OUT#_S1,OUT#_inv_permutation)):ref(d#IN,d#OUT#_S1);
       d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,OUT#_nbcols),h##OUT#_ind);
-      d#OUT#_biases = d#OUT#_S2;
+      d#OUT#_biases = OUT#_nbcols*resize(d#OUT#_S2,h##OUT#_ind,2);
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT#_biases;
