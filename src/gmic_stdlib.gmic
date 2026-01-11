@@ -30150,8 +30150,8 @@ nn_lib :
 
     # bce : Binary cross-entropy.
     #----------------------------
-    nn_loss_bce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_bce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
       batch_#OUT = 0;
     );
 
@@ -30296,8 +30296,8 @@ nn_lib :
 
     # sigmoid_bce : Sigmoid + Binary cross entropy.
     #----------------------------------------------
-    nn_loss_sigmoid_bce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_sigmoid_bce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
       batch_#OUT = 0;
     );
 
@@ -30314,7 +30314,7 @@ nn_lib :
 
     nn_loss_sigmoid_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=sigmoid(IN#) - TRUTH;
+      d#IN+=(sigmoid(IN#) - TRUTH)*OUT#_weight;
     );
 
     # smoothl1 : Smooth L1-norm.
@@ -31044,7 +31044,7 @@ nn_loss_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_bce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_bce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_bce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_bce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_bce_backward("$nout,$nin,$ground_truth");"
@@ -31226,7 +31226,7 @@ nn_loss_sigmoid_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_sigmoid_bce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_sigmoid_bce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_sigmoid_bce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_sigmoid_bce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_sigmoid_bce_backward("$nout,$nin,$ground_truth");"
