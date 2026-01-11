@@ -29434,38 +29434,35 @@ nn_lib :
     #--------------------------
     nn_linear_init_forward(OUT,IN,axis) = (
       const OUT#_ind = $""#OUT;
+      const OUT#_rows = h##OUT#_ind;
+      const OUT#_cols = w##OUT#_ind - 1;
       const OUT#_axis = _'axis#';
-      const OUT#_width = OUT#_axis==_'x'?h##OUT#_ind:IN#_width;
-      const OUT#_height = OUT#_axis==_'y'?h##OUT#_ind:IN#_height;
-      const OUT#_depth = OUT#_axis==_'z'?h##OUT#_ind:IN#_depth;
-      const OUT#_spectrum = OUT#_axis==_'c'?h##OUT#_ind:IN#_spectrum;
-      const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
-      const OUT#_nbcols = OUT#_whds/(w##OUT#_ind - 1);
-      OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,h##OUT#_ind);
-      OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,h##OUT#_ind);
-      OUT#_biases_whds = resize(OUT#_biases,OUT#_whds,1);
+      const OUT#_width = OUT#_axis==_'x'?OUT#_rows:IN#_width;
+      const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
+      const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
+      const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
+
+      OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
+      OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
+      OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
       OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
-        OUT#_permutation = 'yzcx';
-        OUT#_inv_permutation = 'cxyz';
-        const OUT#_is_permutation = 1;
+        OUT#_permutation = 'yzcx'; OUT#_inv_permutation = 'cxyz'; const OUT#_is_permutation = 1;
       ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
-        OUT#_permutation = 'xzcy';
-        OUT#_inv_permutation = 'xcyz';
-        const OUT#_is_permutation = 1;
+        OUT#_permutation = 'xzcy'; OUT#_inv_permutation = 'xcyz'; const OUT#_is_permutation = 1;
       ):OUT#_axis==_'z' && IN#_spectrum!=1?(
-        OUT#_permutation = 'xycz';
-        OUT#_inv_permutation = 'xycz';
-        const OUT#_is_permutation = 1;
+        OUT#_permutation = 'xycz'; OUT#_inv_permutation = 'xycz'; const OUT#_is_permutation = 1;
       ):(
         const OUT#_is_permutation = 0;
       );
     );
 
     nn_linear_forward(OUT,IN) = (
-      OUT#_is_permutation?(OUT#_S1 = permute(IN#,OUT#_permutation)):ref(IN#,OUT#_S1);
-      OUT#_S2 = mul(OUT#_params,OUT#_S1,OUT#_nbcols);
+      OUT#_is_permutation?(OUT#_S1 = permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,OUT#_permutation)):
+        ref(IN#,OUT#_S1);
+      OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
       OUT#_S2+=OUT#_biases_whds;
-      OUT#_is_permutation?(OUT# = permute(OUT#_S2,OUT#_inv_permutation)):ref(OUT#_S2,OUT#);
+      OUT#_is_permutation?(OUT# = permute(OUT#_S2,size(IN#)/OUT#_cols,OUT#_rows,1,1,OUT#_inv_permutation)):
+        ref(OUT#_S2,OUT#);
     );
 
     nn_linear_init_backward(OUT,IN,weight_decay) = (
@@ -29476,11 +29473,13 @@ nn_lib :
 
     nn_linear_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_is_permutation?(d#OUT#_S2 = permute(d#OUT,OUT#_permutation)):ref(d#OUT,d#OUT#_S2);
-      d#OUT#_S1 = mul(transpose(OUT#_params,h##OUT#_ind),d#OUT#_S2,OUT#_nbcols);
-      OUT#_is_permutation?(d#IN+=permute(d#OUT#_S1,OUT#_inv_permutation)):ref(d#IN,d#OUT#_S1);
-      d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,OUT#_nbcols),h##OUT#_ind);
-      d#OUT#_biases = OUT#_nbcols*resize(d#OUT#_S2,h##OUT#_ind,2);
+      OUT#_is_permutation?(d#OUT#_S2 = permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,OUT#_permutation)):
+        ref(d#OUT,d#OUT#_S2);
+      d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
+      OUT#_is_permutation?(d#IN+=permute(d#OUT#_S1,size(IN#)/OUT#_cols,OUT#_cols,1,1,OUT#_inv_permutation)):
+        ref(d#IN,d#OUT#_S1);
+      d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
+      d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
       batch_d#OUT#_biases+=d#OUT#_biases;
