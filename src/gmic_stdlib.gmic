@@ -29444,16 +29444,28 @@ nn_lib :
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,h##OUT#_ind);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,h##OUT#_ind);
       OUT#_biases_whds = resize(OUT#_biases,OUT#_whds,1);
-      OUT#_axis==_'x'?(OUT#_permutation = 'yzcx'; OUT#_inv_permutation = 'cxyz'):
-      OUT#_axis==_'y'?(OUT#_permutation = 'xzcy'; OUT#_inv_permutation = 'xcyz'):
-      OUT#_axis==_'z'?(OUT#_permutation = 'xycz'; OUT#_inv_permutation = 'xycz');
+      OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permutation = 'yzcx';
+        OUT#_inv_permutation = 'cxyz';
+        const OUT#_permutation_needed = 1;
+      ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permutation = 'xzcy';
+        OUT#_inv_permutation = 'xcyz';
+        const OUT#_permutation_needed = 1;
+      ):OUT#_axis==_'z' && IN#_spectrum!=1?(
+        OUT#_permutation = 'xycz';
+        OUT#_inv_permutation = 'xycz';
+        const OUT#_permutation_needed = 1;
+      ):(
+        const OUT#_permutation_needed = 0;
+      );
     );
 
     nn_linear_forward(OUT,IN) = (
-      OUT#_axis==_'c'?ref(IN#,OUT#_step1):(OUT#_step1 = permute(IN#,OUT#_permutation));
-      OUT#_step2 = mul(OUT#_params,OUT#_step1,OUT#_nbcols);
-      OUT#_step2+=OUT#_biases_whds;
-      OUT#_axis==_'c'?ref(OUT#_step2,OUT#):(OUT# = permute(OUT#_step2,OUT#_inv_permutation));
+      OUT#_permutation_needed?(OUT#_S1 = permute(IN#,OUT#_permutation)):ref(IN#,OUT#_S1):
+      OUT#_S2 = mul(OUT#_params,OUT#_S1,OUT#_nbcols);
+      OUT#_S2+=OUT#_biases_whds;
+      OUT#_permutation_needed?(OUT# = permute(OUT#_S2,OUT#_inv_permutation)):ref(OUT#_S2,OUT#);
     );
 
     nn_linear_init_backward(OUT,IN,weight_decay) = (
