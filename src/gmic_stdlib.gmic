@@ -29668,7 +29668,7 @@ nn_lib :
       d#IN+=d#OUT*nn_activation_d_#activation(IN#);
     );
 
-    # Special case: Softmax.
+    # Special case: 'softmax'.
     nn_softmax_forward(OUT,IN) = (
       OUT# = softmax(IN#);
     );
@@ -29676,6 +29676,24 @@ nn_lib :
     nn_softmax_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#))*OUT#;
+    );
+
+    # Special case: 'softmax_x'.
+    nn_softmax_x_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (size(OUT#)/OUT#_width,k,
+        OUT#_crop = OUT#[k*OUT#_width,OUT#_width];
+        copy(OUT#[k*OUT#_width],softmax(OUT#_crop),OUT#_width);
+      );
+    );
+
+    nn_softmax_x_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (size(OUT#)/OUT#_width,k,
+        OUT#_crop = OUT#[k*OUT#_width,OUT#_width];
+        d#OUT#_crop = d#OUT#[k*OUT#_width,OUT#_width];
+        copy(OUT#[k*OUT#_width],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,OUT#_width,1,1,-1);
+      );
     );
 
     # Special case: Norm2.
@@ -31433,7 +31451,8 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' layer (nonlinearity) to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | sqr | sqrt | \
+#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | \
+# softmax_x | softmax_y | softmax_z | softmax_c | msqr | sqrt | \
 # swish | tanh }.
 #@cli : Default value: 'activation=leakyrelu'.
 nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
@@ -31460,6 +31479,18 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   elif ['$activation']=='softmax'
     _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
     _${nout}_backward="nn_softmax_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_x'
+    _${nout}_forward.="nn_softmax_x_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_x_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_y'
+    _${nout}_forward.="nn_softmax_y_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_y_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_z'
+    _${nout}_forward.="nn_softmax_z_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_z_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_c'
+    _${nout}_forward.="nn_softmax_c_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_c_backward("$nout,$nin");"
   else
     _${nout}_forward.="nn_nl_forward("$nout,$nin,$activation");"
     _${nout}_backward="nn_nl_backward("$nout,$nin,$activation");"
