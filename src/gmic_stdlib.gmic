@@ -30272,6 +30272,26 @@ nn_lib :
       d#IN1+=mul(IN0#,d#OUT,OUT#_width);
     );
 
+    # tmmult: Matrix multiplication IN0^t.IN1^t.
+    #-------------------------------------------
+    nn_tmmult_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_height;
+      const OUT#_height = IN0#_width;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_tmmult_forward(OUT,IN0,IN1) = (
+      OUT# = mul(transpose(IN0#,IN0#_width),transpose(IN1#,IN1#_width),IN1#_height);
+    );
+
+    nn_tmmult_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=transpose(mul(d#OUT,IN1#,IN1#_width),IN0#_height);
+      d#IN1+=transpose(mul(IN#0,d#OUT,OUT#_width),IN1#_height);
+    );
+
     # transpose: Matrix transposition.
     #---------------------------------
     nn_transpose_init_forward(OUT,IN) = (
@@ -32261,6 +32281,36 @@ nn_tmmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_tmmul_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_tmmul_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_tmmult : out,in0,in1
+#@cli : Add a 'tmmult' layer (matrix multiplication 'in0^t.in1^t') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_tmmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in0
+                  (isvarname(s3) || s3=='.') # in1
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'tmmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=tmmul,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[0]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[1],s0[0],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_tmmult_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_tmmult_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_tmmult_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
