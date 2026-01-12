@@ -30252,6 +30252,26 @@ nn_lib :
       size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT);
     );
 
+    # tmmul: Matrix multiplication IN0^t.IN1.
+    #----------------------------------------
+    nn_tmmul_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_width;
+      const OUT#_height = IN0#_width;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_tmmul_forward(OUT,IN0,IN1) = (
+      OUT# = mul(transpose(IN0#,IN0#_width),IN1#,IN1#_width);
+    );
+
+    nn_tmmul_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=mul(IN1#,transpose(d#OUT,OUT#_width),OUT#_height);
+      d#IN1+=mul(IN0#,d#OUT,OUT#_width);
+    );
+
     # transpose: Matrix transposition.
     #---------------------------------
     nn_transpose_init_forward(OUT,IN) = (
@@ -31487,8 +31507,8 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_mmul : out,in0,in1
-#@cli : Add a 'mmul' layer (matrix multiplication IN0.IN1) to the current network.
-#@cli : 'in0' or 'in1' must be of compatible size (so that 'in0*in1' can be defined).
+#@cli : Add a 'mmul' layer (matrix multiplication 'in0*in1') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
 nn_mmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                  isvarname(s1) && # out
                  (isvarname(s2) || s2=='.') && # in0
@@ -31517,8 +31537,8 @@ nn_mmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _nn_previous_layer=$out
 
 #@cli nn_mmult : out,in0,in1
-#@cli : Add a 'mmult' layer (matrix multiplication IN0.IN1^t) to the current network.
-#@cli : 'in0' or 'in1' must be of compatible size (so that 'in0*in1' can be defined).
+#@cli : Add a 'mmult' layer (matrix multiplication 'in0*in1^t') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
 nn_mmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                   isvarname(s1) && # out
                   (isvarname(s2) || s2=='.') && # in0
@@ -32211,6 +32231,36 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_tmmul : out,in0,in1
+#@cli : Add a 'tmmul' layer (matrix multiplication 'in0^t.in1') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_tmmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in0
+                  (isvarname(s3) || s3=='.') # in1
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'tmmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=tmmul,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[1]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[0],s0[0],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_tmmul_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_tmmul_backward("$nout,$nin0,$nin1");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
