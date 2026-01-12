@@ -30232,6 +30232,24 @@ nn_lib :
       size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT);
     );
 
+    # transpose: Matrix transposition.
+    #---------------------------------
+    nn_transpose_init_forward(OUT,IN) = (
+      const OUT#_width = IN#_height;
+      const OUT#_height = IN#_width;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_transpose_forward(OUT,IN) = (
+      OUT# = permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,'yxzc');
+    );
+
+    nn_transpose_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,'yxzc');
+    );
+
     #----------------
     # Loss functions.
     #----------------
@@ -32142,6 +32160,30 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_transpose : out,in
+#@cli : Add a 'transpose' layer (matrix transpose) to the current network.
+nn_transpose : check "s1 = ['$1']; s2 = ['$2'];
+                      isvarname(s1) && # out
+                      (isvarname(s2) || s2=='.') # in
+                      "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+
+  e[^-1] "[nn_lib] Add 'transpose' layer '"$out"' to network '"$net"', with input '"$in"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=transpose,
+  _${nout}_size:=s=[${_${nin}_size}];[s[1],s[0],s[2],s[3]]
+  _${nout}_input=$in
+  _${nout}_properties=
+  _${nout}_forward="begin(nn_transpose_init_forward("$nout,$nin"));"\
+                   "nn_transpose_forward("$nout,$nin");"
+  _${nout}_backward="nn_transpose_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
