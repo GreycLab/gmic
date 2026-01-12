@@ -4399,8 +4399,8 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
     dx,dy:=$xmax-$xmin,$ymax-$ymin
 
     # Determine number of axis tick marks.
-    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg1(1,$u) deltax:=arg1(2,$u)
-    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg1(1,$u) deltay:=arg1(2,$u)
+    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg0(0,$u) deltax:=arg0(1,$u)
+    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg0(0,$u) deltay:=arg0(1,$u)
 
     # Create plot canvas.
     one:=$3!=3 gw:=$w-2*$11 gh:=$h-2*$11 gg:=($gw-$one)/($siz-$one)
@@ -4736,7 +4736,7 @@ _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2
           C = [ hsv2rgb([ 2*ang,1-r2/r1,v ]), 255 ];
         );
       );
-      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg1(k + 1,C,Co)));
+      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg0(k,C,Co)));
       I"
     rm..
   }
@@ -5829,7 +5829,7 @@ output_ggr : skip "${2=}"
       end={_($>+1)/{0,h}}
       mid={_0.5*($start+$end)}
       rgba={0,I(0,$>)}
-      r:=arg1(1,$rgba) g:=arg1(2,$rgba) b:=arg1(3,$rgba) a:=arg1(4,$rgba)
+      r:=arg0(0,$rgba) g:=arg0(1,$rgba) b:=arg0(2,$rgba) a:=arg0(3,$rgba)
       ('$start" "$mid" "$end" "$r" "$g" "$b" "$a" "$r" "$g" "$b" "$a" 0 0\n"')
     }
     rm[0] a x
@@ -14946,7 +14946,7 @@ adjust_colors : check "${1=0}>=-100 && $1<=100 && ${2=0}>=-100 && $2<=100 && ${3
           value range [$6,$7]."
   foreach { split_opacity l[0] {
     range:="$6==$7 && !$6?[im,iM]:[min($6,$7),max($6,$7)]"
-    m:=arg1(1,$range) M:=arg1(2,$range) fact:=255/max(1e-5,$M-$m)
+    m:=arg0(0,$range) M:=arg0(1,$range) fact:=255/max(1e-5,$M-$m)
     - $m * $fact
     if $4" || "$5 # Adjust Hue/Saturation
       to_rgb[0] rgb2hsv[0]
@@ -22927,8 +22927,8 @@ axes : check "isint(${5=14},0) && ${6=1}>=0" skip ${7=0},${8=0}
     w1,h1={0,[w,h]-1}
 
     # Determine number of axes tick marks.
-    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg1(1,$u) deltax:=arg1(2,$u) fi
-    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg1(1,$u) deltay:=arg1(2,$u) fi
+    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg0(0,$u) deltax:=arg0(1,$u) fi
+    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg0(0,$u) deltay:=arg0(1,$u) fi
 
     # Draw x-axis.
     is_0x=0
@@ -37330,7 +37330,7 @@ math_lib :
     _I[2] = cut(_I[2],0,1);
     _c = _I[2]*_I[1];
     _x = _c*(1-abs((_I[0]/60)%2-1));
-    (arg1(1 + int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
+    (arg0(int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
   );
 
   rgb2hsv(I...) = ( # Convert RGB vector to HSV
@@ -39185,7 +39185,7 @@ _x_colorize :
 
   => img
 
-  fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+  fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
   selection=-1 view_markers=2 contrast=9 xpan=-1 ypan=-1 replace_color= current_replace_color=
 
   if narg($_gui_control_points)>=6 # Import list of control points from plug-in GUI
@@ -39224,7 +39224,7 @@ _x_colorize :
       nww:=$ww/1.25 nwh:=$wh/1.25
       if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
     elif $is_ctrl" && "{*,R} # Reset window size
-      fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim)
+      fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim)
       x0=0 y0=0 x1:=$w-1 y1:=$h-1
     elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
       dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -39478,8 +39478,8 @@ x_connect4 : check_display $0
                if (pbad>=0 && val==p,  pbad = -1, pbad+=!!val);
              );
            );
-           pgood = arg1(2 + pgood,0,1,2,4,100,1e8);
-           pbad = arg1(2 + pbad,0,1,2,4,10000,1e8);
+           pgood = arg0(1 + pgood,0,1,2,4,100,1e8);
+           pbad = arg0(1 + pbad,0,1,2,4,10000,1e8);
            pgood - pbad;
          );
          case(1,0) + case(0,1) + case(1,1) + case(1,-1)"
@@ -39510,7 +39510,7 @@ x_connect4 : check_display $0
 
     if narg($winner) # End of game animation
       [visu] => tmpvisu
-      x:=arg1(1,$winner) y:=arg1(2,$winner) c:=arg1(3,$winner)
+      x:=arg0(0,$winner) y:=arg0(1,$winner) c:=arg0(2,$winner)
       if $x<0 # Draw game
         if !narg($text)
           0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand. xy,3 +dilate. 5 n.. 0,255 to_rgb..
@@ -39989,7 +39989,7 @@ x_grab_color : skip ${1=xgc_variable} check_display $0
       ox=$x oy=$y ob=$b ohc=$hc oyc=$yc ocolor=$color o$1=$$1
     fi
 
-    if arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' wait 50 else wait fi
     if {*,r} w[] -1 rm[visu0] yc=5 fi
     if ['$$1']=='-1' break fi # Close request
 
@@ -40814,8 +40814,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       y:=round({*,y}*(h#2-1)/(h-1))
       b={*,b}
       c=$x,$y,{2,I($x,$y)}
-      is_add:=arg1(1,$colors_add)>=0
-      is_sub:=arg1(1,$colors_sub)>=0
+      is_add:=arg0(0,$colors_add)>=0
+      is_sub:=arg0(0,$colors_sub)>=0
       is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
       is_resized=0
       refresh=0
@@ -40856,11 +40856,11 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
     while {*}" && "!{*,ESC}" && "!{*,Q}" && "!{*,RETURN}
 
     # Rescale to original image dimensions.
-    if arg1(1,$colors_add)>=0 ($colors_add)
+    if arg0(0,$colors_add)>=0 ($colors_add)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_add={-2,^} rm[-2,-1]
     fi
-    if arg1(1,$colors_sub)>=0 ($colors_sub)
+    if arg0(0,$colors_sub)>=0 ($colors_sub)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_sub={-2,^} rm[-2,-1]
     fi
@@ -40872,8 +40872,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
 
 _x_mask_color : # Estimate color mask image
   100%,100%
-  is_add:=arg1(1,$3)>=0
-  is_sub:=arg1(1,$4)>=0
+  is_add:=arg0(0,$3)>=0
+  is_sub:=arg0(0,$4)>=0
   t0=$|
   if $is_add" || "$is_sub
     if $is_add
@@ -41554,7 +41554,7 @@ _pacman_ghost_afraid_gfx :
   map.. . rm. r. 16,16,1,3,2
   line. 4,4,6,6,1,$col,255 line. 4,6,6,4,1,$col,255
   line. 9,4,11,6,1,$col,255 line. 9,6,11,4,1,$col,255
-  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg1(c+1,$col):i"
+  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg0(c,$col):i"
 
 _pacman_pacman_gfx :
   32,32,1,1,'X=x-15;Y=y-15;A=atan2(Y,X);R=sqrt(X^2+Y^2);R<15.5&&abs(A)>0.8*0.33*$1'
@@ -42120,7 +42120,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
 
     # Init variables and images.
     name={0,n} title={0,b} if narg({0,x}) title=$title.{0,x} fi
-    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
     selection=-1 marker_mode=2 xpan=-1 ypan=-1 bg_mode=0 opacity=64
     to_rgb => img
 
@@ -42160,7 +42160,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
         nww:=$ww/1.25 nwh:=$wh/1.25
         if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
       elif $is_ctrl" && "{*,-R} # Reset window size
-        fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim)
+        fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim)
         x0=0 y0=0 x1:=$w-1 y1:=$h-1
       elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
         dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -42322,11 +42322,11 @@ _x_segment :
 x_select_color : skip ${1=xsc_variable} check_display $0
   rm
   n:=narg($$1) if !$n $1=0,0,0 fi
-  rgba_mode:=$n>=4 R:=arg1(1,$$1) G:=arg1(2,$$1) B:=arg1(3,$$1) A:=$rgba_mode?arg1(4,$$1):255
+  rgba_mode:=$n>=4 R:=arg0(0,$$1) G:=arg0(1,$$1) B:=arg0(2,$$1) A:=$rgba_mode?arg0(3,$$1):255
   e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
              ($$1)"."
   if !{*} w[] {400+24*$rgba_mode},400,0,"Select a color" fi
-  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_'
+  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_'
 
   # Manage color presets.
   m "add_preset : if !narg($_xsc_preset$""1) _xsc_preset$""1=$""2,$""3,$""4 fi"
@@ -42487,7 +42487,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
   reset_w,reset_h={*,w,h}
   if !narg($$1) $1=0,0,100,100 fi
   ($$1) => points y. x r. 2,{w/2},1,1,-1
-  is_thread_variable:=arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' selected=-1 X=-1 Y=-1
+  is_thread_variable:=arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' selected=-1 X=-1 Y=-1
   do
 
     # Update base view.
@@ -42665,7 +42665,7 @@ x_select_palette : skip ${1=xsp_variable},${2=0} check_display $0
       => view w[view]
     fi
 
-    if arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' wait 50 else wait fi
 
     # Manage window size.
     is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
@@ -43848,7 +43848,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   siz:=0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:\
        0$_preview_width?[0$_preview_width,0$_preview_height]:\
        [${fitscreen[]\ {[max(w,1),max(h,1)]},400,800}]
-  sizw:=arg1(1,$siz)-8
+  sizw:=arg0(0,$siz)-8
   if $! rs $siz,3,1 drgba else $siz,1,3,128 fi
   (1;0.5^1;0.5^0;1)
   (0,0.5,0;0.5,1,0.5;0,0.5,0) *. 0.65
@@ -43857,7 +43857,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   # Render title.
   l[] {
     if ['"$1"']!=0 msg="$1" else msg=" " fi
-    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg1(1,$sizw)-8)}
+    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg0(0,$sizw)-8)}
     r. 100%,140%,1,100%,0,0
     onfail rm
   }
@@ -43922,7 +43922,7 @@ gui_autocrop_layers :
     if max($coords)==-1 coords=0,0
     else z $coords
     fi
-    => "mode("$mode"),opacity("$opacity"),pos("{arg1(1,$coords)}","{arg1(2,$coords)}"),name("$nm")"
+    => "mode("$mode"),opacity("$opacity"),pos("{arg0(0,$coords)}","{arg0(1,$coords)}"),name("$nm")"
   }
 
 fx_logo : skip "${1= }"
@@ -45481,7 +45481,7 @@ fx_puzzle :
         +==[1] $>
         coords=${autocrop_coords.\ 0}
         +z[0] $coords z.. $coords rv[-2,-1] *.. . *. 255 a[-2,-1] c
-        x$>,y$>:=arg1(1,$coords)+round(w/2),arg1(2,$coords)+round(h/2)
+        x$>,y$>:=arg0(0,$coords)+round(w/2),arg0(1,$coords)+round(h/2)
       }
       rm[0,1]
 
@@ -56918,7 +56918,7 @@ fx_pack : skip "${8=}"
     repeat 256 { filename "$8/gmic_pack.txt",$> filename=${} if isfile(['{/$filename}']) else break fi }
     if !narg($filename) filename="$8/gmic_pack.txt" fi
     l[] { repeat narg($coords)/2 {
-      x,y:=arg0(2*$>,$coords),arg1(2+2*$>,$coords)
+      x,y:=arg0(2*$>,$coords),arg0(1+2*$>,$coords)
       ('"Image ""#"{1+$>}" ("${nm$>}"): "$x,$y\n')
     } a x ot $filename rm }
   fi
