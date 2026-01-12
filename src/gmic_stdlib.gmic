@@ -29681,18 +29681,94 @@ nn_lib :
     # Special case: 'softmax_x'.
     nn_softmax_x_forward(OUT,IN) = (
       OUT# = IN#;
-      repeat (size(OUT#)/OUT#_width,k,
-        OUT#_crop = OUT#[k*OUT#_width,OUT#_width];
-        copy(OUT#[k*OUT#_width],softmax(OUT#_crop),OUT#_width);
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        copy(OUT#[OUT#_off],softmax(OUT#_crop),
+             OUT#_width);
       );
     );
 
     nn_softmax_x_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (size(OUT#)/OUT#_width,k,
-        OUT#_crop = OUT#[k*OUT#_width,OUT#_width];
-        d#OUT#_crop = d#OUT#[k*OUT#_width,OUT#_width];
-        copy(OUT#[k*OUT#_width],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,OUT#_width,1,1,-1);
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
+        copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+             OUT#_width,1,1,-1);
+      );
+    );
+
+    # Special case: 'softmax_y'.
+    nn_softmax_y_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(OUT#[OUT#_off],softmax(OUT#_crop),
+               OUT#_height,OUT#_width,1);
+        );
+      );
+    );
+
+    nn_softmax_y_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+               OUT#_height,OUT#_width,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'softmax_z'.
+    nn_softmax_z_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(OUT#[OUT#_off],softmax(OUT#_crop),
+               OUT#_depth,OUT#_width*OUT#_height,1);
+        );
+      );
+    );
+
+    nn_softmax_z_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+               OUT#_depth,OUT#_width*OUT#_height,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'softmax_c'.
+    nn_softmax_c_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[k],softmax(OUT#_crop),
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
+      );
+    );
+
+    nn_softmax_c_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
       );
     );
 
