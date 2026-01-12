@@ -335,7 +335,7 @@ reference : skip "${2=}"
   l { reference_begin_$1 reference_header_$1 onfail }
   _section "Usage"
   _text \
-"~~~\ngmic [command1 [arg1_1,arg1_2,..]] .. [commandN [argN_1,argN_2,..]]\n~~~"\n\n\
+"~~~\ngmic [command_1 [arg_1_1,arg_1_2,..]] .. [command_N [arg_N_1,arg_N_2,..]]\n~~~"\n\n\
 "`gmic` is the open-source interpreter of the G'MIC language, a scripting programming "\
 "language dedicated to the design of possibly complex image processing pipelines and operators."\n\
 "It can be used to convert, manipulate, filter and visualize image datasets made of one or "\
@@ -711,7 +711,7 @@ reference : skip "${2=}"
 "'%' (modulo), '^' (power), '!' (logical not), '~' (bitwise not), '++', '--', '+=', '-=', '*=', '/=', '%=', "\
 "'&=', '|=', '^=', '>>', '<<=' (in-place operators)."\n\
 "## Usual math functions:"\n\
-"'abs()', 'acos()', 'acosh()', 'arg()', 'arg0()', 'argkth()', 'argmax()', 'argmaxabs()', "\
+"'abs()', 'acos()', 'acosh()', 'arg0()', 'arg1()', 'argkth()', 'argmax()', 'argmaxabs()', "\
 "'argmin()', 'argminabs()', 'asin()', 'asinh()', 'atan()', 'atan2()', 'atanh()', 'avg()', 'bool()', 'cbrt()', "\
 "'ceil()', 'cos()', 'cosh()', 'cut()', 'deg2rad()', 'erf()', 'erfinv()', 'exp()', 'fact()', 'fibo()', 'floor()', "\
 "'frac()', 'gamma()', 'gauss()', 'gcd()', 'hypot()', 'int()', 'isconst()', 'isfinite()', 'isnan()', 'isnum()', "\
@@ -729,8 +729,8 @@ reference : skip "${2=}"
 "* 'cut(x,min,_max)' returns 'x' if it is in range '[min,max]', or 'min' or 'max' otherwise."\n\
 "* 'abscut(x,min,_max,_offset)' returns 'cut(abs(x) + offset,min,max)*sign(x)'."\n\
 "* 'narg(a_1,...,a_N)' returns the number of specified arguments (here, 'N')."\n\
-"* 'arg(i,a_1,..,a_N)' returns the `i`-th argument 'a_i' (where index `i` starts from '1')."\n\
-"* 'arg0(i,a_0,..,a_N)' does the same, but for index `i` starting from '0'."\n\
+"* 'arg0(i,a_0,..,a_N)' returns the `i`-th argument 'a_i' (where index `i` goes from '0' to 'N')."\n\
+"* 'arg1(i,a_1,..,a_N)' does the same, but for index `i` going from '1' to 'N'."\n\
 "* 'indexof(ref,a_0,..,a_N)' returns the index `i` of the element `ref` in the list of elements `a_k` "\
 "(or '-1' if 'ref' is not present in the list). Index `i` starts from '0'."\n\
 "* 'isnum()', 'isnan()', 'isinf()', 'isint()', 'isbool()' test the type of the given number or expression, "\
@@ -883,7 +883,7 @@ reference : skip "${2=}"
 "* Function 'index(A,P,nb_channelsP,_dithering,_map_colors)' returns the indexed version "\
 "of the image 'A' by the colormap 'P'. "\
 "This is the math evaluator analog to command ''index''."\n\
-"* Function 'permute(A,wA,hA,dA,sA,permutation_string)' returns a permuted version of the image 'A' "\
+"* Function 'permute(A,wA,hA,dA,sA,permutation)' returns a permuted version of the image 'A' "\
 "(of size '(wA,hA,dA,sA)', seen as a vector of size 'wA*hA*dA*sA'). "\
 "This is the math evaluator analog to command ''permute''."\n\
 "* Function 'mirror(A,wA,hA,dA,sA,axes_string)' returns a mirrored version of the image 'A' "\
@@ -1564,7 +1564,7 @@ reference_end_pdf :
     it ../../src/gmic_stdlib.gmic +parse_cli. list loc=${}
     parse_cli html
     repeat narg($loc) {
-      command=${"arg "1+$>","$loc}
+      command=${arg0\ $>,$loc}
       l[] { if ['$command'][0]!=_'_' it $command.html fi onfail }
     }
     sort_list +,n
@@ -2374,7 +2374,7 @@ _display : skip ${1=},${3=}
               if $is_alpha
                 to_rgba.
                 if $setting_alpha==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-                else $w,$h,1,3,{arg($setting_alpha-1,0,128,255)}
+                else $w,$h,1,3,{arg1($setting_alpha-1,0,128,255)}
                 fi
                 sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               elif s==1 r. 100%,100%,1,3
@@ -2649,7 +2649,7 @@ _display : skip ${1=},${3=}
               rectangle[canvas_base] $coords,0.5,0xF0F0F0F0,255
               sh. 100% j[canvas_base] ..,$np0,$nq0,0,0,1,.,255 rm.
             else
-              100%,100%,1,3,{arg($setting_alpha-1,0,128,255)}
+              100%,100%,1,3,{arg1($setting_alpha-1,0,128,255)}
               sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               j[canvas_base] .,$np0,$nq0
             fi
@@ -2722,7 +2722,7 @@ _display : skip ${1=},${3=}
         if !0$canvas_3d_background" || "{0$canvas_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
           $0_rmn canvas_3d_background
           background,is_checkerboard:=int([$setting_3d_background>>1,$setting_3d_background&1])
-          if $background<3 {*,w,h},1,3,{arg(1+$background,0,128,255)}
+          if $background<3 {*,w,h},1,3,{arg0($background,0,128,255)}
           elif $background==3 3,2,1,1,"16,16,48,44,96,76" permute. cyzx
           elif $background==4 3,2,1,1,"0,0,0,0,64,96" permute. cyzx
           else 3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx
@@ -2782,8 +2782,8 @@ _display : skip ${1=},${3=}
                  {$setting_3d_focale*$fact},$setting_3d_light,$_specl3d,$_specs3d,$area_3d_is_motion
             g. xy,1 !=[-2,-1] 0 or[-2,-1]
             100%,100%,1,3
-            fc. ${"arg "$setting_3d_outline_mode,\
-                "\"0,0,0\",\"128,128,128\",\"255,0,0\",\"0,128,0\",\"0,0,255\",\"255,255,255\""}
+            fc. ${arg1\ $setting_3d_outline_mode,\
+                  \"0,0,0\",\"128,128,128\",\"255,0,0\",\"0,128,0\",\"0,0,255\",\"255,255,255\"}
             j[area_3d_view] .,0,0,0,0,0.5,..
             rm[-2,-1]
           fi
@@ -4399,8 +4399,8 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
     dx,dy:=$xmax-$xmin,$ymax-$ymin
 
     # Determine number of axis tick marks.
-    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg(1,$u) deltax:=arg(2,$u)
-    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg(1,$u) deltay:=arg(2,$u)
+    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg0(0,$u) deltax:=arg0(1,$u)
+    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg0(0,$u) deltay:=arg0(1,$u)
 
     # Create plot canvas.
     one:=$3!=3 gw:=$w-2*$11 gh:=$h-2*$11 gg:=($gw-$one)/($siz-$one)
@@ -4736,7 +4736,7 @@ _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2
           C = [ hsv2rgb([ 2*ang,1-r2/r1,v ]), 255 ];
         );
       );
-      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg(k + 1,C,Co)));
+      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg0(k,C,Co)));
       I"
     rm..
   }
@@ -4759,7 +4759,7 @@ _display_voxels3d :
     nm=${nm$>} bnm={b} l. { if ['{x}']!=0 bnm.=.{x} fi onfail bnm.=.{x} }
     asiz:=max(w,h,d)/5
     +norm1. !=. 0 nbv:=is rm. # Count voxels
-    e[0--4] "Display image ["{arg(1+$>,$[])}"] = '"$nm"' ("${w}x${h}x${d}", "$nbv" voxels)."
+    e[0--4] "Display image ["{arg0($>,$[])}"] = '"$nm"' ("${w}x${h}x${d}", "$nbv" voxels)."
     args=0.5,1,0.75
 
     if s==1
@@ -4867,7 +4867,7 @@ echo_file : skip "${2='\n'}"
     foreach { if $><256 => char$> else => mask{$>-256} fi }
     store $varname
   onfail
-    v + error[0--3] "Command 'font': Unknown font '$1'." v -
+    v + error[0--3] "Command '$0': Unknown font '$1'." v -
     varname=$2 # Fallback
     rm
   }
@@ -5348,7 +5348,7 @@ _input_csv_val :
   l[] {
     i raw:"$1",float32
     if i!=202021.25 endian. fi
-    if i!=202021.25 error[0--3] "Command 'input_flo': Filename '$1' is not a valid .flo file." return fi
+    if i!=202021.25 error[0--3] "Command '$0': Filename '$1' is not a valid .flo file." return fi
     +rows 1,2 cast. float32,uint32 w,h={^} rm.
     rows 3,100% r 2,$w,$h,1,-1 permute yzcx
   }
@@ -5405,7 +5405,7 @@ _input_glob :
     url=https://gmic.eu/"$1"
     l[] { file=${-path_cache}$basename i $url o $file is_change 1 onfail file= }
     if ['{/$file}']==0
-      error[0--3] "Command 'input_cached': Unknown filename '"{/"$1"}"'."
+      error[0--3] "Command '$0': Unknown filename '"{/"$1"}"'."
     fi
   fi
   u $file
@@ -5829,7 +5829,7 @@ output_ggr : skip "${2=}"
       end={_($>+1)/{0,h}}
       mid={_0.5*($start+$end)}
       rgba={0,I(0,$>)}
-      r:=arg(1,$rgba) g:=arg(2,$rgba) b:=arg(3,$rgba) a:=arg(4,$rgba)
+      r:=arg0(0,$rgba) g:=arg0(1,$rgba) b:=arg0(2,$rgba) a:=arg0(3,$rgba)
       ('$start" "$mid" "$end" "$r" "$g" "$b" "$a" "$r" "$g" "$b" "$a" 0 0\n"')
     }
     rm[0] a x
@@ -6032,7 +6032,7 @@ output_obj : check "isbool(${2=1})" check3d
           ++nb_primitives;
 
         ):( # Unsupported primitive
-          run(['warn \"Command 'output_obj': Cannot convert primitive \#'],p,'/',nbp - 1,
+          run(['warn \"Command '$0': Cannot convert primitive \#'],p,'/',nbp - 1,
                ' (size ',type,'). Ignoring it.\"');
         );
 
@@ -6187,7 +6187,7 @@ parse_cli : skip "${1=print},${2=*}"
   # Check that specified output mode is actually implemented.
   l[] {
     ({'$$parse_cli_$1'}) rm
-    onfail error[0--2] "Command 'parse_cli': Invalid output mode '$1'."
+    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
   }
 
   if !$! l[] { it ${_path_rc}update$_version.gmic onfail } fi
@@ -7865,7 +7865,7 @@ gmd2html : skip "${1=}"
 
   # Embed with header and footer if needed.
   if $embed_html
-    section_title=${"arg "$embed_html",Reference,Tutorial,News"}
+    section_title=${arg1\ $embed_html,Reference,Tutorial,News}
     foreach {
       nm={b} nm0=${nm$>}
       if ['${title$>}']!=0 title=${title$>} else title=$nm0 fi
@@ -8403,7 +8403,7 @@ parse_gui : skip "${1=print},${2=*}"
   # Check that specified output mode is actually implemented.
   l[] {
     ({'$$parse_gui_$1'}) rm
-    onfail error[0--2] "Command 'parse_gui': Invalid output mode '$1'."
+    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
   }
 
   # Input .gmic data.
@@ -10988,7 +10988,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.6.7').
+# $1 = version number (e.g. '3.7.0').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -11046,7 +11046,7 @@ update_color_presets_html : check "isbool(${1=0})"
   use_vt100
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/color_presets/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_color_presets_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
 
@@ -11148,7 +11148,7 @@ update_color_presets_html : check "isbool(${1=0})"
 
   nb_presets=0
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
+    category=${arg0\ $>,$categories}
     presets=${-_fx_cluts_$category}
     nb_presets+=narg({/$presets})
   }
@@ -11192,7 +11192,7 @@ update_color_presets_html : check "isbool(${1=0})"
   # Generate color grading data and rendering on each input sample.
   ind_preset=0
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
+    category=${arg0\ $>,$categories}
     presets=${-_fx_cluts_$category}
 
     e $_vt100_g"\n  * Category ""#"{1+$>}": "$_vt100_b$category"\n"$_vt100_n
@@ -11200,7 +11200,7 @@ update_color_presets_html : check "isbool(${1=0})"
     createdir $category/clut
 
     repeat narg({/$presets}) {
-      preset=${arg\ {1+$>},$presets}
+      preset=${arg0\ $>,$presets}
       e "    - "$preset
       clut $preset,64 to_rgb.
 
@@ -11260,8 +11260,8 @@ update_color_presets_html : check "isbool(${1=0})"
   e "\n  * Generate html code.\n"
 
   repeat narg($categories) {
-    category=${arg\ {1+$>},$categories}
-    arg {1+$>},$category_names
+    category=${arg0\ $>,$categories}
+    arg0 $>,$category_names
     category_name=${}
     presets=${-_fx_cluts_$category}
     x 0,"rm -f "$category/clut/"*.cube"
@@ -11343,16 +11343,16 @@ update_color_presets_html : check "isbool(${1=0})"
 "            <td style=\"width: 50%\">Select category:"\n\
 "              <ul>\n"')
       repeat narg($categories) {
-        _category=${arg\ {1+$>},$categories}
-        arg {1+$>},$category_names
+        _category=${arg0\ $>,$categories}
+        arg0 $>,$category_names
         _category_name=${}
 
-        arg {1+$>},$category_authors_url
+        arg0 $>,$category_authors_url
         if isnum(${}) _category_author_url_start= _category_author_url_end=
         else _category_author_url_start="<a href=\""${}"\">" _category_author_url_end="</a>"
         fi
 
-        arg {1+$>},$category_authors
+        arg0 $>,$category_authors
         if isnum(${}) _category_author=""
         else _category_author=$_category_author_url_start${}$_category_author_url_end
         fi
@@ -11415,7 +11415,7 @@ update_color_presets_html : check "isbool(${1=0})"
         "          <tr><td><b>Reference Image</b></td><td colspan=\"3\"></td></tr>"\n\n')
 
       repeat narg({/$presets}) {
-        preset=${arg\ {1+$>},$presets}
+        preset=${arg0\ $>,$presets}
 
         ('$preset') replace_seq. 39,"92,92,39" preset_esc={t} rm.
         _title $preset title=${}
@@ -11467,7 +11467,7 @@ update_color_presets_html : check "isbool(${1=0})"
 
   # All done, exiting.
   rm
-  category=${arg\ 1,$categories}
+  category=${arg1\ 1,$categories}
   x "ln -fs "${category}_$basename0.html" index.html"
   if $1
     e "\n  * Transfer color presets on G'MIC server.\n"
@@ -11482,7 +11482,7 @@ update_gallery_html : check "isbool(${1=0})"
   use_vt100
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/gallery/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_gallery_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
   delete img createdir img
@@ -11593,7 +11593,7 @@ update_gallery_html : check "isbool(${1=0})"
     html.=${html_menu}"          <div class=\"gallery_grid\">\n"
 
     repeat $nb_commands {
-      command=${"arg "1+$>,$commands}
+      command=${arg0\ $>,$commands}
       is_stylization:=['$command']=='_gallery_stylization'
 
       e $_vt100_m"    - Command '"$_vt100_b$command$_vt100_n"' ["{1+$>}/$nb_commands"]."
@@ -12389,7 +12389,7 @@ _update_gmicol : # Keep only a subset of existing filters
 update_reference_html : check "isbool(${1=0})"
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/reference/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_reference_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
   x "rm -f *.pdf"
@@ -12425,7 +12425,7 @@ update_reference_html : check "isbool(${1=0})"
 update_tutorial_html : check "isbool(${1=0})"
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/tutorial/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_tutorial_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
 
@@ -12517,7 +12517,7 @@ strings2ts : skip "${1=}"
   if $N0 e "  > File '$1' contains "$N0" strings." fi
   l[] { it "$2" s -,10 N1=$! repeat $! { nsrc$>={$>,t} } rm }
   l[] { it "$3" replace_str " ;",";" s -,10 N2=$! repeat $! { ndest$>={$>,t} } rm }
-  if $N1!=$N2 error[0--3] "Command 'strings2ts': Number of lines do not match in files '$2' and '$3'." fi
+  if $N1!=$N2 error[0--3] "Command '$0': Number of lines do not match in files '$2' and '$3'." fi
   e "  > Files '$2' and '$3' contain "$N1" strings."
 
   # Merge all strings together (set higher priority to strings that were already in the .ts file).
@@ -12894,7 +12894,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=363,364,365,366,367,$_version
+  versions=370,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -14100,7 +14100,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
       W = P[0]; H = P[1]; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1); use_rbf = s>2?V[2]:1;
       [ W,H,D,S,V[0],V[1],use_rbf ]"
     if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($use_rbf)
-      error[0--4] "Command 'decompress_keypoints': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
+      error[0--4] "Command '$0': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
                   "is a not a valid keypoint set."
     fi
 
@@ -14794,7 +14794,7 @@ rand_sum : check "isint($1,1) && isexpr(${3=u})"
   e[^-1] "Fill image$? with strictly positive, random, integer values that sums to $1, with random function '$3'."
   foreach {
     if whds>$1
-      error[0--4] "Command 'rand_sum': Image ["$>"] = ("{[w,h,d,s]}") has "{whds}" elements (should be <=$1)."
+      error[0--4] "Command '$0': Image ["$>"] = ("{[w,h,d,s]}") has "{whds}" elements (should be <=$1)."
     fi
     f. "abs($3)" *. {($1-whds)/is} round. +. 1
     eval "
@@ -14946,7 +14946,7 @@ adjust_colors : check "${1=0}>=-100 && $1<=100 && ${2=0}>=-100 && $2<=100 && ${3
           value range [$6,$7]."
   foreach { split_opacity l[0] {
     range:="$6==$7 && !$6?[im,iM]:[min($6,$7),max($6,$7)]"
-    m:=arg(1,$range) M:=arg(2,$range) fact:=255/max(1e-5,$M-$m)
+    m:=arg0(0,$range) M:=arg0(1,$range) fact:=255/max(1e-5,$M-$m)
     - $m * $fact
     if $4" || "$5 # Adjust Hue/Saturation
       to_rgb[0] rgb2hsv[0]
@@ -16828,7 +16828,7 @@ pseudogray : check "isint(${1=5},0) && ${2=2.3}>=0 && isint(${3=8},1)"
 #@cli replace_color : tolerance[%]>=0,smoothness[%]>=0,src1,src2,...,dest1,dest2,...
 #@cli : Replace pixels from/to specified colors in selected images.
 #@cli : $ image.jpg +replace_color 40,3,204,153,110,255,0,0
-replace_color : check "$1>=0 && $2>=0"
+replace_color : check "${1=0}>=0 && ${2=0}>=0"
   l[] { (${3--1}) y c s c,2 col1={0,^} col2={1,^} rm }
   e[^-1] "Replace color ("$col1") by color ("$col2") in image$?, with tolerance $1 and smoothness $2."
   foreach {
@@ -16860,7 +16860,7 @@ retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5
 
 _retinex :
   - {im-$1} {[w,h,d,s]},1
-  repeat 3 { +b[0] {arg(1+$>,${4-6})} +/[0,-1] rm.. *[1,-1] }
+  repeat 3 { +b[0] {arg0($>,${4-6})} +/[0,-1] rm.. *[1,-1] }
   rm[0] log c $2%,{100-$3}% n 0,255
 
 #@cli rgb : _min_RGB_value,_max_RGB_value : (no arg)
@@ -17372,7 +17372,7 @@ to_colormode : check "isint(${1=0},0,4)"
   if $err foreach {
     if !s||s>4 error[0--5] "Command '$0': Image ["$>"] is not a G,GA,RGB or RGBA image ("{s}" channels)." fi
   } fi
-  ss=${"arg "$s",gray,graya,rgb,rgba"}
+  ss=${arg1\ $s,gray,graya,rgb,rgba}
   e[^-1] "Force image$? to be in "{`uppercase(['$ss'])`}" mode."
   to_$ss
 
@@ -18104,7 +18104,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
 
 _montage :
   if $_p>$_lcode error "Command 'montage': Incomplete layout code '"$_scode"'." fi
-  c:=arg($_p,$_code)
+  c:=arg1($_p,$_code)
   if $c>=0 _p+=1 u $c # Single index
   elif $c==-4 # Mirror
     _p+=1 l=${-_montage} f[$l] "a=i(5,y)%2;(x==7&&a)||(x==6&&!a)?!i:x==1?i(3,0)-i(3,y)-i:i" u $l
@@ -18147,7 +18147,7 @@ _montage :
 #@cli : $ image.jpg +mirror y +mirror[0] c
 #@cli : $ image.jpg +mirror x +mirror y append_tiles 2,2
 
-#@cli permute : permutation_string : (+)
+#@cli permute : permutation : (+)
 #@cli : Permute selected image axes by specified permutation.
 #@cli : 'permutation' is a combination of the character set {x|y|z|c},
 #@cli : e.g. 'xycz', 'cxyz', ...
@@ -18443,7 +18443,7 @@ scale2x_cnn : check "${1=1.25}>=0"
   else l[] {
     l[] {
       input_cached gmic_scale2x_cnn.gmz
-      onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
+      onfail error[0--5] "Command '$0': Unable to load network file 'gmic_scale2x_cnn.gmz'."
     }
     +store _scale2x_cnn _is_scale2x_cnn=1
   } fi
@@ -18954,7 +18954,7 @@ closing : skip "${2=},${3=}"
     if ['$3']!=0 is_real=$3 fi
     e[0--3] "Apply morphological closing to image$? with kernel ["${"pass$1 -1"}"] and "${b$boundary}" boundary "\
             "conditions, in "${r$is_real}" mode."
-  else error[0--3] "Command 'closing': Invalid arguments '$*'."
+  else error[0--3] "Command '$0': Invalid arguments '$*'."
   fi
 
   if $sx>0||$sy>0||$sz>0
@@ -19247,7 +19247,7 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
   if !0${_is_denoise_cnn} l[] {
     input_cached gmic_denoise_cnn.gmz
     store _denoise_cnn _is_denoise_cnn=1
-    onfail error[0--5] "Command 'denoise_cnn': Unable to load network file 'gmic_denoise_cnn.gmz'."
+    onfail error[0--5] "Command '$0': Unable to load network file 'gmic_denoise_cnn.gmz'."
   } fi
   l[] {
     $_denoise_cnn replace_str. "64,64,1","$2,$2,1" run {t} rm
@@ -20461,7 +20461,7 @@ opening : skip "${2=},${3=}"
     if ['$3']!=0 is_real=$3 fi
     e[0--3] "Apply morphological opening to image$? with kernel ["${"pass$1 -1"}"] and "${b$boundary}" boundary "\
             "conditions, in "${r$is_real}" mode."
-  else error[0--3] "Command 'opening': Invalid arguments '$*'."
+  else error[0--3] "Command '$0': Invalid arguments '$*'."
   fi
 
   if $sx>0||$sy>=0||$sz>=0
@@ -20716,7 +20716,7 @@ rbf :
       k. $avg ri. .. + => $nm
     fi }
 
-  else error[0--2] "Command 'rbf': invalid arguments '$*'."
+  else error[0--2] "Command '$0': invalid arguments '$*'."
   fi
 
 #@cli red_eye : 0<=_threshold<=100,_smoothness>=0,0<=attenuation<=1
@@ -21579,14 +21579,14 @@ edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>
     if $is_xyn0 # Edgel coordinates specified
       if "const x = $1; const y = $2;
           !i(#0,x,y) || arg0($3,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))"
-        error[0--5] "Command 'edgels': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
+        error[0--5] "Command '$0': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
       fi
       1,1,1,3
       eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code
 
     elif $is_xy0 # Pixel coordinates specified
       if "!i($1,$2)"
-        error[0--5] "Command 'edgels': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
+        error[0--5] "Command '$0': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
       fi
       100%,100% # Already visited edgels (bitwise storage)
       1,1,1,3
@@ -21787,11 +21787,11 @@ ifftpolar :
 img2patches : check "isint($1,1) && ${2=0}>=0 && isint(${3=0},0,3)"
   e[^-1] "Decompose 2D images$? as $1x$1 patch-image, with overlap $2."
   foreach {
-    if d>1 error[0--4] "Command 'img2patches': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
+    if d>1 error[0--4] "Command '$0': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz=$1
     if ispercentage($2) overlap:=round(lerp(0,$psiz-1,$2)) else overlap:=int($2) fi
     if $overlap<0" || "$overlap>=$psiz
-      error[0--4] "Command 'img2patches': Specified overlap $2 (value: "$overlap") is larger than "\
+      error[0--4] "Command '$0': Specified overlap $2 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
     fi
     step:=$psiz-$overlap
@@ -22037,11 +22037,11 @@ mse_matrix :
 patches2img : check "isint($1,1) && isint($2,1) && ${3=0}>=0 && (${4=-1}==-1 || $4>=0)"
   e[^-1] "Recompose 2D images from patch-image$?, with size ($1,$2), overlap $3 and overlap_std $4."
   foreach {
-    if w!=h error[0--4] "Command 'patches2img': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
+    if w!=h error[0--4] "Command '$0': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz:=w W,H:=${1,2}
     if ispercentage($3) overlap:=round(lerp(0,$psiz-1,$3)) else overlap:=int($3) fi
     if $overlap<0" || "$overlap>=$psiz
-      error[0--4] "Command 'patches2img': Specified overlap $3 (value: "$overlap") is larger than "\
+      error[0--4] "Command '$0': Specified overlap $3 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
     fi
     step:=$psiz-$overlap
@@ -22271,7 +22271,7 @@ plot2value :
 #@cli : $ 3000,2 rand 0,400 +pointcloud 0 dilate[-1] 3
 #@cli : $ 3000,2 rand 0,400 {w} {w},3 rand[-1] 0,255 append y +pointcloud 0 dilate[-1] 3
 pointcloud : check "${1=0}<=3 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
-  e[^-1] "Convert image$? to point clouds, in "${arg\ 2+($1>=0)*$1-($1<0),{-$1}-opacity,binary,cumulative,labeling}\
+  e[^-1] "Convert image$? to point clouds, in "${arg0\ 1+($1>=0)*$1-($1<0),{-$1}-opacity,binary,cumulative,labeling}\
          " mode, with dimensions $2x$3x$4."
   foreach {
     nm={n}
@@ -22643,7 +22643,7 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
     # Check image dimensions.
     pass. 0
     if [w#0,h#0,d#0,s#0]!=[w#1,h#1,d#1,s#1]
-      error[0--4] "Command 'ssim': Image dimensions ("{0,[w,h,d,s]}") and ("{1,[w,h,d,s]}") do not match."
+      error[0--4] "Command '$0': Image dimensions ("{0,[w,h,d,s]}") and ("{1,[w,h,d,s]}") do not match."
     fi
 
     # Automatic downsampling.
@@ -22927,8 +22927,8 @@ axes : check "isint(${5=14},0) && ${6=1}>=0" skip ${7=0},${8=0}
     w1,h1={0,[w,h]-1}
 
     # Determine number of axes tick marks.
-    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg(1,$u) deltax:=arg(2,$u) fi
-    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg(1,$u) deltay:=arg(2,$u) fi
+    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg0(0,$u) deltax:=arg0(1,$u) fi
+    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg0(0,$u) deltay:=arg0(1,$u) fi
 
     # Draw x-axis.
     is_0x=0
@@ -24830,7 +24830,7 @@ diagonal :
   foreach {
     nm={n}
     if !w" || "w!=h" || "d>1" || "s>1
-      error[0--4] "Command 'dijkstra': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
+      error[0--4] "Command '$0': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
                   "is not an adjacency matrix."
     fi
     N:=w # Number of nodes
@@ -24897,7 +24897,7 @@ fitsamples : check "isint($1,1) && ${2=100%}>0" skip "${3=},${4=},${5=}"
     # Determine input format: 'MxNx1x1', 'Mx1xNx1', 'Mx1x1xN', '1xMxNx1', '1xMx1xN' or '1x1xMxN'.
     M,N,type:=w>1?[w,h>1?[h,0]:d>1?[d,1]:[s,2]]:h>1?[h,d>1?[d,3]:[s,4]]:d>1?[d,s>1?[s,5]:[-1,-1]]
     if $M*$N!=whds
-      error[0--4] "Command 'fitsamples': Selected image ("{[w,h,d,s]}") does not represent a set of vectors."
+      error[0--4] "Command '$0': Selected image ("{[w,h,d,s]}") does not represent a set of vectors."
     fi
     permute ${fwd$type} # Force it to be a 'Mx1x1xN' matrix
 
@@ -24945,7 +24945,7 @@ meigen : check "isint($1,1)"
   e[^-1] "Compute $1 largest eigen-values of matri"$s"$?."
   foreach {
     nm={n}
-    if w!=h" || "d!=1" || "s!=1 v 1 error[0--5] "Command 'meigen': Image '"$nm"' is not a square matrix." fi
+    if w!=h" || "d!=1" || "s!=1 v 1 error[0--5] "Command '$0': Image '"$nm"' is not a square matrix." fi
     eval ${-math_lib}" store('val',meig(crop(),$1,h),1,min($1,h))" $val k. => $nm
   }
 
@@ -27406,7 +27406,7 @@ sprite3d :
 #@cli : $ torus3d 100,20 image.jpg rescale2d[-1] ,64 100%,100% gaussian[-1] 30%,30% *[-1] 255 append[-2,-1] c \
 # +sprites3d[0] [1],1 display_rgba[-2]
 sprites3d : check ${is_image_arg\ $1} skip ${2=0}
-  e[^-1] "Convert image$? as 3D sprites clouds, using sprite $1 ("${"arg {1+!$2},with,without"}" alpha-channel)."
+  e[^-1] "Convert image$? as 3D sprites clouds, using sprite $1 ("${arg0\ {!$2},with,without}" alpha-channel)."
   repeat $! {
     if !{$>,i(0,7)} continue fi # Do nothing if 3D object is empty
     pass$1 0
@@ -28446,7 +28446,7 @@ _exec_out :
 #@cli : The status value is set with the corresponding error message.
 #@cli : $ image.jpg +local blur -3 onfail mirror x done
 
-#@cli parallel : _wait_threads,"command1","command2",... : (+)
+#@cli parallel : _wait_threads,"command_1","command_2",... : (+)
 #@cli : Execute specified commands in parallel, each in a different thread.
 #@cli : Parallel threads share the list of images.
 #@cli : 'wait_threads' can be { 0:When current environment ends | 1:Immediately }.
@@ -28486,7 +28486,7 @@ parallel : skip "${1=},${2=},${3=},${4=},${5=},${6=},${7=},${8=},${9=},${10=},${
 #@cli : specified progress bounds.
 rprogress : skip ${2=""}
   if !narg($_progress_bounds) _progress_bounds=0,100 fi
-  m:=arg(-2,$_progress_bounds) M:=arg(-1,$_progress_bounds)
+  m:=arg1(-2,$_progress_bounds) M:=arg1(-1,$_progress_bounds)
   if $#==2&&!narg($2) # 1 argument -> Set progress bar
     e[0--3] "Set relative progress index to $1%."
     progress {$1<0?-1:min(100,max(0,$m+($M-$m)*$1%))}
@@ -28870,8 +28870,8 @@ nn_lib :
     # Network layers.
     #----------------
 
-    # add: Add two/three or four inputs.
-    #------------------------------------
+    # add: Element-wide addition.
+    #-----------------------------
     nn_add_init_forward(OUT,IN) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -28930,7 +28930,8 @@ nn_lib :
     );
 
     nn_append_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#,IN1#);
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
       d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
@@ -29255,8 +29256,8 @@ nn_lib :
                  0);
     );
 
-    # div: Divide two inputs.
-    #------------------------
+    # div: Element-wise division.
+    #----------------------------
     nn_div_init_forward(OUT,IN) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29429,6 +29430,80 @@ nn_lib :
       ref(d#OUT,d#IN);
     );
 
+    # linear: Linear transform.
+    #--------------------------
+    nn_linear_init_forward(OUT,IN,axis) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_rows = h##OUT#_ind;
+      const OUT#_cols = w##OUT#_ind - 1;
+      const OUT#_axis = _'axis#';
+      const OUT#_width = OUT#_axis==_'x'?OUT#_rows:IN#_width;
+      const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
+      const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
+      const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
+
+      OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
+      OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
+      OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
+      OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'yzcx');
+        OUT#_inv_permute(X,w,d,h,s) = permute(X,h,d,s,w,'cxyz');
+        const OUT#_is_permutation = 1;
+      ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xzcy');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,d,s,h,'xcyz');
+        const OUT#_is_permutation = 1;
+      ):OUT#_axis==_'z' && IN#_spectrum!=1?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xycz');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,h,s,d,'xycz');
+        const OUT#_is_permutation = 1;
+      ):(
+        OUT#_permute(X,w,h,d,s) = ();
+        OUT#_inv_permute(X,w,h,d,s) = ();
+        const OUT#_is_permutation = 0;
+      );
+    );
+
+    nn_linear_forward(OUT,IN) = (
+      OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
+        ref(IN#,OUT#_S1);
+      OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
+      OUT#_S2+=OUT#_biases_whds;
+      OUT#_is_permutation?(OUT# = OUT#_inv_permute(OUT#_S2,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
+        ref(OUT#_S2,OUT#);
+    );
+
+    nn_linear_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+      batch_d#OUT#_biases = vector(#size(OUT#_biases));
+    );
+
+    nn_linear_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
+        ref(d#OUT,d#OUT#_S2);
+      d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
+      OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
+        ref(d#IN,d#OUT#_S1);
+      d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
+      d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+      batch_d#OUT#_biases+=d#OUT#_biases;
+    );
+
+    nn_linear_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      merge(batch_d#OUT#_biases,+);
+      batch_d#OUT#_params/=nn_batch_size;
+      batch_d#OUT#_biases/=nn_batch_size;
+    );
+
+    nn_linear_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    );
+
     # maxpool2d : 2D max pooling.
     #----------------------------
     nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
@@ -29537,8 +29612,48 @@ nn_lib :
       );
     );
 
-    # mul: Multiply two inputs.
-    #---------------------------
+    # mmul: Matrix multiplication IN0.IN1.
+    #-------------------------------------
+    nn_mmul_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_width;
+      const OUT#_height = IN0#_height;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_mmul_forward(OUT,IN0,IN1) = (
+      OUT# = mul(IN0#,IN1#,IN1#_width);
+    );
+
+    nn_mmul_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=mul(d#OUT,transpose(IN1#,IN1#_width),IN1#_height);
+      d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
+    );
+
+    # mmult: Matrix multiplication IN0.IN1^t.
+    #----------------------------------------
+    nn_mmult_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_height;
+      const OUT#_height = IN0#_height;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_mmult_forward(OUT,IN0,IN1) = (
+      OUT# = mul(IN0#,transpose(IN1#,IN1#_width),IN1#_height);
+    );
+
+    nn_mmult_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=mul(d#OUT,IN1#,IN1#_width);
+      d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
+    );
+
+    # mul: Element-wise multiplication.
+    #-----------------------------------
     nn_mul_init_forward(OUT,IN) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29573,7 +29688,7 @@ nn_lib :
       d#IN+=d#OUT*nn_activation_d_#activation(IN#);
     );
 
-    # Special case: Softmax.
+    # Special case: 'softmax'.
     nn_softmax_forward(OUT,IN) = (
       OUT# = softmax(IN#);
     );
@@ -29581,6 +29696,100 @@ nn_lib :
     nn_softmax_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#))*OUT#;
+    );
+
+    # Special case: 'softmax_x'.
+    nn_softmax_x_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        copy(OUT#[OUT#_off],softmax(OUT#_crop),
+             OUT#_width);
+      );
+    );
+
+    nn_softmax_x_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
+        copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+             OUT#_width,1,1,-1);
+      );
+    );
+
+    # Special case: 'softmax_y'.
+    nn_softmax_y_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(OUT#[OUT#_off],softmax(OUT#_crop),
+               OUT#_height,OUT#_width,1);
+        );
+      );
+    );
+
+    nn_softmax_y_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+               OUT#_height,OUT#_width,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'softmax_z'.
+    nn_softmax_z_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(OUT#[OUT#_off],softmax(OUT#_crop),
+               OUT#_depth,OUT#_width*OUT#_height,1);
+        );
+      );
+    );
+
+    nn_softmax_z_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+               OUT#_depth,OUT#_width*OUT#_height,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'softmax_c'.
+    nn_softmax_c_forward(OUT,IN) = (
+      OUT# = IN#;
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[k],softmax(OUT#_crop),
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
+      );
+    );
+
+    nn_softmax_c_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
+      );
     );
 
     # Special case: Norm2.
@@ -29594,9 +29803,35 @@ nn_lib :
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
 
+    # noise: Perturb input with noise.
+    #---------------------------------
+    nn_noise_init_forward(OUT,IN,amplitude,noise_type,training_only) = (
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+      const OUT#_amplitude = amplitude;
+      const OUT#_noise_type = noise_type;
+      const OUT#_training_only = training_only;
+    );
+
+    nn_noise_forward(OUT,IN) = (
+      OUT#_training_only && !nn_is_training?(
+        OUT# = IN#;
+      ):(
+        srand();
+        OUT# = noise(IN#,OUT#_amplitude,OUT#_noise_type);
+      );
+    );
+
+    nn_noise_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=d#OUT;
+    );
+
     # normalize: Variance/mean or RMS normalization.
     #-----------------------------------------------
-    nn_normalize_init_forward(OUT,IN,normalization_type,w_ca,h_ca,d_ca,s_ca) = (
+    nn_normalize_init_forward(OUT,IN,normalization_type,ca_w,ca_h,ca_d,ca_s) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29606,10 +29841,10 @@ nn_lib :
       const OUT#_normalization_type = normalization_type; # 0: Avg_std, 1:RMS
 
       # Dimensions of complementary axes.
-      const OUT#_ca_width = w_ca;
-      const OUT#_ca_height = h_ca;
-      const OUT#_ca_depth = d_ca;
-      const OUT#_ca_spectrum = s_ca;
+      const OUT#_ca_width = ca_w;
+      const OUT#_ca_height = ca_h;
+      const OUT#_ca_depth = ca_d;
+      const OUT#_ca_spectrum = ca_s;
       const OUT#_ca_whds = OUT#_ca_width*OUT#_ca_height*OUT#_ca_depth*OUT#_ca_spectrum;
 
       # Dimension of normalized feature.
@@ -29854,6 +30089,24 @@ nn_lib :
       d#IN+=map(OUT#_map_backward,d#OUT);
     );
 
+    # permute: Axes permutation.
+    #---------------------------
+    nn_permute_init_forward(OUT,IN,w,h,d,s) = (
+      const OUT#_width = w;
+      const OUT#_height = h;
+      const OUT#_depth = d;
+      const OUT#_spectrum = s;
+    );
+
+    nn_permute_forward(OUT,IN,permutation) = (
+      OUT# = permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,'permutation#');
+    );
+
+    nn_permute_backward(OUT,IN,inv_permutation) = (
+      nn_define_backward(IN#);
+      d#IN+=permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,'inv_permutation#');
+    );
+
     # rename: Rename input.
     #----------------------
     nn_rename_init_forward(OUT,IN) = (
@@ -29981,8 +30234,8 @@ nn_lib :
            -1); # Add to d#IN
     );
 
-    # sub: Subtract two inputs.
-    #---------------------------
+    # sub: Element-wise subtraction.
+    #-------------------------------
     nn_sub_init_forward(OUT,IN) = (
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
@@ -29999,6 +30252,64 @@ nn_lib :
       size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT);
     );
 
+    # tmmul: Matrix multiplication IN0^t.IN1.
+    #----------------------------------------
+    nn_tmmul_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_width;
+      const OUT#_height = IN0#_width;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_tmmul_forward(OUT,IN0,IN1) = (
+      OUT# = mul(transpose(IN0#,IN0#_width),IN1#,IN1#_width);
+    );
+
+    nn_tmmul_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=mul(IN1#,transpose(d#OUT,OUT#_width),OUT#_height);
+      d#IN1+=mul(IN0#,d#OUT,OUT#_width);
+    );
+
+    # tmmult: Matrix multiplication IN0^t.IN1^t.
+    #-------------------------------------------
+    nn_tmmult_init_forward(OUT,IN0,IN1) = (
+      const OUT#_width = IN1#_height;
+      const OUT#_height = IN0#_width;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+    );
+
+    nn_tmmult_forward(OUT,IN0,IN1) = (
+      OUT# = mul(transpose(IN0#,IN0#_width),transpose(IN1#,IN1#_width),IN1#_height);
+    );
+
+    nn_tmmult_backward(OUT,IN0,IN1) = (
+      nn_define_backward(IN0#);
+      nn_define_backward(IN1#);
+      d#IN0+=transpose(mul(d#OUT,IN1#,IN1#_width),IN0#_height);
+      d#IN1+=transpose(mul(IN0#,d#OUT,OUT#_width),IN1#_height);
+    );
+
+    # transpose: Matrix transposition.
+    #---------------------------------
+    nn_transpose_init_forward(OUT,IN) = (
+      const OUT#_width = IN#_height;
+      const OUT#_height = IN#_width;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_transpose_forward(OUT,IN) = (
+      OUT# = permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,'yxzc');
+    );
+
+    nn_transpose_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,'yxzc');
+    );
+
     #----------------
     # Loss functions.
     #----------------
@@ -30011,8 +30322,8 @@ nn_lib :
 
     # bce : Binary cross-entropy.
     #----------------------------
-    nn_loss_bce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_bce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
       batch_#OUT = 0;
     );
 
@@ -30157,8 +30468,8 @@ nn_lib :
 
     # sigmoid_bce : Sigmoid + Binary cross entropy.
     #----------------------------------------------
-    nn_loss_sigmoid_bce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_sigmoid_bce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight/size(IN#);
       batch_#OUT = 0;
     );
 
@@ -30175,7 +30486,7 @@ nn_lib :
 
     nn_loss_sigmoid_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=sigmoid(IN#) - TRUTH;
+      d#IN+=(sigmoid(IN#) - TRUTH)*OUT#_weight;
     );
 
     # smoothl1 : Smooth L1-norm.
@@ -30229,7 +30540,7 @@ nn_lib :
     );"
 
 #@cli nn_add : out,in0,in1,_in2,_in3
-#@cli : Add an 'add' layer to the current network.
+#@cli : Add an 'add' layer (element-wise addition) to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
 nn_add :
   check "s_out = ['$1']; s_in0 = ['$2']; s_in1 = ['$3']; s_in2 = ['${4=}']; s_in3 = ['${5=}'];
@@ -30621,7 +30932,7 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _nn_previous_layer=$out
 
 #@cli nn_div : out,in0,in1
-#@cli : Add a 'div' layer to the current network.
+#@cli : Add a 'div' layer (element-wise division) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
@@ -30773,6 +31084,65 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_linear : out,in,nb_channels>0,_axis={ x | y | z | c},_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add a 'linear' layer to the current network.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+# 4:Residual He-initialization }.
+#@cli : Default value: 'axis=c', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_linear : check "s1 = ['$1']; s2 = ['$2'];
+                   isvarname(s1) && # out
+                   (isvarname(s2) || s2=='.') && # in
+                   isint($3,1) && # nb_channels
+                   isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
+                   isint(${5=3},0,3) && # learning_mode
+                   ${6=0}>=0 && # weight_decay
+                   isint(${7=3},0,4) # initialization
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nb_channels,axis,learning_mode,weight_decay,initialization=${3-7}
+
+  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
+         "and axis '"$axis"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=linear,
+  _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="axis="$axis", learning_mode="$learning_mode", weight_decay="$weight_decay
+
+  whds={k=indexof(_'$axis',_'x',_'y',_'z',_'c');[${_${nin}_size}][k]+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1 # Identity
+      f. "(x%h)==(y%(w - 1))"
+    elif $initialization==2 # Lecun-initialization
+      f. "g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "g*sqrt(0.002/(w - 1))"
+    fi
+    1,100% j.. .,100% rm. # Set biases to 0
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin,$axis"));"\
+                   "nn_linear_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_linear_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_linear_backward("$nout,$nin");"\
+                    "end(nn_linear_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network (saved as a .gmz file).
 #@cli : Network files can be only loaded in '.gmz' format.
@@ -30788,7 +31158,7 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','normalize')
+      if isin('$type','conv2d','conv3d','fc','linear','normalize')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -30846,7 +31216,7 @@ nn_loss_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_bce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_bce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_bce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_bce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_bce_backward("$nout,$nin,$ground_truth");"
@@ -31028,7 +31398,7 @@ nn_loss_sigmoid_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_sigmoid_bce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_sigmoid_bce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_sigmoid_bce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_sigmoid_bce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_sigmoid_bce_backward("$nout,$nin,$ground_truth");"
@@ -31156,8 +31526,68 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_mmul : out,in0,in1
+#@cli : Add a 'mmul' layer (matrix multiplication 'in0*in1') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_mmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                 isvarname(s1) && # out
+                 (isvarname(s2) || s2=='.') && # in0
+                 (isvarname(s3) || s3=='.') # in1
+                 "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'mmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=mmul,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[1]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[0],s0[1],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_mmul_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_mmul_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_mmul_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_mmult : out,in0,in1
+#@cli : Add a 'mmult' layer (matrix multiplication 'in0*in1^t') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_mmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in0
+                  (isvarname(s3) || s3=='.') # in1
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'mmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=mmult,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[0]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[1],s0[1],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_mmult_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_mmult_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_mmult_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_mul : out,in0,in1
-#@cli : Add a 'mul' layer to the current network.
+#@cli : Add a 'mul' layer (element-wise multiplication) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
@@ -31189,6 +31619,7 @@ nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+
 #@cli nn_network : _network_name
 #@cli : Get/set current network name (and initialize network if it does not already exist).
 #@cli : This command returns the name of the current selected network.
@@ -31204,8 +31635,9 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
   u ${_nn_network}
 
 #@cli nn_nl : out,in,_activation
-#@cli : Add a 'nl' (nonlinearity) layer to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | sqr | sqrt | \
+#@cli : Add a 'nl' layer (nonlinearity) to the current network.
+#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | \
+# softmax_x | softmax_y | softmax_z | softmax_c | msqr | sqrt | \
 # swish | tanh }.
 #@cli : Default value: 'activation=leakyrelu'.
 nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
@@ -31232,10 +31664,54 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   elif ['$activation']=='softmax'
     _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
     _${nout}_backward="nn_softmax_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_x'
+    _${nout}_forward.="nn_softmax_x_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_x_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_y'
+    _${nout}_forward.="nn_softmax_y_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_y_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_z'
+    _${nout}_forward.="nn_softmax_z_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_z_backward("$nout,$nin");"
+  elif ['$activation']=='softmax_c'
+    _${nout}_forward.="nn_softmax_c_forward("$nout,$nin");"
+    _${nout}_backward="nn_softmax_c_backward("$nout,$nin");"
   else
     _${nout}_forward.="nn_nl_forward("$nout,$nin,$activation");"
     _${nout}_backward="nn_nl_backward("$nout,$nin,$activation");"
   fi
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_noise : out,in,_amplitude,_noise_type,_training_only={ 0:No | 1:Yes }
+#@cli : Add a 'noise' layer to the current network.
+#@cli : 'noise_type' can be { 0:Gaussian | 1:Uniform | 2:Salt&pepper | 3:Poisson | 4:Rice }.
+#@cli : If 'training_only' is set, the noise is applied on the input only during the network training phase.
+#@cli : Default value: 'amplitude=0.1', 'noise_type=0' and 'training_only=1'.
+nn_noise : check "s1 = ['$1']; s2 = ['$2'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in
+                  ${3=0.1}>=0 && # amplitude
+                  isint(${4=0},0,4) && # noise_type
+                  isbool(${5=1}) # training_only
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  amplitude,noise_type,training_only=${3-5}
+  s0,s1,s2,s3,s4=gaussian,uniform,salt&pepper,poisson,rice
+  e[^-1] "[nn_lib] Add 'noise' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "amplitude "$amplitude" and "${s$noise_type}" noise."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=noise,
+  _${nout}_size=${_${nin}_size}
+  _${nout}_input=$in
+  _${nout}_properties="amplitude="$amplitude", noise_type="${s$noise_type}", training_only="$training_only
+  _${nout}_forward="begin(nn_noise_init_forward("$nout,$nin,$amplitude,$noise_type,$training_only"));"\
+                   "nn_noise_forward("$nout,$nin");"
+  _${nout}_backward="nn_noise_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -31286,14 +31762,14 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
                       "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
 
-  w_ca,h_ca,d_ca,s_ca:="axes = ['"$axes"']; # Dimensions of complementary axes
+  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; # Dimensions of complementary axes
     dim = ["${_${nout}_size}"];
     [ find(axes,_'x')>=0?1:$group_x?min($group_x,dim[0]):dim[0],
       find(axes,_'y')>=0?1:$group_y?min($group_y,dim[1]):dim[1],
       find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
       find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
 
-  whds={$normalization_type?1:2},{$w_ca*$h_ca*$d_ca*$s_ca},1,1
+  whds={$normalization_type?1:2},{$ca_w*$ca_h*$ca_d*$ca_s},1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -31304,7 +31780,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
     r. $whds # gamma,beta (avg/std) or gamma (rms)
     => $nout
   fi
-  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$w_ca,$h_ca,$d_ca,$s_ca"));"\
+  _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$ca_w,$ca_h,$ca_d,$ca_s"));"\
                    "nn_normalize_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_normalize_init_backward("$nout,$nin"));"\
                     "nn_normalize_backward("$nout,$nin");"\
@@ -31315,7 +31791,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchdown2d : out,in,_patch_size>1
-#@cli : Add a 'patchdown2d' (2D downscale by patch) layer to the current network.
+#@cli : Add a 'patchdown2d' layer (2D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
                         isvarname(s1) && # out
@@ -31335,7 +31811,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}
   if !min(${_${nout}_size})
-    error[0--3] "Command 'nn_patchdown2d': Specified patch size ("${patch_size}x${patch_size}") is higher than "\
+    error[0--3] "Command '$0': Specified patch size ("${patch_size}x${patch_size}") is higher than "\
                 "input size ("${_${nin}_size}")."
   fi
   _${nout}_forward="begin(nn_patchdown2d_init_forward("$nout,$nin,$patch_size"));"\
@@ -31348,7 +31824,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchdown3d : out,in,_patch_size>1
-#@cli : Add a 'patchdown3d' (3D downscale by patch) layer to the current network.
+#@cli : Add a 'patchdown3d' layer (3D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
                         isvarname(s1) && # out
@@ -31368,7 +31844,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
   if !min(${_${nout}_size})
-    error[0--3] "Command 'nn_patchdown3d': Specified patch size ("${patch_size}x${patch_size}x${patch_size}") is "\
+    error[0--3] "Command '$0': Specified patch size ("${patch_size}x${patch_size}x${patch_size}") is "\
                 "higher than input size ("${_${nin}_size}")."
   fi
   _${nout}_forward="begin(nn_patchdown3d_init_forward("$nout,$nin,$patch_size"));"\
@@ -31381,7 +31857,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchup2d : out,in,_patch_size>1
-#@cli : Add a 'patchup2d' (2D upscale by patch) layer to the current network.
+#@cli : Add a 'patchup2d' layer (2D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
@@ -31410,7 +31886,7 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_patchup3d : out,in,_patch_size>1
-#@cli : Add a 'patchup3d' (3D upscale by patch) layer to the current network.
+#@cli : Add a 'patchup3d' layer (3D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
 nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                       isvarname(s1) && # out
@@ -31433,6 +31909,43 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
                    "nn_patchup3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchup3d_init_backward("$nout,$nin,$patch_size"));"\
                     "nn_patchup3d_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_permute : out,in,permutation
+#@cli : Add a 'permute' layer (axes permutation) to the current network.
+nn_permute : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                    isvarname(s1) && # out
+                    (isvarname(s2) || s2=='.') && # in
+                    isin(s3,'xyzc','xycz','xzyc','xzcy','xcyz','xczy', # permutation
+                            'yxzc','yxcz','yzxc','yzcx','ycxz','yczx',
+                            'zxyc','zxcy','zyxc','zycx','zcxy','zcyx',
+                            'cxyz','cxzy','cyxz','cyzx','czxy','czyx')
+                    "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  permutations=xyzc,xycz,xzyc,xzcy,xcyz,xczy,yxzc,yxcz,yzxc,yzcx,ycxz,yczx,\
+               zxyc,zxcy,zyxc,zycx,zcxy,zcyx,cxyz,cxzy,cyxz,cyzx,czxy,czyx
+  inv_permutations=xyzc,xycz,xzyc,xcyz,xzcy,xczy,yxzc,yxcz,zxyc,cxyz,zxcy,cxzy,\
+                   yzxc,ycxz,zyxc,cyxz,zcxy,czxy,yzcx,yczx,zycx,cyzx,zcyx,czyx
+  permutation=$3
+  k=${indexof\ $permutation,$permutations}
+  inv_permutation=${arg0\ $k,$inv_permutations}
+
+  e[^-1] "[nn_lib] Add 'permute' layer '"$out"' to network '"$net"', with input '"$in"' "\
+         "and permutation '"$permutation"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=permute,
+  _${nout}_size:=s=[${_${nin}_size}];mode='$permutation';res=vector4();\
+                 fill(res,k,s[indexof(mode[k],_'x',_'y',_'z',_'c')]);res
+  _${nout}_input=$in
+  _${nout}_properties="permutation="$permutation
+  _${nout}_forward="begin(nn_permute_init_forward("$nout,$nin,${_${nout}_size}"));"\
+                   "nn_permute_forward("$nout,$nin,$permutation");"
+  _${nout}_backward="nn_permute_backward("$nout,$nin,$inv_permutation");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -31469,7 +31982,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -31528,7 +32041,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
   if prod(${_${nout}_size})!=prod(${_${nin}_size})
-    error[0--3] "Command 'nn_reshape': Cannot reshape input ("${_${nin}_size}") "\
+    error[0--3] "Command '$0': Cannot reshape input ("${_${nin}_size}") "\
                 "to output ("${_${nout}_size}")."
   fi
   _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"
@@ -31540,6 +32053,8 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
 #@cli : Add a 'resize' layer to the current network.
+#@cli : 'interpolation' can be { -1:None (memory content) | 0:None | 1:Nearest | 2:Average | 3:Linear | \
+# 4=Grid | 5=Bicubic | 6=Lanczos }.
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
 nn_resize : check "s1 = ['$1']; s2 = ['$2'];
                    isvarname(s1) && # out
@@ -31632,7 +32147,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       siz+={${net}_$name,whds}
     fi
   }
@@ -31696,7 +32211,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31709,7 +32224,7 @@ __nn_store :
   ('${_${net}_init}':y) autocrop. {'" "'} => ${net}__init__
 
 #@cli nn_sub : out,in0,in1
-#@cli : Add a 'sub' layer to the current network.
+#@cli : Add a 'sub' layer (element-wise subtraction) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
@@ -31736,6 +32251,90 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_tmmul : out,in0,in1
+#@cli : Add a 'tmmul' layer (matrix multiplication 'in0^t.in1') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_tmmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in0
+                  (isvarname(s3) || s3=='.') # in1
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'tmmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=tmmul,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[1]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[0],s0[0],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_tmmul_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_tmmul_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_tmmult : out,in0,in1
+#@cli : Add a 'tmmult' layer (matrix multiplication 'in0^t.in1^t') to the current network.
+#@cli : 'in0' or 'in1' must be of compatible size.
+nn_tmmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+                  isvarname(s1) && # out
+                  (isvarname(s2) || s2=='.') && # in0
+                  (isvarname(s3) || s3=='.') # in1
+                  "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
+  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
+  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'tmmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=tmmult,
+  _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
+                 s0[2]==1&&s0[3]==1&&s1[0]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[1],s0[0],1,1]:vector4(-1);
+  if min(${_${nout}_size})<0
+    error[^-1] "Command '$0': Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+  fi
+  _${nout}_input=$in0,$in1
+  _${nout}_forward="begin(nn_tmmult_init_forward("$nout,$nin0,$nin1"));"\
+                   "nn_tmmult_forward("$nout,$nin0,$nin1");"
+  _${nout}_backward="nn_tmmult_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_transpose : out,in
+#@cli : Add a 'transpose' layer (matrix transpose) to the current network.
+nn_transpose : check "s1 = ['$1']; s2 = ['$2'];
+                      isvarname(s1) && # out
+                      (isvarname(s2) || s2=='.') # in
+                      "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+
+  e[^-1] "[nn_lib] Add 'transpose' layer '"$out"' to network '"$net"', with input '"$in"'."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=transpose,
+  _${nout}_size:=s=[${_${nin}_size}];[s[1],s[0],s[2],s[3]]
+  _${nout}_input=$in
+  _${nout}_properties=
+  _${nout}_forward="begin(nn_transpose_init_forward("$nout,$nin"));"\
+                   "nn_transpose_forward("$nout,$nin");"
+  _${nout}_backward="nn_transpose_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -31834,7 +32433,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
@@ -32775,7 +33374,7 @@ drop_shadow : check "isexpr(${1=20}) && isexpr(${2=$1}) && ${3=5}>=0 && isnum(${
          ${t$7}" layer output."
   foreach {
     nm={n}
-    if s>4 error[0--3] "Command 'drop_shadow': Invalid input image (has "{s}" channels)." fi
+    if s>4 error[0--3] "Command '$0': Invalid input image (has "{s}" channels)." fi
     to_a
 
     shiftx,shifty:=round([ispercentage($1)?$1*w:$1,ispercentage($2)?$2*h:$2])
@@ -33221,12 +33820,12 @@ pixelsort : check "(str1=['${1=+}']; isin(str1,'+','-')) && "\
   repeat $! {
     if ['$3']!=0 pass$3 0 else +compose_channels[$>] + fi
     if [w#1,h#1,d#1,s#1]!=[w#0,h#0,d#0,1]
-      error[0--4] "Command 'pixelsort': Invalid specified sorting criterion (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
+      error[0--4] "Command '$0': Invalid specified sorting criterion (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
     if ['$4']!=0 pass$4 0 else [$>],[$>],[$>],1,1 fi
     if [w#2,h#2,d#2,s#2]!=[w#0,h#0,d#0,1]
-      error[0--4] "Command 'pixelsort': Invalid specified mask (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
+      error[0--4] "Command '$0': Invalid specified mask (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
     l[$>,-2,-1] {
@@ -34132,7 +34731,7 @@ warp_perspective : skip ${1=1.5},${2=0},${3=1},${4=50},${5=50},${6=2}
 warp_rbf :
   e[^-1] "Warp image$? using RBF interpolation, with keypoints ($*)."
   $=arg N:=$#/4
-  if int($N)!=$N error[0--2] "Command 'warp_rbf': Wrong number of arguments ($#)." fi
+  if int($N)!=$N error[0--2] "Command '$0': Wrong number of arguments ($#)." fi
   foreach {
     # Retrieve absolute keypoints coordinates.
     4,$N
@@ -34153,7 +34752,7 @@ warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
   pass$1
   if !$2 warp[^-1] . rm. return fi
   dim:=$3?$3:s
-  if $dim>3 error[0--3] "Command 'warp_seamless': Invalid displacement map (size: "{[w,h,d,s]}")." fi
+  if $dim>3 error[0--3] "Command '$0': Invalid displacement map (size: "{[w,h,d,s]}")." fi
   foreach[^-1] { nm={n}
     im,iM:=im,iM
     pass.
@@ -35445,7 +36044,7 @@ morph_rbf : check "$1>=0.5"
   e[^-1] "Create morphing sequence between image$? using RBF interpolation, "\
     "with "$nbf" inner frames and keypoints ($*)."
   $=arg N:=($#-1)/4
-  if int($N)!=$N error[0--2] "Command 'morph_rbf': Wrong number of arguments ($#)." fi
+  if int($N)!=$N error[0--2] "Command '$0': Wrong number of arguments ($#)." fi
   ri[^0] [0],3
   repeat $!-1 { nm={$>,n} l[$<,{$<+1}] {
     e "\r > Morph image "$>" to image "{$>+1}".    "
@@ -35829,20 +36428,15 @@ alert : skip "${1=[G'MIC Alert]},${2=This is an alert box.},${3=OK}"
     w$disp 0 rm u $clicked
   }
 
-#@cli arg : n>=1,_arg1,...,_argN
-#@cli : Return the n-th argument of the specified argument list.
-arg : check "isint($1,1)"
-  $=arg u ${arg{1+($1)}}
+#@cli arg0 : n>=0,_arg_0,...,_arg_N
+#@cli : Return the n-th argument of the specified argument list (where 'n' goes from '0' to 'N').
+arg0 : check "isint($1)"
+  $=arg u ${arg{k=($1);k>=0?2+k:$#+1+k}}
 
-#@cli arg0 : n>=0,_arg0,...,_argN
-#@cli : Return the n-th argument of the specified argument list (where 'n' starts from '0').
-arg0 : check "isint($1,0)"
-  $=arg u ${arg{2+($1)}}
-
-#@cli arg2img : argument_1,...,argument_N
-#@cli : Split specified list of arguments and return each as a new image (as a null-terminated string).
-arg2img :
-  $=arg repeat $# { arg=${arg{1+$>}} ({'$arg'},0) => $arg }
+#@cli arg1 : n>=1,_arg_1,...,_arg_N
+#@cli : Return the n-th argument of the specified argument list (where 'n' goes from '1' to 'N').
+arg1 : check "isint($1)"
+  $=arg u ${arg{k=($1);k>=0?1+k:$#+1+k}}
 
 #@cli arg2var : variable_name,argument_1,...,argument_N
 #@cli : For each i in [1...N], set 'variable_name$i=argument_i'.
@@ -36135,19 +36729,6 @@ _dec2oct :
        sgn>=0?0:(res[0] = _'-');
        for (val = abs($1); k = size(res) - 1, k>=(sgn<0), --k, res[k] = _'0' + (val&7); val>>=3); res"`}
 
-#@cli fibonacci : N>=0
-#@cli : Return the Nth number of the Fibonacci sequence.
-#@cli : $ echo ${"fibonacci 10"}
-#@cli : \n~~~\n[gmic]-0./ Start G'MIC interpreter.\n[gmic]-0./ 55\n[gmic]-0./ End G'MIC interpreter.\n~~~\n
-fibonacci : check "$1>=0"
-  u {N=$1;N<2?N:for(n=N;F0=0;F1=1,n=n-1,F2=F0+F1;F0=F1;F1=F2)}
-
-#@cli file_mv : filename_src,filename_dest
-#@cli : Rename or move a file from a location $1 to another location $2.
-file_mv :
-  e[^-1] "Move file '$1' to location '$2'."
-  if ${-is_windows} x "move "$1" "$2 else x "mv "$1" "$2 fi
-
 #@cli filename : filename,_number1,_number2,...,_numberN
 #@cli : Return a filename numbered with specified indices.
 filename : skip "${1=default}"
@@ -36377,11 +36958,11 @@ img2str :
   }
   u $str
 
-#@cli img2text : _line_separator
-#@cli : Return text contained in a multi-line image.
-#@cli : Default value: 'line_separator= '.
-img2text : skip "${1= }"
-  +l { s y s -,0 y x if $!>1 i[1--2] ('"$1"') fi a x u {0,t} rm }
+#@cli indexof : string,_arg_0,...,_arg_N
+#@cli : Return the lowest index 'i' such that 'arg_i==string'.
+#@cli : If no 'arg_i' matches, '-1' is returned.
+indexof :
+  $=arg repeat $# { if ['${arg{2+$>}}']==['$1'] u $> return fi } u -1
 
 #@cli is_mesh3d
 #@cli : Return 1 if all of the selected images are 3D meshes, 0 otherwise.
@@ -36749,7 +37330,7 @@ math_lib :
     _I[2] = cut(_I[2],0,1);
     _c = _I[2]*_I[1];
     _x = _c*(1-abs((_I[0]/60)%2-1));
-    (arg(1 + int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
+    (arg0(int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
   );
 
   rgb2hsv(I...) = ( # Convert RGB vector to HSV
@@ -37077,7 +37658,7 @@ name2color :
   names={`"s = ['"{n}"']; m = !(s-_'~')*(_'_'-_'~'); s+=m; lowercase(s)"`}
   l. {
     s x => $names u {$name,^} rm
-    onfail rm error[0--3] "Command 'name2color': Unknown color '$1'."
+    onfail rm error[0--3] "Command '$0': Unknown color '$1'."
   }
 
 #@cli nmd : eq. to 'named' : (+)
@@ -37090,7 +37671,7 @@ name2color :
 #@cli : 'mode' can be { 0:All indices (default) | 1:Lowest index | 2:Highest index | \
 # 3:All indices (case insensitive) | 4:Lowest index (case insensitive) | 5:Highest index (case insensitive)}
 
-#@cli narg : arg1,arg2,...,argN
+#@cli narg : arg_1,arg_2,...,arg_N
 #@cli : Return number of specified arguments.
 narg :
   u $#
@@ -37312,11 +37893,6 @@ _ovh2stats_versions :
     rm
   }
 
-#@cli padint : number,_size>0
-#@cli : Return a integer with 'size' digits (eventually left-padded with '0').
-padint : check "isint($1)" skip ${2=4}
-  u "" repeat $2 { u ${}{int($1/10^$<)%10} }
-
 #@cli path_cache
 #@cli : Return a path to store G'MIC data files for one user (whose value is OS-dependent).
 path_cache :
@@ -37478,8 +38054,7 @@ render_donations : skip "${1="$HOME"/work/src/private_tschumperle/gmic_donations
     all_eur,all_usd,all_charged_eur,all_charged_usd,asep_eur,asep_usd=
     repeat $nb_months {
       edate:=y=date(0);m=date(1)-1-$>;while(m<=0,--y;m+=12);100*y+m
-      s_month=${"arg "$edate%100",January,February,March,April,May,June,July,August,\
-                                  September,October,November,December"}
+      s_month=${arg1\ $edate%100,January,February,March,April,May,June,July,August,September,October,November,December}
       s_year:=int($edate/100)
       month_eur,month_charged_eur,month_usd,month_charged_usd,msep_eur,msep_usd=
       nb_sponsors=0
@@ -37702,6 +38277,11 @@ strclut :
 strlen : skip "${1=}"
   u {narg({'"$1"'})}
 
+#@cli strlowercase : string
+#@cli : Return a lower-case version of the specified string.
+strlowercase :
+  ('"$*"') u {`lowercase([{^}])`} rm.
+
 #@cli strreplace : string,search,replace
 #@cli : Search and replace substrings in an input string.
 strreplace : skip "${3=}"
@@ -37716,11 +38296,6 @@ strreplace : skip "${3=}"
   else
     l[] { ('"$1"') s -,{'"$2"'} a y u {t} rm }
   fi
-
-#@cli strlowercase : string
-#@cli : Return a lower-case version of the specified string.
-strlowercase :
-  ('"$*"') u {`lowercase([{^}])`} rm.
 
 #@cli struppercase : string
 #@cli : Return an upper-case version of the specified string.
@@ -37945,7 +38520,7 @@ demos : check "isint(${1=2},0,2)" check_display $0
 
     # Manage user selection.
     if !$mb" && "$omb" && "$ind_clicked" && "$ind_clicked==$ind
-      m "com : v 1 "${arg\ $ind,$commands} parallel $parallel_mode,"l[] { com rm }" um com
+      m "com : v 1 "${arg1\ $ind,$commands} parallel $parallel_mode,"l[] { com rm }" um com
     elif !$mb ind_clicked=0
     fi
     omb=$mb
@@ -38610,7 +39185,7 @@ _x_colorize :
 
   => img
 
-  fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+  fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
   selection=-1 view_markers=2 contrast=9 xpan=-1 ypan=-1 replace_color= current_replace_color=
 
   if narg($_gui_control_points)>=6 # Import list of control points from plug-in GUI
@@ -38649,7 +39224,7 @@ _x_colorize :
       nww:=$ww/1.25 nwh:=$wh/1.25
       if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
     elif $is_ctrl" && "{*,R} # Reset window size
-      fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim)
+      fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim)
       x0=0 y0=0 x1:=$w-1 y1:=$h-1
     elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
       dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -38903,8 +39478,8 @@ x_connect4 : check_display $0
                if (pbad>=0 && val==p,  pbad = -1, pbad+=!!val);
              );
            );
-           pgood = arg(2 + pgood,0,1,2,4,100,1e8);
-           pbad = arg(2 + pbad,0,1,2,4,10000,1e8);
+           pgood = arg0(1 + pgood,0,1,2,4,100,1e8);
+           pbad = arg0(1 + pbad,0,1,2,4,10000,1e8);
            pgood - pbad;
          );
          case(1,0) + case(0,1) + case(1,1) + case(1,-1)"
@@ -38935,7 +39510,7 @@ x_connect4 : check_display $0
 
     if narg($winner) # End of game animation
       [visu] => tmpvisu
-      x:=arg(1,$winner) y:=arg(2,$winner) c:=arg(3,$winner)
+      x:=arg0(0,$winner) y:=arg0(1,$winner) c:=arg0(2,$winner)
       if $x<0 # Draw game
         if !narg($text)
           0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand. xy,3 +dilate. 5 n.. 0,255 to_rgb..
@@ -39369,7 +39944,7 @@ x_fourier : check_display $0
 x_grab_color : skip ${1=xgc_variable} check_display $0
   if !$! error[0--3] "Command '$0': Missing specified input image." fi
   l[0] { nm={n} => img
-  e[^-1] "Open "${arg\ {0,s},GRAY,GRAYA,RGB,RGBA}" color grabber widget for image$?, with variable name '$1'."
+  e[^-1] "Open "${arg1\ {0,s},GRAY,GRAYA,RGB,RGBA}" color grabber widget for image$?, with variable name '$1'."
 
   if !{*} w[] ${fitscreen[]\ {[w,h]},128,50%},0,0,-1,-1,"Grab a color" fi
   _x_grab_color +dilate. 3 => icon_mask *.. 255 to_rgb.. =>.. icon_sprite
@@ -39414,7 +39989,7 @@ x_grab_color : skip ${1=xgc_variable} check_display $0
       ox=$x oy=$y ob=$b ohc=$hc oyc=$yc ocolor=$color o$1=$$1
     fi
 
-    if arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' wait 50 else wait fi
     if {*,r} w[] -1 rm[visu0] yc=5 fi
     if ['$$1']=='-1' break fi # Close request
 
@@ -40239,8 +40814,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       y:=round({*,y}*(h#2-1)/(h-1))
       b={*,b}
       c=$x,$y,{2,I($x,$y)}
-      is_add:=arg(1,$colors_add)>=0
-      is_sub:=arg(1,$colors_sub)>=0
+      is_add:=arg0(0,$colors_add)>=0
+      is_sub:=arg0(0,$colors_sub)>=0
       is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
       is_resized=0
       refresh=0
@@ -40281,11 +40856,11 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
     while {*}" && "!{*,ESC}" && "!{*,Q}" && "!{*,RETURN}
 
     # Rescale to original image dimensions.
-    if arg(1,$colors_add)>=0 ($colors_add)
+    if arg0(0,$colors_add)>=0 ($colors_add)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_add={-2,^} rm[-2,-1]
     fi
-    if arg(1,$colors_sub)>=0 ($colors_sub)
+    if arg0(0,$colors_sub)>=0 ($colors_sub)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_sub={-2,^} rm[-2,-1]
     fi
@@ -40297,8 +40872,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
 
 _x_mask_color : # Estimate color mask image
   100%,100%
-  is_add:=arg(1,$3)>=0
-  is_sub:=arg(1,$4)>=0
+  is_add:=arg0(0,$3)>=0
+  is_sub:=arg0(0,$4)>=0
   t0=$|
   if $is_add" || "$is_sub
     if $is_add
@@ -40627,7 +41202,7 @@ x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
 
       # Generate warp fields.
       if (!narg($warp0)" || "!narg($warp1))
-        subsamp:=arg(1+$2,8,6,4,2,1)
+        subsamp:=arg0($2,8,6,4,2,1)
         +_x_warp_rbf[keypoints] {imgb0,round([w,h]/$subsamp)}
         +l[keypoints] { s c,-2 rv[0,1] a c } +_x_warp_rbf. {imgb0,round([w,h]/$subsamp)} rm..
         *[-2,-1] $subsamp
@@ -40979,7 +41554,7 @@ _pacman_ghost_afraid_gfx :
   map.. . rm. r. 16,16,1,3,2
   line. 4,4,6,6,1,$col,255 line. 4,6,6,4,1,$col,255
   line. 9,4,11,6,1,$col,255 line. 9,6,11,4,1,$col,255
-  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg(c+1,$col):i"
+  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg0(c,$col):i"
 
 _pacman_pacman_gfx :
   32,32,1,1,'X=x-15;Y=y-15;A=atan2(Y,X);R=sqrt(X^2+Y^2);R<15.5&&abs(A)>0.8*0.33*$1'
@@ -41545,7 +42120,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
 
     # Init variables and images.
     name={0,n} title={0,b} if narg({0,x}) title=$title.{0,x} fi
-    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
     selection=-1 marker_mode=2 xpan=-1 ypan=-1 bg_mode=0 opacity=64
     to_rgb => img
 
@@ -41585,7 +42160,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
         nww:=$ww/1.25 nwh:=$wh/1.25
         if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
       elif $is_ctrl" && "{*,-R} # Reset window size
-        fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim)
+        fdim=${fitscreen[]\ $w,$h} ww:=arg0(0,$fdim) wh:=arg0(1,$fdim)
         x0=0 y0=0 x1:=$w-1 y1:=$h-1
       elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
         dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -41747,11 +42322,11 @@ _x_segment :
 x_select_color : skip ${1=xsc_variable} check_display $0
   rm
   n:=narg($$1) if !$n $1=0,0,0 fi
-  rgba_mode:=$n>=4 R:=arg(1,$$1) G:=arg(2,$$1) B:=arg(3,$$1) A:=$rgba_mode?arg(4,$$1):255
+  rgba_mode:=$n>=4 R:=arg0(0,$$1) G:=arg0(1,$$1) B:=arg0(2,$$1) A:=$rgba_mode?arg0(3,$$1):255
   e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
              ($$1)"."
   if !{*} w[] {400+24*$rgba_mode},400,0,"Select a color" fi
-  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_'
+  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_'
 
   # Manage color presets.
   m "add_preset : if !narg($_xsc_preset$""1) _xsc_preset$""1=$""2,$""3,$""4 fi"
@@ -41912,7 +42487,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
   reset_w,reset_h={*,w,h}
   if !narg($$1) $1=0,0,100,100 fi
   ($$1) => points y. x r. 2,{w/2},1,1,-1
-  is_thread_variable:=arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' selected=-1 X=-1 Y=-1
+  is_thread_variable:=arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' selected=-1 X=-1 Y=-1
   do
 
     # Update base view.
@@ -42090,7 +42665,7 @@ x_select_palette : skip ${1=xsp_variable},${2=0} check_display $0
       => view w[view]
     fi
 
-    if arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg0(0,{'$1'})==_'_'" && "arg0(1,{'$1'})==_'_' wait 50 else wait fi
 
     # Manage window size.
     is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
@@ -42734,7 +43309,7 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
       val = ("$expr");
       n = cabs(val);
       r = floor(0.48*b*cut(n,0,1));
-      a = (360+carg(val)*180/pi)%360;
+      a = (360 + carg(val)*180/pi)%360;
       c = I[#"$cmap",a];
       r>1?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),r,r,0,1,c):
       r>0?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),1,1,0,0.5,c)"
@@ -42839,7 +43414,7 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
 
       # Generate warp field.
       if !narg($warp)
-        subsamp:=arg(1+$4,8,6,4,2,1)
+        subsamp:=arg0($4,8,6,4,2,1)
         +_x_warp_rbf[keypoints] {imgb,round([w,h]/$subsamp)} *. $subsamp
         r. {imgb,[w,h]},1,100%,3 +. '[x,y]'
         => warp
@@ -43249,10 +43824,10 @@ gui_split_preview : check "isint(${2=0},0,12) && ${5=0}>=0" skip "${3=nan},${4=n
         +dilate[-2,-1] 3 /[-2,-1] 255 r[-4,-3] 100%,100%,1,3
       }
 
-      if {-4,"const c1 = "$posx">w+2; const c2 = "$posy">h+2; arg("$dir",c2,c1,c1&&c2)"}
+      if {-4,"const c1 = "$posx">w+2; const c2 = "$posy">h+2; arg1("$dir",c2,c1,c1&&c2)"}
         j[0] [-4],2,2,0,0,1,..
       fi
-      if {-3,"const c1 = "$posx"<w#0-w-3; const c2 = $2<11?("$posy"<h#0-h-3):("$posy">h+2); arg("$dir",c2,c1,c1&&c2)"}
+      if {-3,"const c1 = "$posx"<w#0-w-3; const c2 = $2<11?("$posy"<h#0-h-3):("$posy">h+2); arg1("$dir",c2,c1,c1&&c2)"}
         j[0] [-3],{[w#0-3-w,isin($2,11,12)?2:h#0-3-h]},0,0,1,.
       fi
       k[0]
@@ -43273,7 +43848,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   siz:=0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:\
        0$_preview_width?[0$_preview_width,0$_preview_height]:\
        [${fitscreen[]\ {[max(w,1),max(h,1)]},400,800}]
-  sizw:=arg(1,$siz)-8
+  sizw:=arg0(0,$siz)-8
   if $! rs $siz,3,1 drgba else $siz,1,3,128 fi
   (1;0.5^1;0.5^0;1)
   (0,0.5,0;0.5,1,0.5;0,0.5,0) *. 0.65
@@ -43282,7 +43857,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   # Render title.
   l[] {
     if ['"$1"']!=0 msg="$1" else msg=" " fi
-    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg(1,$sizw)-8)}
+    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg0(0,$sizw)-8)}
     r. 100%,140%,1,100%,0,0
     onfail rm
   }
@@ -43347,7 +43922,7 @@ gui_autocrop_layers :
     if max($coords)==-1 coords=0,0
     else z $coords
     fi
-    => "mode("$mode"),opacity("$opacity"),pos("{arg(1,$coords)}","{arg(2,$coords)}"),name("$nm")"
+    => "mode("$mode"),opacity("$opacity"),pos("{arg0(0,$coords)}","{arg0(1,$coords)}"),name("$nm")"
   }
 
 fx_logo : skip "${1= }"
@@ -43719,7 +44294,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.7</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.7.0</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -43751,7 +44326,7 @@ fx_gmicky_preview :
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2025/12/29</b> : version <i>3.6.6</i> (Current stable).</span>\n
-#@gui : - <b>2026/01/05</b> : version <i>3.6.7_pre</i> (Current pre-release).\n
+#@gui : - <b>2026/01/12</b> : version <i>3.7.0_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
@@ -44220,7 +44795,7 @@ fx_asciiart : skip "${10=},${11=},${12=}"
     elif $6==2" || "$6==3
       r[0] $wh,1,100%,1
       if $9>=7 luminance[0] fi
-      if $9%7 quantize[0] {arg($9%7,2,3,4,8,12,16)-1},1,0 fi
+      if $9%7 quantize[0] {arg1($9%7,2,3,4,8,12,16)-1},1,0 fi
       r[0] [1],[1],1,100% *[0] [1]
       if $6==2 rm[1]
       else *[1] 255 a c
@@ -44906,7 +45481,7 @@ fx_puzzle :
         +==[1] $>
         coords=${autocrop_coords.\ 0}
         +z[0] $coords z.. $coords rv[-2,-1] *.. . *. 255 a[-2,-1] c
-        x$>,y$>:=arg(1,$coords)+round(w/2),arg(2,$coords)+round(h/2)
+        x$>,y$>:=arg0(0,$coords)+round(w/2),arg0(1,$coords)+round(h/2)
       }
       rm[0,1]
 
@@ -46568,7 +47143,7 @@ fx_stringify :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/03/23</i>.</small>")
 fx_stylize :
-  init_resolution:=arg(1+$16,8,16,32,64,128,256)
+  init_resolution:=arg0($16,8,16,32,64,128,256)
 
   # Define image matching function
   colorspace=${"arg0 $11,all,lrgb,ycbcr,ycbcr,ycbcr_y,ycbcr_cbcr,lab,lab,lab_l,lab_ab"}
@@ -46610,7 +47185,7 @@ fx_stylize :
   is_window=0
   repeat $N { l[{$ind_first+$>},-1] {
     nm={0,n}
-    if $2 +rs[1] {0,[w,h]*arg($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},2,2 fi
+    if $2 +rs[1] {0,[w,h]*arg1($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},2,2 fi
     if $3==1 . +mirror. x +mirror[-2,-1] y a[-4--1] z
     elif $3==2 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 3 { +rotate[0] {90*$>},1,3,50%,50% } a z }
     elif $3==3 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 7 { +rotate[0] {45*$>},1,3,50%,50% } a z }
@@ -46666,8 +47241,8 @@ fx_vector_painting :
       +luminance b. {10-$1}%,1,1
       f. "dmax = -1; nmax = 0;
           for (n = 0, ++n<=8,
-            p = arg(n,-1,0,1,-1,1,-1,0,1);
-            q = arg(n,-1,-1,-1,0,0,1,1,1);
+            p = arg1(n,-1,0,1,-1,1,-1,0,1);
+            q = arg1(n,-1,-1,-1,0,0,1,1,1);
             d = (j(p,q,0,0,0,1) - i)^2;
             d>dmax?(dmax = d; nmax = n):nmax;
           )"
@@ -46848,7 +47423,7 @@ fx_charcoal :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/07/12</i>.</small>")
 fx_colorize_interactive : skip "${4=},${5=},${6=}"
   N=$! nm={n}
-  resolution:=arg(1+$3,512,1024,2048,0)
+  resolution:=arg0($3,512,1024,2048,0)
   => "[G'MIC] Colorize"
   if [$9][0]==-1" || "[$8]!=[w,h] _gui_control_points= else _gui_control_points=$9 fi
   N=$!
@@ -47335,7 +47910,7 @@ fx_ditheredbw :
 #@gui : note = note("<small>Authors: <i>Lyle Kroll</i> and <i>David Tschumperlé</i>.
 #@gui :       Latest Update: <i>2015/03/13</i>.</small>")
 fx_engrave :
-  f:=arg(1+$14,1,1.5,2,3)
+  f:=arg0($14,1,1.5,2,3)
   r:=$f*(0.2+$1)
   foreach {
     nm=${-gui_layer_name} pos=${-gui_layer_pos}
@@ -47364,7 +47939,7 @@ fx_engrave :
     # Process color background.
     if $!>1
       l[1] { split_opacity l[0] {
-        f:=arg(1+$14,1,1.5,2,3)
+        f:=arg0($14,1,1.5,2,3)
         if $14 r {100*$f}%,{100*$f}%,1,100%,3 fi
         b {$f*$9} segment_watershed 5
         if $14 r $wh,1,100%,2 fi
@@ -47935,7 +48510,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
     l[0] {
       s c,-3 +max. 1 /[-3,-1] ==. 0 inpaint_pde.. .,75%,1 distance. 0 *. {-1/(1+$6)} exp.
       f.. "f = i(#-1); f*I + (1-f)*[x,y,z]*255/(w-1)" rm.
-      S:=arg(1+$2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w r. $S,$S,$S,3,3 fi
+      S:=arg0($2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w r. $S,$S,$S,3,3 fi
       c 0,255
     }
     if $1==2 # Output as a file
@@ -48849,7 +49424,7 @@ fx_color_presets :
                       michaelezra,moviz,ohadperetz,oliviosarikas,on1,picturefx,pixelmator,pixlsus,purple11,\
                       rocketstock,shamoonabbasi,smallhd,toddblankenship,youssefhossam,others}
   presets=${-_fx_cluts_$category}
-  index:=arg(1+$1,${2-31})
+  index:=arg0($1,${2-31})
   thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${32-39}
 
   if $normalize==1" || "$normalize==3 # Pre-normalization
@@ -48890,7 +49465,7 @@ fx_color_presets :
 
 fx_color_presets_preview :
   _is_preview=1
-  index:=arg(1+$1,${2-31})
+  index:=arg0($1,${2-31})
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_color_presets $*",${40-42}
   fi
@@ -49431,9 +50006,9 @@ fx_curves_interactive :
   repeat 5 { __xcc_C$>=0,0,100,100 }
   if $4==$1 l[] { ($5) s -,-1 repeat $! { __xcc_C$>={$>,^} } rm } fi
   if $3 # Apply transformation from previously defined curves
-    _xcc_colorbase=${arg\ {$4+1},rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr} x_color_curves last
+    _xcc_colorbase=${arg0\ $4,rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr} x_color_curves last
   else # Run interactive curve builder
-    x_color_curves ${arg\ {$1+1},rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr}
+    x_color_curves ${arg0\ $1,rgb,cmy,cmyk,hsi,hsl,hsv,lab,lch,ycbcr}
     u "{$1}{$2}{$3}{$1}{"$__xcc_C0,-1,$__xcc_C1,-1,$__xcc_C2,-1,$__xcc_C3,-1,$__xcc_C4"}"
   fi
   if $2 # Add HaldCLUT layer
@@ -50630,7 +51205,7 @@ fx_simulate_film :
   category=${arg0\ $1,bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_new,negative_old,\
            print,colorslide}
   presets=${-_fx_cluts_$category}
-  index:=arg(1+$1,${2-10})
+  index:=arg0($1,${2-10})
   thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${11-18}
   if $normalize==1" || "$normalize==3 # Pre-normalization
     foreach { split_opacity balance_gamma[0] , a c }
@@ -50670,7 +51245,7 @@ fx_simulate_film :
 
 fx_simulate_film_preview :
   _is_preview=1
-  index:=arg(1+$1,${2-10})
+  index:=arg0($1,${2-10})
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_simulate_film $*",${19-21}
   fi
@@ -51390,7 +51965,7 @@ fx_edge_offsets :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/09/29</i>.</small>")
 fx_extract_foreground :
   if !$! return fi
-  resolution:=arg(1+$3,512,1024,2048,0)
+  resolution:=arg0($3,512,1024,2048,0)
   foreach {
     nm=${-gui_layer_name}
     initial_pos=${-gui_layer_pos}
@@ -53083,7 +53658,7 @@ _fx_zoom_v2 :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/08/02</i>.</small>")
 fx_simulate_grain :
-  __fx_simulate_grain ${arg\ {1+$1},${-_fx_simulate_grain}},${2-11},0,0
+  __fx_simulate_grain ${arg0\ $1,${-_fx_simulate_grain}},${2-11},0,0
 
 _fx_simulate_grain :
   u orwo_np20,kodak_tmax400,kodak_tmax3200,kodak_trix1600,unknown
@@ -53092,7 +53667,7 @@ fx_simulate_grain_preview :
   gui_split_preview "_fx_simulate_grain_preview $*",$-2
 
 _fx_simulate_grain_preview :
-  __fx_simulate_grain ${arg\ {1+$1},${-_fx_simulate_grain}},${2-13}
+  __fx_simulate_grain ${arg0\ $1,${-_fx_simulate_grain}},${2-13}
 
 __fx_simulate_grain :
   bm0=alpha bm1=grainmerge bm2=hardlight bm3=overlay bm4=softlight bm5=alpha
@@ -53510,7 +54085,7 @@ _fx_blur_multidirectional :
     rm[0]
 
     if $blend_mode==6 blend_median
-    elif $blend_mode>2 blend_edges {arg($blend_mode-2,0.5,1,2)}
+    elif $blend_mode>2 blend_edges {arg1($blend_mode-2,0.5,1,2)}
     fi
 
     n 0,255 ac "normalize_local "$contrast,hsl_l
@@ -56192,7 +56767,7 @@ fx_split_colors : skip ${2=0}
 fx_split_colors_preview :
   foreach {
     +fx_split_colors ${1-4} drgba
-    foreach { to ${arg\ {1+!!$>},"Original","#"$>},1,1,43,7,1,255 }
+    foreach { to ${arg0\ !!$>,"Original","#"$>},1,1,43,7,1,255 }
     frame xy,1,0 frame xy,3,255 to_rgba append_tiles ,
   }
 
@@ -56274,14 +56849,14 @@ fx_morph_layers :
 fx_apply_multiscale : skip "${13=}"
   foreach {
     w0,h0:=w,h
-    apply_scales "$13",$1,$2%,$3%,{10^$4},{arg(1+$5,1,3,5,6)}
+    apply_scales "$13",$1,$2%,$3%,{10^$4},{arg0($5,1,3,5,6)}
     if $8" || "($9" && "$8!=$12) to_a N=$! repeat $! {
       angle:=$9?$8+($12-$8)*$>/max($N-1,1):$8
       rotate[$>] $angle
     } fi
     if $14
       if $15 siz=$w0,$h0 else siz=${-max_wh} fi
-      r $siz,1,100%,{arg($14,1,3,5,6)}
+      r $siz,1,100%,{arg1($14,1,3,5,6)}
       c 0,255
     fi
     w=${-max_w} h=${-max_h} N=$!
@@ -56343,7 +56918,7 @@ fx_pack : skip "${8=}"
     repeat 256 { filename "$8/gmic_pack.txt",$> filename=${} if isfile(['{/$filename}']) else break fi }
     if !narg($filename) filename="$8/gmic_pack.txt" fi
     l[] { repeat narg($coords)/2 {
-      x,y:=arg(1+2*$>,$coords),arg(2+2*$>,$coords)
+      x,y:=arg0(2*$>,$coords),arg0(1+2*$>,$coords)
       ('"Image ""#"{1+$>}" ("${nm$>}"): "$x,$y\n')
     } a x ot $filename rm }
   fi
@@ -56971,7 +57546,7 @@ __fx_illuminate_shape2d : # Input selection must contains a single image. Output
   fi
 
   if $input_type<=1
-    shape2bump. {arg($resolution,2048,1024,512,256,128,64)},$weight_avg_max,{$dilation%*max(w,h)},\
+    shape2bump. {arg1($resolution,2048,1024,512,256,128,64)},$weight_avg_max,{$dilation%*max(w,h)},\
                 $shape_smoothness
   fi
   if $input_type<=2
@@ -58868,7 +59443,7 @@ fx_truchet :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/04/30</i>.</small>")
 fx_voronoi :
   foreach {
-    wh:=w,h f:=arg(1+$16,1,1.5,2,2.5)*100 r $f%,$f%,1,100%,3
+    wh:=w,h f:=arg0($16,1,1.5,2,2.5)*100 r $f%,$f%,1,100%,3
     if $2 +gradient_norm t:=(255-$1)/4 else +s c med[^0] t:=255-$1 fi
     if $3 mM:=im,iM b. $3 n. $mM fi
     >. $t
@@ -58894,7 +59469,7 @@ fx_voronoi :
     # Centers.
     if $11" && "$15
       1,{iM+1},1,3 eval.. "I[#-1,i]+=[x,y,1]" s. c,-2 /[-2,-1] rm..
-      eval. "const r = ($11-1)*arg(1+$16,1,1.5,2,2.5); ellipse(#0,i0,i1,r,r,0,$15/255,[${12-14},255])"
+      eval. "const r = ($11-1)*arg0($16,1,1.5,2,2.5); ellipse(#0,i0,i1,r,r,0,$15/255,[${12-14},255])"
     fi
     rm.
     r $wh,1,100%,2
@@ -60587,7 +61162,7 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   foreach {
     if !narg($_size) _size:=max(w,h) fi
     rm
-    antialias:=arg(1+$33,1,1.5,2,2.5,3,3.5,4)
+    antialias:=arg0($33,1,1.5,2,2.5,3,3.5,4)
     {$antialias*[$_size,$_size]}
     if $5==1
       pz="z^^2 - 1" dpz="2*zn" d2pz="2"
@@ -60641,7 +61216,7 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
       fi
 
       * 255 mod 256
-      if $21 ${"arg $21,hsi8,hsl8,hsv8,lab8"}2rgb fi # Convert to RGB colors
+      if $21 ${arg1\ $21,hsi8,hsl8,hsv8,lab8}2rgb fi # Convert to RGB colors
     fi
 
     rs $_size
@@ -60656,7 +61231,7 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   is_color_by_iter:=$12==1?2:0
   is_color_by_value:=$12==2?2:0
   _size0:=min(${-gui_preview_wh})
-  _size:=$_size0/arg(1+$44,1,1.5,2,2.5,3,3.5,4)
+  _size:=$_size0/arg0($44,1,1.5,2,2.5,3,3.5,4)
 
   angle=$38
   if "$39 || $40 || $41"
@@ -61084,7 +61659,7 @@ fx_sine_curve :
   # Change unit for some variables.
   W,H:=w#0?[w#0,h#0]:0$_is_preview" && "0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:[1024,1024]
   nresolution:=max(1,round($periods*1000000*($resolution%)^2))
-  nfocale:=arg($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
+  nfocale:=arg1($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
   noxa,noxb,noya,noyb,noza,nozb:=[$oxa,$oxb,$oya,$oyb,$oza,$ozb]*pi/180
   nantialiasing:=arg0($antialiasing,1,1.25,1.5,2,3)
   rW,rH:=[$W,$H]*$nantialiasing # Size of the non-antialiased rendering
@@ -61892,7 +62467,7 @@ _fx_inpaint_patch :
 fx_inpaint_patch :
   foreach {
     if $14
-      bs:=max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)
+      bs:=max(16,min(w,h)*arg0($14,100,75,50,25,10,5,2,1)%)
       at "_fx_inpaint_patch $*",$bs,$bs,1,25%,25%,0,2
     else _fx_inpaint_patch $*
     fi
@@ -63111,7 +63686,7 @@ fx_moire :
     if $3
       if $W>$H W:=$H/sqrt(2) else H:=$W*sqrt(2) fi
       fW,fH=$W,$H
-      W,H/=arg($3,4,3,2,1)
+      W,H/=arg1($3,4,3,2,1)
     fi
   elif $3
     W,H,fW,fH:="$3==1?[620,877]:$3==2?[827,1169]:$3==3?[1240,1754]:[2480,3508]",2480,3508
@@ -63652,7 +64227,7 @@ fx_gmic_demos :
   coms=2048,blobs,bouncing,connect4,fire,fireworks,fisheye,fourier,hanoi,histogram,hough,jawbreaker,landscape,life,\
        light,mandelbrot,metaballs3d,minesweeper,minimal_path,pacman,paint,plasma,quantize_rgb,reflection3d,\
        rubber3d,shadebobs,spline,starfield3d,tetris,tictactoe,waves,whirl
-  com=${arg\ {1+$1},$coms}
+  com=${arg0\ $1,$coms}
   if $!>0 sel=0 else sel= fi
   +l[$sel] { m "foo : x_"$com foo rm um foo }
 
@@ -63776,10 +64351,10 @@ fx_intarsia :
     ('"</table>\n</td><td>"')
 
     # Render result and overview images.
-    starting=${"arg {1+$5},\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\""}
-    label=${"arg {1+$6},Row,Column"}
+    starting=${arg0\ $5,\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\"}
+    label=${arg0\ $6,Row,Column}
     if $6 dir0="T &#8594; B" dir1="B &#8594; T" else dir0="L &#8594; R" dir1="R &#8594; L" fi
-    dir:=arg(1+2*$5+$6,0,0,1,0,0,1,1,1)
+    dir:=arg0(2*$5+$6,0,0,1,0,0,1,1,1)
 
     +map[0] [1]
     +fx_intarsia_preview. ${1-7},63 drgba.
