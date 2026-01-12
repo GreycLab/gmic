@@ -711,7 +711,7 @@ reference : skip "${2=}"
 "'%' (modulo), '^' (power), '!' (logical not), '~' (bitwise not), '++', '--', '+=', '-=', '*=', '/=', '%=', "\
 "'&=', '|=', '^=', '>>', '<<=' (in-place operators)."\n\
 "## Usual math functions:"\n\
-"'abs()', 'acos()', 'acosh()', 'arg()', 'arg0()', 'argkth()', 'argmax()', 'argmaxabs()', "\
+"'abs()', 'acos()', 'acosh()', 'arg0()', 'arg1()', 'argkth()', 'argmax()', 'argmaxabs()', "\
 "'argmin()', 'argminabs()', 'asin()', 'asinh()', 'atan()', 'atan2()', 'atanh()', 'avg()', 'bool()', 'cbrt()', "\
 "'ceil()', 'cos()', 'cosh()', 'cut()', 'deg2rad()', 'erf()', 'erfinv()', 'exp()', 'fact()', 'fibo()', 'floor()', "\
 "'frac()', 'gamma()', 'gauss()', 'gcd()', 'hypot()', 'int()', 'isconst()', 'isfinite()', 'isnan()', 'isnum()', "\
@@ -729,8 +729,8 @@ reference : skip "${2=}"
 "* 'cut(x,min,_max)' returns 'x' if it is in range '[min,max]', or 'min' or 'max' otherwise."\n\
 "* 'abscut(x,min,_max,_offset)' returns 'cut(abs(x) + offset,min,max)*sign(x)'."\n\
 "* 'narg(a_1,...,a_N)' returns the number of specified arguments (here, 'N')."\n\
-"* 'arg1(i,a_1,..,a_N)' returns the `i`-th argument 'a_i' (where index `i` goes from '1' to 'N')."\n\
-"* 'arg0(i,a_0,..,a_N)' does the same, but for index `i` goind from '0' to 'N'."\n\
+"* 'arg0(i,a_0,..,a_N)' returns the `i`-th argument 'a_i' (where index `i` goes from '0' to 'N')."\n\
+"* 'arg1(i,a_1,..,a_N)' does the same, but for index `i` going from '1' to 'N'."\n\
 "* 'indexof(ref,a_0,..,a_N)' returns the index `i` of the element `ref` in the list of elements `a_k` "\
 "(or '-1' if 'ref' is not present in the list). Index `i` starts from '0'."\n\
 "* 'isnum()', 'isnan()', 'isinf()', 'isint()', 'isbool()' test the type of the given number or expression, "\
@@ -2374,7 +2374,7 @@ _display : skip ${1=},${3=}
               if $is_alpha
                 to_rgba.
                 if $setting_alpha==1 (64,96;96,64) r. 16,16,1,1 r. $w,$h,1,3,0,2
-                else $w,$h,1,3,{arg($setting_alpha-1,0,128,255)}
+                else $w,$h,1,3,{arg1($setting_alpha-1,0,128,255)}
                 fi
                 sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               elif s==1 r. 100%,100%,1,3
@@ -2649,7 +2649,7 @@ _display : skip ${1=},${3=}
               rectangle[canvas_base] $coords,0.5,0xF0F0F0F0,255
               sh. 100% j[canvas_base] ..,$np0,$nq0,0,0,1,.,255 rm.
             else
-              100%,100%,1,3,{arg($setting_alpha-1,0,128,255)}
+              100%,100%,1,3,{arg1($setting_alpha-1,0,128,255)}
               sh.. 100% j.. ...,0,0,0,0,1,.,255 rm[-3,-1]
               j[canvas_base] .,$np0,$nq0
             fi
@@ -2722,7 +2722,7 @@ _display : skip ${1=},${3=}
         if !0$canvas_3d_background" || "{0$canvas_3d_background,[w,h]!=[$area_3d_width,$area_3d_height]}
           $0_rmn canvas_3d_background
           background,is_checkerboard:=int([$setting_3d_background>>1,$setting_3d_background&1])
-          if $background<3 {*,w,h},1,3,{arg(1+$background,0,128,255)}
+          if $background<3 {*,w,h},1,3,{arg1(1+$background,0,128,255)}
           elif $background==3 3,2,1,1,"16,16,48,44,96,76" permute. cyzx
           elif $background==4 3,2,1,1,"0,0,0,0,64,96" permute. cyzx
           else 3,3,1,1,"0,0,0,0,0,100,100,0,50" permute. cyzx
@@ -4399,8 +4399,8 @@ _display_graph : check "${1=0}>=0 && ${2=0}>=0 && isint(${11=32},0)"
     dx,dy:=$xmax-$xmin,$ymax-$ymin
 
     # Determine number of axis tick marks.
-    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg(1,$u) deltax:=arg(2,$u)
-    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg(1,$u) deltay:=arg(2,$u)
+    u=${"_axes[] "$xmin,$xmax",{0.3*"$w"/14}"} offx:=arg1(1,$u) deltax:=arg1(2,$u)
+    u=${"_axes[] "$ymin,$ymax",{0.3*"$h"/14}"} offy:=arg1(1,$u) deltay:=arg1(2,$u)
 
     # Create plot canvas.
     one:=$3!=3 gw:=$w-2*$11 gh:=$h-2*$11 gg:=($gw-$one)/($siz-$one)
@@ -4736,7 +4736,7 @@ _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2
           C = [ hsv2rgb([ 2*ang,1-r2/r1,v ]), 255 ];
         );
       );
-      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg(k + 1,C,Co)));
+      for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg1(k + 1,C,Co)));
       I"
     rm..
   }
@@ -4759,7 +4759,7 @@ _display_voxels3d :
     nm=${nm$>} bnm={b} l. { if ['{x}']!=0 bnm.=.{x} fi onfail bnm.=.{x} }
     asiz:=max(w,h,d)/5
     +norm1. !=. 0 nbv:=is rm. # Count voxels
-    e[0--4] "Display image ["{arg(1+$>,$[])}"] = '"$nm"' ("${w}x${h}x${d}", "$nbv" voxels)."
+    e[0--4] "Display image ["{arg1(1+$>,$[])}"] = '"$nm"' ("${w}x${h}x${d}", "$nbv" voxels)."
     args=0.5,1,0.75
 
     if s==1
@@ -5829,7 +5829,7 @@ output_ggr : skip "${2=}"
       end={_($>+1)/{0,h}}
       mid={_0.5*($start+$end)}
       rgba={0,I(0,$>)}
-      r:=arg(1,$rgba) g:=arg(2,$rgba) b:=arg(3,$rgba) a:=arg(4,$rgba)
+      r:=arg1(1,$rgba) g:=arg1(2,$rgba) b:=arg1(3,$rgba) a:=arg1(4,$rgba)
       ('$start" "$mid" "$end" "$r" "$g" "$b" "$a" "$r" "$g" "$b" "$a" 0 0\n"')
     }
     rm[0] a x
@@ -10988,7 +10988,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.6.7').
+# $1 = version number (e.g. '3.7.0').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -12894,7 +12894,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=363,364,365,366,367,$_version
+  versions=370,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -14946,7 +14946,7 @@ adjust_colors : check "${1=0}>=-100 && $1<=100 && ${2=0}>=-100 && $2<=100 && ${3
           value range [$6,$7]."
   foreach { split_opacity l[0] {
     range:="$6==$7 && !$6?[im,iM]:[min($6,$7),max($6,$7)]"
-    m:=arg(1,$range) M:=arg(2,$range) fact:=255/max(1e-5,$M-$m)
+    m:=arg1(1,$range) M:=arg1(2,$range) fact:=255/max(1e-5,$M-$m)
     - $m * $fact
     if $4" || "$5 # Adjust Hue/Saturation
       to_rgb[0] rgb2hsv[0]
@@ -16860,7 +16860,7 @@ retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5
 
 _retinex :
   - {im-$1} {[w,h,d,s]},1
-  repeat 3 { +b[0] {arg(1+$>,${4-6})} +/[0,-1] rm.. *[1,-1] }
+  repeat 3 { +b[0] {arg1(1+$>,${4-6})} +/[0,-1] rm.. *[1,-1] }
   rm[0] log c $2%,{100-$3}% n 0,255
 
 #@cli rgb : _min_RGB_value,_max_RGB_value : (no arg)
@@ -18104,7 +18104,7 @@ montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
 
 _montage :
   if $_p>$_lcode error "Command 'montage': Incomplete layout code '"$_scode"'." fi
-  c:=arg($_p,$_code)
+  c:=arg1($_p,$_code)
   if $c>=0 _p+=1 u $c # Single index
   elif $c==-4 # Mirror
     _p+=1 l=${-_montage} f[$l] "a=i(5,y)%2;(x==7&&a)||(x==6&&!a)?!i:x==1?i(3,0)-i(3,y)-i:i" u $l
@@ -22927,8 +22927,8 @@ axes : check "isint(${5=14},0) && ${6=1}>=0" skip ${7=0},${8=0}
     w1,h1={0,[w,h]-1}
 
     # Determine number of axes tick marks.
-    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg(1,$u) deltax:=arg(2,$u) fi
-    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg(1,$u) deltay:=arg(2,$u) fi
+    if $1!=$2 u=${"_axes[] $1,$2,{0.3*w/$5}"} offx:=arg1(1,$u) deltax:=arg1(2,$u) fi
+    if $3!=$4 u=${"_axes[] $3,$4,{0.3*h/$5}"} offy:=arg1(1,$u) deltay:=arg1(2,$u) fi
 
     # Draw x-axis.
     is_0x=0
@@ -28486,7 +28486,7 @@ parallel : skip "${1=},${2=},${3=},${4=},${5=},${6=},${7=},${8=},${9=},${10=},${
 #@cli : specified progress bounds.
 rprogress : skip ${2=""}
   if !narg($_progress_bounds) _progress_bounds=0,100 fi
-  m:=arg(-2,$_progress_bounds) M:=arg(-1,$_progress_bounds)
+  m:=arg1(-2,$_progress_bounds) M:=arg1(-1,$_progress_bounds)
   if $#==2&&!narg($2) # 1 argument -> Set progress bar
     e[0--3] "Set relative progress index to $1%."
     progress {$1<0?-1:min(100,max(0,$m+($M-$m)*$1%))}
@@ -37330,7 +37330,7 @@ math_lib :
     _I[2] = cut(_I[2],0,1);
     _c = _I[2]*_I[1];
     _x = _c*(1-abs((_I[0]/60)%2-1));
-    (arg(1 + int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
+    (arg1(1 + int(_I[0]/60),[_c,_x,0],[_x,_c,0],[0,_c,_x],[0,_x,_c],[_x,0,_c],[_c,0,_x])+=_I[2] - _c)*=255;
   );
 
   rgb2hsv(I...) = ( # Convert RGB vector to HSV
@@ -39185,7 +39185,7 @@ _x_colorize :
 
   => img
 
-  fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+  fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
   selection=-1 view_markers=2 contrast=9 xpan=-1 ypan=-1 replace_color= current_replace_color=
 
   if narg($_gui_control_points)>=6 # Import list of control points from plug-in GUI
@@ -39224,7 +39224,7 @@ _x_colorize :
       nww:=$ww/1.25 nwh:=$wh/1.25
       if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
     elif $is_ctrl" && "{*,R} # Reset window size
-      fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim)
+      fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim)
       x0=0 y0=0 x1:=$w-1 y1:=$h-1
     elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
       dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -39478,8 +39478,8 @@ x_connect4 : check_display $0
                if (pbad>=0 && val==p,  pbad = -1, pbad+=!!val);
              );
            );
-           pgood = arg(2 + pgood,0,1,2,4,100,1e8);
-           pbad = arg(2 + pbad,0,1,2,4,10000,1e8);
+           pgood = arg1(2 + pgood,0,1,2,4,100,1e8);
+           pbad = arg1(2 + pbad,0,1,2,4,10000,1e8);
            pgood - pbad;
          );
          case(1,0) + case(0,1) + case(1,1) + case(1,-1)"
@@ -39510,7 +39510,7 @@ x_connect4 : check_display $0
 
     if narg($winner) # End of game animation
       [visu] => tmpvisu
-      x:=arg(1,$winner) y:=arg(2,$winner) c:=arg(3,$winner)
+      x:=arg1(1,$winner) y:=arg1(2,$winner) c:=arg1(3,$winner)
       if $x<0 # Draw game
         if !narg($text)
           0 t. "Draw game",0,0,57,1,1 rs. {tmpvisu,w/2} expand. xy,3 +dilate. 5 n.. 0,255 to_rgb..
@@ -39989,7 +39989,7 @@ x_grab_color : skip ${1=xgc_variable} check_display $0
       ox=$x oy=$y ob=$b ohc=$hc oyc=$yc ocolor=$color o$1=$$1
     fi
 
-    if arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' wait 50 else wait fi
     if {*,r} w[] -1 rm[visu0] yc=5 fi
     if ['$$1']=='-1' break fi # Close request
 
@@ -40814,8 +40814,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       y:=round({*,y}*(h#2-1)/(h-1))
       b={*,b}
       c=$x,$y,{2,I($x,$y)}
-      is_add:=arg(1,$colors_add)>=0
-      is_sub:=arg(1,$colors_sub)>=0
+      is_add:=arg1(1,$colors_add)>=0
+      is_sub:=arg1(1,$colors_sub)>=0
       is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
       is_resized=0
       refresh=0
@@ -40856,11 +40856,11 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
     while {*}" && "!{*,ESC}" && "!{*,Q}" && "!{*,RETURN}
 
     # Rescale to original image dimensions.
-    if arg(1,$colors_add)>=0 ($colors_add)
+    if arg1(1,$colors_add)>=0 ($colors_add)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_add={-2,^} rm[-2,-1]
     fi
-    if arg(1,$colors_sub)>=0 ($colors_sub)
+    if arg1(1,$colors_sub)>=0 ($colors_sub)
       r. {2+s#2},{w/(2+s#2)},1,1,-1 +z. 0,1 *. '{(w#0-1)/(w#2-1)},{(h#0-1)/(h#2-1)}'
       j.. . colors_sub={-2,^} rm[-2,-1]
     fi
@@ -40872,8 +40872,8 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
 
 _x_mask_color : # Estimate color mask image
   100%,100%
-  is_add:=arg(1,$3)>=0
-  is_sub:=arg(1,$4)>=0
+  is_add:=arg1(1,$3)>=0
+  is_sub:=arg1(1,$4)>=0
   t0=$|
   if $is_add" || "$is_sub
     if $is_add
@@ -41202,7 +41202,7 @@ x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
 
       # Generate warp fields.
       if (!narg($warp0)" || "!narg($warp1))
-        subsamp:=arg(1+$2,8,6,4,2,1)
+        subsamp:=arg1(1+$2,8,6,4,2,1)
         +_x_warp_rbf[keypoints] {imgb0,round([w,h]/$subsamp)}
         +l[keypoints] { s c,-2 rv[0,1] a c } +_x_warp_rbf. {imgb0,round([w,h]/$subsamp)} rm..
         *[-2,-1] $subsamp
@@ -41554,7 +41554,7 @@ _pacman_ghost_afraid_gfx :
   map.. . rm. r. 16,16,1,3,2
   line. 4,4,6,6,1,$col,255 line. 4,6,6,4,1,$col,255
   line. 9,4,11,6,1,$col,255 line. 9,6,11,4,1,$col,255
-  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg(c+1,$col):i"
+  f. "y>=9 && y<=10 && x>=2 && x<=13 && ((int((x+1)/2)+y)%2)?arg1(c+1,$col):i"
 
 _pacman_pacman_gfx :
   32,32,1,1,'X=x-15;Y=y-15;A=atan2(Y,X);R=sqrt(X^2+Y^2);R<15.5&&abs(A)>0.8*0.33*$1'
@@ -42120,7 +42120,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
 
     # Init variables and images.
     name={0,n} title={0,b} if narg({0,x}) title=$title.{0,x} fi
-    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
+    w,h={w},{h} fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim) x0=0 y0=0 x1:=w-1 y1:=h-1
     selection=-1 marker_mode=2 xpan=-1 ypan=-1 bg_mode=0 opacity=64
     to_rgb => img
 
@@ -42160,7 +42160,7 @@ x_segment : check "!${1=1024} || $1>=128" check_display $0
         nww:=$ww/1.25 nwh:=$wh/1.25
         if min($nww,$nwh)>=64 ww=$nww wh=$nwh fi
       elif $is_ctrl" && "{*,-R} # Reset window size
-        fdim=${fitscreen[]\ $w,$h} ww:=arg(1,$fdim) wh:=arg(2,$fdim)
+        fdim=${fitscreen[]\ $w,$h} ww:=arg1(1,$fdim) wh:=arg1(2,$fdim)
         x0=0 y0=0 x1:=$w-1 y1:=$h-1
       elif ($is_shift" && "$o<0)" || "{*,ARROWLEFT} # Go left
         dx:=($x1-$x0)/6 x0-=$dx x1-=$dx
@@ -42322,11 +42322,11 @@ _x_segment :
 x_select_color : skip ${1=xsc_variable} check_display $0
   rm
   n:=narg($$1) if !$n $1=0,0,0 fi
-  rgba_mode:=$n>=4 R:=arg(1,$$1) G:=arg(2,$$1) B:=arg(3,$$1) A:=$rgba_mode?arg(4,$$1):255
+  rgba_mode:=$n>=4 R:=arg1(1,$$1) G:=arg1(2,$$1) B:=arg1(3,$$1) A:=$rgba_mode?arg1(4,$$1):255
   e[^-1] "Open "${arg0\ $rgba_mode,RGB,RGBA}" color selector widget, with variable '$1' and starting color "\
              ($$1)"."
   if !{*} w[] {400+24*$rgba_mode},400,0,"Select a color" fi
-  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_'
+  update_view=1 is_sv=0 is_h=0 is_a=0 colordb=0 is_thread_variable:=arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_'
 
   # Manage color presets.
   m "add_preset : if !narg($_xsc_preset$""1) _xsc_preset$""1=$""2,$""3,$""4 fi"
@@ -42487,7 +42487,7 @@ x_select_function1d : skip ${1=xsf_variable},${2=220},${3=$2},${4=$2} check_disp
   reset_w,reset_h={*,w,h}
   if !narg($$1) $1=0,0,100,100 fi
   ($$1) => points y. x r. 2,{w/2},1,1,-1
-  is_thread_variable:=arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' selected=-1 X=-1 Y=-1
+  is_thread_variable:=arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' selected=-1 X=-1 Y=-1
   do
 
     # Update base view.
@@ -42665,7 +42665,7 @@ x_select_palette : skip ${1=xsp_variable},${2=0} check_display $0
       => view w[view]
     fi
 
-    if arg(1,{'$1'})==_'_'" && "arg(2,{'$1'})==_'_' wait 50 else wait fi
+    if arg1(1,{'$1'})==_'_'" && "arg1(2,{'$1'})==_'_' wait 50 else wait fi
 
     # Manage window size.
     is_ctrl:={*,CTRLLEFT}" || "{*,CTRLRIGHT}
@@ -43309,7 +43309,7 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
       val = ("$expr");
       n = cabs(val);
       r = floor(0.48*b*cut(n,0,1));
-      a = (360+carg(val)*180/pi)%360;
+      a = (360 + carg(val)*180/pi)%360;
       c = I[#"$cmap",a];
       r>1?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),r,r,0,1,c):
       r>0?ellipse(#-1,b*(x + 0.5),b*(y + 0.5),1,1,0,0.5,c)"
@@ -43414,7 +43414,7 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
 
       # Generate warp field.
       if !narg($warp)
-        subsamp:=arg(1+$4,8,6,4,2,1)
+        subsamp:=arg1(1+$4,8,6,4,2,1)
         +_x_warp_rbf[keypoints] {imgb,round([w,h]/$subsamp)} *. $subsamp
         r. {imgb,[w,h]},1,100%,3 +. '[x,y]'
         => warp
@@ -43824,10 +43824,10 @@ gui_split_preview : check "isint(${2=0},0,12) && ${5=0}>=0" skip "${3=nan},${4=n
         +dilate[-2,-1] 3 /[-2,-1] 255 r[-4,-3] 100%,100%,1,3
       }
 
-      if {-4,"const c1 = "$posx">w+2; const c2 = "$posy">h+2; arg("$dir",c2,c1,c1&&c2)"}
+      if {-4,"const c1 = "$posx">w+2; const c2 = "$posy">h+2; arg1("$dir",c2,c1,c1&&c2)"}
         j[0] [-4],2,2,0,0,1,..
       fi
-      if {-3,"const c1 = "$posx"<w#0-w-3; const c2 = $2<11?("$posy"<h#0-h-3):("$posy">h+2); arg("$dir",c2,c1,c1&&c2)"}
+      if {-3,"const c1 = "$posx"<w#0-w-3; const c2 = $2<11?("$posy"<h#0-h-3):("$posy">h+2); arg1("$dir",c2,c1,c1&&c2)"}
         j[0] [-3],{[w#0-3-w,isin($2,11,12)?2:h#0-3-h]},0,0,1,.
       fi
       k[0]
@@ -43848,7 +43848,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   siz:=0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:\
        0$_preview_width?[0$_preview_width,0$_preview_height]:\
        [${fitscreen[]\ {[max(w,1),max(h,1)]},400,800}]
-  sizw:=arg(1,$siz)-8
+  sizw:=arg1(1,$siz)-8
   if $! rs $siz,3,1 drgba else $siz,1,3,128 fi
   (1;0.5^1;0.5^0;1)
   (0,0.5,0;0.5,1,0.5;0,0.5,0) *. 0.65
@@ -43857,7 +43857,7 @@ gui_print_preview : skip "${1=},${3=}" check "${2=32}>=0 && ${4=20}>=0"
   # Render title.
   l[] {
     if ['"$1"']!=0 msg="$1" else msg=" " fi
-    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg(1,$sizw)-8)}
+    0 t. $msg,0,0,$2,1,255 i.. 100%,100%,1,3 fc.. 255,200,120 a[-2,-1] c rs. {min(w,arg1(1,$sizw)-8)}
     r. 100%,140%,1,100%,0,0
     onfail rm
   }
@@ -43922,7 +43922,7 @@ gui_autocrop_layers :
     if max($coords)==-1 coords=0,0
     else z $coords
     fi
-    => "mode("$mode"),opacity("$opacity"),pos("{arg(1,$coords)}","{arg(2,$coords)}"),name("$nm")"
+    => "mode("$mode"),opacity("$opacity"),pos("{arg1(1,$coords)}","{arg1(2,$coords)}"),name("$nm")"
   }
 
 fx_logo : skip "${1= }"
@@ -44294,7 +44294,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.6.7</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.7.0</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -44326,7 +44326,7 @@ fx_gmicky_preview :
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2025/12/29</b> : version <i>3.6.6</i> (Current stable).</span>\n
-#@gui : - <b>2026/01/05</b> : version <i>3.6.7_pre</i> (Current pre-release).\n
+#@gui : - <b>2026/01/12</b> : version <i>3.7.0_pre</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
@@ -44795,7 +44795,7 @@ fx_asciiart : skip "${10=},${11=},${12=}"
     elif $6==2" || "$6==3
       r[0] $wh,1,100%,1
       if $9>=7 luminance[0] fi
-      if $9%7 quantize[0] {arg($9%7,2,3,4,8,12,16)-1},1,0 fi
+      if $9%7 quantize[0] {arg1($9%7,2,3,4,8,12,16)-1},1,0 fi
       r[0] [1],[1],1,100% *[0] [1]
       if $6==2 rm[1]
       else *[1] 255 a c
@@ -45481,7 +45481,7 @@ fx_puzzle :
         +==[1] $>
         coords=${autocrop_coords.\ 0}
         +z[0] $coords z.. $coords rv[-2,-1] *.. . *. 255 a[-2,-1] c
-        x$>,y$>:=arg(1,$coords)+round(w/2),arg(2,$coords)+round(h/2)
+        x$>,y$>:=arg1(1,$coords)+round(w/2),arg1(2,$coords)+round(h/2)
       }
       rm[0,1]
 
@@ -47143,7 +47143,7 @@ fx_stringify :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/03/23</i>.</small>")
 fx_stylize :
-  init_resolution:=arg(1+$16,8,16,32,64,128,256)
+  init_resolution:=arg1(1+$16,8,16,32,64,128,256)
 
   # Define image matching function
   colorspace=${"arg0 $11,all,lrgb,ycbcr,ycbcr,ycbcr_y,ycbcr_cbcr,lab,lab,lab_l,lab_ab"}
@@ -47185,7 +47185,7 @@ fx_stylize :
   is_window=0
   repeat $N { l[{$ind_first+$>},-1] {
     nm={0,n}
-    if $2 +rs[1] {0,[w,h]*arg($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},2,2 fi
+    if $2 +rs[1] {0,[w,h]*arg1($2,0.1,0.2,0.3,0.5,0.75,1,1.5,2,2.5,3)},2,2 fi
     if $3==1 . +mirror. x +mirror[-2,-1] y a[-4--1] z
     elif $3==2 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 3 { +rotate[0] {90*$>},1,3,50%,50% } a z }
     elif $3==3 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 7 { +rotate[0] {45*$>},1,3,50%,50% } a z }
@@ -47241,8 +47241,8 @@ fx_vector_painting :
       +luminance b. {10-$1}%,1,1
       f. "dmax = -1; nmax = 0;
           for (n = 0, ++n<=8,
-            p = arg(n,-1,0,1,-1,1,-1,0,1);
-            q = arg(n,-1,-1,-1,0,0,1,1,1);
+            p = arg1(n,-1,0,1,-1,1,-1,0,1);
+            q = arg1(n,-1,-1,-1,0,0,1,1,1);
             d = (j(p,q,0,0,0,1) - i)^2;
             d>dmax?(dmax = d; nmax = n):nmax;
           )"
@@ -47423,7 +47423,7 @@ fx_charcoal :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/07/12</i>.</small>")
 fx_colorize_interactive : skip "${4=},${5=},${6=}"
   N=$! nm={n}
-  resolution:=arg(1+$3,512,1024,2048,0)
+  resolution:=arg1(1+$3,512,1024,2048,0)
   => "[G'MIC] Colorize"
   if [$9][0]==-1" || "[$8]!=[w,h] _gui_control_points= else _gui_control_points=$9 fi
   N=$!
@@ -47910,7 +47910,7 @@ fx_ditheredbw :
 #@gui : note = note("<small>Authors: <i>Lyle Kroll</i> and <i>David Tschumperlé</i>.
 #@gui :       Latest Update: <i>2015/03/13</i>.</small>")
 fx_engrave :
-  f:=arg(1+$14,1,1.5,2,3)
+  f:=arg1(1+$14,1,1.5,2,3)
   r:=$f*(0.2+$1)
   foreach {
     nm=${-gui_layer_name} pos=${-gui_layer_pos}
@@ -47939,7 +47939,7 @@ fx_engrave :
     # Process color background.
     if $!>1
       l[1] { split_opacity l[0] {
-        f:=arg(1+$14,1,1.5,2,3)
+        f:=arg1(1+$14,1,1.5,2,3)
         if $14 r {100*$f}%,{100*$f}%,1,100%,3 fi
         b {$f*$9} segment_watershed 5
         if $14 r $wh,1,100%,2 fi
@@ -48510,7 +48510,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
     l[0] {
       s c,-3 +max. 1 /[-3,-1] ==. 0 inpaint_pde.. .,75%,1 distance. 0 *. {-1/(1+$6)} exp.
       f.. "f = i(#-1); f*I + (1-f)*[x,y,z]*255/(w-1)" rm.
-      S:=arg(1+$2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w r. $S,$S,$S,3,3 fi
+      S:=arg1(1+$2,16,25,36,49,64,81,100,121,144,169,225,256) if $S!=w r. $S,$S,$S,3,3 fi
       c 0,255
     }
     if $1==2 # Output as a file
@@ -49424,7 +49424,7 @@ fx_color_presets :
                       michaelezra,moviz,ohadperetz,oliviosarikas,on1,picturefx,pixelmator,pixlsus,purple11,\
                       rocketstock,shamoonabbasi,smallhd,toddblankenship,youssefhossam,others}
   presets=${-_fx_cluts_$category}
-  index:=arg(1+$1,${2-31})
+  index:=arg1(1+$1,${2-31})
   thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${32-39}
 
   if $normalize==1" || "$normalize==3 # Pre-normalization
@@ -49465,7 +49465,7 @@ fx_color_presets :
 
 fx_color_presets_preview :
   _is_preview=1
-  index:=arg(1+$1,${2-31})
+  index:=arg1(1+$1,${2-31})
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_color_presets $*",${40-42}
   fi
@@ -51205,7 +51205,7 @@ fx_simulate_film :
   category=${arg0\ $1,bw,instant_consumer,instant_pro,fujixtransiii,negative_color,negative_new,negative_old,\
            print,colorslide}
   presets=${-_fx_cluts_$category}
-  index:=arg(1+$1,${2-10})
+  index:=arg1(1+$1,${2-10})
   thumbsize,strength,brightness,contrast,gamma,hue,saturation,normalize=${11-18}
   if $normalize==1" || "$normalize==3 # Pre-normalization
     foreach { split_opacity balance_gamma[0] , a c }
@@ -51245,7 +51245,7 @@ fx_simulate_film :
 
 fx_simulate_film_preview :
   _is_preview=1
-  index:=arg(1+$1,${2-10})
+  index:=arg1(1+$1,${2-10})
   if !$index gui_warning_preview "Preview disabled in 'Collage' mode"
   else gui_split_preview "fx_simulate_film $*",${19-21}
   fi
@@ -51965,7 +51965,7 @@ fx_edge_offsets :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/09/29</i>.</small>")
 fx_extract_foreground :
   if !$! return fi
-  resolution:=arg(1+$3,512,1024,2048,0)
+  resolution:=arg1(1+$3,512,1024,2048,0)
   foreach {
     nm=${-gui_layer_name}
     initial_pos=${-gui_layer_pos}
@@ -54085,7 +54085,7 @@ _fx_blur_multidirectional :
     rm[0]
 
     if $blend_mode==6 blend_median
-    elif $blend_mode>2 blend_edges {arg($blend_mode-2,0.5,1,2)}
+    elif $blend_mode>2 blend_edges {arg1($blend_mode-2,0.5,1,2)}
     fi
 
     n 0,255 ac "normalize_local "$contrast,hsl_l
@@ -56849,14 +56849,14 @@ fx_morph_layers :
 fx_apply_multiscale : skip "${13=}"
   foreach {
     w0,h0:=w,h
-    apply_scales "$13",$1,$2%,$3%,{10^$4},{arg(1+$5,1,3,5,6)}
+    apply_scales "$13",$1,$2%,$3%,{10^$4},{arg1(1+$5,1,3,5,6)}
     if $8" || "($9" && "$8!=$12) to_a N=$! repeat $! {
       angle:=$9?$8+($12-$8)*$>/max($N-1,1):$8
       rotate[$>] $angle
     } fi
     if $14
       if $15 siz=$w0,$h0 else siz=${-max_wh} fi
-      r $siz,1,100%,{arg($14,1,3,5,6)}
+      r $siz,1,100%,{arg1($14,1,3,5,6)}
       c 0,255
     fi
     w=${-max_w} h=${-max_h} N=$!
@@ -56918,7 +56918,7 @@ fx_pack : skip "${8=}"
     repeat 256 { filename "$8/gmic_pack.txt",$> filename=${} if isfile(['{/$filename}']) else break fi }
     if !narg($filename) filename="$8/gmic_pack.txt" fi
     l[] { repeat narg($coords)/2 {
-      x,y:=arg(1+2*$>,$coords),arg(2+2*$>,$coords)
+      x,y:=arg1(1+2*$>,$coords),arg1(2+2*$>,$coords)
       ('"Image ""#"{1+$>}" ("${nm$>}"): "$x,$y\n')
     } a x ot $filename rm }
   fi
@@ -57546,7 +57546,7 @@ __fx_illuminate_shape2d : # Input selection must contains a single image. Output
   fi
 
   if $input_type<=1
-    shape2bump. {arg($resolution,2048,1024,512,256,128,64)},$weight_avg_max,{$dilation%*max(w,h)},\
+    shape2bump. {arg1($resolution,2048,1024,512,256,128,64)},$weight_avg_max,{$dilation%*max(w,h)},\
                 $shape_smoothness
   fi
   if $input_type<=2
@@ -59443,7 +59443,7 @@ fx_truchet :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2020/04/30</i>.</small>")
 fx_voronoi :
   foreach {
-    wh:=w,h f:=arg(1+$16,1,1.5,2,2.5)*100 r $f%,$f%,1,100%,3
+    wh:=w,h f:=arg1(1+$16,1,1.5,2,2.5)*100 r $f%,$f%,1,100%,3
     if $2 +gradient_norm t:=(255-$1)/4 else +s c med[^0] t:=255-$1 fi
     if $3 mM:=im,iM b. $3 n. $mM fi
     >. $t
@@ -59469,7 +59469,7 @@ fx_voronoi :
     # Centers.
     if $11" && "$15
       1,{iM+1},1,3 eval.. "I[#-1,i]+=[x,y,1]" s. c,-2 /[-2,-1] rm..
-      eval. "const r = ($11-1)*arg(1+$16,1,1.5,2,2.5); ellipse(#0,i0,i1,r,r,0,$15/255,[${12-14},255])"
+      eval. "const r = ($11-1)*arg1(1+$16,1,1.5,2,2.5); ellipse(#0,i0,i1,r,r,0,$15/255,[${12-14},255])"
     fi
     rm.
     r $wh,1,100%,2
@@ -61162,7 +61162,7 @@ fx_newton_fractal : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   foreach {
     if !narg($_size) _size:=max(w,h) fi
     rm
-    antialias:=arg(1+$33,1,1.5,2,2.5,3,3.5,4)
+    antialias:=arg1(1+$33,1,1.5,2,2.5,3,3.5,4)
     {$antialias*[$_size,$_size]}
     if $5==1
       pz="z^^2 - 1" dpz="2*zn" d2pz="2"
@@ -61231,7 +61231,7 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
   is_color_by_iter:=$12==1?2:0
   is_color_by_value:=$12==2?2:0
   _size0:=min(${-gui_preview_wh})
-  _size:=$_size0/arg(1+$44,1,1.5,2,2.5,3,3.5,4)
+  _size:=$_size0/arg1(1+$44,1,1.5,2,2.5,3,3.5,4)
 
   angle=$38
   if "$39 || $40 || $41"
@@ -61659,7 +61659,7 @@ fx_sine_curve :
   # Change unit for some variables.
   W,H:=w#0?[w#0,h#0]:0$_is_preview" && "0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:[1024,1024]
   nresolution:=max(1,round($periods*1000000*($resolution%)^2))
-  nfocale:=arg($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
+  nfocale:=arg1($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
   noxa,noxb,noya,noyb,noza,nozb:=[$oxa,$oxb,$oya,$oyb,$oza,$ozb]*pi/180
   nantialiasing:=arg0($antialiasing,1,1.25,1.5,2,3)
   rW,rH:=[$W,$H]*$nantialiasing # Size of the non-antialiased rendering
@@ -62467,7 +62467,7 @@ _fx_inpaint_patch :
 fx_inpaint_patch :
   foreach {
     if $14
-      bs:=max(16,min(w,h)*arg(1+$14,100,75,50,25,10,5,2,1)%)
+      bs:=max(16,min(w,h)*arg1(1+$14,100,75,50,25,10,5,2,1)%)
       at "_fx_inpaint_patch $*",$bs,$bs,1,25%,25%,0,2
     else _fx_inpaint_patch $*
     fi
@@ -63686,7 +63686,7 @@ fx_moire :
     if $3
       if $W>$H W:=$H/sqrt(2) else H:=$W*sqrt(2) fi
       fW,fH=$W,$H
-      W,H/=arg($3,4,3,2,1)
+      W,H/=arg1($3,4,3,2,1)
     fi
   elif $3
     W,H,fW,fH:="$3==1?[620,877]:$3==2?[827,1169]:$3==3?[1240,1754]:[2480,3508]",2480,3508
@@ -64354,7 +64354,7 @@ fx_intarsia :
     starting=${arg0\ $5,\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\"}
     label=${arg0\ $6,Row,Column}
     if $6 dir0="T &#8594; B" dir1="B &#8594; T" else dir0="L &#8594; R" dir1="R &#8594; L" fi
-    dir:=arg(1+2*$5+$6,0,0,1,0,0,1,1,1)
+    dir:=arg1(1+2*$5+$6,0,0,1,0,0,1,1,1)
 
     +map[0] [1]
     +fx_intarsia_preview. ${1-7},63 drgba.
