@@ -4867,7 +4867,7 @@ echo_file : skip "${2='\n'}"
     foreach { if $><256 => char$> else => mask{$>-256} fi }
     store $varname
   onfail
-    v + error[0--3] "Command 'font': Unknown font '$1'." v -
+    v + error[0--3] "Command '$0': Unknown font '$1'." v -
     varname=$2 # Fallback
     rm
   }
@@ -5348,7 +5348,7 @@ _input_csv_val :
   l[] {
     i raw:"$1",float32
     if i!=202021.25 endian. fi
-    if i!=202021.25 error[0--3] "Command 'input_flo': Filename '$1' is not a valid .flo file." return fi
+    if i!=202021.25 error[0--3] "Command '$0': Filename '$1' is not a valid .flo file." return fi
     +rows 1,2 cast. float32,uint32 w,h={^} rm.
     rows 3,100% r 2,$w,$h,1,-1 permute yzcx
   }
@@ -5405,7 +5405,7 @@ _input_glob :
     url=https://gmic.eu/"$1"
     l[] { file=${-path_cache}$basename i $url o $file is_change 1 onfail file= }
     if ['{/$file}']==0
-      error[0--3] "Command 'input_cached': Unknown filename '"{/"$1"}"'."
+      error[0--3] "Command '$0': Unknown filename '"{/"$1"}"'."
     fi
   fi
   u $file
@@ -6032,7 +6032,7 @@ output_obj : check "isbool(${2=1})" check3d
           ++nb_primitives;
 
         ):( # Unsupported primitive
-          run(['warn \"Command 'output_obj': Cannot convert primitive \#'],p,'/',nbp - 1,
+          run(['warn \"Command '$0': Cannot convert primitive \#'],p,'/',nbp - 1,
                ' (size ',type,'). Ignoring it.\"');
         );
 
@@ -6187,7 +6187,7 @@ parse_cli : skip "${1=print},${2=*}"
   # Check that specified output mode is actually implemented.
   l[] {
     ({'$$parse_cli_$1'}) rm
-    onfail error[0--2] "Command 'parse_cli': Invalid output mode '$1'."
+    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
   }
 
   if !$! l[] { it ${_path_rc}update$_version.gmic onfail } fi
@@ -8403,7 +8403,7 @@ parse_gui : skip "${1=print},${2=*}"
   # Check that specified output mode is actually implemented.
   l[] {
     ({'$$parse_gui_$1'}) rm
-    onfail error[0--2] "Command 'parse_gui': Invalid output mode '$1'."
+    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
   }
 
   # Input .gmic data.
@@ -11046,7 +11046,7 @@ update_color_presets_html : check "isbool(${1=0})"
   use_vt100
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/color_presets/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_color_presets_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
 
@@ -11482,7 +11482,7 @@ update_gallery_html : check "isbool(${1=0})"
   use_vt100
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/gallery/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_gallery_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
   delete img createdir img
@@ -12389,7 +12389,7 @@ _update_gmicol : # Keep only a subset of existing filters
 update_reference_html : check "isbool(${1=0})"
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/reference/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_reference_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
   x "rm -f *.pdf"
@@ -12425,7 +12425,7 @@ update_reference_html : check "isbool(${1=0})"
 update_tutorial_html : check "isbool(${1=0})"
   path_current=${-path_current} path_ok=$HOME/work/src/gmic/html/tutorial/
   if ['$path_current']!=['$path_ok']
-    error[0--3] "Command 'update_tutorial_html: Command run from wrong path: '"$path_current"', "\
+    error[0--3] "Command '$0': Command run from wrong path: '"$path_current"', "\
                 "should be '"$path_ok"'."
   fi
 
@@ -12517,7 +12517,7 @@ strings2ts : skip "${1=}"
   if $N0 e "  > File '$1' contains "$N0" strings." fi
   l[] { it "$2" s -,10 N1=$! repeat $! { nsrc$>={$>,t} } rm }
   l[] { it "$3" replace_str " ;",";" s -,10 N2=$! repeat $! { ndest$>={$>,t} } rm }
-  if $N1!=$N2 error[0--3] "Command 'strings2ts': Number of lines do not match in files '$2' and '$3'." fi
+  if $N1!=$N2 error[0--3] "Command '$0': Number of lines do not match in files '$2' and '$3'." fi
   e "  > Files '$2' and '$3' contain "$N1" strings."
 
   # Merge all strings together (set higher priority to strings that were already in the .ts file).
@@ -14100,7 +14100,7 @@ decompress_from_keypoints : skip "${1=},${2=},${3=}"
       W = P[0]; H = P[1]; D = s>2?P[2]:1; S = s - (D>1?3:H>1?2:1); use_rbf = s>2?V[2]:1;
       [ W,H,D,S,V[0],V[1],use_rbf ]"
     if $w<=0" || "$h<0" || "$d<0" || "$s<0" || "!isbool($use_rbf)
-      error[0--4] "Command 'decompress_keypoints': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
+      error[0--4] "Command '$0': Image \#"{arg0($>,$sel)}" = ("{[w,h,d,s]}") "\
                   "is a not a valid keypoint set."
     fi
 
@@ -14794,7 +14794,7 @@ rand_sum : check "isint($1,1) && isexpr(${3=u})"
   e[^-1] "Fill image$? with strictly positive, random, integer values that sums to $1, with random function '$3'."
   foreach {
     if whds>$1
-      error[0--4] "Command 'rand_sum': Image ["$>"] = ("{[w,h,d,s]}") has "{whds}" elements (should be <=$1)."
+      error[0--4] "Command '$0': Image ["$>"] = ("{[w,h,d,s]}") has "{whds}" elements (should be <=$1)."
     fi
     f. "abs($3)" *. {($1-whds)/is} round. +. 1
     eval "
@@ -18443,7 +18443,7 @@ scale2x_cnn : check "${1=1.25}>=0"
   else l[] {
     l[] {
       input_cached gmic_scale2x_cnn.gmz
-      onfail error[0--5] "Command 'scale2x_cnn': Unable to load network file 'gmic_scale2x_cnn.gmz'."
+      onfail error[0--5] "Command '$0': Unable to load network file 'gmic_scale2x_cnn.gmz'."
     }
     +store _scale2x_cnn _is_scale2x_cnn=1
   } fi
@@ -18954,7 +18954,7 @@ closing : skip "${2=},${3=}"
     if ['$3']!=0 is_real=$3 fi
     e[0--3] "Apply morphological closing to image$? with kernel ["${"pass$1 -1"}"] and "${b$boundary}" boundary "\
             "conditions, in "${r$is_real}" mode."
-  else error[0--3] "Command 'closing': Invalid arguments '$*'."
+  else error[0--3] "Command '$0': Invalid arguments '$*'."
   fi
 
   if $sx>0||$sy>0||$sz>0
@@ -19247,7 +19247,7 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
   if !0${_is_denoise_cnn} l[] {
     input_cached gmic_denoise_cnn.gmz
     store _denoise_cnn _is_denoise_cnn=1
-    onfail error[0--5] "Command 'denoise_cnn': Unable to load network file 'gmic_denoise_cnn.gmz'."
+    onfail error[0--5] "Command '$0': Unable to load network file 'gmic_denoise_cnn.gmz'."
   } fi
   l[] {
     $_denoise_cnn replace_str. "64,64,1","$2,$2,1" run {t} rm
@@ -20461,7 +20461,7 @@ opening : skip "${2=},${3=}"
     if ['$3']!=0 is_real=$3 fi
     e[0--3] "Apply morphological opening to image$? with kernel ["${"pass$1 -1"}"] and "${b$boundary}" boundary "\
             "conditions, in "${r$is_real}" mode."
-  else error[0--3] "Command 'opening': Invalid arguments '$*'."
+  else error[0--3] "Command '$0': Invalid arguments '$*'."
   fi
 
   if $sx>0||$sy>=0||$sz>=0
@@ -20716,7 +20716,7 @@ rbf :
       k. $avg ri. .. + => $nm
     fi }
 
-  else error[0--2] "Command 'rbf': invalid arguments '$*'."
+  else error[0--2] "Command '$0': invalid arguments '$*'."
   fi
 
 #@cli red_eye : 0<=_threshold<=100,_smoothness>=0,0<=attenuation<=1
@@ -21579,14 +21579,14 @@ edgels : check "isint(${1=-1}) && $1>=(${2=-1}>=0?0:-1) && isint($2) && $2>=($1>
     if $is_xyn0 # Edgel coordinates specified
       if "const x = $1; const y = $2;
           !i(#0,x,y) || arg0($3,i(#0,x + 1,y),i(#0,x,y + 1),i(#0,x - 1,y),i(#0,x,y - 1))"
-        error[0--5] "Command 'edgels': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
+        error[0--5] "Command '$0': Edgel ($1,$2,$3) is not defined, in image ["{arg0($>,$sel)}"]."
       fi
       1,1,1,3
       eval ${-math_lib}"const x = $1; const y = $2; const n = $3; "$code
 
     elif $is_xy0 # Pixel coordinates specified
       if "!i($1,$2)"
-        error[0--5] "Command 'edgels': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
+        error[0--5] "Command '$0': Point ($1,$2) is in background, in image ["{arg0($>,$sel)}"]."
       fi
       100%,100% # Already visited edgels (bitwise storage)
       1,1,1,3
@@ -21787,11 +21787,11 @@ ifftpolar :
 img2patches : check "isint($1,1) && ${2=0}>=0 && isint(${3=0},0,3)"
   e[^-1] "Decompose 2D images$? as $1x$1 patch-image, with overlap $2."
   foreach {
-    if d>1 error[0--4] "Command 'img2patches': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
+    if d>1 error[0--4] "Command '$0': Image ["$>"] is not a 2D image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz=$1
     if ispercentage($2) overlap:=round(lerp(0,$psiz-1,$2)) else overlap:=int($2) fi
     if $overlap<0" || "$overlap>=$psiz
-      error[0--4] "Command 'img2patches': Specified overlap $2 (value: "$overlap") is larger than "\
+      error[0--4] "Command '$0': Specified overlap $2 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
     fi
     step:=$psiz-$overlap
@@ -22037,11 +22037,11 @@ mse_matrix :
 patches2img : check "isint($1,1) && isint($2,1) && ${3=0}>=0 && (${4=-1}==-1 || $4>=0)"
   e[^-1] "Recompose 2D images from patch-image$?, with size ($1,$2), overlap $3 and overlap_std $4."
   foreach {
-    if w!=h error[0--4] "Command 'patches2img': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
+    if w!=h error[0--4] "Command '$0': Image "[$>]" is not a patch-image (size: "{[w,h,d,s]}")." fi
     nm={n} psiz:=w W,H:=${1,2}
     if ispercentage($3) overlap:=round(lerp(0,$psiz-1,$3)) else overlap:=int($3) fi
     if $overlap<0" || "$overlap>=$psiz
-      error[0--4] "Command 'patches2img': Specified overlap $3 (value: "$overlap") is larger than "\
+      error[0--4] "Command '$0': Specified overlap $3 (value: "$overlap") is larger than "\
                   "patch size (value: "$psiz")."
     fi
     step:=$psiz-$overlap
@@ -22643,7 +22643,7 @@ ssd_patch : check ${is_image_arg\ $1} skip ${2=0},${3=0}
     # Check image dimensions.
     pass. 0
     if [w#0,h#0,d#0,s#0]!=[w#1,h#1,d#1,s#1]
-      error[0--4] "Command 'ssim': Image dimensions ("{0,[w,h,d,s]}") and ("{1,[w,h,d,s]}") do not match."
+      error[0--4] "Command '$0': Image dimensions ("{0,[w,h,d,s]}") and ("{1,[w,h,d,s]}") do not match."
     fi
 
     # Automatic downsampling.
@@ -24830,7 +24830,7 @@ diagonal :
   foreach {
     nm={n}
     if !w" || "w!=h" || "d>1" || "s>1
-      error[0--4] "Command 'dijkstra': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
+      error[0--4] "Command '$0': Image ["{arg0($>,$[])}"]: '"$nm"', of size ("{[w,h,d,s]}") "\
                   "is not an adjacency matrix."
     fi
     N:=w # Number of nodes
@@ -24897,7 +24897,7 @@ fitsamples : check "isint($1,1) && ${2=100%}>0" skip "${3=},${4=},${5=}"
     # Determine input format: 'MxNx1x1', 'Mx1xNx1', 'Mx1x1xN', '1xMxNx1', '1xMx1xN' or '1x1xMxN'.
     M,N,type:=w>1?[w,h>1?[h,0]:d>1?[d,1]:[s,2]]:h>1?[h,d>1?[d,3]:[s,4]]:d>1?[d,s>1?[s,5]:[-1,-1]]
     if $M*$N!=whds
-      error[0--4] "Command 'fitsamples': Selected image ("{[w,h,d,s]}") does not represent a set of vectors."
+      error[0--4] "Command '$0': Selected image ("{[w,h,d,s]}") does not represent a set of vectors."
     fi
     permute ${fwd$type} # Force it to be a 'Mx1x1xN' matrix
 
@@ -24945,7 +24945,7 @@ meigen : check "isint($1,1)"
   e[^-1] "Compute $1 largest eigen-values of matri"$s"$?."
   foreach {
     nm={n}
-    if w!=h" || "d!=1" || "s!=1 v 1 error[0--5] "Command 'meigen': Image '"$nm"' is not a square matrix." fi
+    if w!=h" || "d!=1" || "s!=1 v 1 error[0--5] "Command '$0': Image '"$nm"' is not a square matrix." fi
     eval ${-math_lib}" store('val',meig(crop(),$1,h),1,min($1,h))" $val k. => $nm
   }
 
@@ -31771,7 +31771,7 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}
   if !min(${_${nout}_size})
-    error[0--3] "Command 'nn_patchdown2d': Specified patch size ("${patch_size}x${patch_size}") is higher than "\
+    error[0--3] "Command '$0': Specified patch size ("${patch_size}x${patch_size}") is higher than "\
                 "input size ("${_${nin}_size}")."
   fi
   _${nout}_forward="begin(nn_patchdown2d_init_forward("$nout,$nin,$patch_size"));"\
@@ -31804,7 +31804,7 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_input=$in
   _${nout}_properties="patch_size="${patch_size}x${patch_size}x${patch_size}
   if !min(${_${nout}_size})
-    error[0--3] "Command 'nn_patchdown3d': Specified patch size ("${patch_size}x${patch_size}x${patch_size}") is "\
+    error[0--3] "Command '$0': Specified patch size ("${patch_size}x${patch_size}x${patch_size}") is "\
                 "higher than input size ("${_${nin}_size}")."
   fi
   _${nout}_forward="begin(nn_patchdown3d_init_forward("$nout,$nin,$patch_size"));"\
@@ -32001,7 +32001,7 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
   if prod(${_${nout}_size})!=prod(${_${nin}_size})
-    error[0--3] "Command 'nn_reshape': Cannot reshape input ("${_${nin}_size}") "\
+    error[0--3] "Command '$0': Cannot reshape input ("${_${nin}_size}") "\
                 "to output ("${_${nout}_size}")."
   fi
   _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"
@@ -33274,7 +33274,7 @@ drop_shadow : check "isexpr(${1=20}) && isexpr(${2=$1}) && ${3=5}>=0 && isnum(${
          ${t$7}" layer output."
   foreach {
     nm={n}
-    if s>4 error[0--3] "Command 'drop_shadow': Invalid input image (has "{s}" channels)." fi
+    if s>4 error[0--3] "Command '$0': Invalid input image (has "{s}" channels)." fi
     to_a
 
     shiftx,shifty:=round([ispercentage($1)?$1*w:$1,ispercentage($2)?$2*h:$2])
@@ -33720,12 +33720,12 @@ pixelsort : check "(str1=['${1=+}']; isin(str1,'+','-')) && "\
   repeat $! {
     if ['$3']!=0 pass$3 0 else +compose_channels[$>] + fi
     if [w#1,h#1,d#1,s#1]!=[w#0,h#0,d#0,1]
-      error[0--4] "Command 'pixelsort': Invalid specified sorting criterion (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
+      error[0--4] "Command '$0': Invalid specified sorting criterion (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
     if ['$4']!=0 pass$4 0 else [$>],[$>],[$>],1,1 fi
     if [w#2,h#2,d#2,s#2]!=[w#0,h#0,d#0,1]
-      error[0--4] "Command 'pixelsort': Invalid specified mask (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
+      error[0--4] "Command '$0': Invalid specified mask (size=("{1,[w,h,d,s]}")) for image ["$>"] "\
                   "(size=("{0,[w,h,d,s]}"))."
     fi
     l[$>,-2,-1] {
@@ -34631,7 +34631,7 @@ warp_perspective : skip ${1=1.5},${2=0},${3=1},${4=50},${5=50},${6=2}
 warp_rbf :
   e[^-1] "Warp image$? using RBF interpolation, with keypoints ($*)."
   $=arg N:=$#/4
-  if int($N)!=$N error[0--2] "Command 'warp_rbf': Wrong number of arguments ($#)." fi
+  if int($N)!=$N error[0--2] "Command '$0': Wrong number of arguments ($#)." fi
   foreach {
     # Retrieve absolute keypoints coordinates.
     4,$N
@@ -34652,7 +34652,7 @@ warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
   pass$1
   if !$2 warp[^-1] . rm. return fi
   dim:=$3?$3:s
-  if $dim>3 error[0--3] "Command 'warp_seamless': Invalid displacement map (size: "{[w,h,d,s]}")." fi
+  if $dim>3 error[0--3] "Command '$0': Invalid displacement map (size: "{[w,h,d,s]}")." fi
   foreach[^-1] { nm={n}
     im,iM:=im,iM
     pass.
@@ -35944,7 +35944,7 @@ morph_rbf : check "$1>=0.5"
   e[^-1] "Create morphing sequence between image$? using RBF interpolation, "\
     "with "$nbf" inner frames and keypoints ($*)."
   $=arg N:=($#-1)/4
-  if int($N)!=$N error[0--2] "Command 'morph_rbf': Wrong number of arguments ($#)." fi
+  if int($N)!=$N error[0--2] "Command '$0': Wrong number of arguments ($#)." fi
   ri[^0] [0],3
   repeat $!-1 { nm={$>,n} l[$<,{$<+1}] {
     e "\r > Morph image "$>" to image "{$>+1}".    "
@@ -37558,7 +37558,7 @@ name2color :
   names={`"s = ['"{n}"']; m = !(s-_'~')*(_'_'-_'~'); s+=m; lowercase(s)"`}
   l. {
     s x => $names u {$name,^} rm
-    onfail rm error[0--3] "Command 'name2color': Unknown color '$1'."
+    onfail rm error[0--3] "Command '$0': Unknown color '$1'."
   }
 
 #@cli nmd : eq. to 'named' : (+)
