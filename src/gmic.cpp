@@ -6164,7 +6164,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   arg_command_text,
                   add_debug_info?", with debug info":"");
             cimg::strunescape(arg_command);
-            add_commands(arg_command,0,add_debug_info,&count_new,&count_replaced);
+            bool is_main = false;
+            add_commands(arg_command,0,add_debug_info,&count_new,&count_replaced,&is_main);
+            if (is_main)
+              error(true,0,0,
+                    "Command 'command': Expression '%s' does not define a named command.",
+                    gmic_argument_text());
           }
           if (is_verbose) {
             unsigned int count_total = 0;
