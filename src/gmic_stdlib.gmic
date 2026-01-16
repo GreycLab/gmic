@@ -29972,6 +29972,59 @@ nn_lib :
       learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
+    # nn_parameters: 4D grid of parameters.
+    #--------------------------------------
+    nn_parameters_init_forward(OUT) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_width = w##OUT#_ind;
+      const OUT#_height = h##OUT#_ind;
+      const OUT#_depth = d##OUT#_ind;
+      const OUT#_spectrum = s##OUT#_ind;
+      OUT#_params = crop(##OUT#_ind);
+    );
+
+    nn_parameters_forward(OUT,IN) = (
+      ref(OUT#_params,OUT#);
+    );
+
+    nn_parameters_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+    );
+
+    nn_parameters_backward(OUT,IN) = (
+      d#OUT#_params = d#OUT;
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+    );
+
+    nn_parameters_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      batch_d#OUT#_params/=nn_batch_size;
+    );
+
+    nn_parameters_update(P,O,learning_mode) = (
+      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+        const P#_ind_m = $""P#_m;
+        learning_mode?(
+          d#P#_params_m = crop(##P#_ind);
+          nn_optimizer_#O#_update(P#_params,nn_weight_decay);
+          draw(##P#_ind_m,d#P#_params_m);
+        );
+      ):isin(nn_optimizer_#O,nn_optimizer_rmsprop,nn_optimizer_adam,nn_optimizer_adamax)?( # rmsprop, adam, adamax
+        const P#_ind_m = $""P#_m;
+        const P#_ind_m2 = $""P#_m2;
+        learning_mode?(
+          d#P#_params_m = crop(##P#_ind);
+          d#P#_params_m2 = crop(##P#_ind_m2);
+          nn_optimizer_#O#_update(P#_params,nn_weight_decay);
+          draw(##P#_ind_m,d#P#_params);
+          draw(##P#_ind_m2,d#P#_params_m2);
+        );
+      );
+      learning_mode?draw(##P#_ind,P#_params);
+    );
+
     # patchdown2d: 2D downscale by patch.
     #------------------------------------
     nn_patchdown2d_init_forward(OUT,IN,patch_size) = (
