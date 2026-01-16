@@ -29799,13 +29799,13 @@ nn_lib :
       );
     );
 
-    # Special case: Norm2.
-    nn_norm2_forward(OUT,IN) = (
+    # Special case: 'orientation'.
+    nn_orientation_forward(OUT,IN) = (
       OUT#_epsiloned = max(norm(IN#),nn_eps);
       OUT# = IN#/OUT#_epsiloned;
     );
 
-    nn_norm2_backward(OUT,IN) = (
+    nn_orientation_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
@@ -31696,7 +31696,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' layer (nonlinearity) to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | relu | sigmoid | sin | sinc | softmax | \
+#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | orientation | relu | sigmoid | sin | sinc | softmax | \
 # softmax_x | softmax_y | softmax_z | softmax_c | msqr | sqrt | \
 # swish | tanh }.
 #@cli : Default value: 'activation=leakyrelu'.
@@ -31718,9 +31718,9 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${nout}_input=$in
   _${nout}_properties="activation="$activation
   _${nout}_forward="begin(nn_nl_init_forward("$nout,$nin"));"
-  if ['$activation']=='norm2'
-    _${nout}_forward.="nn_norm2_forward("$nout,$nin");"
-    _${nout}_backward="nn_norm2_backward("$nout,$nin");"
+  if ['$activation']=='orientation'
+    _${nout}_forward.="nn_orientation_forward("$nout,$nin");"
+    _${nout}_backward="nn_orientation_backward("$nout,$nin");"
   elif ['$activation']=='softmax'
     _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
     _${nout}_backward="nn_softmax_backward("$nout,$nin");"
