@@ -28818,7 +28818,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adamax_beta1);
       d#P#_m2 = vmax(abs(batch_d#P),nn_adamax_beta2*d#P#_m2);
-      P#-=(nn_learning_rate/nn_optimizer_ombeta1_t)*d#P#_m/sqrt(d#P#_m2 + nn_eps);
+      P#-=(nn_learning_rate/nn_adamax_ombeta1_t)*d#P#_m/sqrt(d#P#_m2 + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29972,8 +29972,8 @@ nn_lib :
       learning_mode&2?draw(##P#_ind,P#_beta,1,0,1,h##P#_ind);
     );
 
-    # nn_parameters: 4D grid of parameters.
-    #--------------------------------------
+    # nn_parameters: 4D grid of learnable parameters.
+    #------------------------------------------------
     nn_parameters_init_forward(OUT) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = w##OUT#_ind;
@@ -29993,7 +29993,7 @@ nn_lib :
     );
 
     nn_parameters_backward(OUT) = (
-      d#OUT#_params = d#OUT;
+      ref(d#OUT,d#OUT#_params);
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
     );
@@ -30007,7 +30007,7 @@ nn_lib :
       nn_optimizer_#O==nn_optimizer_sgd?( # sgd
         const P#_ind_m = $""P#_m;
         learning_mode?(
-          d#P#_params_m = crop(##P#_ind);
+          d#P#_params_m = crop(##P#_ind_m);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
           draw(##P#_ind_m,d#P#_params_m);
         );
@@ -30015,7 +30015,7 @@ nn_lib :
         const P#_ind_m = $""P#_m;
         const P#_ind_m2 = $""P#_m2;
         learning_mode?(
-          d#P#_params_m = crop(##P#_ind);
+          d#P#_params_m = crop(##P#_ind_m);
           d#P#_params_m2 = crop(##P#_ind_m2);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
           draw(##P#_ind_m,d#P#_params);
@@ -31851,18 +31851,18 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _nn_previous_layer=$out
 
 #@cli nn_parameters : out,width>0,_height>0,_depth>0,_spectrum>0,_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'parameters' layer (4D grid of parameters) to the current network.
+#@cli : Add a 'parameters' layer (4D grid of learnable parameters) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'height=depth=spectrum=1', 'learning_mode=1', 'weight_decay=0' and 'initialization=3'.
 nn_parameters : check "s1 = ['$1'];
                        isvarname(s1) && # out
-                       $2>0 && # width
-                       ${3=1}>0 && # height
-                       ${4=1}>0 && # depth
-                       ${5=1}>0 && # spectrum
-                       isint(${6=3},0,3) && # learning_mode
+                       isint($2,1) && # width
+                       isint(${3=1},1) && # height
+                       isint(${4=1},1) && # depth
+                       isint(${5=1},1) && # spectrum
+                       isbool(${6=1}) && # learning_mode
                        ${7=0}>=0 && # weight_decay
                        isint(${8=3},0,4) # initialization
                        "
