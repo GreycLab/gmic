@@ -5768,24 +5768,39 @@ merge_multiline_comments :
 output_565 : check "isbool(${2=0})"
   e[^-1] "Output image$? as raw RGB-565 file '"{/"$1"}"'."
   N=$! +foreach {
+    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     s c c 0,255 /[-3,-1] 8 /.. 4 round
     bsl... 11 bsl.. 5 +
-    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     if $2 endian uint16 fi
     o raw:$fn,uint16 rm
   }
   is_change 0
 
+#@cli output_csv : "filename",_column_separator
+#@cli : Output selected ascii-encoded arrays as .csv files.
+#@cli : Defaut value: 'column_separator=,'.
+output_csv : skip "${2=,}"
+  e[^-1] "Output ascii-encoded array$? as file '"{/"$1"}"', with column separator '$2'."
+  N=$! +foreach {
+    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
+    0 eval.. ">
+      str = I; for (k = 0, k<s && str[k], ++k, da_push(str[k]));
+      da_push(x==w-1?_'\n':_'$2');
+      end(da_freeze()); str"
+    ot. $fn rm
+  }
+  is_change 0
+
 #@cli output_cube : "filename"
-#@cli : Output selected CLUTs as a .cube file (Adobe CLUT format).
+#@cli : Output selected CLUTs as .cube files (Adobe CLUT format).
 output_cube :
   e[^-1] "Output CLUT$? as file '"{/"$1"}"'."
   N=$! +foreach {
+    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     to_rgb
     l:=round((w*h*d)^(1/3))
     if w*h*d!=$l^3 error "Command '$0': CLUT '"{n}"' has invalid dimensions "({w},{h},{d},{s}). fi
     r $l,$l,$l,3,-1 permute cxyz / 255
-    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     o dlm:$fn rm it[] $fn replace {','},32
     0 => $fn basename={b} rm.
     header="\# Created by: G'MIC (https://gmic.eu)\n"\
@@ -5806,10 +5821,10 @@ output_cube :
 output_flo :
   e[^-1] "Output optical flow$? as file '"{/"$1"}"'."
   N=$! +foreach {
-   w,h={w},{h}
-   channels 0,1 permute cxyz i[0] (202021.25) i[1] ($w,$h) cast[1] uint32,float32 y a y
-   if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
-   o raw:$fn,float32 rm
+    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
+    w,h={w},{h}
+    channels 0,1 permute cxyz i[0] (202021.25) i[1] ($w,$h) cast[1] uint32,float32 y a y
+    o raw:$fn,float32 rm
   }
   is_change 0
 
@@ -5819,6 +5834,7 @@ output_flo :
 output_ggr : skip "${2=}"
   e[^-1] "Output image$? as .ggr gradient file '"{/"$1"}"'."
   N=$! +foreach {
+  if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     r 1,{w*h*d},1,100%,-1 to_rgba / 255
     if narg("$2") name="$2"
     else l[] { 1 => "$1" ('{b}') f "!x && i>=_'a' && i<=_'z'?i-_'a'+_'A':i" name={t} rm }
@@ -5832,9 +5848,7 @@ output_ggr : skip "${2=}"
       r:=arg0(0,$rgba) g:=arg0(1,$rgba) b:=arg0(2,$rgba) a:=arg0(3,$rgba)
       ('$start" "$mid" "$end" "$r" "$g" "$b" "$a" "$r" "$g" "$b" "$a" 0 0\n"')
     }
-    rm[0] a x
-    if $N>1 ot ${"filename \"$1\",$>"} else ot "$1" fi
-    rm
+    rm[0] a x ot $fn rm
   }
   is_change 0
 
@@ -5873,8 +5887,8 @@ output_obj : check "isbool(${2=1})" check3d
     nm={n} nb_materials,nb_primitives,nb_textures,nb_tcoords=0
 
     # Generate basename, file header and eval macros.
-    if $N>1 filename=${"filename \"$1\",$>"} else filename="$1" fi
-    0 => $filename basename={b} folder={f} ext={x} if narg($ext) ext=.$ext fi rm.
+    if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
+    0 => $fn basename={b} folder={f} ext={x} if narg($ext) ext=.$ext fi rm.
     fnobj="begin(out = 0; s_rgba = vector8());
            tos(x) = v2s(x,6);
            strhex(v,str) = (
@@ -28636,6 +28650,11 @@ nn_lib :
     nn_activation_tanh(z) = (tanh(z));
     nn_activation_d_tanh(z) = (1 - tanh(z)^2);
 
+    # tanhz3.
+    #--------
+    nn_activation_tanhz3(z) = (tanh(z^3/10));
+    nn_activation_d_tanhz3(z) = (3*(1 - tanh(z^3/10))*z^2/10);
+
     # waves.
     #-------
     nn_activation_waves(z,a,b,c) = (
@@ -28706,11 +28725,6 @@ nn_lib :
       ref(round(1024*z+16384),_nn_custom_k);
       512*(_nn_activation_custom(_nn_custom_k + 1) - _nn_activation_custom(_nn_custom_k - 1));
     );
-
-    # foo.
-    #-----
-    nn_activation_foo(z) = (tanh(z^3/10));
-    nn_activation_d_foo(z) = (3*(1 - tanh(z^3/10))*z^2/10);
 
     #---------
     # Trainer.
