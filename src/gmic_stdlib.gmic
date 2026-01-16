@@ -29740,10 +29740,10 @@ nn_lib :
     nn_nl_orientation_x_forward(OUT,IN) = (
       OUT#_epsiloned = vector(##OUT#_height*OUT#_depth*OUT#_spectrum);
       OUT# = IN#;
-      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
-        OUT#_off = l*OUT#_width;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
-        OUT#_eps = OUT#_epsiloned[l] = max(norm(OUT#_crop),nn_eps);
+        OUT#_eps = OUT#_epsiloned[_nn_l] = max(norm(OUT#_crop),nn_eps);
         copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
              OUT#_width);
       );
@@ -29751,11 +29751,11 @@ nn_lib :
 
     nn_nl_orientation_x_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
-        OUT#_off = l*OUT#_width;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
         d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
-        copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l],
+        copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[_nn_l],
              OUT#_width,1,1,-1);
       );
     );
@@ -29764,11 +29764,11 @@ nn_lib :
     nn_nl_orientation_y_forward(OUT,IN) = (
       OUT#_epsiloned = vector(##OUT#_width*OUT#_depth*OUT#_spectrum);
       OUT# = IN#;
-      repeat (OUT#_depth*OUT#_spectrum,l,
-        repeat (OUT#_width,k,
-          OUT#_off = l*OUT#_width*OUT#_height + k;
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
-          OUT#_eps = OUT#_epsiloned[l*OUT#_width + k] = max(norm(OUT#_crop),nn_eps);
+          OUT#_eps = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = max(norm(OUT#_crop),nn_eps);
           copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
                OUT#_height,OUT#_width,1);
         );
@@ -29777,12 +29777,13 @@ nn_lib :
 
     nn_nl_orientation_y_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_depth*OUT#_spectrum,l,
-        repeat (OUT#_width,k,
-          OUT#_off = l*OUT#_width*OUT#_height + k;
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
-          copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l*OUT#_width + k],
+          copy(d#IN[OUT#_off],
+               (d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[_nn_l*OUT#_width + _nn_k],
                OUT#_height,OUT#_width,1,-1);
         );
       );
@@ -29792,11 +29793,11 @@ nn_lib :
     nn_nl_orientation_z_forward(OUT,IN) = (
       OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
       OUT# = IN#;
-      repeat (OUT#_spectrum,l,
-        repeat (OUT#_width*OUT#_height,k,
-          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
-          OUT#_eps = OUT#_epsiloned[l*OUT#_width*OUT#_height + k] = max(norm(OUT#_crop),nn_eps);
+          OUT#_eps = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = max(norm(OUT#_crop),nn_eps);
           copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
                OUT#_depth,OUT#_width*OUT#_height,1);
         );
@@ -29805,13 +29806,14 @@ nn_lib :
 
     nn_nl_orientation_z_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_spectrum,l,
-        repeat (OUT#_width*OUT#_height,k,
-          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           copy(d#IN[OUT#_off],
-               (d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l*OUT#_width*OUT#_height + k],
+               (d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/
+                 OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k],
                OUT#_depth,OUT#_width*OUT#_height,1,-1);
         );
       );
@@ -29821,20 +29823,20 @@ nn_lib :
     nn_nl_orientation_c_forward(OUT,IN) = (
       OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_depth);
       OUT# = IN#;
-      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
-        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        OUT#_eps = OUT#_epsiloned[k] = max(norm(OUT#_crop),nn_eps);
-        copy(OUT#[k],OUT#_crop/OUT#_eps,
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        OUT#_eps = OUT#_epsiloned[_nn_k] = max(norm(OUT#_crop),nn_eps);
+        copy(OUT#[_nn_k],OUT#_crop/OUT#_eps,
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
       );
     );
 
     nn_nl_orientation_c_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
-        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        d#OUT#_crop = d#OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        copy(d#IN[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[k],
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(d#IN[_nn_k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[_nn_k],
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
       );
     );
@@ -29852,8 +29854,8 @@ nn_lib :
     # Special case: 'softmax_x'.
     nn_nl_softmax_x_forward(OUT,IN) = (
       OUT# = IN#;
-      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
-        OUT#_off = l*OUT#_width;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
         copy(OUT#[OUT#_off],softmax(OUT#_crop),
              OUT#_width);
@@ -29862,8 +29864,8 @@ nn_lib :
 
     nn_nl_softmax_x_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
-        OUT#_off = l*OUT#_width;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
         d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
         copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
@@ -29874,9 +29876,9 @@ nn_lib :
     # Special case: 'softmax_y'.
     nn_nl_softmax_y_forward(OUT,IN) = (
       OUT# = IN#;
-      repeat (OUT#_depth*OUT#_spectrum,l,
-        repeat (OUT#_width,k,
-          OUT#_off = l*OUT#_width*OUT#_height + k;
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
           copy(OUT#[OUT#_off],softmax(OUT#_crop),
                OUT#_height,OUT#_width,1);
@@ -29886,9 +29888,9 @@ nn_lib :
 
     nn_nl_softmax_y_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_depth*OUT#_spectrum,l,
-        repeat (OUT#_width,k,
-          OUT#_off = l*OUT#_width*OUT#_height + k;
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
           copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
@@ -29900,9 +29902,9 @@ nn_lib :
     # Special case: 'softmax_z'.
     nn_nl_softmax_z_forward(OUT,IN) = (
       OUT# = IN#;
-      repeat (OUT#_spectrum,l,
-        repeat (OUT#_width*OUT#_height,k,
-          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           copy(OUT#[OUT#_off],softmax(OUT#_crop),
                OUT#_depth,OUT#_width*OUT#_height,1);
@@ -29912,9 +29914,9 @@ nn_lib :
 
     nn_nl_softmax_z_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_spectrum,l,
-        repeat (OUT#_width*OUT#_height,k,
-          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           copy(d#IN[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
@@ -29926,19 +29928,19 @@ nn_lib :
     # Special case: 'softmax_c'.
     nn_nl_softmax_c_forward(OUT,IN) = (
       OUT# = IN#;
-      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
-        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        copy(OUT#[k],softmax(OUT#_crop),
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[_nn_k],softmax(OUT#_crop),
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
       );
     );
 
     nn_nl_softmax_c_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
-        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        d#OUT#_crop = d#OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        copy(d#IN[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(d#IN[_nn_k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
       );
     );
@@ -30157,6 +30159,23 @@ nn_lib :
       );
       learning_mode?draw(##P#_ind,P#_params);
     );
+
+    # # patchcol2d : Transform 2D image as a sequence of column-encoded patches.
+    # #--------------------------------------------------------------------------
+    # nn_patch2col2d_init_forward(OUT,IN,patch_size) = (
+    #   const OUT#_patch_size = patch_size;
+    #   const OUT#_height = OUT#_patch_size^2*OUT#_spectrum;
+    #   const OUT#_width = size(IN#)/OUT#_height;
+    #   const OUT#_depth = 1;
+    #   const OUT#_spectrum = 1;
+    # );
+
+    # nn_patchcol2d_forward(OUT,IN) = (
+    #   OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+    #   repeat (OUT#_height,l,
+    #     repeat (OUT#_
+
+    # );
 
     # patchdown2d: 2D downscale by patch.
     #------------------------------------
