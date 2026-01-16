@@ -29695,18 +29695,132 @@ nn_lib :
       d#IN+=d#OUT*nn_activation_d_#activation(IN#);
     );
 
+    # Special case: 'orientation'.
+    nn_nl_orientation_forward(OUT,IN) = (
+      OUT#_epsiloned = max(norm(IN#),nn_eps);
+      OUT# = IN#/OUT#_epsiloned;
+    );
+
+    nn_nl_orientation_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
+    );
+
+    # Special case: 'orientation_x'.
+    nn_nl_orientation_x_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_height*OUT#_depth*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        OUT#_eps = OUT#_epsiloned[l] = max(norm(OUT#_crop),nn_eps);
+        copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
+             OUT#_width);
+      );
+    );
+
+    nn_nl_orientation_x_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
+        OUT#_off = l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
+        copy(OUT#[OUT#_off],(d#OUT_crop - dot(d#OUT_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l],
+             OUT#_width,1,1,-1);
+      );
+    );
+
+    # Special case: 'orientation_y'.
+    nn_nl_orientation_y_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_depth*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          OUT#_eps = OUT#_epsiloned[l*OUT#_width + k] = max(norm(OUT#_crop),nn_eps);
+          copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
+               OUT#_height,OUT#_width,1);
+        );
+      );
+    );
+
+    nn_nl_orientation_y_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_depth*OUT#_spectrum,l,
+        repeat (OUT#_width,k,
+          OUT#_off = l*OUT#_width*OUT#_height + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(OUT#[OUT#_off],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l*OUT#_width + k],
+               OUT#_height,OUT#_width,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'orientation_z'.
+    nn_nl_orientation_z_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          OUT#_eps = OUT#_epsiloned[l*OUT#_width*OUT#_height + k] = max(norm(OUT#_crop),nn_eps);
+          copy(OUT#[OUT#_off],OUT#_crop/OUT#_eps,
+               OUT#_depth,OUT#_width*OUT#_height,1);
+        );
+      );
+    );
+
+    nn_nl_orientation_z_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_spectrum,l,
+        repeat (OUT#_width*OUT#_height,k,
+          OUT#_off = l*OUT#_width*OUT#_height*OUT#_depth + k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(OUT#[OUT#_off],
+               (d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[l*OUT#_width*OUT#_height + k],
+               OUT#_depth,OUT#_width*OUT#_height,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'orientation_c'.
+    nn_nl_orientation_c_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_depth);
+      OUT# = IN#;
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        OUT#_eps = OUT#_epsiloned[k] = max(norm(OUT#_crop),nn_eps);
+        copy(OUT#[k],OUT#_crop/OUT#_eps,
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
+      );
+    );
+
+    nn_nl_orientation_c_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_width*OUT#_height*OUT#_depth,k,
+        OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(OUT#[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop)*OUT#_crop)/OUT#_epsiloned[k],
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
+      );
+    );
+
     # Special case: 'softmax'.
-    nn_softmax_forward(OUT,IN) = (
+    nn_nl_softmax_forward(OUT,IN) = (
       OUT# = softmax(IN#);
     );
 
-    nn_softmax_backward(OUT,IN) = (
+    nn_nl_softmax_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=(d#OUT - dot(d#OUT,OUT#))*OUT#;
     );
 
     # Special case: 'softmax_x'.
-    nn_softmax_x_forward(OUT,IN) = (
+    nn_nl_softmax_x_forward(OUT,IN) = (
       OUT# = IN#;
       repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
         OUT#_off = l*OUT#_width;
@@ -29716,7 +29830,7 @@ nn_lib :
       );
     );
 
-    nn_softmax_x_backward(OUT,IN) = (
+    nn_nl_softmax_x_backward(OUT,IN) = (
       nn_define_backward(IN#);
       repeat (OUT#_height*OUT#_depth*OUT#_spectrum,l,
         OUT#_off = l*OUT#_width;
@@ -29728,7 +29842,7 @@ nn_lib :
     );
 
     # Special case: 'softmax_y'.
-    nn_softmax_y_forward(OUT,IN) = (
+    nn_nl_softmax_y_forward(OUT,IN) = (
       OUT# = IN#;
       repeat (OUT#_depth*OUT#_spectrum,l,
         repeat (OUT#_width,k,
@@ -29740,7 +29854,7 @@ nn_lib :
       );
     );
 
-    nn_softmax_y_backward(OUT,IN) = (
+    nn_nl_softmax_y_backward(OUT,IN) = (
       nn_define_backward(IN#);
       repeat (OUT#_depth*OUT#_spectrum,l,
         repeat (OUT#_width,k,
@@ -29754,7 +29868,7 @@ nn_lib :
     );
 
     # Special case: 'softmax_z'.
-    nn_softmax_z_forward(OUT,IN) = (
+    nn_nl_softmax_z_forward(OUT,IN) = (
       OUT# = IN#;
       repeat (OUT#_spectrum,l,
         repeat (OUT#_width*OUT#_height,k,
@@ -29766,7 +29880,7 @@ nn_lib :
       );
     );
 
-    nn_softmax_z_backward(OUT,IN) = (
+    nn_nl_softmax_z_backward(OUT,IN) = (
       nn_define_backward(IN#);
       repeat (OUT#_spectrum,l,
         repeat (OUT#_width*OUT#_height,k,
@@ -29780,7 +29894,7 @@ nn_lib :
     );
 
     # Special case: 'softmax_c'.
-    nn_softmax_c_forward(OUT,IN) = (
+    nn_nl_softmax_c_forward(OUT,IN) = (
       OUT# = IN#;
       repeat (OUT#_width*OUT#_height*OUT#_depth,k,
         OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
@@ -29789,7 +29903,7 @@ nn_lib :
       );
     );
 
-    nn_softmax_c_backward(OUT,IN) = (
+    nn_nl_softmax_c_backward(OUT,IN) = (
       nn_define_backward(IN#);
       repeat (OUT#_width*OUT#_height*OUT#_depth,k,
         OUT#_crop = OUT#[k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
@@ -29797,17 +29911,6 @@ nn_lib :
         copy(OUT#[k],(d#OUT#_crop - dot(d#OUT#_crop,OUT#_crop))*OUT#_crop,
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
       );
-    );
-
-    # Special case: 'orientation'.
-    nn_orientation_forward(OUT,IN) = (
-      OUT#_epsiloned = max(norm(IN#),nn_eps);
-      OUT# = IN#/OUT#_epsiloned;
-    );
-
-    nn_orientation_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      d#IN+=(d#OUT - dot(d#OUT,OUT#)*OUT#)/OUT#_epsiloned;
     );
 
     # noise: Perturb input with noise.
@@ -31696,7 +31799,8 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' layer (nonlinearity) to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | orientation | relu | sigmoid | sin | sinc | softmax | \
+#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | orientation | orientation_x | orientation_y | \
+# orientation_z | orientation_c relu | sigmoid | sin | sinc | softmax | \
 # softmax_x | softmax_y | softmax_z | softmax_c | msqr | sqrt | \
 # swish | tanh }.
 #@cli : Default value: 'activation=leakyrelu'.
@@ -31719,23 +31823,35 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
   _${nout}_properties="activation="$activation
   _${nout}_forward="begin(nn_nl_init_forward("$nout,$nin"));"
   if ['$activation']=='orientation'
-    _${nout}_forward.="nn_orientation_forward("$nout,$nin");"
-    _${nout}_backward="nn_orientation_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_orientation_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_orientation_backward("$nout,$nin");"
+  elif ['$activation']=='orientation_x'
+    _${nout}_forward.="nn_nl_orientation_x_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_orientation_x_backward("$nout,$nin");"
+  elif ['$activation']=='orientation_y'
+    _${nout}_forward.="nn_nl_orientation_y_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_orientation_y_backward("$nout,$nin");"
+  elif ['$activation']=='orientation_z'
+    _${nout}_forward.="nn_nl_orientation_z_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_orientation_z_backward("$nout,$nin");"
+  elif ['$activation']=='orientation_c'
+    _${nout}_forward.="nn_nl_orientation_c_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_orientation_c_backward("$nout,$nin");"
   elif ['$activation']=='softmax'
-    _${nout}_forward.="nn_softmax_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_softmax_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_softmax_backward("$nout,$nin");"
   elif ['$activation']=='softmax_x'
-    _${nout}_forward.="nn_softmax_x_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_x_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_softmax_x_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_softmax_x_backward("$nout,$nin");"
   elif ['$activation']=='softmax_y'
-    _${nout}_forward.="nn_softmax_y_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_y_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_softmax_y_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_softmax_y_backward("$nout,$nin");"
   elif ['$activation']=='softmax_z'
-    _${nout}_forward.="nn_softmax_z_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_z_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_softmax_z_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_softmax_z_backward("$nout,$nin");"
   elif ['$activation']=='softmax_c'
-    _${nout}_forward.="nn_softmax_c_forward("$nout,$nin");"
-    _${nout}_backward="nn_softmax_c_backward("$nout,$nin");"
+    _${nout}_forward.="nn_nl_softmax_c_forward("$nout,$nin");"
+    _${nout}_backward="nn_nl_softmax_c_backward("$nout,$nin");"
   else
     _${nout}_forward.="nn_nl_forward("$nout,$nin,$activation");"
     _${nout}_backward="nn_nl_backward("$nout,$nin,$activation");"
