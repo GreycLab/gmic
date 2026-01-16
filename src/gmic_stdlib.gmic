@@ -31055,54 +31055,6 @@ nn_fc : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_parameters : out,width>0,_height>0,_depth>0,_spectrum>0,_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'parameters' layer (4D grid of parameters) to the current network.
-#@cli : 'learning_mode' can be { 0:No learning | 1:Weights }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
-# 4:Residual He-initialization }.
-#@cli : Default value: 'height=depth=spectrum=1', 'learning_mode=1', 'weight_decay=0' and 'initialization=3'.
-nn_parameters : check "s1 = ['$1'];
-                       isvarname(s1) && # out
-                       $2>0 && # width
-                       ${3=1}>0 && # height
-                       ${4=1}>0 && # depth
-                       ${5=1}>0 && # spectrum
-                       isint(${6=3},0,3) && # learning_mode
-                       ${7=0}>=0 && # weight_decay
-                       isint(${8=3},0,4) # initialization
-                       "
-  net,out=${-nn_network},$1
-  nout=${net}_$out
-  width,height,depth,spectrum,learning_mode,weight_decay,initialization=${2-8}
-
-  e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")".
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=parameters,
-  _${nout}_size=$width,$height,$depth,$spectrum
-  _${nout}_input=
-  _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
-  $width,$height,$depth,$spectrum
-  if $initialization==1 # Identity
-    f. "(x%h)==(y%(w - 1))"
-  elif $initialization==2 # Lecun-initialization
-    f. "g*sqrt(1/(w - 1))"
-  elif $initialization==3 # He-initialization
-    f. "g*sqrt(2/(w - 1))"
-  elif $initialization==4 # Residual He-initialization
-    f. "g*sqrt(0.002/(w - 1))"
-  fi
-  => $nout
-  _${nout}_forward="begin(nn_parameters_init_forward("$nout"));"\
-                   "nn_parameters_forward("$nout");"
-  _${nout}_backward="begin(nn_parameters_init_backward("$nout,$weight_decay"));"\
-                    "nn_parameters_backward("$nout");"\
-                    "end(nn_parameters_end_backward("$nout"));"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1}\n"
-  _nn_previous_layer=$out
-
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
 #@cli : Default value: 'network_name=nn'.
@@ -31213,7 +31165,7 @@ nn_linear : check "s1 = ['$1']; s2 = ['$2'];
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','linear','normalize')
+      if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -31845,6 +31797,54 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_parameters : out,width>0,_height>0,_depth>0,_spectrum>0,_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add a 'parameters' layer (4D grid of parameters) to the current network.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+# 4:Residual He-initialization }.
+#@cli : Default value: 'height=depth=spectrum=1', 'learning_mode=1', 'weight_decay=0' and 'initialization=3'.
+nn_parameters : check "s1 = ['$1'];
+                       isvarname(s1) && # out
+                       $2>0 && # width
+                       ${3=1}>0 && # height
+                       ${4=1}>0 && # depth
+                       ${5=1}>0 && # spectrum
+                       isint(${6=3},0,3) && # learning_mode
+                       ${7=0}>=0 && # weight_decay
+                       isint(${8=3},0,4) # initialization
+                       "
+  net,out=${-nn_network},$1
+  nout=${net}_$out
+  width,height,depth,spectrum,learning_mode,weight_decay,initialization=${2-8}
+
+  e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")".
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=parameters,
+  _${nout}_size=$width,$height,$depth,$spectrum
+  _${nout}_input=
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
+  $width,$height,$depth,$spectrum
+  if $initialization==1 # Identity
+    f. "(x%h)==(y%(w - 1))"
+  elif $initialization==2 # Lecun-initialization
+    f. "g*sqrt(1/(w - 1))"
+  elif $initialization==3 # He-initialization
+    f. "g*sqrt(2/(w - 1))"
+  elif $initialization==4 # Residual He-initialization
+    f. "g*sqrt(0.002/(w - 1))"
+  fi
+  => $nout
+  _${nout}_forward="begin(nn_parameters_init_forward("$nout"));"\
+                   "nn_parameters_forward("$nout");"
+  _${nout}_backward="begin(nn_parameters_init_backward("$nout,$weight_decay"));"\
+                    "nn_parameters_backward("$nout");"\
+                    "end(nn_parameters_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_patchdown2d : out,in,_patch_size>1
 #@cli : Add a 'patchdown2d' layer (2D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
@@ -32037,7 +32037,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$c$input$n" ("$input_siz")"
     fi
-    if isin('$type','conv2d','conv3d','fc','linear','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     e "       * Output size: "$c${_${net}_${name}_size}$n
@@ -32202,7 +32202,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','linear','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
       siz+={${net}_$name,whds}
     fi
   }
@@ -32266,7 +32266,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','linear','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -32488,7 +32488,7 @@ nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=co
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','linear','normalize')
+    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
