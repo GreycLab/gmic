@@ -30162,7 +30162,7 @@ nn_lib :
 
     # patchcolumn2d: Rearrange image patchs as matrix columns.
     #---------------------------------------------------------
-    nn_patchcolumn2d_init_forward(OUT,IN,patch_size,wI,hI,dI,sI) = (
+    nn_patchcolumn2d_init_forward(OUT,IN,patch_size,wI,hI) = (
       const OUT#_width = int(IN#_width*IN#_height/patch_size^2);
       const OUT#_height = patch_size^2*IN#_spectrum;
       const OUT#_depth = 1;
@@ -30170,7 +30170,7 @@ nn_lib :
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const p = patch_size; const p2 = p^2; const M = int(wI/p); const N = int(hI/p);
         fx = p*(x%M) + (y%p); fy = p*int(x/M) + (int(y/p)%p); fc = int(y/p^2);
-        fx + wI*fy + hI*sI*fc',
+        fx + wI*fy + wI*hI*fc',
         OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
     );
 
@@ -32110,7 +32110,7 @@ nn_patchcolumn2d : check "s1 = ['$1']; s2 = ['$2'];
   if si=[${_${nin}_size}];so=[${_${nout}_size}];si[2]!=1
     error[0--3] "Command '$0': Invalid input size ("${_${nin}_size}") for patch size "$patch_size"."
   fi
-  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,${_${nin}_size}"));"\
+  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,{s=[${_${nin}_size}];s[0,2]}"));"\
                    "nn_patchcolumn2d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchcolumn2d_init_backward("$nout,$nin,$patch_size"));"\
                     "nn_patchcolumn2d_backward("$nout,$nin");"
