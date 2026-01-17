@@ -30162,7 +30162,7 @@ nn_lib :
 
     # patchcolumn2d: Rearrange image patchs as matrix columns.
     #---------------------------------------------------------
-    nn_patchcolumn2d_init_forward(OUT,IN,patch_size,wI,hI,sI) = (
+    nn_patchcolumn2d_init_forward(OUT,IN,patch_size,wI,hI,dI,sI) = (
       const OUT#_width = int(IN#_width*IN#_height/patch_size^2);
       const OUT#_height = patch_size^2*IN#_spectrum;
       const OUT#_depth = 1;
@@ -32083,6 +32083,37 @@ nn_parameters : check "s1 = ['$1'];
   _${nout}_backward="begin(nn_parameters_init_backward("$nout,$weight_decay"));"\
                     "nn_parameters_backward("$nout");"\
                     "end(nn_parameters_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_patchcolumn2d : out,in,patch_size>0
+#@cli : Add a 'patchcolumn2d' layer (rearrangement of image patchs as matrix columns) to the current network.
+nn_patchcolumn2d : check "s1 = ['$1']; s2 = ['$2'];
+                        isvarname(s1) && # out
+                        (isvarname(s2) || s2=='.') && # in
+                        isint($3,1) # patch_size
+                        "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  patch_size=$3
+
+  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
+         "and patch size "${patch_size}x${patch_size}"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=patchcolumn2d,
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$patch_size)*int(s[1]/$patch_size),s[3]*$patch_size^2,1,1]
+  _${nout}_input=$in
+  _${nout}_properties="patch_size="${patch_size}x${patch_size}
+  if si=[${_${nin}_size}];so=[${_${nout}_size}];si[2]!=1
+    error[0--3] "Command '$0': Invalid input size ("${_${nin}_size}") for patch size "$patch_size"."
+  fi
+  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,${_${nin}_size}"));"\
+                   "nn_patchcolumn2d_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_patchcolumn2d_init_backward("$nout,$nin,$patch_size"));"\
+                    "nn_patchcolumn2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
