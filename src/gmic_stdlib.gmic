@@ -30802,14 +30802,14 @@ nn_lib :
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
 nn_add :
-  check "s_out = ['$1']; s_in0 = ['$2']; s_in1 = ['$3']; s_in2 = ['${4=}']; s_in3 = ['${5=}'];
+  check "s_in0 = ['$2']; s_in1 = ['$3']; s_in2 = ['${4=}']; s_in3 = ['${5=}'];
          is_in2 = s_in2!=0;
          is_in3 = s_in3!=0;
          is_num0 = isnum($2);
          is_num1 = isnum($3);
          is_num2 = isnum($4);
          is_num3 = isnum($5);
-         isvarname(s_out) && # out
+         isvarname(['$1']) && # out
          (isvarname(s_in0) || s_in0=='.' || is_num0) && # in0
          (isvarname(s_in1) || s_in1=='.' || is_num1) && # in1
          (!is_in2 || (is_in2 && (isvarname(s_in1) || s_in1=='.' || is_num1))) && # in2
@@ -30865,11 +30865,11 @@ nn_add :
 
 #@cli nn_append : out,in0,in1,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
-nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
-                   isvarname(s1) && # out
+nn_append : check "s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') && # in0
                    (isvarname(s3) || s3=='.') && # in1
-                   isin(s4,'x','y','z','c') # axis
+                   isin(s-1,'x','y','z','c') # axis
                    "
   net,out=${-nn_network},$1
   if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
@@ -30896,8 +30896,8 @@ nn_append : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
 #@cli nn_avgpool2d : out,in,_patch_size>1
 #@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_avgpool2d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
@@ -30923,8 +30923,8 @@ nn_avgpool2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_avgpool3d : out,in,patch_size>1
 #@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_avgpool3d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_avgpool3d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
@@ -30958,9 +30958,9 @@ nn_check_layer :
 
 #@cli nn_clone : out0,out1,in
 #@cli : Add a 'clone' layer to the current network.
-nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                  isvarname(s1) && # out0
-                  isvarname(s2) && # out1
+nn_clone : check "s3 = ['$3'];
+                  isvarname(['$1']) && # out0
+                  isvarname(['$2']) && # out1
                   (isvarname(s3) || s3=='.') # in
                   "
   net,out0,out1=${-nn_network},${1,2}
@@ -30984,8 +30984,8 @@ nn_clone : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 
 #@cli nn_columnpatch2d : out,in,patch_size>0,out_width>0,out_height>0
 #@cli : Add a 'columnpatch2d' layer (rearrangement of matrix columns as image patchs) to the current network.
-nn_columnpatch2d : check "s1 = ['$1']; s2 = ['$2'];
-                          isvarname(s1) && # out
+nn_columnpatch2d : check "s2 = ['$2'];
+                          isvarname(['$1']) && # out
                           (isvarname(s2) || s2=='.') && # in
                           isint($3,1) && # patch_size
                           isint($4,1) && !($4%$3) && # out_width
@@ -31025,8 +31025,8 @@ nn_columnpatch2d : check "s1 = ['$1']; s2 = ['$2'];
 # 4:Residual He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
 # 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
-                   isvarname(s1) && # out
+nn_conv2d : check "s2 = ['$2'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
                    isint(${4=3},1) && # kernel_size
@@ -31096,8 +31096,8 @@ nn_conv2d : check "s1 = ['$1']; s2 = ['$2'];
 # 4:Residual He-initialization }.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', 'shrink=0', \
 # 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
-                   isvarname(s1) && # out
+nn_conv3d : check "s2 = ['$2'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
                    isint(${4=3},1) && # kernel_size
@@ -31162,8 +31162,8 @@ nn_conv3d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Add a 'crop' layer to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : Default value: 'boundary_conditions=0'.
-nn_crop : check "s1 = ['$1']; s2 = ['$2'];
-                 isvarname(s1) && # out
+nn_crop : check "s2 = ['$2'];
+                 isvarname(['$1']) && # out
                  (isvarname(s2) || s2=='.') && # in
                  min(isint([${3-10}])) && # x0,y0,z0,c0,x1,y1,z1,c1
                  isint(${11=0},0,3) # boundary_conditions
@@ -31195,10 +31195,10 @@ nn_crop : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Add a 'distance' layer to the current network (averaged distance between two inputs, with specified metric).
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
 #@cli : Default value: 'metric=2'.
-nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_distance : check "s2 = ['$2']; s3 = ['$3'];
                      isnum2 = isnum($2);
                      isnum3 = isnum($3);
-                     isvarname(s1) && # out
+                     isvarname(['$1']) && # out
                      (isvarname(s2) || s2=='.' || isnum2) && # in0
                      (isvarname(s3) || s3=='.' || isnum3) && # in1
                      isint(${4=2},0) && # metric
@@ -31234,10 +31234,10 @@ nn_distance : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_div : out,in0,in1
 #@cli : Add a 'div' layer (element-wise division) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_div : check "s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
                 isnum3 = isnum($3);
-                isvarname(s1) && # out
+                isvarname(['$1']) && # out
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)
@@ -31267,8 +31267,8 @@ nn_div : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1
 #@cli : Add a 'dropout' layer to the current network.
-nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
-                    isvarname(s1) && # out
+nn_dropout : check "s2 = ['$2'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     inrange($3,0,1,1,0) # dropout_rate
                     "
@@ -31298,8 +31298,8 @@ nn_dropout : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_fc : check "s1 = ['$1']; s2 = ['$2'];
-               isvarname(s1) && # out
+nn_fc : check "s2 = ['$2'];
+               isvarname(['$1']) && # out
                (isvarname(s2) || s2=='.') && # in
                isint($3,1) && # nb_channels
                isint(${4=3},0,3) && # learning_mode
@@ -31364,8 +31364,8 @@ _nn_init : # Init new network
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
 #@cli : Default values: 'height=1', 'depth=1' and 'spectrum=1'.
-nn_input : check "s1 = ['$1']; s2 = ['$2'];
-                  isvarname(s1) && # out
+nn_input : check "s2 = ['$2'];
+                  isvarname(['$1']) && # out
                   isint($2,1) && # width
                   isint(${3=1},1) && # height
                   isint(${4=1},1) && # depth
@@ -31391,8 +31391,8 @@ nn_input : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'axis=c', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_linear : check "s1 = ['$1']; s2 = ['$2'];
-                   isvarname(s1) && # out
+nn_linear : check "s2 = ['$2'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
                    isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
@@ -31448,8 +31448,7 @@ nn_linear : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Load and initialize network (saved as a .gmz file).
 #@cli : Network files can be only loaded in '.gmz' format.
 #@cli : Default value: 'include_trainer_data=1'.
-+nn_load : check "s1 = ['$1'];
-                  find(s1,'.gmz')==size(s1) - 4 && # filename
++nn_load : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
                   isbool(${2=1}) # include_trainer_data
                   "
   s0,s1=""," (include training data)"
@@ -31474,8 +31473,8 @@ nn_linear : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_loss_add : out,in0,in1
 #@cli : Add a 'add' loss to the current network (sum of losses).
-nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                     isvarname(s1) && # out
+nn_loss_add : check "s2 = ['$2']; s3 = ['$3'];
+                     isvarname(['$1']) && # out
                      (isvarname(s2) || s2=='.' || isnum(s2)) && # in0
                      (isvarname(s3) || s3=='.' || isnum(s3)) # in1
                      (!isnum(s2) || !isnum(s3))
@@ -31499,8 +31498,8 @@ nn_loss_add : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli : Add a 'bce' loss to the current network (binary cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                     isvarname(s1) && # out
+nn_loss_bce : check "s2 = ['$2']; s3 = ['$3'];
+                     isvarname(['$1']) && # out
                      (isvarname(s2) || s2=='.') && # in
                      (isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
@@ -31529,8 +31528,8 @@ nn_loss_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli : Add a 'ce' loss to the current network (cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_ce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                    isvarname(s1) && # out
+nn_loss_ce : check "s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     (isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
@@ -31559,8 +31558,8 @@ nn_loss_ce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'l1' loss to the current network (L1-norm).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_l1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                    isvarname(s1) && # out
+nn_loss_l1 : check "s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     (isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
@@ -31589,8 +31588,8 @@ nn_loss_l1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'l2' loss to the current network (L2-norm).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_l2 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                    isvarname(s1) && # out
+nn_loss_l2 : check "s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     (isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
@@ -31619,8 +31618,8 @@ nn_loss_l2 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'lp' loss to the current network (Lp-norm).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'p=1.5' and 'weight=1'.
-nn_loss_lp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                    isvarname(s1) && # out
+nn_loss_lp : check "s2 = ['$2']; s3 = ['${3=0}'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     (isvarname(s3) || isnum($3)) && # ground_truth
                     ${4=1.5}>0 && # p
@@ -31650,8 +31649,8 @@ nn_loss_lp : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                     isvarname(s1) && # out
+nn_loss_mse : check "s2 = ['$2']; s3 = ['${3=0}'];
+                     isvarname(['$1']) && # out
                      (isvarname(s2) || s2=='.') && # in
                      (isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
@@ -31681,8 +31680,8 @@ nn_loss_mse : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0). \
 # Its value correspond to the desired probability (so, after the sigmoid).
 #@cli : Default value: 'weight=1'.
-nn_loss_sigmoid_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                             isvarname(s1) && # out
+nn_loss_sigmoid_bce : check "s2 = ['$2']; s3 = ['${3=0}'];
+                             isvarname(['$1']) && # out
                              (isvarname(s2) || s2=='.') && # in
                              (isvarname(s3) || isnum($3)) && # ground_truth
                              isnum(${4=1}) # weight
@@ -31711,8 +31710,8 @@ nn_loss_sigmoid_bce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_smoothl1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                          isvarname(s1) && # out
+nn_loss_smoothl1 : check "s2 = ['$2']; s3 = ['${3=0}'];
+                          isvarname(['$1']) && # out
                           (isvarname(s2) || s2=='.') && # in
                           (isvarname(s3) || isnum($3)) && # ground_truth
                           isnum(${4=1}) # weight
@@ -31741,8 +31740,8 @@ nn_loss_smoothl1 : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli : Add a 'softmax_ce' loss to the current network (softmax followed by cross entropy).
 #@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
 #@cli : Default value: 'weight=1'.
-nn_loss_softmax_ce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
-                            isvarname(s1) && # out
+nn_loss_softmax_ce : check "s2 = ['$2']; s3 = ['${3=0}'];
+                            isvarname(['$1']) && # out
                             (isvarname(s2) || s2=='.') && # in
                             (isvarname(s3) || isnum($3)) && # ground_truth
                             isnum(${4=1}) # weight
@@ -31770,8 +31769,8 @@ nn_loss_softmax_ce : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=0}'];
 #@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
 #@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
-nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_maxpool2d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
@@ -31800,8 +31799,8 @@ nn_maxpool2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
 #@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
-nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_maxpool3d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
                       isbool(${4=0}) # is_maxabs
@@ -31830,8 +31829,8 @@ nn_maxpool3d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_mmul : out,in0,in1
 #@cli : Add a 'mmul' layer (matrix multiplication 'in0*in1') to the current network.
 #@cli : 'in0' or 'in1' must be of compatible size.
-nn_mmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                 isvarname(s1) && # out
+nn_mmul : check "s2 = ['$2']; s3 = ['$3'];
+                 isvarname(['$1']) && # out
                  (isvarname(s2) || s2=='.') && # in0
                  (isvarname(s3) || s3=='.') # in1
                  "
@@ -31861,8 +31860,8 @@ nn_mmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_mmult : out,in0,in1
 #@cli : Add a 'mmult' layer (matrix multiplication 'in0*in1^t') to the current network.
 #@cli : 'in0' or 'in1' must be of compatible size.
-nn_mmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                  isvarname(s1) && # out
+nn_mmult : check "s2 = ['$2']; s3 = ['$3'];
+                  isvarname(['$1']) && # out
                   (isvarname(s2) || s2=='.') && # in0
                   (isvarname(s3) || s3=='.') # in1
                   "
@@ -31892,10 +31891,10 @@ nn_mmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_mul : out,in0,in1
 #@cli : Add a 'mul' layer (element-wise multiplication) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_mul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_mul : check "s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
                 isnum3 = isnum($3);
-                isvarname(s1) && # out
+                isvarname(['$1']) && # out
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)
@@ -31945,8 +31944,8 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 # softmax_x | softmax_y | softmax_z | softmax_c | msqr | sqrt | \
 # swish | tanh | z2 | z3 }.
 #@cli : Default value: 'activation=leakyrelu'.
-nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
-               isvarname(s1) && # out
+nn_nl : check "s2 = ['$2']; s3 = ['${3=leakyrelu}'];
+               isvarname(['$1']) && # out
                (isvarname(s2) || s2=='.') && # in
                isvarname(s3) # activation
                "
@@ -32007,8 +32006,8 @@ nn_nl : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=leakyrelu}'];
 #@cli : 'noise_type' can be { 0:Gaussian | 1:Uniform | 2:Salt&pepper | 3:Poisson | 4:Rice }.
 #@cli : If 'training_only' is set, the noise is applied on the input only during the network training phase.
 #@cli : Default value: 'amplitude=0.1', 'noise_type=0' and 'training_only=1'.
-nn_noise : check "s1 = ['$1']; s2 = ['$2'];
-                  isvarname(s1) && # out
+nn_noise : check "s2 = ['$2'];
+                  isvarname(['$1']) && # out
                   (isvarname(s2) || s2=='.') && # in
                   ${3=0.1}>=0 && # amplitude
                   isint(${4=0},0,4) && # noise_type
@@ -32050,8 +32049,8 @@ nn_noise : check "s1 = ['$1']; s2 = ['$2'];
 # 'N' groups.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
 #@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
-nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_normalize : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
@@ -32113,8 +32112,7 @@ nn_normalize : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'height=depth=spectrum=1', 'learning_mode=1', 'weight_decay=0' and 'initialization=3'.
-nn_parameters : check "s1 = ['$1'];
-                       isvarname(s1) && # out
+nn_parameters : check "isvarname(['$1']) && # out
                        isint($2,1) && # width
                        isint(${3=1},1) && # height
                        isint(${4=1},1) && # depth
@@ -32157,8 +32155,8 @@ nn_parameters : check "s1 = ['$1'];
 
 #@cli nn_patchcolumn2d : out,in,patch_size>0,_overlap>=0
 #@cli : Add a 'patchcolumn2d' layer (rearrangement of image patchs as matrix columns) to the current network.
-nn_patchcolumn2d : check "s1 = ['$1']; s2 = ['$2'];
-                          isvarname(s1) && # out
+nn_patchcolumn2d : check "s2 = ['$2'];
+                          isvarname(['$1']) && # out
                           (isvarname(s2) || s2=='.') && # in
                           isint($3,1) && # patch_size
                           isint(${4=0},0) && $4<$3 # overlap
@@ -32191,8 +32189,8 @@ nn_patchcolumn2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_patchdown2d : out,in,_patch_size>1
 #@cli : Add a 'patchdown2d' layer (2D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
-                        isvarname(s1) && # out
+nn_patchdown2d : check "s2 = ['$2'];
+                        isvarname(['$1']) && # out
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
@@ -32224,8 +32222,8 @@ nn_patchdown2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_patchdown3d : out,in,_patch_size>1
 #@cli : Add a 'patchdown3d' layer (3D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
-                        isvarname(s1) && # out
+nn_patchdown3d : check "s2 = ['$2'];
+                        isvarname(['$1']) && # out
                         (isvarname(s2) || s2=='.') && # in
                         isint(${3=2},2) # patch_size
                         "
@@ -32257,8 +32255,8 @@ nn_patchdown3d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_patchup2d : out,in,_patch_size>1
 #@cli : Add a 'patchup2d' layer (2D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_patchup2d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
@@ -32286,8 +32284,8 @@ nn_patchup2d : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_patchup3d : out,in,_patch_size>1
 #@cli : Add a 'patchup3d' layer (3D upscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
-nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_patchup3d : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) # patch_size
                       "
@@ -32314,8 +32312,8 @@ nn_patchup3d : check "s1 = ['$1']; s2 = ['$2'];
 
 #@cli nn_permute : out,in,permutation
 #@cli : Add a 'permute' layer (axes permutation) to the current network.
-nn_permute : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                    isvarname(s1) && # out
+nn_permute : check "s2 = ['$2']; s3 = ['$3'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     isin(s3,'xyzc','xycz','xzyc','xzcy','xcyz','xczy', # permutation
                             'yxzc','yxcz','yzxc','yzcx','ycxz','yczx',
@@ -32397,8 +32395,8 @@ nn_print :
 
 #@cli nn_rename : out,in
 #@cli : Add a 'rename' layer to the current network.
-nn_rename : check "s1 = ['$1']; s2 = ['$2'];
-                   isvarname(s1) && # out
+nn_rename : check "s2 = ['$2'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') # in
                    "
   net,out=${-nn_network},$1
@@ -32420,8 +32418,8 @@ nn_rename : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
 #@cli : Default values: 'height=depth=spectrum=1'.
-nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
-                    isvarname(s1) && # out
+nn_reshape : check "s2 = ['$2'];
+                    isvarname(['$1']) && # out
                     (isvarname(s2) || s2=='.') && # in
                     isint($3,1) && # width
                     isint(${4=1},1) && # height
@@ -32455,8 +32453,8 @@ nn_reshape : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'interpolation' can be { -1:None (memory content) | 0:None | 1:Nearest | 2:Average | 3:Linear | \
 # 4=Grid | 5=Bicubic | 6=Lanczos }.
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
-nn_resize : check "s1 = ['$1']; s2 = ['$2'];
-                   isvarname(s1) && # out
+nn_resize : check "s2 = ['$2'];
+                   isvarname(['$1']) && # out
                    (isvarname(s2) || s2=='.') && # in
                    $3>0 && # width
                    ${4=100%}>0 && # height
@@ -32491,8 +32489,8 @@ nn_resize : check "s1 = ['$1']; s2 = ['$2'];
 #@cli nn_run : out,in,"command",_width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0
 #@cli : Add a 'run' layer to the current network.
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
-nn_run : check "s1 = ['$1']; s2 = ['$2'];
-                isvarname(s1) && # out
+nn_run : check "s2 = ['$2'];
+                isvarname(['$1']) && # out
                 (isvarname(s2) || s2=='.') && # in
                 ${4=100%}>0 && # width
                 ${5=100%}>0 && # height
@@ -32527,8 +32525,7 @@ nn_run : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : Save current network as a .gmz file.
 #@cli : `.gmz` is mandatory extension, specifying another file extension will throw an error.
 #@cli : Default value: 'include_trainer_data=1'.
-nn_save : check "s1 = ['$1'];
-                 find(s1,'.gmz')==size(s1) - 4 && # filename
+nn_save : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
                  isbool(${2=1}) # include_trainer_data
                  "
   net=${-nn_network}
@@ -32554,9 +32551,9 @@ nn_size :
 
 #@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0
 #@cli : Add a 'split' layer to the current network.
-nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
-                  isvarname(s1) && # out0
-                  isvarname(s2) && # out1
+nn_split : check "s3 = ['$3']; s4 = ['$4'];
+                  isvarname(['$1']) && # out0
+                  isvarname(['$2']) && # out1
                   (isvarname(s3) || s3=='.') && # in
                   isin(s4,'x','y','z','c') && # axis
                   isint($5,1)
@@ -32587,8 +32584,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
 #@cli nn_store : 'variable_name',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Store current network into a variable.
 #@cli : Default value: 'include_trainer_data=1'.
-+nn_store : check "s1 = ['$1'];
-                   isvarname(s1) && # variable_name
++nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
                    isbool(${2=1}) # include_trainer_data
                    "
   net=${-nn_network}
@@ -32596,8 +32592,7 @@ nn_split : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3']; s4 = ['$4'];
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
   __nn_store $2 +store[$sel,-1] "$1" rm.
 
-nn_store : check "s1 = ['$1'];
-                  isvarname(s1) && # variable_name
+nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
                   isbool(${2=1}) # include_trainer_data
                   "
   net=${-nn_network}
@@ -32625,10 +32620,10 @@ __nn_store :
 #@cli nn_sub : out,in0,in1
 #@cli : Add a 'sub' layer (element-wise subtraction) to the current network.
 #@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
+nn_sub : check "s2 = ['$2']; s3 = ['$3'];
                 isnum2 = isnum($2);
                 isnum3 = isnum($3);
-                isvarname(s1) && # out
+                isvarname(['$1']) && # out
                 (isvarname(s2) || s2=='.' || isnum2) && # in0
                 (isvarname(s3) || s3=='.' || isnum3) && # in1
                 (!isnum2 || !isnum3)
@@ -32659,8 +32654,8 @@ nn_sub : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_tmmul : out,in0,in1
 #@cli : Add a 'tmmul' layer (matrix multiplication 'in0^t.in1') to the current network.
 #@cli : 'in0' or 'in1' must be of compatible size.
-nn_tmmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                  isvarname(s1) && # out
+nn_tmmul : check "s2 = ['$2']; s3 = ['$3'];
+                  isvarname(['$1']) && # out
                   (isvarname(s2) || s2=='.') && # in0
                   (isvarname(s3) || s3=='.') # in1
                   "
@@ -32690,11 +32685,11 @@ nn_tmmul : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 #@cli nn_tmmult : out,in0,in1
 #@cli : Add a 'tmmult' layer (matrix multiplication 'in0^t.in1^t') to the current network.
 #@cli : 'in0' or 'in1' must be of compatible size.
-nn_tmmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
-                  isvarname(s1) && # out
-                  (isvarname(s2) || s2=='.') && # in0
-                  (isvarname(s3) || s3=='.') # in1
-                  "
+nn_tmmult : check "s2 = ['$2']; s3 = ['$3'];
+                   isvarname(['$1']) && # out
+                   (isvarname(s2) || s2=='.') && # in0
+                   (isvarname(s3) || s3=='.') # in1
+                   "
   net,out=${-nn_network},$1
   if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
   if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
@@ -32720,8 +32715,8 @@ nn_tmmult : check "s1 = ['$1']; s2 = ['$2']; s3 = ['$3'];
 
 #@cli nn_transpose : out,in
 #@cli : Add a 'transpose' layer (matrix transpose) to the current network.
-nn_transpose : check "s1 = ['$1']; s2 = ['$2'];
-                      isvarname(s1) && # out
+nn_transpose : check "s2 = ['$2'];
+                      isvarname(['$1']) && # out
                       (isvarname(s2) || s2=='.') # in
                       "
   net,out=${-nn_network},$1
@@ -32752,12 +32747,12 @@ nn_transpose : check "s1 = ['$1']; s2 = ['$2'];
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,cli_gradient_max).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
-nn_trainer : check "s1 = ['$1']; s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=constant}'];
-                    isvarname(s1) &&
-                    (s2=='.' || isvarname(s2)) &&
-                    isvarname(s3) && isvarname(s5) &&
-                    isin(s3,'sgd','rmsprop','adam','adamax') &&
-                    isin(s5,'constant','linear','exponential','adaptive')"
+nn_trainer : check "s2 = ['$2']; s3 = ['${3=adam}'] ; s5 = ['${5=constant}'];
+                    isvarname(['$1']) && # out
+                    (s2=='.' || isvarname(s2)) && # in
+                    isvarname(s3) && isin(s3,'sgd','rmsprop','adam','adamax') && # optimizer
+                    isvarname(s5) && isin(s5,'constant','linear','exponential','adaptive') # scheduler
+                    "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
   if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
