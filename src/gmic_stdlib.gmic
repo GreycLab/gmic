@@ -32686,7 +32686,7 @@ nn_transpose : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_trainer : out,in,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
+#@cli nn_trainer : out,loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
@@ -32703,8 +32703,8 @@ nn_trainer : check "isvarname(['$1']) && # out
                     "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
-  if ['${2=.}']=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${nn_varname\ $in}
+  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
+  nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
   # Trainer matrix has size 8x3, and is organized as follow:
@@ -32759,19 +32759,19 @@ nn_trainer : check "isvarname(['$1']) && # out
   s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,1)} c=", " }
   s_scheduler_params=$s
 
-  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$in"' in network '"$net"', with '"$optimizer"' optimizer "\
+  e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
          ($s_optimizer_params)" and '"$scheduler"' scheduler "($s_scheduler_params)"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
-  _${nout}_input=$in
+  _${nout}_input=$loss
   _${nout}_properties="optimizer="$optimizer
   if ['$s_optimizer_params']!=0 _${nout}_properties.=", "$s_optimizer_params fi
   _${nout}_properties.=", scheduler="$scheduler
   if ['$s_scheduler_params']!=0 _${nout}_properties.=", "$s_scheduler_params fi
 
   # Generate code for updating network weights.
-  _${net}_update="begin(nn_trainer_init("$nout,$nin,$optimizer,$scheduler"));"\
+  _${net}_update="begin(nn_trainer_init("$nout,$nloss,$optimizer,$scheduler"));"\
                  "end("
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -32794,7 +32794,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   }
 
   # That should be the very last thing happening 'end()'!
-  _${net}_update.="nn_trainer_update("$nout,$nin,$optimizer,$scheduler"));"
+  _${net}_update.="nn_trainer_update("$nout,$nloss,$optimizer,$scheduler"));"
 
 #@cli nn_varname : layer_name
 #@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
