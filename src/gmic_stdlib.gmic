@@ -29733,9 +29733,30 @@ nn_lib :
       OUT# = IN0#*IN1#;
     );
 
+    nn_mul_forward(OUT,IN0,IN1,IN2) = (
+      OUT# = IN0#*IN1#*IN2#;
+    );
+
+    nn_mul_forward(OUT,IN0,IN1,IN2,IN3) = (
+      OUT# = IN0#*IN1#*IN2#*IN3#;
+    );
+
     nn_mul_backward(OUT,IN0,IN1) = (
       size(IN0#)?(nn_define_backward(IN0#); d#IN0+=IN1#*d#OUT);
       size(IN1#)?(nn_define_backward(IN1#); d#IN1+=IN0#*d#OUT);
+    );
+
+    nn_mul_backward(OUT,IN0,IN1,IN2) = (
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=IN1#*IN2#*d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=IN0#*IN2#*d#OUT);
+      size(IN2#)?(nn_define_backward(IN2#); d#IN2+=IN0#*IN1#*d#OUT);
+    );
+
+    nn_mul_backward(OUT,IN0,IN1,IN2,IN3) = (
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=IN1#*IN2#*IN3#*d#OUT);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=IN0#*IN2#*IN3#*d#OUT);
+      size(IN2#)?(nn_define_backward(IN2#); d#IN2+=IN0#*IN1#*IN3#*d#OUT);
+      size(IN3#)?(nn_define_backward(IN3#); d#IN3+=IN0#*IN1#*IN2#*d#OUT);
     );
 
     # nl: Non-linearity.
@@ -31831,38 +31852,43 @@ nn_mmult : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_mul : out,in0,in1
+#@cli nn_mul : out,in0,in1,...
 #@cli : Add a 'mul' layer (element-wise multiplication) to the current network.
-#@cli : 'in0' or 'in1' can be layer names or constant values (both cannot be constant values though).
-nn_mul : check "isnum2 = isnum($2); isnum3 = isnum($3);
-                isvarname(['$1']) && # out
-                (s2 = ['$2']; isvarname(s2) || s2=='.' || isnum2) && # in0
-                (s3 = ['$3']; isvarname(s3) || s3=='.' || isnum3) && # in1
-                (!isnum2 || !isnum3)
+#@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
+nn_mul : check "isvarname(['$1']) && # out
+                isint($#-1,2,4) # nb_inputs
                 "
+  $=arg nb_inputs:=$#-1 is_all_num=1 nins,nnin,sep=
+  repeat $nb_inputs {
+    arg=${arg{2+$>}} is_num:=isnum($arg) is_all_num&=$is_num
+    check "s = ['"$arg"']; isvarname(s) || s=='.' || $is_num"
+    if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
+    if $is_num nin$>=${in$>}
+    else
+      nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
+      if narg($out_size) check [${_${nin$>}_size}]==[$out_size]
+      else out_size=${_${nin$>}_size}
+      fi
+      nnin=${nin$>} # one of the non-numerical input
+    fi
+    nins.=$sep${nin$>} sep=,
+  }
+  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
-  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
-  isnum0,isnum1:=isnum($in0),isnum($in1)
-  out_size=
-  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
-  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
-  if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
+  nout=${net}_$out
 
-  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs "$nins"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mul,
   _${nout}_size=$out_size
-  _${nout}_input=$in0,$in1
-  _${nout}_forward="begin(nn_mul_init_forward("$nout,${nin$isnum0}"));"\
-                   "nn_mul_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_mul_backward("$nout,$nin0,$nin1");"
+  _${nout}_input=$nins
+  _${nout}_forward="begin(nn_mul_init_forward("$nout,$nnin"));"
+  _${nout}_forward.="nn_mul_forward("$nout,$nins");"
+  _${nout}_backward="nn_mul_backward("$nout,$nins");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
-
 
 #@cli nn_network : _network_name
 #@cli : Get/set current network name (and initialize network if it does not already exist).
