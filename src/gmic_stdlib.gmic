@@ -30674,6 +30674,14 @@ nn_lib :
       OUT# = IN0# + IN1#;
     );
 
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2) = (
+      OUT# = IN0# + IN1# + IN2#;
+    );
+
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2,IN3) = (
+      OUT# = IN0# + IN1# + IN2# + IN3#;
+    );
+
     # bce : Binary cross-entropy.
     #----------------------------
     nn_loss_bce_init_forward(OUT,IN,weight) = (
@@ -30943,7 +30951,7 @@ nn_append : check "isvarname(['$1']) && # out
   $=arg nb_inputs:=$#-2 nins,sep=
   repeat $nb_inputs {
     arg=${arg{2+$>}}
-    check "s = ['"$arg"']; isvarname(s) || s=='.' || $is_num"
+    check "s = ['"$arg"']; isvarname(s) || s=='.'"
     if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
     nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
     if narg($out_size)
@@ -31531,24 +31539,28 @@ nn_linear : check "isvarname(['$1']) && # out
     k[$sel]
   }
 
-#@cli nn_loss_add : out,in0,in1
+#@cli nn_loss_add : out,in0,in1,...
 #@cli : Add a 'add' loss to the current network (sum of losses).
 nn_loss_add : check "isvarname(['$1']) && # out
-                     (s2 = ['$2']; isvarname(s2) || s2=='.' || isnum(s2)) && # in0
-                     (s3 = ['$3']; isvarname(s3) || s3=='.' || isnum(s3)) # in1
-                     (!isnum(s2) || !isnum(s3))
+                     isint($#-1,2,4) # nb_inputs
                      "
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
-  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
-  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
+  nout=${net}_$out
+  $=arg nb_inputs:=$#-1 nins,sep=
+  repeat $nb_inputs {
+    arg=${arg{2+$>}}
+    check "s = ['"$arg"']; isvarname(s) || s=='.'"
+    if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
+    nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
+    nins.=$sep${nin$>} sep=,
+  }
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in0,$in1
-  _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nin0,$nin1"));"
+  _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nins"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
