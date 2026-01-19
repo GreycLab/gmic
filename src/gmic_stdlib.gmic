@@ -30555,26 +30555,34 @@ nn_lib :
                    3);
     );
 
-    # split: Split input as two outputs.
-    #-----------------------------------
+    # split: Split input as multiple outputs.
+    #----------------------------------------
+    _nn_split_init_forward(OUT,IN,axis,size) = (
+      const OUT#_width = _'axis#'==_'x'?size:IN#_width;
+      const OUT#_height = _'axis#'==_'y'?size:IN#_height;
+      const OUT#_depth = _'axis#'==_'z'?size:IN#_depth;
+      const OUT#_spectrum = _'axis#'==_'c'?size:IN#_spectrum;
+    );
+
     nn_split_init_forward(OUT0,OUT1,IN,axis,size0,size1) = (
+      _nn_split_init_forward(OUT0#,IN#,axis#,size0#);
+      _nn_split_init_forward(OUT1#,IN#,axis#,size1#);
       const OUT0#_axis = _'#axis';
-      const OUT0#_width = OUT0#_axis==_'x'?size0:IN#_width;
-      const OUT0#_height = OUT0#_axis==_'y'?size0:IN#_height;
-      const OUT0#_depth = OUT0#_axis==_'z'?size0:IN#_depth;
-      const OUT0#_spectrum = OUT0#_axis==_'c'?size0:IN#_spectrum;
-      const OUT1#_width = OUT0#_axis==_'x'?size1:IN#_width;
-      const OUT1#_height = OUT0#_axis==_'y'?size1:IN#_height;
-      const OUT1#_depth = OUT0#_axis==_'z'?size1:IN#_depth;
-      const OUT1#_spectrum = OUT0#_axis==_'c'?size1:IN#_spectrum;
     );
 
     nn_split_init_forward(OUT0,OUT1,OUT2,IN,axis,size0,size1,size2) = (
-      nn_split_init_forward(OUT0#,OUT1#,IN#,axis#,size0#,size1#);
-      const OUT2#_width = OUT0#_axis==_'x'?size2:IN#_width;
-      const OUT2#_height = OUT0#_axis==_'y'?size2:IN#_height;
-      const OUT2#_depth = OUT0#_axis==_'z'?size2:IN#_depth;
-      const OUT2#_spectrum = OUT0#_axis==_'c'?size2:IN#_spectrum;
+      _nn_split_init_forward(OUT0#,IN#,axis#,size0#);
+      _nn_split_init_forward(OUT1#,IN#,axis#,size1#);
+      _nn_split_init_forward(OUT2#,IN#,axis#,size2#);
+      const OUT0#_axis = _'#axis';
+    );
+
+    nn_split_init_forward(OUT0,OUT1,OUT2,OUT3,IN,axis,size0,size1,size2,size3) = (
+      _nn_split_init_forward(OUT0#,IN#,axis#,size0#);
+      _nn_split_init_forward(OUT1#,IN#,axis#,size1#);
+      _nn_split_init_forward(OUT2#,IN#,axis#,size2#);
+      _nn_split_init_forward(OUT3#,IN#,axis#,size3#);
+      const OUT0#_axis = _'#axis';
     );
 
     nn_split_forward(OUT0,OUT1,IN) = (
@@ -30599,6 +30607,24 @@ nn_lib :
                    IN#_width - OUT2#_width,IN#_height - OUT2#_height,
                    IN#_depth - OUT2#_depth,IN#_spectrum - OUT2#_spectrum,
                    OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum);
+    );
+
+    nn_split_forward(OUT0,OUT1,OUT2,OUT3,IN) = (
+      OUT0# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   0,0,0,0,
+                   OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+      OUT1# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   OUT0#_axis==_'x'?OUT0#_width:0,OUT0#_axis==_'y'?OUT0#_height:0,
+                   OUT0#_axis==_'z'?OUT0#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum:0,
+                   OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
+      OUT2# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   OUT0#_axis==_'x'?OUT0#_width + OUT1#_width:0,OUT0#_axis==_'y'?OUT0#_height + OUT1#_height:0,
+                   OUT0#_axis==_'z'?OUT0#_depth + OUT1#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum + OUT1#_spectrum:0,
+                   OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum);
+      OUT3# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   IN#_width - OUT3#_width,IN#_height - OUT3#_height,
+                   IN#_depth - OUT3#_depth,IN#_spectrum - OUT3#_spectrum,
+                   OUT3#_width,OUT3#_height,OUT3#_depth,OUT3#_spectrum);
     );
 
     nn_split_backward(OUT0,OUT1,IN) = (
@@ -30634,6 +30660,33 @@ nn_lib :
            IN#_width - OUT2#_width,IN#_height - OUT2#_height,
            IN#_depth - OUT2#_depth,IN#_spectrum - OUT2#_spectrum,
            OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum,
+           -1); # Add to d#IN
+    );
+
+    nn_split_backward(OUT0,OUT1,OUT2,OUT3,IN) = (
+      nn_define_backward(IN#);
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT0,
+           0,0,0,0,
+           OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum,
+           -1); # Add to d#IN
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT1,
+           OUT0#_axis==_'x'?OUT0#_width:0,OUT0#_axis==_'y'?OUT0#_height:0,
+           OUT0#_axis==_'z'?OUT0#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum:0,
+           OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum,
+           -1); # Add to d#IN
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT2,
+           OUT0#_axis==_'x'?OUT0#_width + OUT1#_width:0,OUT0#_axis==_'y'?OUT0#_height + OUT1#_height:0,
+           OUT0#_axis==_'z'?OUT0#_depth + OUT1#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum + OUT1#_spectrum:0,
+           OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum,
+           -1); # Add to d#IN
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT3,
+           IN#_width - OUT3#_width,IN#_height - OUT3#_height,
+           IN#_depth - OUT3#_depth,IN#_spectrum - OUT3#_spectrum,
+           OUT3#_width,OUT3#_height,OUT3#_depth,OUT3#_spectrum,
            -1); # Add to d#IN
     );
 
@@ -32661,22 +32714,26 @@ nn_split : check "$#>=4"
       in=${arg{$i-1}} if '$in'=='.' in=$_nn_previous_layer fi nn_check_layer $in # in
       nin=${nn_varname\ $in}
       axis=${arg$i} ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3 # axis
-      repeat $#-$i { size$>=${arg{$i+1+$>}} } # size_out_k
+      repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
       break
     fi
   }
-  sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size})
+  sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size}) first_unknown=0
   repeat $nb_outputs {
     i=$> nb_remaining:=1+$<
-    if ${size$i} remaining_size-=${size$i} sizes.=$sep${size$i} sep=,
+    if narg(${size$i}) remaining_size-=${size$i} sizes.=$sep${size$i} first_unknown+=1 sep=,
     else
       siz:=int($remaining_size/$nb_remaining)
       repeat $nb_remaining { size{$i+$>}=$siz remaining_size-=$siz }
-      if $remaining_size size0+=$remaining_size fi
+      if $remaining_size size$first_unknown+=$remaining_size fi
       repeat $nb_remaining { sizes.=$sep${size{$i+$>}} sep=, }
       break
     fi
   }
+  if si=[${_${nin}_size}];ss=[$sizes];min(ss)<=0" || "sum(ss)!=si[$ind_axis]
+    error[0--3] "Command '$0': Cannot split input layer '"$in"' ("${_${nin}_size}") in "$nb_outputs" blocks "\
+                "with sizes ("$sizes")."
+  fi
 
   e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
          "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
