@@ -29114,7 +29114,6 @@ nn_lib :
     #---------------------------------------------------------
     nn_columnpatch2d_init_forward(OUT,IN,out_width,out_height,patch_size,overlap) = (
       const OUT#_patch_size = patch_size;
-      print(OUT#_patch_size);
       const OUT#_p_o = OUT#_patch_size - overlap;
       const OUT#_width = out_width;
       const OUT#_height = out_height;
@@ -29137,11 +29136,22 @@ nn_lib :
     );
 
     nn_columnpatch2d_init_backward(OUT,IN) = (
-      0;
+      OUT#_map_backward_src = expr('c2o([x,y,0,c])',OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
+      OUT#_map_backward = vector(##IN#_width*IN#_height);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                            _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,3);
+          draw(OUT#_map_backward,IN#_width,IN#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
+        );
+      );
     );
 
     nn_columnpatch2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
+      d#IN+=map(OUT#_map_backward,OUT#);
     );
 
     # conv2d: 2D convolutional layer.
@@ -31193,6 +31203,10 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   _${net}_layer_names.=$out,
   _${net}_layer_types.=columnpatch2d,
   _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,ceil(s[1]/$patch_size^2)]
+  if s=[${_${nin}_size}];s[2,2]!=[1,1]
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Invalid input size ("${_${nin}_size}")."
+  fi
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
   _${nout}_forward="begin(nn_columnpatch2d_init_forward("$nout,$nin,$out_width,$out_height,$patch_size,$overlap"));"\
