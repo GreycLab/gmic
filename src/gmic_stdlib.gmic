@@ -30291,17 +30291,26 @@ nn_lib :
     # patchcolumn2d: Rearrange image patchs as matrix columns.
     #---------------------------------------------------------
     nn_patchcolumn2d_init_forward(OUT,IN,patch_size,overlap,wI,hI) = (
-      const OUT#_width = int(IN#_width*IN#_height/patch_size^2);
+      const OUT#_patch_size = patch_size;
+      const OUT#_overlap = overlap;
+      const OUT#_p_o = OUT#_patch_size - OUT#_overlap;
+      const OUT#_nb_cols = ceil(IN#_width/OUT#_p_o);
+      const OUT#_nb_rows = ceil(IN#_height/OUT#_p_o);
+      const OUT#_width = OUT#_nb_cols*OUT#_nb_rows;
       const OUT#_height = patch_size^2*IN#_spectrum;
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
-      const OUT#_patch_size = patch_size;
-      const OUT#_overlap = overlap;
-      OUT#_map_forward = expr('const p = patch_size; const p2 = p^2; const o = overlap;
-        const M = int(wI/(p - o)); const N = int(hI/(p - o));
-        fx = p*(x%M) + (y%p); fy = p*int(x/M) + (int(y/p)%p); fc = int(y/p^2);
-        fx + wI*fy + wI*hI*fc',
-        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
+
+      OUT#_map_forward_src = expr('c2o([x,y,0,c])',IN#_width,IN#_height,1,IN#_spectrum);
+      OUT#_map_forward = vector(##OUT#_width*OUT#_height);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(OUT#_map_forward_src,wI,hI,1,IN#_spectrum,_nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,3);
+          draw(OUT#_map_forward,OUT#_width,OUT#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
+        );
+      );
     );
 
     nn_patchcolumn2d_forward(OUT,IN) = (
