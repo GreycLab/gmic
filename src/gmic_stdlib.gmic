@@ -28947,32 +28947,62 @@ nn_lib :
 
     # append: Append two inputs as a new output.
     #--------------------------------------------
-    nn_append_init_forward(OUT,IN0,IN1,axis) = (
+    nn_append_init_forward(OUT,w,h,d,s,axis) = (
+      const OUT#_width = w;
+      const OUT#_height = h;
+      const OUT#_depth = d;
+      const OUT#_spectrum = s;
       const OUT#_axis = _'#axis';
-      const OUT#_width = IN0#_width + (OUT#_axis==_'x'?IN1#_width:0);
-      const OUT#_height = IN0#_height + (OUT#_axis==_'y'?IN1#_height:0);
-      const OUT#_depth = IN0#_depth + (OUT#_axis==_'z'?IN1#_depth:0);
-      const OUT#_spectrum = IN0#_spectrum + (OUT#_axis==_'c'?IN1#_spectrum:0);
     );
 
     nn_append_forward(OUT,IN0,IN1) = (
-      OUT# = vector(#size(IN0#) + size(IN1#));
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
            IN0#,0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-           IN1#,OUT#_width - IN1#_width,OUT#_height - IN1#_height,
-                OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
+           IN1#,
+           OUT#_width - IN1#_width,OUT#_height - IN1#_height,
+           OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
            IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
     );
 
+    nn_append_forward(OUT,IN0,IN1,IN2) = (
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN0#,0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN1#,
+           OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
+           OUT#_axis==_'z'?IN0#_depth:0,OUT#_axis==_'c'?IN0#_spectrum:0,
+           IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN2#,
+           OUT#_axis==_'x'?OUT#_width - IN2#_width:0,OUT#_axis==_'y'?OUT#_height - IN2#_height:0,
+           OUT#_axis==_'z'?OUT#_depth - IN2#_depth:0,OUT#_axis==_'c'?OUT#_spectrum - IN2#_spectrum:0,
+           IN2#_width,IN2#_height,IN2#_depth,IN2#_spectrum);
+    );
+
     nn_append_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#);
-      nn_define_backward(IN1#);
+      nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   OUT#_width - IN1#_width,OUT#_height - IN1#_height,
                   OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
+                  IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
+    );
+
+    nn_append_backward(OUT,IN0,IN1,IN2) = (
+      nn_define_backward(IN0#); nn_define_backward(IN1#); nn_define_backward(IN2#);
+      d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
+                  OUT#_axis==_'z'?IN0#_depth:0,OUT#_axis==_'c'?IN0#_spectrum:0,
+                  IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
+      d#IN2+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  OUT#_axis==_'x'?OUT#_width - IN2#_width:0,OUT#_axis==_'y'?OUT#_height - IN2#_height:0,
+                  OUT#_axis==_'z'?OUT#_depth - IN2#_depth:0,OUT#_axis==_'c'?OUT#_spectrum - IN2#_spectrum:0,
                   IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
     );
 
@@ -29694,8 +29724,7 @@ nn_lib :
     );
 
     nn_mmul_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#);
-      nn_define_backward(IN1#);
+      nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=mul(d#OUT,transpose(IN1#,IN1#_width),IN1#_height);
       d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
     );
@@ -29714,8 +29743,7 @@ nn_lib :
     );
 
     nn_mmult_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#);
-      nn_define_backward(IN1#);
+      nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=mul(d#OUT,IN1#,IN1#_width);
       d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
     );
@@ -30546,8 +30574,7 @@ nn_lib :
     );
 
     nn_tmmul_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#);
-      nn_define_backward(IN1#);
+      nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=mul(IN1#,transpose(d#OUT,OUT#_width),OUT#_height);
       d#IN1+=mul(IN0#,d#OUT,OUT#_width);
     );
@@ -30566,8 +30593,7 @@ nn_lib :
     );
 
     nn_tmmult_backward(OUT,IN0,IN1) = (
-      nn_define_backward(IN0#);
-      nn_define_backward(IN1#);
+      nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=transpose(mul(d#OUT,IN1#,IN1#_width),IN0#_height);
       d#IN1+=transpose(mul(IN0#,d#OUT,OUT#_width),IN1#_height);
     );
@@ -30825,6 +30851,8 @@ nn_lib :
 nn_add : check "isvarname(['$1']) && # out
                 isint($#-1,2,4) # nb_inputs
                 "
+  net,out=${-nn_network},$1
+  nout=${net}_$out
   $=arg nb_inputs:=$#-1 is_all_num=1 nins,nnin,sep=
   repeat $nb_inputs {
     arg=${arg{2+$>}} is_num:=isnum($arg) is_all_num&=$is_num
@@ -30841,8 +30869,6 @@ nn_add : check "isvarname(['$1']) && # out
     nins.=$sep${nin$>} sep=,
   }
   if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
-  net,out=${-nn_network},$1
-  nout=${net}_$out
 
   e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$nins"."
   _${net}_layer_names.=$out,
@@ -30857,30 +30883,38 @@ nn_add : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_append : out,in0,in1,axis={ x | y | z | c }
+#@cli nn_append : out,in0,in1,...,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
 nn_append : check "isvarname(['$1']) && # out
-                   (s2 = ['$2']; isvarname(s2) || s2=='.') && # in0
-                   (s3 = ['$3']; isvarname(s3) || s3=='.') && # in1
-                   isin(s-1,'x','y','z','c') # axis
+                   isint($#-2,2,4) && # nb_inputs
+                   isin('$-1','x','y','z','c') # axis
                    "
   net,out=${-nn_network},$1
-  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi nn_check_layer $in0
-  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi nn_check_layer $in1
-  nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
-  axis=$4
-  ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
-  check s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];s0[$ind_axis]=s1[$ind_axis]=-1;s0==s1
+  axis=$-1 ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
+  nout=${net}_$out
+  $=arg nb_inputs:=$#-2 nins,sep=
+  repeat $nb_inputs {
+    arg=${arg{2+$>}}
+    check "s = ['"$arg"']; isvarname(s) || s=='.' || $is_num"
+    if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
+    nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
+    if narg($out_size)
+      check s0=[$out_size];s1=[${_${nin$>}_size}];s0[$ind_axis]=s1[$ind_axis]=-1;s0==s1
+      out_size:=s0=[$out_size];s1=[${_${nin$>}_size}];s0[$ind_axis]+=s1[$ind_axis];s0
+    else out_size=${_${nin$>}_size}
+    fi
+    nins.=$sep${nin$>} sep=,
+  }
 
-  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs '"$in0"', '"$in1"' and axis '"$axis"'."
+  e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs "$nins" and axis '"$axis"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=append,
-  _${nout}_size:=s=[${_${nin0}_size}];s[$ind_axis]+=[${_${nin1}_size}][$ind_axis];s
-  _${nout}_input=$in0,$in1
+  _${nout}_size=$out_size
+  _${nout}_input=$nins
   _${nout}_properties="axis="$axis
-  _${nout}_forward="begin(nn_append_init_forward("$nout,$nin0,$nin1,$axis"));"\
-                   "nn_append_forward("$nout,$nin0,$nin1");"
-  _${nout}_backward="nn_append_backward("$nout,$nin0,$nin1");"
+  _${nout}_forward="begin(nn_append_init_forward("$nout,$out_size,$axis"));"\
+                   "nn_append_forward("$nout,$nins");"
+  _${nout}_backward="nn_append_backward("$nout,$nins");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -31858,6 +31892,8 @@ nn_mmult : check "isvarname(['$1']) && # out
 nn_mul : check "isvarname(['$1']) && # out
                 isint($#-1,2,4) # nb_inputs
                 "
+  net,out=${-nn_network},$1
+  nout=${net}_$out
   $=arg nb_inputs:=$#-1 is_all_num=1 nins,nnin,sep=
   repeat $nb_inputs {
     arg=${arg{2+$>}} is_num:=isnum($arg) is_all_num&=$is_num
@@ -31874,8 +31910,6 @@ nn_mul : check "isvarname(['$1']) && # out
     nins.=$sep${nin$>} sep=,
   }
   if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
-  net,out=${-nn_network},$1
-  nout=${net}_$out
 
   e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs "$nins"."
   _${net}_layer_names.=$out,
