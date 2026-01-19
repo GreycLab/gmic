@@ -30557,36 +30557,83 @@ nn_lib :
 
     # split: Split input as two outputs.
     #-----------------------------------
-    nn_split_init_forward(OUT0,OUT1,IN,axis,size0) = (
+    nn_split_init_forward(OUT0,OUT1,IN,axis,size0,size1) = (
       const OUT0#_axis = _'#axis';
       const OUT0#_width = OUT0#_axis==_'x'?size0:IN#_width;
       const OUT0#_height = OUT0#_axis==_'y'?size0:IN#_height;
       const OUT0#_depth = OUT0#_axis==_'z'?size0:IN#_depth;
       const OUT0#_spectrum = OUT0#_axis==_'c'?size0:IN#_spectrum;
-      const OUT1#_width = IN#_width - (OUT0#_axis==_'x'?size0:0);
-      const OUT1#_height = IN#_height - (OUT0#_axis==_'y'?size0:0);
-      const OUT1#_depth = IN#_depth - (OUT0#_axis==_'z'?size0:0);
-      const OUT1#_spectrum = IN#_spectrum - (OUT0#_axis==_'c'?size0:0);
+      const OUT1#_width = OUT0#_axis==_'x'?size1:IN#_width;
+      const OUT1#_height = OUT0#_axis==_'y'?size1:IN#_height;
+      const OUT1#_depth = OUT0#_axis==_'z'?size1:IN#_depth;
+      const OUT1#_spectrum = OUT0#_axis==_'c'?size1:IN#_spectrum;
+    );
+
+    nn_split_init_forward(OUT0,OUT1,OUT2,IN,axis,size0,size1,size2) = (
+      nn_split_init_forward(OUT0#,OUT1#,IN#,axis#,size0#,size1#);
+      const OUT2#_width = OUT0#_axis==_'x'?size2:IN#_width;
+      const OUT2#_height = OUT0#_axis==_'y'?size2:IN#_height;
+      const OUT2#_depth = OUT0#_axis==_'z'?size2:IN#_depth;
+      const OUT2#_spectrum = OUT0#_axis==_'c'?size2:IN#_spectrum;
     );
 
     nn_split_forward(OUT0,OUT1,IN) = (
       OUT0# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                   0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+                   0,0,0,0,
+                   OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
       OUT1# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                    IN#_width - OUT1#_width,IN#_height - OUT1#_height,
                    IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
                    OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
     );
 
+    nn_split_forward(OUT0,OUT1,OUT2,IN) = (
+      OUT0# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   0,0,0,0,
+                   OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum);
+      OUT1# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   OUT0#_axis==_'x'?OUT0#_width:0,OUT0#_axis==_'y'?OUT0#_height:0,
+                   OUT0#_axis==_'z'?OUT0#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum:0,
+                   OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum);
+      OUT2# = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   IN#_width - OUT2#_width,IN#_height - OUT2#_height,
+                   IN#_depth - OUT2#_depth,IN#_spectrum - OUT2#_spectrum,
+                   OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum);
+    );
+
     nn_split_backward(OUT0,OUT1,IN) = (
       nn_define_backward(IN#);
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-           d#OUT0,0,0,0,0,OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum,
+           d#OUT0,
+           0,0,0,0,
+           OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum,
            -1); # Add to d#IN
       draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-           d#OUT1,IN#_width - OUT1#_width,IN#_height - OUT1#_height,
-                  IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
+           d#OUT1,
+           IN#_width - OUT1#_width,IN#_height - OUT1#_height,
+           IN#_depth - OUT1#_depth,IN#_spectrum - OUT1#_spectrum,
            OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum,
+           -1); # Add to d#IN
+    );
+
+    nn_split_backward(OUT0,OUT1,OUT2,IN) = (
+      nn_define_backward(IN#);
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT0,
+           0,0,0,0,
+           OUT0#_width,OUT0#_height,OUT0#_depth,OUT0#_spectrum,
+           -1); # Add to d#IN
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT1,
+           OUT0#_axis==_'x'?OUT0#_width:0,OUT0#_axis==_'y'?OUT0#_height:0,
+           OUT0#_axis==_'z'?OUT0#_depth:0,OUT0#_axis==_'c'?OUT0#_spectrum:0,
+           OUT1#_width,OUT1#_height,OUT1#_depth,OUT1#_spectrum,
+           -1); # Add to d#IN
+      draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+           d#OUT2,
+           IN#_width - OUT2#_width,IN#_height - OUT2#_height,
+           IN#_depth - OUT2#_depth,IN#_spectrum - OUT2#_spectrum,
+           OUT2#_width,OUT2#_height,OUT2#_depth,OUT2#_spectrum,
            -1); # Add to d#IN
     );
 
@@ -30901,9 +30948,9 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,in1,...,inN
+#@cli nn_add : out,in0,in1,...,_inN
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
-#@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
+#@cli : the 'in_k' arguments can be layer names or constant values (all cannot be constant values though).
 nn_add : check "isvarname(['$1']) && # out
                 isint($#-1,2,4) # nb_inputs
                 "
@@ -30939,14 +30986,14 @@ nn_add : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_append : out,in0,in1,...,inN,axis={ x | y | z | c }
+#@cli nn_append : out,in0,in1,...,_inN,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
 nn_append : check "isvarname(['$1']) && # out
                    isint($#-2,2,4) && # nb_inputs
                    isin('$-1','x','y','z','c') # axis
                    "
   net,out=${-nn_network},$1
-  axis=$-1 ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
+  axis=$-1 ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3
   nout=${net}_$out
   $=arg nb_inputs:=$#-2 nins,sep=
   repeat $nb_inputs {
@@ -31946,9 +31993,9 @@ nn_mmult : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_mul : out,in0,in1,...,inN
+#@cli nn_mul : out,in0,in1,...,_inN
 #@cli : Add a 'mul' layer (element-wise multiplication) to the current network.
-#@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
+#@cli : the 'in_k' arguments can be layer names or constant values (all cannot be constant values though).
 nn_mul : check "isvarname(['$1']) && # out
                 isint($#-1,2,4) # nb_inputs
                 "
@@ -32598,35 +32645,51 @@ nn_size :
   }
   u $siz
 
-#@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0 : \
-# out0,out1,out2,in,axis={ x | y | z | c },size0>0,_size1>0 : \
-# out0,out1,ou2,out3in,axis={ x | y | z | c },size0>0,_size1>0,_size2>0 : \
+#@cli nn_split : out0,out1,...,_outN,in,axis={ x | y | z | c },size_out0>0,_size_out1>0,...,_size_outN>0 : \
 #@cli : Add a 'split' layer to the current network.
 #@cli : Default values: 'size2=size1=size0'.
-nn_split : check "isvarname(['$1']) && # out0
-                  isvarname(['$2']) && # out1
-                  (s3 = ['$3']; isvarname(s3) || s3=='.') && # in
-                  isin(['$4'],'x','y','z','c') && # axis
-                  isint($5,1)
-                  "
-  net,out0,out1=${-nn_network},${1,2}
-  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
-  nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
-  axis,size0=${4-5}
-  ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3;
+nn_split : check "$#>=4"
+  net=${-nn_network}
+  $=arg nb_outputs=0 nouts,sep=
+  repeat $#-3 {
+    i:=$#-$>
+    if isin(['${arg$i}'],'x','y','z','c')
+      nb_outputs:=$i-2
+      repeat $nb_outputs { # out_k
+        out$>=${arg{1+$>}} nout$>=${net}_${out$>} outs.=$sep${out$>} nouts.=$sep${nout$>} sep=,
+      }
+      in=${arg{$i-1}} if '$in'=='.' in=$_nn_previous_layer fi nn_check_layer $in # in
+      nin=${nn_varname\ $in}
+      axis=${arg$i} ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3 # axis
+      repeat $#-$i { size$>=${arg{$i+1+$>}} } # size_out_k
+      break
+    fi
+  }
+  sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size})
+  repeat $nb_outputs {
+    i=$> nb_remaining:=1+$<
+    if ${size$i} remaining_size-=${size$i} sizes.=$sep${size$i} sep=,
+    else
+      siz:=int($remaining_size/$nb_remaining)
+      repeat $nb_remaining { size{$i+$>}=$siz remaining_size-=$siz }
+      if $remaining_size size0+=$remaining_size fi
+      repeat $nb_remaining { sizes.=$sep${size{$i+$>}} sep=, }
+      break
+    fi
+  }
 
   e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
-         "outputs '"$out0"', '"$out1"', axis '"$axis"' and size0 "$size0"."
-  _${net}_layer_names.=$out0,$out1,
-  _${net}_layer_types.=split,split,
-  _${nout0}_size:=s=[${_${nin}_size}];s[$ind_axis]=$size0;s
-  _${nout0}_input=$in
-  _${nout1}_size:=s=[${_${nin}_size}];s[$ind_axis]-=$size0;s
-  _${nout1}_input=$in
-  _${nout0}_properties,_${nout1}_properties="axis="$axis
-  _${nout0}_forward="begin(nn_split_init_forward("$nout0,$nout1,$nin,$axis,$size0"));"\
-                    "nn_split_forward("$nout0,$nout1,$nin");"
-  _${nout0}_backward="nn_split_backward("$nout0,$nout1,$nin");"
+         "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
+  repeat $nb_outputs {
+    _${net}_layer_names.=${out$>},
+    _${net}_layer_types.=split,
+    _${nout$>}_size:=s=[${_${nin}_size}];s[$ind_axis]=${size$>};s
+    _${nout$>}_input=$in
+    _${nout$>}_properties="axis="$axis
+  }
+  _${nout0}_forward="begin(nn_split_init_forward("$nouts,$nin,$axis,$sizes"));"\
+                    "nn_split_forward("$nouts,$nin");"
+  _${nout0}_backward="nn_split_backward("$nouts,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -54934,8 +54997,8 @@ _fx_flip_blocks :
 # Simulates data corruption (glitch art) based on Huffman coding.
 #@gui : "}, sep = separator()
 #@gui : Noise Level (%) = float(30,0,100)
-#@gui : Split Mode = choice("None","Horizontal Blocs","Vertical Blocs","Patches")
-#@gui : Bloc Size (%) = int(25,0,100)_1
+#@gui : Split Mode = choice("None","Horizontal Blocks","Vertical Blocks","Patches")
+#@gui : Block Size (%) = int(25,0,100)_1
 #@gui : Patch Overlap (%) = float(0,0,50)_1
 #@gui : Color Space = choice("RGB","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKLab","YCbCr","YIQ")
 #@gui : Quantization = int(0,0,64)
@@ -54967,11 +55030,11 @@ fx_huffman_glitches :
 
     huffman_tree mv. 0
 
-    # Decompose image into blocs.
-    bloc_size:=max(1,round($split_size*max(w,h)%))
-    if $split_mode==1 s. y,{-$bloc_size}
-    elif $split_mode==2 s. x,{-$bloc_size}
-    elif $split_mode==3 img2patches. $bloc_size,$patch_overlap%,2 s. z
+    # Decompose image into blocks.
+    block_size:=max(1,round($split_size*max(w,h)%))
+    if $split_mode==1 s. y,{-$block_size}
+    elif $split_mode==2 s. x,{-$block_size}
+    elif $split_mode==3 img2patches. $block_size,$patch_overlap%,2 s. z
     fi
     compress_huffman[^0] [0]
 
