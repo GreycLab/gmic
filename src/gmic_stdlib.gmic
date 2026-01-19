@@ -30798,62 +30798,40 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,in1,_in2,_in3
+#@cli nn_add : out,in0,in1,...
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
-nn_add :
-  check "is_num2 = isnum($2); is_num3 = isnum($3);
-         s4 = ['${4=}']; is4 = s4!=0; is_num4 = isnum($4);
-         s5 = ['${5=}']; is5 = s5!=0; is_num5 = isnum($5);
-         isvarname(['$1']) && # out
-         (s2 = ['$2']; isvarname(s2) || s2=='.' || is_num2) && # in0
-         (s3 = ['$3']; isvarname(s3) || s3=='.' || is_num3) && # in1
-         (!is4 || (is4 && (isvarname(s3) || s3=='.' || is_num3))) && # in2
-         (!is5 || (is5 && (isvarname(s5) || s5=='.' || is_num5))) && # in3
-         (!is_num2 || !is_num3 || (is4 && !is_num4) || (is5 && !is_num5))
-         "
-  net,out=${-nn_network},$1
-  nb_inputs:=2+!!narg($4)+!!narg($5)
-  check "isint($nb_inputs,2,4)"
-  if '$2'=='.' in0=$_nn_previous_layer else in0=$2 fi
-  if '$3'=='.' in1=$_nn_previous_layer else in1=$3 fi
-  if '$4'=='.' in2=$_nn_previous_layer else in2=$4 fi
-  if '$5'=='.' in3=$_nn_previous_layer else in3=$5 fi
-  nout,nin0,nin1,nin2,nin3=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1},${nn_varname\ $in2},${nn_varname\ $in3}
-  isnum0,isnum1,isnum2,isnum3:=isnum($in0),isnum($in1),isnum($in2),isnum($in3)
-  out_size=
-  if !$isnum0 nn_check_layer $in0 out_size=${_${nin0}_size} else nin0=$in0 fi
-  if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
-  if $nb_inputs>2" && "!$isnum2 nn_check_layer $in2 out_size=${_${nin2}_size} else nin2=$in2 fi
-  if $nb_inputs>3" && "!$isnum3 nn_check_layer $in3 out_size=${_${nin3}_size} else nin3=$in3 fi
-  if !$isnum0 check [${_${nin0}_size}]==[$out_size] fi
-  if !$isnum1 check [${_${nin1}_size}]==[$out_size] fi
-  if $nb_inputs>2" && "!$isnum2 check [${_${nin2}_size}]==[$out_size] fi
-  if $nb_inputs>3" && "!$isnum3 check [${_${nin3}_size}]==[$out_size] fi
-  if $nb_inputs==2 s_in="'"$in0"' and '"$in1"'"
-  elif $nb_inputs==3 s_in="'"$in0"', '"$in1"' and '"$in2"'"
-  else s_in="'"$in0"', '"$in1"', '"$in2"' and '"$in3"'"
-  fi
+nn_add : check "isvarname(['$1']) && # out
+                isint($#-1,2,4) # nb_inputs
+                "
+  $=arg nb_inputs:=$#-1 is_all_num=1 nins,nnin,sep=
+  repeat $nb_inputs {
+    arg=${arg{2+$>}} is_num:=isnum($arg) is_all_num&=$is_num
+    check "s = ['"$arg"']; isvarname(s) || s=='.' || $is_num"
+    if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
+    if $is_num nin$>=${in$>}
+    else
+      nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
+      if narg($out_size) check [${_${nin$>}_size}]==[$out_size]
+      else out_size=${_${nin$>}_size}
+      fi
+      nnin=${nin$>} # one of the non-numerical input
+    fi
+    nins.=$sep${nin$>} sep=,
+  }
+  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
-  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$s_in"."
+  net,out=${-nn_network},$1
+  nout=${net}_$out
+
+  e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$nins"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
-  if $nb_inputs==2 _${nout}_input=$in0,$in1
-  elif $nb_inputs==3 _${nout}_input=$in0,$in1,$in2
-  else _${nout}_input=$in0,$in1,$in2,$in3
-  fi
-  _${nout}_forward="begin(nn_add_init_forward("$nout,${nin$isnum0}"));"
-  if $nb_inputs==2
-    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1");"
-    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1");"
-  elif $nb_inputs==3
-    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1,$nin2");"
-    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1,$nin2");"
-  else
-    _${nout}_forward.="nn_add_forward("$nout,$nin0,$nin1,$nin2,$nin3");"
-    _${nout}_backward="nn_add_backward("$nout,$nin0,$nin1,$nin2,$nin3");"
-  fi
+  _${nout}_input=$nins
+  _${nout}_forward="begin(nn_add_init_forward("$nout,$nnin"));"
+  _${nout}_forward.="nn_add_forward("$nout,$nins");"
+  _${nout}_backward="nn_add_backward("$nout,$nins");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
