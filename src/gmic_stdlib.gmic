@@ -30901,7 +30901,7 @@ nn_lib :
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
 
-#@cli nn_add : out,in0,in1,...
+#@cli nn_add : out,in0,in1,...,inN
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
 nn_add : check "isvarname(['$1']) && # out
@@ -30939,7 +30939,7 @@ nn_add : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_append : out,in0,in1,...,axis={ x | y | z | c }
+#@cli nn_append : out,in0,in1,...,inN,axis={ x | y | z | c }
 #@cli : Add an 'append' layer to the current network.
 nn_append : check "isvarname(['$1']) && # out
                    isint($#-2,2,4) && # nb_inputs
@@ -31946,7 +31946,7 @@ nn_mmult : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_mul : out,in0,in1,...
+#@cli nn_mul : out,in0,in1,...,inN
 #@cli : Add a 'mul' layer (element-wise multiplication) to the current network.
 #@cli : the 'in' arguments can be layer names or constant values (all cannot be constant values though).
 nn_mul : check "isvarname(['$1']) && # out
@@ -32598,8 +32598,11 @@ nn_size :
   }
   u $siz
 
-#@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0
+#@cli nn_split : out0,out1,in,axis={ x | y | z | c },size0>0 : \
+# out0,out1,out2,in,axis={ x | y | z | c },size0>0,_size1>0 : \
+# out0,out1,ou2,out3in,axis={ x | y | z | c },size0>0,_size1>0,_size2>0 : \
 #@cli : Add a 'split' layer to the current network.
+#@cli : Default values: 'size2=size1=size0'.
 nn_split : check "isvarname(['$1']) && # out0
                   isvarname(['$2']) && # out1
                   (s3 = ['$3']; isvarname(s3) || s3=='.') && # in
