@@ -28958,7 +28958,9 @@ nn_lib :
     nn_append_forward(OUT,IN0,IN1) = (
       OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-           IN0#,0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+           IN0#,
+           0,0,0,0,
+           IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
            IN1#,
            OUT#_width - IN1#_width,OUT#_height - IN1#_height,
@@ -28969,7 +28971,9 @@ nn_lib :
     nn_append_forward(OUT,IN0,IN1,IN2) = (
       OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-           IN0#,0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+           IN0#,
+           0,0,0,0,
+           IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
            IN1#,
            OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
@@ -28982,10 +28986,34 @@ nn_lib :
            IN2#_width,IN2#_height,IN2#_depth,IN2#_spectrum);
     );
 
+    nn_append_forward(OUT,IN0,IN1,IN2,IN3) = (
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN0#,
+           0,0,0,0,
+           IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN1#,
+           OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
+           OUT#_axis==_'z'?IN0#_depth:0,OUT#_axis==_'c'?IN0#_spectrum:0,
+           IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN2#,
+           OUT#_axis==_'x'?IN0#_width + IN1#_width:0,OUT#_axis==_'y'?IN0#_height + IN1#_height:0,
+           OUT#_axis==_'z'?IN0#_depth + IN1#_depth:0,OUT#_axis==_'c'?IN0#_spectrum + IN1#_spectrum:0,
+           IN2#_width,IN2#_height,IN2#_depth,IN2#_spectrum);
+      draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+           IN3#,
+           OUT#_axis==_'x'?OUT#_width - IN3#_width:0,OUT#_axis==_'y'?OUT#_height - IN3#_height:0,
+           OUT#_axis==_'z'?OUT#_depth - IN3#_depth:0,OUT#_axis==_'c'?OUT#_spectrum - IN3#_spectrum:0,
+           IN3#_width,IN3#_height,IN3#_depth,IN3#_spectrum);
+    );
+
     nn_append_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                  0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+                  0,0,0,0,
+                  IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   OUT#_width - IN1#_width,OUT#_height - IN1#_height,
                   OUT#_depth - IN1#_depth,OUT#_spectrum - IN1#_spectrum,
@@ -28995,7 +29023,8 @@ nn_lib :
     nn_append_backward(OUT,IN0,IN1,IN2) = (
       nn_define_backward(IN0#); nn_define_backward(IN1#); nn_define_backward(IN2#);
       d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                  0,0,0,0,IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+                  0,0,0,0,
+                  IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
       d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
                   OUT#_axis==_'z'?IN0#_depth:0,OUT#_axis==_'c'?IN0#_spectrum:0,
@@ -29003,7 +29032,26 @@ nn_lib :
       d#IN2+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   OUT#_axis==_'x'?OUT#_width - IN2#_width:0,OUT#_axis==_'y'?OUT#_height - IN2#_height:0,
                   OUT#_axis==_'z'?OUT#_depth - IN2#_depth:0,OUT#_axis==_'c'?OUT#_spectrum - IN2#_spectrum:0,
+                  IN2#_width,IN2#_height,IN2#_depth,IN2#_spectrum);
+    );
+
+    nn_append_backward(OUT,IN0,IN1,IN2,IN3) = (
+      nn_define_backward(IN0#); nn_define_backward(IN1#); nn_define_backward(IN2#); nn_define_backward(IN3#);
+      d#IN0+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  0,0,0,0,
+                  IN0#_width,IN0#_height,IN0#_depth,IN0#_spectrum);
+      d#IN1+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  OUT#_axis==_'x'?IN0#_width:0,OUT#_axis==_'y'?IN0#_height:0,
+                  OUT#_axis==_'z'?IN0#_depth:0,OUT#_axis==_'c'?IN0#_spectrum:0,
                   IN1#_width,IN1#_height,IN1#_depth,IN1#_spectrum);
+      d#IN2+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  OUT#_axis==_'x'?IN0#_width + IN1#_width:0,OUT#_axis==_'y'?IN0#_height + IN1#_height:0,
+                  OUT#_axis==_'z'?IN0#_depth + IN1#_depth:0,OUT#_axis==_'c'?IN0#_spectrum + IN1#_spectrum:0,
+                  IN2#_width,IN2#_height,IN2#_depth,IN2#_spectrum);
+      d#IN3+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                  OUT#_axis==_'x'?OUT#_width - IN3#_width:0,OUT#_axis==_'y'?OUT#_height - IN3#_height:0,
+                  OUT#_axis==_'z'?OUT#_depth - IN3#_depth:0,OUT#_axis==_'c'?OUT#_spectrum - IN3#_spectrum:0,
+                  IN3#_width,IN3#_height,IN3#_depth,IN3#_spectrum);
     );
 
     # avgpool2d : 2D average pooling.
