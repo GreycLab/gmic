@@ -30319,7 +30319,15 @@ nn_lib :
 
     nn_patchcolumn2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=map(OUT#_map_backward,d#OUT);
+      _nn_k = 0;
+#        print(d#OUT);
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(d#OUT,OUT#_width,OUT#_height,1,1,_nn_k++,0,0,0,1,OUT#_height,1,1);
+          draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,OUT#_patch,_nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+               OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,-1);
+        );
+      );
     );
 
     # patchdown2d: 2D downscale by patch.
@@ -32326,7 +32334,7 @@ nn_patchcolumn2d : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  patch_size,overlap=${3-4}
+  patch_size,overlap,boundary_conditions=${3-5}
   if s=[${_${nin}_size}];s[2]!=1
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Size of input layer '"$nin"' ("${_${nin}_size}") is incompatible with patch size "$patch_size"."
@@ -32339,9 +32347,9 @@ nn_patchcolumn2d : check "isvarname(['$1']) && # out
   _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;[ceil(s[0]/po)*ceil(s[1]/po),s[3]*$patch_size^2,1,1]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
-  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,$overlap,$boundary_condition"));"\
+  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,$overlap,$boundary_conditions"));"\
                    "nn_patchcolumn2d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_patchcolumn2d_init_backward("$nout,$nin"));"
+  _${nout}_backward="begin(nn_patchcolumn2d_backward("$nout,$nin"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
