@@ -29121,28 +29121,42 @@ nn_lib :
       const OUT#_spectrum = ceil(IN#_height/OUT#_patch_size^2);
       const OUT#_nb_cols = ceil(OUT#_width/OUT#_p_o);
       const OUT#_nb_rows = ceil(OUT#_height/OUT#_p_o);
-    );
 
-    nn_columnpatch2d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      # Pre-compute OUT#_count (local counting of overlapping patch pixels).
+      OUT#_count = vector(##OUT#_width*OUT#_height);
+      OUT#_one = vector(##OUT#_patch_size^2,1);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,_nn_k++,0,0,0,1,IN#_height,1,1);
-          draw(OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,OUT#_patch,
+          draw(OUT#_count,OUT#_width,OUT#_height,1,1,OUT#_one,
+               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+               OUT#_patch_size,OUT#_patch_size,1,1,-1);
+        );
+      );
+      OUT#_count_whds = resize(OUT#_count,size(OUT#_count)*OUT#_spectrum,0,2);
+    );
+
+    nn_columnpatch2d_forward(OUT,IN) = (
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(IN#,IN#_width,IN#_height,1,1,_nn_k++,0,0,0,1,IN#_height,1,1);
+          draw(OUT#,OUT#_width,OUT#_height,1,OUT#_spectrum,OUT#_patch,
                _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
                OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,-1);
         );
       );
+      OUT#/=OUT#_count_whds;
     );
 
     nn_columnpatch2d_init_backward(OUT,IN) = (
-      OUT#_map_backward_src = expr('c2o([x,y,0,c])',OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum);
+      OUT#_map_backward_src = expr('c2o([x,y,0,c])',OUT#_width,OUT#_height,1,OUT#_spectrum);
       OUT#_map_backward = vector(##IN#_width*IN#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+          OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,1,OUT#_spectrum,
                             _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
                             OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,3);
           draw(OUT#_map_backward,IN#_width,IN#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
@@ -29152,7 +29166,7 @@ nn_lib :
 
     nn_columnpatch2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=map(OUT#_map_backward,d#OUT);
+      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds)
     );
 
     # conv2d: 2D convolutional layer.
@@ -30337,7 +30351,7 @@ nn_lib :
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           OUT#_patch = crop(d#OUT,OUT#_width,OUT#_height,1,1,_nn_k++,0,0,0,1,OUT#_height,1,1);
-          draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,OUT#_patch,
+          draw(d#IN,IN#_width,IN#_height,1,IN#_spectrum,OUT#_patch,
                _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
                OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,-1);
         );
