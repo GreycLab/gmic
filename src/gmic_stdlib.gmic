@@ -30130,11 +30130,11 @@ nn_lib :
     # norm : Lp-norm (opt. along axis).
     #----------------------------------
     nn_norm_init_forward(OUT,IN,p,axis) = (
-      const OUT#_axis = _'axis#';
-      const OUT#_width = OUT#_axis!=_'x'?IN#_width:1;
-      const OUT#_height = OUT#_axis!=_'y'?IN#_height:1;
-      const OUT#_depth = OUT#_axis!=_'z'?IN#_depth:1;
-      const OUT#_spectrum = OUT#_axis!=_'c'?IN#_spectrum:1;
+      const OUT#_axis = axis;
+      const OUT#_width = OUT#_axis && OUT#_axis!=_'x'?IN#_width:1;
+      const OUT#_height = OUT#_axis && OUT#_axis!=_'y'?IN#_height:1;
+      const OUT#_depth = OUT#_axis && OUT#_axis!=_'z'?IN#_depth:1;
+      const OUT#_spectrum = OUT#_axis && OUT#_axis!=_'c'?IN#_spectrum:1;
       const OUT#_p = p;
     );
 
@@ -32277,7 +32277,7 @@ nn_norm : check "isvarname(['$1']) && # out
   _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
   _${nout}_input=$in
   _${nout}_properties="p="$p", axis="$axis
-  _${nout}_forward="begin(nn_norm_init_forward("$nout,$nin,$p,$axis"));"\
+  _${nout}_forward="begin(nn_norm_init_forward("$nout,$nin,$p,{_'$axis'==_'0'?0:_'$axis'}"));"\
                    "nn_norm_forward("$nout,$nin");"
   _${nout}_backward="nn_norm_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
