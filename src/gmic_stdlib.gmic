@@ -30791,6 +30791,28 @@ nn_lib :
       size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT);
     );
 
+    # sum : Sum/average (opt. along axis).
+    #--------------------------------------
+    nn_sum_init_forward(OUT,IN,is_average,axis) = (
+      const OUT#_axis = axis;
+      const OUT#_width = OUT#_axis && OUT#_axis!=_'x'?IN#_width:1;
+      const OUT#_height = OUT#_axis && OUT#_axis!=_'y'?IN#_height:1;
+      const OUT#_depth = OUT#_axis && OUT#_axis!=_'z'?IN#_depth:1;
+      const OUT#_spectrum = OUT#_axis && OUT#_axis!=_'c'?IN#_spectrum:1;
+      const OUT#_fact = is_average?1:size(IN#)/(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+    );
+
+    nn_sum_forward(OUT,IN) = (
+      OUT# = (resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,2)*=OUT#_fact);
+    );
+
+    nn_sum_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN#+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,1)*=OUT#_fact);
+    );
+
     # tmmul: Matrix multiplication IN0^t.IN1.
     #----------------------------------------
     nn_tmmul_init_forward(OUT,IN0,IN1) = (
@@ -32892,6 +32914,36 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_sum : out,in,_is_average={ 0:No | 1:Yes },_axis={ 0 | x | y | z | c }
+#@cli : Add a 'sum' layer (Sum or average computation) to the current network.
+#@cli : Default values: 'is_average=0' and 'axis=0'.
+nn_sum : check "isvarname(['$1']) && # out
+                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                isbool(${3=0}) && # is_average
+                isin(_'${4=0}',_'0',_'x',_'y',_'z',_'c') # axis
+                "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  is_average,axis=${3-4} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
+  if $ind_axis s_axis=" and axis '"$axis"'" fi
+  s0,s1="No",""
+
+  e[^-1] "[nn_lib] Add 'sum' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $s$3"averaging"$s_axis.
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=sum,
+  _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
+  _${nout}_input=$in
+  _${nout}_properties="is_average="$is_average", axis="$axis
+  _${nout}_forward="begin(nn_sum_init_forward("$nout,$nin,$is_average,{_'$axis'==_'0'?0:_'$axis'}"));"\
+                   "nn_sum_forward("$nout,$nin");"
+  _${nout}_backward="nn_sum_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
