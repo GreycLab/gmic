@@ -30141,10 +30141,17 @@ nn_lib :
     nn_norm_forward(OUT,IN) = (
       OUT#_axis?(
         OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
-        OUT#_axis==_'x'?(
-          0;
-        ):OUT#_axis==_'y'?(
-          0;
+        _nn_off = 0;
+        OUT#_axis==_'x'?repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+          OUT#_off = _nn_l*IN#_width;
+          OUT#_crop = IN#[OUT#_off,IN#_width];
+          OUT#[_nn_off++] = normp(OUT#_crop,OUT#_p);
+        ):OUT#_axis==_'y'?repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+          repeat (OUT#_width,_nn_k,
+            OUT#_off = _nn_l*IN#_width*IN#_height + _nn_k;
+            OUT#_crop = IN#[OUT#_off,IN#_height,IN#_width];
+            OUT#[_nn_off++] = normp(OUT#_crop,OUT#_p);
+          );
         ):OUT#_axis==_'z'?(
           0;
         ):(
