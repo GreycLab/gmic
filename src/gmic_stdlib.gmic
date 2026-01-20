@@ -29855,7 +29855,115 @@ nn_lib :
 
     nn_nl_normalize_l1_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=d#OUT/OUT#_epsiloned - abs(OUT#)*(dot(d#OUT,IN#)/OUT#_epsiloned^2);
+      d#IN+=(d#OUT - sign(OUT#)*dot(d#OUT,OUT#))/OUT#_epsiloned;
+    );
+
+    # Special case: 'normalize_l1_x'.
+    nn_nl_normalize_l1_x_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_height*OUT#_depth*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        _nn_N = OUT#_epsiloned[_nn_l] = max(norm1(OUT#_crop),nn_eps);
+        copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
+             OUT#_width);
+      );
+    );
+
+    nn_nl_normalize_l1_x_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
+        OUT#_off = _nn_l*OUT#_width;
+        OUT#_crop = OUT#[OUT#_off,OUT#_width];
+        d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
+        _nn_N = OUT#_epsiloned[_nn_l];
+        copy(d#IN[OUT#_off],
+             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_l],
+             OUT#_width,1,1,-1);
+      );
+    );
+
+    # Special case: 'normalize_l1_y'.
+    nn_nl_normalize_l1_y_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_depth*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = max(norm1(OUT#_crop),nn_eps);
+          copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
+               OUT#_height,OUT#_width,1);
+        );
+      );
+    );
+
+    nn_nl_normalize_l1_y_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_depth*OUT#_spectrum,_nn_l,
+        repeat (OUT#_width,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
+          copy(d#IN[OUT#_off],
+               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_l*OUT#_width + _nn_k],
+               OUT#_height,OUT#_width,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'normalize_l1_z'.
+    nn_nl_normalize_l1_z_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+      OUT# = IN#;
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = max(norm1(OUT#_crop),nn_eps);
+          copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
+               OUT#_depth,OUT#_width*OUT#_height,1);
+        );
+      );
+    );
+
+    nn_nl_normalize_l1_z_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_spectrum,_nn_l,
+        repeat (OUT#_width*OUT#_height,_nn_k,
+          OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
+          OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
+          copy(d#IN[OUT#_off],
+               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/
+                 OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k],
+               OUT#_depth,OUT#_width*OUT#_height,1,-1);
+        );
+      );
+    );
+
+    # Special case: 'normalize_l1_c'.
+    nn_nl_normalize_l1_c_forward(OUT,IN) = (
+      OUT#_epsiloned = vector(##OUT#_width*OUT#_height*OUT#_depth);
+      OUT# = IN#;
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        _nn_N = OUT#_epsiloned[_nn_k] = max(norm1(OUT#_crop),nn_eps);
+        copy(OUT#[_nn_k],OUT#_crop/_nn_N,
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
+      );
+    );
+
+    nn_nl_normalize_l1_c_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
+        OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        d#OUT#_crop = d#OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
+        copy(d#IN[_nn_k],
+             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_k],
+             OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
+      );
     );
 
     # Special case: 'normalize_l2'
