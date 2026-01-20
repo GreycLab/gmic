@@ -30127,6 +30127,29 @@ nn_lib :
       d#IN+=d#OUT;
     );
 
+    # norm : Lp-norm (opt. along axis).
+    #----------------------------------
+    nn_norm_init_forward(OUT,IN,p,axis) = (
+      const OUT#_axis = _'axis#';
+      const OUT#_width = OUT#_axis!=_'x'?IN#_width:1;
+      const OUT#_height = OUT#_axis!=_'y'?IN#_height:1;
+      const OUT#_depth = OUT#_axis!=_'z'?IN#_depth:1;
+      const OUT#_spectrum = OUT#_axis!=_'c'?IN#_spectrum:1;
+      const OUT#_p = p;
+    );
+
+    nn_norm_forward(OUT,IN) = (
+      OUT#_axis?(
+        OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+        OUT# = 1;
+        OUT#;
+      ):(OUT# = normp(IN#,OUT#_p));
+    );
+
+    nn_norm_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+    );
+
     # normalize: Variance/mean or RMS normalization.
     #-----------------------------------------------
     nn_normalize_init_forward(OUT,IN,normalization_type,ca_w,ca_h,ca_d,ca_s) = (
