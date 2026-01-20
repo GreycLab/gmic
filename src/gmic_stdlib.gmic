@@ -31084,7 +31084,7 @@ nn_append : check "isvarname(['$1']) && # out
                    isin('$-1','x','y','z','c') # axis
                    "
   net,out=${-nn_network},$1
-  axis=$-1 ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3
+  axis=$-1 ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
   nout=${net}_$out
   $=arg nb_inputs:=$#-2 nins,sep=
   repeat $nb_inputs {
@@ -32232,6 +32232,37 @@ nn_noise : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_norm : out,in,p>=0,_axis={ 0 | x | y | z | c }
+#@cli : Add a 'norm' layer (Lp norm computation) to the current network.
+#@cli : 'p' can be { 0:Squared norm | >0:Lp-norm }.
+#@cli : Default values: 'p=2' and 'axis=0'.
+nn_norm : check "isvarname(['$1']) && # out
+                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                 ${3=2}>=0 && # p
+                 isin(_'${4=}',_'0',_'x',_'y',_'z',_'c') # axis
+                 "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  p,axis=${3-4} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
+
+  if '$axis'!='0' s_axis=", along axis '"$axis"'" fi
+  e[^-1] "[nn_lib] Add 'norm' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "p "$p$s_axis"."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=norm,
+  _${nout}_size:=s=[${_${nin}_size}];a=_'$axis';a==_'0'?[1,1,1,1]:[int(s[0,2]/$patch_size),s[2,2]]
+  _${nout}_input=$in
+  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
+  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
+                   "nn_maxpool2d_forward("$nout,$nin");"
+  _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
+
 #@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
@@ -32752,7 +32783,7 @@ nn_split : check "$#>=4"
       }
       in=${arg{$i-1}} if '$in'=='.' in=$_nn_previous_layer fi nn_check_layer $in # in
       nin=${nn_varname\ $in}
-      axis=${arg$i} ind_axis:=s=_'$axis';s==_'x'?0:s==_'y'?1:s==_'z'?2:3 # axis
+      axis=${arg$i} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c') # axis
       repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
       break
     fi
