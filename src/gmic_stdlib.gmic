@@ -32239,29 +32239,28 @@ nn_noise : check "isvarname(['$1']) && # out
 nn_norm : check "isvarname(['$1']) && # out
                  (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                  ${3=2}>=0 && # p
-                 isin(_'${4=}',_'0',_'x',_'y',_'z',_'c') # axis
+                 isin(_'${4=0}',_'0',_'x',_'y',_'z',_'c') # axis
                  "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   p,axis=${3-4} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
+  if $ind_axis s_axis=" and axis '"$axis"'" fi
 
-  if '$axis'!='0' s_axis=", along axis '"$axis"'" fi
   e[^-1] "[nn_lib] Add 'norm' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "p "$p$s_axis"."
+         "'p="$p"'"$s_axis.
   _${net}_layer_names.=$out,
   _${net}_layer_types.=norm,
-  _${nout}_size:=s=[${_${nin}_size}];a=_'$axis';a==_'0'?[1,1,1,1]:[int(s[0,2]/$patch_size),s[2,2]]
+  _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
   _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
-  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
-                   "nn_maxpool2d_forward("$nout,$nin");"
-  _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
+  _${nout}_properties="p="$p", axis="$axis
+  _${nout}_forward="begin(nn_norm_init_forward("$nout,$nin,$p,$axis"));"\
+                   "nn_norm_forward("$nout,$nin");"
+  _${nout}_backward="nn_norm_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
-
 
 #@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
 # _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
