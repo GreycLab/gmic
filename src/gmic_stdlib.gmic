@@ -32526,17 +32526,25 @@ nn_parameters : check "isvarname(['$1']) && # out
   _${nout}_input=
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
-  $width,$height,$depth,$spectrum
-  if $initialization==1 # Identity
-    f. "(x%h)==(y%(w - 1))"
-  elif $initialization==2 # Lecun-initialization
-    f. "g*sqrt(1/(w - 1))"
-  elif $initialization==3 # He-initialization
-    f. "g*sqrt(2/(w - 1))"
-  elif $initialization==4 # Residual He-initialization
-    f. "g*sqrt(0.002/(w - 1))"
+  whds:=$width,$height,$depth,$spectrum
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $width,$height,$depth,$spectrum
+    if $initialization==1 # Identity
+      f. "(x%h)==(y%(w - 1))"
+    elif $initialization==2 # Lecun-initialization
+      f. "g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "g*sqrt(0.002/(w - 1))"
+    fi
+    => $nout
   fi
-  => $nout
   _${nout}_forward="begin(nn_parameters_init_forward("$nout"));"\
                    "nn_parameters_forward("$nout");"
   _${nout}_backward="begin(nn_parameters_init_backward("$nout,$weight_decay"));"\
