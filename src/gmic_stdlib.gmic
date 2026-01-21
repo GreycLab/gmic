@@ -32749,22 +32749,18 @@ nn_print :
     learning_mode=${_${net}_${name}_learning_mode}
     properties=${_${net}_${name}_properties}
     input=${_${net}_${name}_input}
-    if narg($input)==1
-      input_siz=${_${net}_${input}_size}
-    else
-      input_siz,sep=
-      repeat narg($input) {
-        in=${arg0\ $>,$input}
-        if isnum($in) input_siz.=1
-        else nin=${nn_varname\ $in} input_siz.=$sep${_${nin}_size}
-        fi
-        sep=" and "
-      }
-    fi
+    str_input,sep=
+    repeat narg($input) {
+      in=${arg0\ $>,$input}
+      if isnum($in) str_input.=$sep$c$in$n\ (constant)
+      else nin=${nn_varname\ $in} str_input.=$sep$c$in$n\ (${_${nin}_size})
+      fi
+      sep={`"$<==1?' and ':', \0'"`}
+    }
     e "   - Layer: "$b$name$n" (type: "$g$type$n")"
     if ['$input']!=0
       s={`find(['$input'],_',')>0?_'s':0`}
-      e "       * Input"$s": "$c$input$n" ("$input_siz") → Output: "$c$name$n" ("${_${net}_${name}_size}")"
+      e "       * Input"$s": "$str_input" → Output: "$c$name$n" ("${_${net}_${name}_size}")"
     else
       e "       * Output"$s": "$c$name$n" ("${_${net}_${name}_size}")"
     fi
