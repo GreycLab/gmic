@@ -29052,40 +29052,6 @@ nn_lib :
                   IN3#_width,IN3#_height,IN3#_depth,IN3#_spectrum);
     );
 
-    # avgpool2d : 2D average pooling.
-    #--------------------------------
-    nn_avgpool2d_init_forward(OUT,IN,patch_size) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
-      const OUT#_depth = IN#_depth;
-      const OUT#_spectrum = IN#_spectrum;
-    );
-
-    nn_avgpool2d_forward(OUT,IN) = (
-      OUT# = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                    OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                    2);
-    );
-
-    nn_avgpool2d_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      d#IN+=resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                   1);
-    );
-
-    # avgpool3d : 3D average pooling.
-    #--------------------------------
-    nn_avgpool3d_init_forward(OUT,IN,patch_size) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
-      const OUT#_depth = int(IN#_depth/patch_size);
-      const OUT#_spectrum = IN#_spectrum;
-    );
-
-    nn_avgpool3d_forward(OUT,IN) = nn_avgpool2d_forward(OUT#,IN#); # Same as avgpool2d
-    nn_avgpool3d_backward(OUT,IN) = nn_avgpool2d_backward(OUT#,IN#); # Same as avgpool2d
-
     # clone: Duplicate input as two new outputs.
     #-------------------------------------------
     nn_clone_init_forward(OUT0,OUT1,IN) = (
@@ -31296,58 +31262,6 @@ nn_append : check "isvarname(['$1']) && # out
   _${nout}_forward="begin(nn_append_init_forward("$nout,$out_size,$axis"));"\
                    "nn_append_forward("$nout,$nins");"
   _${nout}_backward="nn_append_backward("$nout,$nins");"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1}\n"
-  _nn_previous_layer=$out
-
-#@cli nn_avgpool2d : out,in,_patch_size>1
-#@cli : Add a 'avgpool2d' layer (2D average pooling) to the current network.
-#@cli : Default value: 'patch_size=2'.
-nn_avgpool2d : check "isvarname(['$1']) && # out
-                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                      isint(${3=2},2) # patch_size
-                      "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  patch_size=$3
-
-  e[^-1] "[nn_lib] Add 'avgpool2d' layer '"$out"' to network '"$net"', with input '"$in"' and patch size "$patch_size"."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=avgpool2d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
-  _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size
-  _${nout}_forward="begin(nn_avgpool2d_init_forward("$nout,$nin,$patch_size"));"\
-                   "nn_avgpool2d_forward("$nout,$nin");"
-  _${nout}_backward="nn_avgpool2d_backward("$nout,$nin");"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 ${1--1}\n"
-  _nn_previous_layer=$out
-
-#@cli nn_avgpool3d : out,in,patch_size>1
-#@cli : Add a 'avgpool3d' layer (3D average pooling) to the current network.
-#@cli : Default value: 'patch_size=2'.
-nn_avgpool3d : check "isvarname(['$1']) && # out
-                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                      isint(${3=2},2) # patch_size
-                      "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  patch_size=$3
-
-  e[^-1] "[nn_lib] Add 'avgpool3d' layer '"$out"' to network '"$net"', with input '"$in"' and patch size "$patch_size"."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=avgpool3d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
-  _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size
-  _${nout}_forward="begin(nn_avgpool3d_init_forward("$nout,$nin,$patch_size"));"\
-                   "nn_avgpool3d_forward("$nout,$nin");"
-  _${nout}_backward="nn_avgpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
