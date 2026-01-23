@@ -31336,6 +31336,78 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_conv1d : out,in,nb_channels>0,_axis={ x | y | z | c },_kernel_size>0,_stride>0,_dilation,_shrink>=0,\
+# _boundary_conditions,_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
+#@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
+# 'shrink=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_conv1d : check "isvarname(['$1']) && # out
+                   (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                   isint($3,1) && # nb_channels
+                   isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
+                   isint(${5=3},1) && # kernel_size
+                   isint(${6=1},1) && # stride
+                   isint(${7=1}) && # dilation
+                   isint(${8=0},0) && # shrink
+                   isint(${9=1},0,3) && # boundary_conditions
+                   isint(${10=3},0,3) && # learning_mode
+                   ${11=0}>=0 && # weight_decay
+                   isint(${12=3},0,4) # initialization
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nb_channels,axis,kernel_size,stride,dilation,shrink,\
+    boundary_conditions,learning_mode,weight_decay,initialization=${3-12}
+  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  e[^-1] "[nn_lib] Add 'conv1d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $nb_channels" channels, axis '"$axis"', kernel size "$kernel_size", stride "$stride", "\
+         "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=conv1d,
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="kernel_size="$kernel_size", stride="$stride", dilation="$dilation", "\
+                      "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay
+
+  whds={[${_${nin}_size}][3]*$kernel_size+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1
+      f. "const siz = "$kernel_size"; x%siz==int(siz/2)"
+    elif $initialization==2 # Lecun-initialization
+      f. "x==w - 1?0:g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
+    fi
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_conv1d_init_forward("$nout,$nin,_'$axis',$kernel_size,$stride,$dilation,\
+                   $shrink,$boundary_conditions"));"\
+                   "nn_conv1d_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_conv1d_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_conv1d_backward("$nout,$nin");"\
+                    "end(nn_conv1d_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
@@ -31364,14 +31436,14 @@ nn_conv2d : check "isvarname(['$1']) && # out
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
+         $nb_channels" channels, kernel size "$kernel_size", stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
+  _${nout}_properties="kernel_size="$kernel_size", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
                       "learning_mode="$learning_mode", weight_decay="$weight_decay
 
@@ -31384,7 +31456,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   else
     $whds
     if $initialization==1
-      f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^2; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
     elif $initialization==2 # Lecun-initialization
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -31434,14 +31506,14 @@ nn_conv3d : check "isvarname(['$1']) && # out
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
+         $nb_channels" channels, kernel size "$kernel_size", stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
   _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
-  _${nout}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
+  _${nout}_properties="kernel_size="$kernel_size", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
                       "weight_decay="$weight_decay
@@ -31454,7 +31526,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   else
     $whds
     if $initialization==1
-      f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^3; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
     elif $initialization==2 # Lecun-initialization
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -31662,11 +31734,11 @@ nn_input : check "isvarname(['$1']) && # out
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
-#@cli : Default value: 'axis=c', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_linear : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
-                   isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
+                   isin(_'$4',_'x',_'y',_'z',_'c') && # axis
                    isint(${5=3},0,3) && # learning_mode
                    ${6=0}>=0 && # weight_decay
                    isint(${7=3},0,4) # initialization
@@ -37461,7 +37533,7 @@ _dec2hex :
     const N = (isinf($1) || isnan($1)?1:1 + floor(log2(max(1,abs($1)))/4)) + (sgn>=0?0:1);
     res = vectorN();
     sgn>=0?0:(res[0] = _'-');
-    for (val = abs($1); k = size(res) - 1, k>=(sgn<0?1:0), --k, res[k] = tab[val&15]; val>>=4); res"`}
+    for (val = abs($1); k = size(res) - 1, k>=(sgn<0), --k, res[k] = tab[val&15]; val>>=4); res"`}
 
 #@cli dec2oct : decimal_int1,...
 #@cli : Convert specified decimal integers into their octal representations.
