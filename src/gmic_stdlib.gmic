@@ -29133,6 +29133,138 @@ nn_lib :
       d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds);
     );
 
+    # conv: Generic 1D/2D/3D convolutional layer.
+    #---------------------------------------------
+    nn_conv_init_forward(OUT,IN,kernel_width,kernel_height,kernel_depth,stride_x,stride_y,stride_z,
+                         dilation_x,dilation_y,dilation_z,shrink_x,shrink_y,shrink_z,boundary_conditions) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_shrink_x = shrink_x;
+      const OUT#_shrink_y = shrink_y;
+      const OUT#_shrink_z = shrink_z;
+      const OUT#_width = int(IN#_width/stride_x) - 2*OUT#_shrink_x;
+      const OUT#_height = int(IN#_height/stride_y) - 2*OUT#_shrink_y;
+      const OUT#_depth = int(IN#_depth/stride_z) - 2*OUT#_shrink_z;
+      const OUT#_spectrum = h##OUT#_ind;
+      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
+      const OUT#_kernel_width = kernel_width;
+      const OUT#_kernel_height = kernel_height;
+      const OUT#_kernel_depth = kernel_depth;
+      const OUT#_kernel_center_x = OUT#_kernel_width - 1 - int(OUT#_kernel_width/2);
+      const OUT#_kernel_center_y = OUT#_kernel_height - 1 - int(OUT#_kernel_height/2);
+      const OUT#_kernel_center_z = OUT#_kernel_depth - 1 - int(OUT#_kernel_depth/2);
+      const OUT#_stride_x = stride_x;
+      const OUT#_stride_y = stride_y;
+      const OUT#_stride_z = stride_z;
+      const OUT#_dilation_x = dilation_x;
+      const OUT#_dilation_y = dilation_y;
+      const OUT#_dilation_z = dilation_z;
+      const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_shrink_stride_x = OUT#_shrink_x*OUT#_stride_x;
+      const OUT#_shrink_stride_y = OUT#_shrink_y*OUT#_stride_y;
+      const OUT#_shrink_stride_z = OUT#_shrink_z*OUT#_stride_z;
+      OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
+      OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+    );
+
+    nn_conv_forward(OUT,IN) = (
+      OUT# = convolve(IN#,
+                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                      OUT#_params,
+                      OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum*OUT#_spectrum,
+                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
+                      OUT#_stride_x,OUT#_stride_y,OUT#_stride_z,
+                      OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
+                      OUT#_shrink_stride_x,OUT#_shrink_stride_y,OUT#_shrink_stride_z,
+                      IN#_width/OUT#_stride_x - 2*OUT#_shrink_x,
+                      IN#_height/OUT#_stride_y - 2*OUT#_shrink_y,
+                      IN#_depth/OUT#_stride_z - 2*OUT#_shrink_z);
+      repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
+    );
+
+    nn_conv_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_width_stride_x = OUT#_width*OUT#_stride_x;
+      const OUT#_height_stride_y = OUT#_height*OUT#_stride_y;
+      const OUT#_depth_stride_z = OUT#_depth*OUT#_stride_z;
+      const OUT#_prestrided_whd = OUT#_width_stride_x*OUT#_height_stride_y*OUT#_depth_stride_z;
+      const OUT#_weight_decay = weight_decay;
+      const OUT#_kernel_whd = OUT#_kernel_width*OUT#_kernel_height*OUT#_kernel_depth;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+      batch_d#OUT#_biases = vector(#size(OUT#_biases));
+    );
+
+    nn_conv_backward(OUT,IN) = (
+
+      # Handle strided convolution case.
+      max(OUT#_stride_x==1,OUT#_stride_y==1,OUT#_stride_z)==1?(
+        ref(d#OUT,d#OUT#_prestrided);
+      ):(
+        d#OUT#_prestrided = resize(d#OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                   OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,4);
+      );
+
+      # Compute dLOSS/dIN.
+      nn_define_backward(IN#);
+      repeat (IN#_spectrum,_nn_k,
+        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+             correlate(d#OUT#_prestrided,
+                       OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
+                       crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
+                            _nn_k*OUT#_kernel_whd,0,OUT#_kernel_whd,OUT#_spectrum),
+                       OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum,
+                       0,0,2,
+                       OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
+                       1,1,1,
+                       OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
+                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
+                       IN#_width,IN#_height,IN#_depth),
+             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
+             -1); # Add to d#IN
+      );
+
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
+      d#OUT#_biases = vector(#size(OUT#_biases));
+      fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
+      batch_d#OUT#_biases+=d#OUT#_biases;
+
+      # Compute dLOSS/dweights.
+      const OUT#_dkc_x = OUT#_dilation_x*OUT#_kernel_center_x;
+      const OUT#_dkc_y = OUT#_dilation_y*OUT#_kernel_center_y;
+      const OUT#_dkc_z = OUT#_dilation_z*OUT#_kernel_center_z;
+      d#OUT#_params = vector(#size(OUT#_params));
+      repeat (OUT#_spectrum,_nn_k,
+        draw(d#OUT#_params,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum*IN#_spectrum,
+             correlate(crop(d#OUT#_prestrided,
+                            OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
+                            0,0,0,_nn_k,OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1),
+                       OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1,
+                       IN#,
+                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       0,0,1,
+                       OUT#_dkc_x,OUT#_dkc_y,OUT#_dkc_z,
+                       OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z, # Correct stride value is actually dilation
+                       1,1,1,
+                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
+                       OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth),
+             0,0,0,_nn_k*IN#_spectrum,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum);
+      );
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+    );
+
+    nn_conv_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      merge(batch_d#OUT#_biases,+);
+      batch_d#OUT#_params/=nn_batch_size;
+      batch_d#OUT#_biases/=nn_batch_size;
+    );
+
+    nn_conv_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    );
+
     # conv2d: 2D convolutional layer.
     #--------------------------------
     nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
@@ -29226,7 +29358,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,0,
-                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually equal to dilation
+                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually dilation
                        1,1,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,0,
                        OUT#_kernel_size,OUT#_kernel_size,1),
@@ -29342,7 +29474,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,OUT#_dkc,
-                       OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually equal to dilation
+                       OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually dilation
                        1,1,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
                        OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size),
@@ -30557,7 +30689,7 @@ nn_lib :
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum/patch_size^2;
       const OUT#_patch_size = patch_size;
-      OUT#_map_forward = expr('const p = patch_size; const p = p^2;
+      OUT#_map_forward = expr('const p = patch_size; const p2 = p^2;
         fx = x%p; fy = y%p;
         xi = int(x/p); yi = int(y/p); ci = fx + p*fy + p2*c;
         xi + w/p*yi + wh/p2*z + whd/p2*ci',
@@ -31336,6 +31468,90 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_conv : out,in,nb_channels>0,_kernel_width>0,_kernel_height>0,_kernel_depth>0,\
+# _stride_x>0,_stride_y>0,_stride_z>0,_dilation_x,_dilation_y,_dilation_z,_shrink_x>=0,_shrink_y>=0_,_shrink_z>=0,\
+# boundary_conditions,_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add a 'conv' layer (generic 1D/2D/3D convolutional layer) to the current network.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
+#@cli : Default values: 'stride_x=stride_y=stride_z=1', 'dilation_x=dilation_y=dilation_z=1', \
+# 'shrink_x=shrink_y=shrink_z=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_conv : check "isvarname(['$1']) && # out
+                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                 isint($3,1) && # nb_channels
+                 isint($4,1) && # kernel_width
+                 isint($5,1) && # kernel_height
+                 isint($6,1) && # kernel_depth
+                 isint(${7=1},1) && # stride_x
+                 isint(${8=1},1) && # stride_y
+                 isint(${9=1},1) && # stride_z
+                 isint(${10=1}) && # dilation_x
+                 isint(${11=1}) && # dilation_y
+                 isint(${12=1}) && # dilation_z
+                 isint(${13=0},0) && # shrink_x
+                 isint(${14=0},0) && # shrink_y
+                 isint(${15=0},0) && # shrink_z
+                 isint(${16=1},0,3) && # boundary_conditions
+                 isint(${17=3},0,3) && # learning_mode
+                 ${18=0}>=0 && # weight_decay
+                 isint(${19=3},0,4) # initialization
+                 "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nb_channels,kernel_width,kernel_height,kernel_depth,stride_x,stride_y,stride_z,dilation_x,dilation_y,dilation_z,\
+    shrink_x,shrink_y,shrink_z,boundary_conditions,learning_mode,weight_decay,initialization=${3-19}
+  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $nb_channels" channels, kernel size ("$kernel_width,$kernel_height,$kernel_depth"), "\
+         "strides ("$stride_x,$stride_y,$stride_z"), dilations ("$dilation_x,$dilation_y,$dilation_z"), "\
+         "border shrinks ("$shrink_x,$shrink_y,$shrink_z") and "${s$boundary_conditions}" boundary conditions."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=conv,
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$stride_x)-2*$shrink_x,int(s[1]/$stride_y)-2*$shrink_y,\
+                                      int(s[2]/$stride_z)-2*$shrink_z,$nb_channels]
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="kernel_size=("$kernel_width,$kernel_height,$kernel_depth"), "\
+                      "strides=("$stride_x,$stride_y,$stride_z"), "\
+                      "dilations=("$dilation_x,$dilation_y,$dilation_z"), "\
+                      "shrinks=("$shrink_x,$shrink_y,$shrink_z"), boundary_conditions="${s$boundary_conditions}", "\
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay
+  whds={[${_${nin}_size}][3]*$kernel_width*$kernel_height*$kernel_depth+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1
+      f. "const siz = "$kernel_size"^2; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
+    elif $initialization==2 # Lecun-initialization
+      f. "x==w - 1?0:g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
+    fi
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_conv_init_forward("$nout,$nin,$kernel_width,$kernel_height,$kernel_depth,\
+                   $stride_x,$stride_y,$stride_z,$dilation_x,$dilation_y,$dilation_z,$shrink_x,$shrink_y,$shrink_z,\
+                   $boundary_conditions"));"\
+                   "nn_conv_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_conv_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_conv_backward("$nout,$nin");"\
+                    "end(nn_conv_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
@@ -31364,14 +31580,14 @@ nn_conv2d : check "isvarname(['$1']) && # out
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels, "${kernel_size}x${kernel_size}" kernels, stride "$stride", dilation "$dilation", "\
+         $nb_channels" channels, kernel size "$kernel_size", stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="kernel="${kernel_size}x${kernel_size}", stride="$stride", dilation="$dilation", "\
+  _${nout}_properties="kernel_size="$kernel_size", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
                       "learning_mode="$learning_mode", weight_decay="$weight_decay
 
@@ -31384,7 +31600,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   else
     $whds
     if $initialization==1
-      f. "const siz = "$kernel_size"^2; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^2; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
     elif $initialization==2 # Lecun-initialization
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -31434,14 +31650,14 @@ nn_conv3d : check "isvarname(['$1']) && # out
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         $nb_channels" channels, "${kernel_size}x${kernel_size}x${kernel_size}" kernels, stride "$stride", "\
+         $nb_channels" channels, kernel size "$kernel_size", stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
   _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
-  _${nout}_properties="kernel="${kernel_size}x${kernel_size}x${kernel_size}", stride="$stride", "\
+  _${nout}_properties="kernel_size="$kernel_size", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
                       "weight_decay="$weight_decay
@@ -31454,7 +31670,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   else
     $whds
     if $initialization==1
-      f. "const siz = "$kernel_size"^3; ; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)?1:0"
+      f. "const siz = "$kernel_size"^3; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
     elif $initialization==2 # Lecun-initialization
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -31662,11 +31878,11 @@ nn_input : check "isvarname(['$1']) && # out
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
 # 4:Residual He-initialization }.
-#@cli : Default value: 'axis=c', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_linear : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
-                   isin(_'${4=c}',_'x',_'y',_'z',_'c') && # axis
+                   isin(_'$4',_'x',_'y',_'z',_'c') && # axis
                    isint(${5=3},0,3) && # learning_mode
                    ${6=0}>=0 && # weight_decay
                    isint(${7=3},0,4) # initialization
@@ -31729,7 +31945,7 @@ nn_linear : check "isvarname(['$1']) && # out
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
-      if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
+      if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -32686,7 +32902,7 @@ nn_print :
     else
       e "       * Output"$s": "$c$name$n" ("${_${net}_${name}_size}")"
     fi
-    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     if ['$properties']!=0
@@ -32845,7 +33061,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       siz+={${net}_$name,whds}
     fi
   }
@@ -32929,7 +33145,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${"arg0 $>,"${_${net}_layer_types}}
     name=${"arg0 $>,"${_${net}_layer_names}}
-    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -33179,7 +33395,7 @@ nn_trainer : check "isvarname(['$1']) && # out
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
@@ -37461,7 +37677,7 @@ _dec2hex :
     const N = (isinf($1) || isnan($1)?1:1 + floor(log2(max(1,abs($1)))/4)) + (sgn>=0?0:1);
     res = vectorN();
     sgn>=0?0:(res[0] = _'-');
-    for (val = abs($1); k = size(res) - 1, k>=(sgn<0?1:0), --k, res[k] = tab[val&15]; val>>=4); res"`}
+    for (val = abs($1); k = size(res) - 1, k>=(sgn<0), --k, res[k] = tab[val&15]; val>>=4); res"`}
 
 #@cli dec2oct : decimal_int1,...
 #@cli : Convert specified decimal integers into their octal representations.
