@@ -29133,6 +29133,138 @@ nn_lib :
       d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds);
     );
 
+    # conv: Generic 1D/2D/3D convolutional layer.
+    #---------------------------------------------
+    nn_conv_init_forward(OUT,IN,kernel_width,kernel_height,kernel_depth,stride_x,stride_y,stride_z,
+                         dilation_x,dilation_y,dilation_z,shrink_x,shrink_y,shrink_z,boundary_conditions) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_shrink_x = shrink_x;
+      const OUT#_shrink_y = shrink_y;
+      const OUT#_shrink_z = shrink_z;
+      const OUT#_width = int(IN#_width/stride_x) - 2*OUT#_shrink_x;
+      const OUT#_height = int(IN#_height/stride_y) - 2*OUT#_shrink_y;
+      const OUT#_depth = int(IN#_depth/stride_z) - 2*OUT#_shrink_z;
+      const OUT#_spectrum = h##OUT#_ind;
+      const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
+      const OUT#_kernel_width = kernel_width;
+      const OUT#_kernel_height = kernel_height;
+      const OUT#_kernel_depth = kernel_depth;
+      const OUT#_kernel_center_x = OUT#_kernel_width - 1 - int(OUT#_kernel_width/2);
+      const OUT#_kernel_center_y = OUT#_kernel_height - 1 - int(OUT#_kernel_height/2);
+      const OUT#_kernel_center_z = OUT#_kernel_depth - 1 - int(OUT#_kernel_depth/2);
+      const OUT#_stride_x = stride_x;
+      const OUT#_stride_y = stride_y;
+      const OUT#_stride_z = stride_z;
+      const OUT#_dilation_x = dilation_x;
+      const OUT#_dilation_y = dilation_y;
+      const OUT#_dilation_z = dilation_z;
+      const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_shrink_stride_x = OUT#_shrink_x*OUT#_stride_x;
+      const OUT#_shrink_stride_y = OUT#_shrink_y*OUT#_stride_y;
+      const OUT#_shrink_stride_z = OUT#_shrink_z*OUT#_stride_z;
+      OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
+      OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+    );
+
+    nn_conv_forward(OUT,IN) = (
+      OUT# = convolve(IN#,
+                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                      OUT#_params,
+                      OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum*OUT#_spectrum,
+                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
+                      OUT#_stride_x,OUT#_stride_y,OUT#_stride_z,
+                      OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
+                      OUT#_shrink_stride_x,OUT#_shrink_stride_y,OUT#_shrink_stride_z,
+                      IN#_width/OUT#_stride_x - 2*OUT#_shrink_x,
+                      IN#_height/OUT#_stride_y - 2*OUT#_shrink_y,
+                      IN#_depth/OUT#_stride_z - 2*OUT#_shrink_z);
+      repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
+    );
+
+    nn_conv_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_width_stride_x = OUT#_width*OUT#_stride_x;
+      const OUT#_height_stride_y = OUT#_height*OUT#_stride_y;
+      const OUT#_depth_stride_z = OUT#_depth*OUT#_stride_z;
+      const OUT#_prestrided_whd = OUT#_width_stride_x*OUT#_height_stride_y*OUT#_depth_stride_z;
+      const OUT#_weight_decay = weight_decay;
+      const OUT#_kernel_whd = OUT#_kernel_width*OUT#_kernel_height*OUT#_kernel_depth;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+      batch_d#OUT#_biases = vector(#size(OUT#_biases));
+    );
+
+    nn_conv_backward(OUT,IN) = (
+
+      # Handle strided convolution case.
+      OUT#_stride_x==1 && OUT#_stride_y==1 && OUT#_stride_z==1?(
+        ref(d#OUT,d#OUT#_prestrided);
+      ):(
+        d#OUT#_prestrided = resize(d#OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                   OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,4);
+      );
+
+      # Compute dLOSS/dIN.
+      nn_define_backward(IN#);
+      repeat (IN#_spectrum,_nn_k,
+        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+             correlate(d#OUT#_prestrided,
+                       OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
+                       crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
+                            _nn_k*OUT#_kernel_whd,0,OUT#_kernel_whd,OUT#_spectrum),
+                       OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum,
+                       0,0,2,
+                       OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
+                       1,1,1,
+                       OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
+                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
+                       IN#_width,IN#_height,IN#_depth),
+             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
+             -1); # Add to d#IN
+      );
+
+      # Compute dLOSS/dbiases (do not apply weight decay on biases!).
+      d#OUT#_biases = vector(#size(OUT#_biases));
+      fill(d#OUT#_biases,_nn_k,sum(d#OUT#_prestrided[_nn_k*OUT#_prestrided_whd,OUT#_prestrided_whd]));
+      batch_d#OUT#_biases+=d#OUT#_biases;
+
+      # Compute dLOSS/dweights.
+      const OUT#_dkc_x = OUT#_dilation_x*OUT#_kernel_center_x;
+      const OUT#_dkc_y = OUT#_dilation_y*OUT#_kernel_center_y;
+      const OUT#_dkc_z = OUT#_dilation_z*OUT#_kernel_center_z;
+      d#OUT#_params = vector(#size(OUT#_params));
+      repeat (OUT#_spectrum,_nn_k,
+        draw(d#OUT#_params,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum*IN#_spectrum,
+             correlate(crop(d#OUT#_prestrided,
+                            OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
+                            0,0,0,_nn_k,OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1),
+                       OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1,
+                       IN#,
+                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       0,0,1,
+                       OUT#_dkc_x,OUT#_dkc_y,OUT#_dkc_z,
+                       OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z, # Correct stride value is actually dilation
+                       1,1,1,
+                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
+                       OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth),
+             0,0,0,_nn_k*IN#_spectrum,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum);
+      );
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+    );
+
+    nn_conv_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      merge(batch_d#OUT#_biases,+);
+      batch_d#OUT#_params/=nn_batch_size;
+      batch_d#OUT#_biases/=nn_batch_size;
+    );
+
+    nn_conv_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    );
+
     # conv2d: 2D convolutional layer.
     #--------------------------------
     nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
@@ -29226,7 +29358,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,0,
-                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually equal to dilation
+                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually dilation
                        1,1,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,0,
                        OUT#_kernel_size,OUT#_kernel_size,1),
@@ -29342,7 +29474,7 @@ nn_lib :
                        IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,OUT#_dkc,
-                       OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually equal to dilation
+                       OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually dilation
                        1,1,1,
                        -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
                        OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size),
