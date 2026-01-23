@@ -31336,6 +31336,91 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_conv : out,in,nb_channels>0,_kernel_width>0,_kernel_height>0,_kernel_depth>0,_stride_x>0,_stride_y,_stride_z,\
+# _dilation_x,_dilation_y,_dilation_z,_shrink_x>=0,_shrink_y>=0_,_shrink_z>=0,boundary_conditions,_learning_mode,\
+# _weight_decay>=0,_initialization
+#@cli : Add a 'conv' layer (generic 1D/2D/3D convolutional layer) to the current network.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
+#@cli : Default values: 'stride_x=stride_y=stride_z=1', 'dilation_x=dilation_y=dilation_z=1', \
+# 'shrink_x=shrink_y=shrink_z=0', 'boundary_conditions=1', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_conv2d : check "isvarname(['$1']) && # out
+                   (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                   isint($3,1) && # nb_channels
+                   isint($4,1) && # kernel_width
+                   isint($5,1) && # kernel_height
+                   isint($6,1) && # kernel_depth
+                   isint(${7=1},1) && # stride_x
+                   isint(${8=1},1) && # stride_y
+                   isint(${9=1},1) && # stride_z
+                   isint(${10=1}) && # dilation_x
+                   isint(${11=1}) && # dilation_y
+                   isint(${12=1}) && # dilation_z
+                   isint(${13=0},0) && # shrink_x
+                   isint(${14=0},0) && # shrink_y
+                   isint(${15=0},0) && # shrink_z
+                   isint(${16=1},0,3) && # boundary_conditions
+                   isint(${17=3},0,3) && # learning_mode
+                   ${18=0}>=0 && # weight_decay
+                   isint(${19=3},0,4) # initialization
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nb_channels,kernel_width,kernel_height,kernel_depth,stride_x,stride_y,stride_z,dilation_x,dilation_y,dilation_z,\
+    shrink_x,shrink_y,shrink_z,boundary_conditions,learning_mode,weight_decay,initialization=${3-19}
+  s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         $nb_channels" channels, kernel size ("$kernel_width,$kernel_height,$kernel_depth"), "\
+         "strides ("$stride_x,$stride_y,$stride_z"), dilations ("$dilation_x,$dilation_y,$dilation_z"), "\
+         "border shrinks ("$shrink_x,$shrink_y,$shrink_z") and "${s$boundary_conditions}" boundary conditions."
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=conv,
+  _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$stride_x)-2*$shrink_x,\
+                                      int(s[1]/$stride_y)-2*$shrink_y,\
+                                      int(s[2]/$stride_z)-2*$shrink_2,$nb_channels]
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="kernel_size=("$kernel_width,$kernel_height,$kernel_depth"), "\
+                      "strides=("$stride_x,$stride_y,$stride_z"), "\
+                      "dilations=("$dilation_x,$dilation_y,$dilation_z"), "\
+                      "shrinks=("$shrink_x,$shrink_y,$shrink_z"), boundary_conditions="${s$boundary_conditions}", "\
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay
+  whds={[${_${nin}_size}][3]*$kernel_width*$kernel_height*$kernel_depth+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1
+      f. "const siz = "$kernel_size"^2; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
+    elif $initialization==2 # Lecun-initialization
+      f. "x==w - 1?0:g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "x==w - 1?0:g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "x==w - 1?0:g*sqrt(0.002/(w - 1))"
+    fi
+    if $learning_mode<2 1,100% j.. .,100% rm. fi # Set biases to 0 if they are not learnt
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_conv_init_forward("$nout,$nin,$kernel_width,$kernel_height,$kernel_depth,\
+                   $stride_x,$stride_y,$stride_z,$dilation_x,$dilation_y,$dilation_z,$shrink_x,$shrink_y,$shrink_z,\
+                   $boundary_conditions"));"\
+                   "nn_conv_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_conv_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_conv_backward("$nout,$nin");"\
+                    "end(nn_conv_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
