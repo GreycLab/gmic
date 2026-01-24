@@ -28554,10 +28554,11 @@ nn_lib :
     begin(
       const nn_nb_threads_max = n;
       const nn_eps = 1e-8;
-      const nn_optimizer_sgd = 0;
-      const nn_optimizer_rmsprop = 1;
-      const nn_optimizer_adam = 2;
-      const nn_optimizer_adamax = 3;
+      const nn_optimizer_adam = 0;
+      const nn_optimizer_adamax = 1;
+      const nn_optimizer_dtschump = 2;
+      const nn_optimizer_sgd = 3;
+      const nn_optimizer_rmsprop = 4;
       nn_is_training = 0;
     );
 
@@ -28767,42 +28768,6 @@ nn_lib :
       );
     );
 
-    # Stochastic gradient descent (SGD).
-    #-----------------------------------
-    nn_optimizer_sgd_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
-      nn_momentum = i(##T#_ind,2,1);
-      nn_weight_decay = i(##T#_ind,3,1);
-      nn_clip_gradient_min = i(##T#_ind,4,1);
-      nn_clip_gradient_max = i(##T#_ind,5,1);
-    );
-
-    nn_optimizer_sgd_update(P,weight_decay) = (
-      nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
-      P#-=nn_learning_rate*d#P#_m;
-      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
-    );
-
-    # RMSprop.
-    #---------
-    nn_optimizer_rmsprop_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
-      nn_momentum = i(##T#_ind,2,1);
-      nn_rmsprop_beta = i(##T#_ind,3,1);
-      nn_weight_decay = i(##T#_ind,4,1);
-      nn_clip_gradient_min = i(##T#_ind,5,1);
-      nn_clip_gradient_max = i(##T#_ind,6,1);
-    );
-
-    nn_optimizer_rmsprop_update(P,weight_decay) = (
-      nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
-      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_rmsprop_beta);
-      P#-=nn_learning_rate*d#P#_m/sqrt(d#P#_m2 + nn_eps);
-      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
-    );
-
     # Adam.
     #------
     nn_optimizer_adam_init(T) = (
@@ -28846,6 +28811,59 @@ nn_lib :
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adamax_beta1);
       d#P#_m2 = vmax(abs(batch_d#P),nn_adamax_beta2*d#P#_m2);
       P#-=(nn_learning_rate/nn_adamax_ombeta1_t)*d#P#_m/sqrt(d#P#_m2 + nn_eps);
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
+    );
+
+    # dtschump.
+    #----------
+    nn_optimizer_dtschump_init(T) = (
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_momentum = i(##T#_ind,2,1);
+      nn_weight_decay = i(##T#_ind,3,1);
+      nn_clip_gradient_min = i(##T#_ind,4,1);
+      nn_clip_gradient_max = i(##T#_ind,5,1);
+    );
+
+    nn_optimizer_dtschump_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
+      P#-=nn_learning_rate*d#P#_m;
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
+    );
+
+    # RMSprop.
+    #---------
+    nn_optimizer_rmsprop_init(T) = (
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_momentum = i(##T#_ind,2,1);
+      nn_rmsprop_beta = i(##T#_ind,3,1);
+      nn_weight_decay = i(##T#_ind,4,1);
+      nn_clip_gradient_min = i(##T#_ind,5,1);
+      nn_clip_gradient_max = i(##T#_ind,6,1);
+    );
+
+    nn_optimizer_rmsprop_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
+      d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_rmsprop_beta);
+      P#-=nn_learning_rate*d#P#_m/sqrt(d#P#_m2 + nn_eps);
+      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
+    );
+
+    # Stochastic gradient descent (SGD).
+    #-----------------------------------
+    nn_optimizer_sgd_init(T) = (
+      nn_learning_rate = i(##T#_ind,1,1);
+      nn_momentum = i(##T#_ind,2,1);
+      nn_weight_decay = i(##T#_ind,3,1);
+      nn_clip_gradient_min = i(##T#_ind,4,1);
+      nn_clip_gradient_max = i(##T#_ind,5,1);
+    );
+
+    nn_optimizer_sgd_update(P,weight_decay) = (
+      nn_optimizer_clip_gradient(#P);
+      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
+      P#-=nn_learning_rate*d#P#_m;
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29618,7 +29636,7 @@ nn_lib :
     );
 
     nn_fc_update(P,O,learning_mode) = (
-      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
         const P#_ind_m = $""P#_m;
         learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
@@ -30490,7 +30508,7 @@ nn_lib :
     );
 
     nn_normalize_update(P,O,learning_mode) = (
-      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
         const P#_ind_m = $""P#_m;
         learning_mode&1?(
           d#P#_gamma_m = crop(##P#_ind_m,0,1);
@@ -30556,7 +30574,7 @@ nn_lib :
     );
 
     nn_parameters_update(P,O,learning_mode) = (
-      nn_optimizer_#O==nn_optimizer_sgd?( # sgd
+      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
         const P#_ind_m = $""P#_m;
         learning_mode?(
           d#P#_params_m = crop(##P#_ind_m);
@@ -33304,17 +33322,19 @@ nn_transpose : check "isvarname(['$1']) && # out
 
 #@cli nn_trainer : out,loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
-#@cli : 'optimizer' can be { sgd | rmsprop | adam | adamax }.
+#@cli : 'optimizer' can be { adam | adamax | dtschump | sgd | rmsprop }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
 #@cli : Value of 'optimizer_params' depends on the chosen optimizer:
-#@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,cli_gradient_max).
-#@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,cli_gradient_max).
-#@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,cli_gradient_max).
+#@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : 'dtschump': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; s2=='.' || isvarname(s2)) && # in
-                    (s3 = ['${3=adam}']; isvarname(s3) && isin(s3,'sgd','rmsprop','adam','adamax')) && # optimizer
+                    (s3 = ['${3=adam}']; isvarname(s3) &&
+                     isin(s3,'adam','adamax','dtschump','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
                       isin(s5,'constant','linear','exponential','adaptive'))
                     "
@@ -33327,7 +33347,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   # Trainer matrix has size 8x3, and is organized as follow:
   #
   # ( iteration, loss, previous_loss, best_loss, smoothed_loss, previous_smoothed_loss, best_smoothed_loss;
-  #   optimizer_ind={ 0:sgd | 1:rmsprop | 2:adam | 3:adamax}, optimizer_params...;
+  #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
   #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
   #
   if isint(${$nout})
@@ -33341,8 +33361,8 @@ nn_trainer : check "isvarname(['$1']) && # out
   nout_ind=${$nout}
 
   # Define optimizer and scheduler parameters.
-  =[$nout] {"s = ['"$optimizer"']; s=='sgd'?0:s=='rmsprop'?1:s=='adam'?2:s=='adamax'?3:4"},0,1
-  if '$optimizer'=='sgd'
+  =[$nout] {"s = ['"$optimizer"']; s==indexof('adam','adamax','dtschump','rmsprop','sgd')"},0,1
+  if isin('$optimizer','dtschump','sgd')
     s_optimizer_params=learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max
     default_optimizer_params=5e-4,0.9,0.01,0,inf
   elif '$optimizer'=='rmsprop'
