@@ -3856,8 +3856,8 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
         if (!index_end) error(true,"Command '%s': Invalid %s '%s%s%s' (no %s available).",
                               command,stype,ctypel,string,ctyper,
                               is_selection?"image":"item");
-        error(true,"Command '%s': Invalid %s '%s%s%s' (contains index %d, not in range -%u...%u).",
-              command,stype,ctypel,string,ctyper,iind0,index_end,index_end - 1);
+        error(true,"Command '%s': Invalid %s '%s%s%s' (contains index %g, not in range -%u...%u).",
+              command,stype,ctypel,string,ctyper,ind0,index_end,index_end - 1);
       }
       iind1 = iind0;
       if (*p=='-') { // Sub-expression 'ind0-ind1'
@@ -3866,8 +3866,8 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
           if (*p=='%') { ++p; ind1 = _gmic_percent(ind1); iind1 = (int)cimg::round(ind1); }
           else { _iind1 = (int)cimg::round(ind1); iind1 = _iind1<0?_iind1 + (int)index_end:_iind1; }
           if (iind1<0 || iind1>=(int)index_end)
-            error(true,"Command '%s': Invalid %s '%s%s%s' (contains index %d, not in range -%u...%u).",
-                  command,stype,ctypel,string,ctyper,iind1,index_end,index_end - 1);
+            error(true,"Command '%s': Invalid %s '%s%s%s' (contains index %g, not in range -%u...%u).",
+                  command,stype,ctypel,string,ctyper,ind1,index_end,index_end - 1);
 
           if (*p==':') { // Sub-expression 'ind0-ind1:step'
             if (cimg_sscanf(++p,"%d%n",&istep,&read)==1) {
@@ -6164,10 +6164,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   arg_command_text,
                   add_debug_info?", with debug info":"");
             cimg::strunescape(arg_command);
-            if (cimg_sscanf(arg_command," %*255[a-zA-Z0-9_] %c",&sep)!=1 || sep!=':')
-              error(true,0,0,
-                    "Command 'command': Expression '%s' does not define a named command.",
-                    gmic_argument_text());
             add_commands(arg_command,0,add_debug_info,&count_new,&count_replaced);
           }
           if (is_verbose) {

@@ -54,9 +54,9 @@ Source: build64-gimp\libcurl-4.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libdouble-conversion.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3_threads-3.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libfftw3-3.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libicudt75.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libicuin75.dll; DestDir: {app}; Flags: ignoreversion
-Source: build64-gimp\libicuuc75.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libicudt78.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libicuin78.dll; DestDir: {app}; Flags: ignoreversion
+Source: build64-gimp\libicuuc78.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libmd4c.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libomp.dll; DestDir: {app}; Flags: ignoreversion
 Source: build64-gimp\libpcre2-16-0.dll; DestDir: {app}; Flags: ignoreversion
