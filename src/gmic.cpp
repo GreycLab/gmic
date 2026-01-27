@@ -3852,6 +3852,9 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
       p+=read;
       if (*p=='%') { ++p; ind0 = _gmic_percent(ind0); iind0 = (int)cimg::round(ind0); }
       else { _iind0 = (int)cimg::round(ind0); iind0 = _iind0<0?_iind0 + (int)index_end:_iind0; }
+
+      std::fprintf(stderr,"\nDEBUG : ind0 = %g,%i, ind1 = %g,%d\n",ind0,iind0,ind1,iind1);
+
       if (iind0<0 || iind0>=(int)index_end) {
         if (!index_end) error(true,"Command '%s': Invalid %s '%s%s%s' (no %s available).",
                               command,stype,ctypel,string,ctyper,
