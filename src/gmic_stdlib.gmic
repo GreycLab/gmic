@@ -29682,6 +29682,7 @@ nn_lib :
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
+      const OUT#_sqrt_whd = sqrt(OUT#_width*OUT#_height*OUT#_depth);
       const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
       const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of real/imaginary parts
     );
@@ -29696,18 +29697,36 @@ nn_lib :
       );
 
       fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_real/=OUT#_sqrt_whd; # Unitary normalization
+      OUT#_imag/=OUT#_sqrt_whd;
 
       OUT#_io_mode&2?( # output is (real,imag)
         OUT# = [ OUT#_real,OUT#_imag ];
       ):( # output is (real,0)
         ref(OUT#_real,OUT#);
       );
-      OUT#/=sqrt(OUT#_width*OUT#_height*OUT#_depth); # Unitary normalization
     );
 
     nn_fft_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=0;
+
+      OUT#_io_mode&2?( # gradient input is (real,imag)
+        OUT#_dreal = d#IN[0,size(IN#)/2];
+        OUT#_dimag = d#IN[size(IN#)/2,size(IN#)/2];
+      ):( # gradient input is (real,0)
+        OUT#_dreal = d#IN;
+        OUT#_dimag = vector(#size(OUT#_dreal),0);
+      );
+
+      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_dreal/=OUT#_sqrt_whd; # Unitary normalization
+      OUT#_dimag/=OUT#_sqrt_whd;
+
+      OUT#_io_mode&2?( # gradient output is (real,imag)
+        d#IN+=[ OUT#_dreal,OUT#_dimag ];
+      ):( # gradient output is (real,0)
+        d#IN+=OUT#_dreal;
+      );
     );
 
     # input: Input image or vector data.
