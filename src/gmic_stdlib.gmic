@@ -28544,10 +28544,10 @@ run :
 #-------------------------
 
 #@cli nn_lib :
-#@cli : Return the functions that has to be included in a math expression, when using 'nn_lib', \
-# the G'MIC neural network library.
+#@cli : Define the math functions that has to be included in a math expression, when using 'nn_lib', \
+# the G'MIC neural network library. This command sets string variable '$_nn_lib' and returns its content.
 nn_lib :
-  u "
+  if v=get('_nn_lib',0,1);!v||isnan(v) _nn_lib="
     #---------------------------------------------------------------------------
     # Definition of the library environment variables and convenience functions.
     #---------------------------------------------------------------------------
@@ -31340,6 +31340,8 @@ nn_lib :
       nn_define_backward(IN#);
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
+  fi
+  u $_nn_lib
 
 #@cli nn_add : out,in0,in1,_in2,_in3
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
@@ -31867,6 +31869,7 @@ _nn_init : # Init new network
   _nn_network=$1
   _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update=
   _$1_init="nn_init $1\n"
+  if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
 
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
