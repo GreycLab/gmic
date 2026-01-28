@@ -29675,6 +29675,41 @@ nn_lib :
       learning_mode&2?draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
     );
 
+    # fft : Fourier transform.
+    #-------------------------
+    nn_fft_init_forward(OUT,IN,io_mode) = (
+      const OUT#_io_mode = io_mode;
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
+      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of real/imaginary parts
+    );
+
+    nn_fft_forward(OUT,IN) = (
+      OUT#_io_mode&1?( # input is (real,imag)
+        OUT#_real = IN#[0,size(IN#)/2];
+        OUT#_imag = IN#[size(IN#)/2,size(IN#)/2];
+      ):( # input is (real,0)
+        OUT#_real = IN#;
+        OUT#_imag = vector(#size(OUT#_real),0);
+      );
+
+      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+
+      OUT#_io_mode&2?( # output is (real,imag)
+        OUT# = [ OUT#_real,OUT#_imag ];
+      ):( # output is (real,0)
+        ref(OUT#_real,OUT#);
+      );
+      OUT#/=sqrt(OUT#_width*OUT#_height*OUT#_depth); # Unitary normalization
+    );
+
+    nn_fft_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=0;
+    );
+
     # input: Input image or vector data.
     #-----------------------------------
     nn_input_init_forward(OUT,IN,w,h,d,s) = (
@@ -31883,7 +31918,7 @@ nn_fft : check "isvarname(['$1']) && # out
   if $mode&1" && "[${_${nin}_size}][3]%2
     error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
   fi
-  out_size:=s=[${_${nin}_size}];s3=s[3];[s[0,3],arg0($mode,s3,s3/2,2*s3,s3)]
+  out_size:=s=[${_${nin}_size}];[s[0,3],s[3]*arg0($mode,1,0.5,2,1)]
   _${net}_layer_names.=$out,
   _${net}_layer_types.=fft,
   _${nout}_size=$out_size
