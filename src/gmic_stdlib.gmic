@@ -31863,33 +31863,38 @@ nn_fc : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_fft : out_real,out_imag,in_real,in_imag
+#@cli nn_fft : out,in,mode
 #@cli : Add a 'fft' layer (Fourier Transform) to the current network.
-nn_fft : check "isvarname(['$1']) && # out_real
-                isvarname(['$2']) && # out_imag
-                isvarname(['$3']) && # in_real
-                isvarname(['$4']) # in_imag
+#@cli : Argument 'mode' tells about the meaning of input/output data:
+#@cli : - If 'mode&1==1', the input must be the concatenation of the real part and the imaginary parts of the input \
+# signal (N channels each). Otherwise, the input contains only the real part of the input signal.
+#@cli : - If 'mode&2==1', the output is the concatenation of the real part and the imaginary parts of the output \
+# signal (N channels each). Otherwise, output contains only the real part of the output signal.
+nn_fft : check "isvarname(['$1']) && # out
+                isvarname(['$2']) && # in
+                isint($3,0,3) # mode
                 "
-  net,out0,out1=${-nn_network},$1,$2
-  if '$3'=='.' in0=$_nn_previous_layer else in0=$3 fi nn_check_layer $in0
-  if '$4'=='.' in1=$_nn_previous_layer else in1=$4 fi nn_check_layer $in1
-  nout0,nout1,nin0,nin1=${net}_$out0,${net}_$out1,${nn_varname\ $in0},${nn_varname\ $in1}
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  mode=$3
 
-  e[^-1] "[nn_lib] Add 'fft' layers to network '"$net"', with inputs ("$in0,$in1") and outputs ("$out0,$out1")."
-  out_size=${_${nin0}_size}
-  repeat 2 {
-    _${net}_layer_names.=${out$>},
-    _${net}_layer_types.=fft,
-    _${nout$>}_size=$out_size
-    _${nout$>}_input=$in0,$in1
-  }
-  _${nout0}_forward="begin(nn_fft_init_forward("$nout0,$nout1,$nin0,$nin1"));"\
-                    "nn_fft_forward("$nout0,$nout1,$nin0,$nin1");"
-  _${nout0}_backward="nn_fft_backward("$nout0,$nout1,$nin0,$nin1");"
-  _${net}_forward.=${_${nout0}_forward}
-  _${net}_backward..=${_${nout0}_backward}
+  e[^-1] "[nn_lib] Add 'fft' layers '"$out"' to network '"$net"', with inputs '"$in"'."
+  if $mode&1" && "[${_${nin}_size}][3]%2
+    error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
+  fi
+  out_size:=s=[${_${nin}_size}];s3=s[3];[s[0,3],arg0($mode,s3,s3/2,2*s3,s3)]
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=fft,
+  _${nout}_size=$out_size
+  _${nout}_input=$in
+  _${nout}_forward="begin(nn_fft_init_forward("$nout,$nin"));"\
+                   "nn_fft_forward("$nout,$nin");"
+  _${nout}_backward="nn_fft_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
-  _nn_previous_layer=$out0
+  _nn_previous_layer=$out
 
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
