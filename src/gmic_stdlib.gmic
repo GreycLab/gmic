@@ -31863,6 +31863,34 @@ nn_fc : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_fft : out_real,out_imag,in_real,in_imag
+#@cli : Add a 'fft' layer (Fourier Transform) to the current network.
+nn_fft : check "isvarname(['$1']) && # out_real
+                isvarname(['$2']) && # out_imag
+                isvarname(['$3']) && # in_real
+                isvarname(['$4']) # in_imag
+                "
+  net,out0,out1=${-nn_network},$1,$2
+  if '$3'=='.' in0=$_nn_previous_layer else in0=$3 fi nn_check_layer $in0
+  if '$4'=='.' in1=$_nn_previous_layer else in1=$4 fi nn_check_layer $in1
+  nout0,nout1,nin0,nin1=${net}_$out0,${net}_$out1,${nn_varname\ $in0},${nn_varname\ $in1}
+
+  e[^-1] "[nn_lib] Add 'fft' layers to network '"$net"', with inputs ("$in0,$in1") and outputs ("$out0,$out1")."
+  out_size=${_${nin0}_size}
+  repeat 2 {
+    _${net}_layer_names.=${out$>},
+    _${net}_layer_types.=fft,
+    _${nout$>}_size=$out_size
+    _${nout$>}_input=$in0,$in1
+  }
+  _${nout0}_forward="begin(nn_fft_init_forward("$nout0,$nout1,$nin0,$nin1"));"\
+                    "nn_fft_forward("$nout0,$nout1,$nin0,$nin1");"
+  _${nout0}_backward="nn_fft_backward("$nout0,$nout1,$nin0,$nin1");"
+  _${net}_forward.=${_${nout0}_forward}
+  _${net}_backward..=${_${nout0}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out0
+
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
 #@cli : Default value: 'network_name=nn'.
