@@ -31926,7 +31926,7 @@ nn_fc : check "isvarname(['$1']) && # out
 # are concatenated into a 2N-channels image.
 #@cli : Default value: 'is_inverse=0'.
 nn_fft : check "isvarname(['$1']) && # out
-                isvarname(['$2']) && # in
+                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                 isint($3,0,3) && # mode
                 isbool(${4=0}) # is_inverse
                 "
@@ -31934,10 +31934,12 @@ nn_fft : check "isvarname(['$1']) && # out
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   io_mode,is_inverse=${3-4}
+  s0,s1="direct","inverse"
   arg0 $io_mode,"real → real","(real,imag) → real","real → (real,imag)","(real,imag) → (real,imag)"
   s_io_mode=${}
 
-  e[^-1] "[nn_lib] Add 'fft' layers '"$out"' to network '"$net"', with inputs '"$in"'."
+  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"' and "\
+         ${s$is_inverse}" transformation."
   if $io_mode&1" && "[${_${nin}_size}][3]%2
     error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
   fi
