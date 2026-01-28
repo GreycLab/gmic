@@ -29683,9 +29683,9 @@ nn_lib :
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
-      const OUT#_fact = 1/sqrt(OUT#_width*OUT#_height*OUT#_depth);
       const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
-      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of real/imaginary parts
+      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of each real/imaginary part
+      const OUT#_fact = (OUT#_width*OUT#_height*OUT#_depth)^(OUT#_is_inverse?0.5:-0.5);
     );
 
     nn_fft_forward(OUT,IN) = (
@@ -29696,8 +29696,8 @@ nn_lib :
         OUT#_real = IN#;
         OUT#_imag = vector(#size(OUT#_real),0);
       );
-
-      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_is_inverse?ifft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
+                      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
       OUT#_real*=OUT#_fact; # Unitary normalization
       OUT#_imag*=OUT#_fact;
 
@@ -29719,7 +29719,8 @@ nn_lib :
         OUT#_dimag = vector(#size(OUT#_dreal),0);
       );
 
-      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_is_inverse?fft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
+                      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
       OUT#_dreal*=OUT#_fact; # Unitary normalization
       OUT#_dimag*=OUT#_fact;
 
