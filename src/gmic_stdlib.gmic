@@ -29677,15 +29677,29 @@ nn_lib :
 
     # fft : Fourier transform (and its inverse).
     #-------------------------------------------
-    nn_fft_init_forward(OUT,IN,io_mode,is_inverse) = (
-      const OUT#_io_mode = io_mode;
-      const OUT#_is_inverse = is_inverse;
+    nn_fft_init_forward(OUT,IN,io_mode,is_inverse,ind_axes) = (
+      # 'ind_axes' can be { 0: all | 1:x | 2:y | 3:z | 4:xy | 5:xz | 6:yz | 7:xyz }.
       const OUT#_width = IN#_width;
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
+      const OUT#_io_mode = io_mode;
       const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
       const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of each real/imaginary part
-      const OUT#_fact = (OUT#_width*OUT#_height*OUT#_depth)^(OUT#_is_inverse?0.5:-0.5);
+      const OUT#_is_inverse = is_inverse;
+      OUT#_axes = ind_axes#==0?0:
+                  ind_axes#==1?'x':
+                  ind_axes#==2?'y':
+                  ind_axes#==3?'z':
+                  ind_axes#==4?'xy':
+                  ind_axes#==4?'xz':
+                  ind_axes#==5?'yz':'xyz';
+      const OUT#_fact = (isin(ind_axes#,0,7)?OUT#_width*OUT#_height*OUT#_depth:
+                         ind_axes#==1?OUT#_width:
+                         ind_axes#==2?OUT#_height:
+                         ind_axes#==3?OUT#_depth:
+                         ind_axes#==4?OUT#_width*OUT#_height:
+                         ind_axes#==5?OUT#_width*OUT#_depth:OUT#_height*OUT#_depth
+                        )^(OUT#_is_inverse?0.5:-0.5);
     );
 
     nn_fft_forward(OUT,IN) = (
@@ -29696,8 +29710,8 @@ nn_lib :
         OUT#_real = IN#;
         OUT#_imag = vector(#size(IN#),0);
       );
-      OUT#_is_inverse?ifft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
-                      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_is_inverse?ifft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes):
+                      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes);
       OUT#_real*=OUT#_fact; # Unitary normalization
       OUT#_imag*=OUT#_fact;
 
@@ -29719,8 +29733,8 @@ nn_lib :
         OUT#_dimag = vector(#size(OUT#),0);
       );
 
-      OUT#_is_inverse?fft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
-                      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
+      OUT#_is_inverse?fft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes):
+                      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes);
       OUT#_dreal/=OUT#_fact; # Unitary normalization
       OUT#_dimag/=OUT#_fact;
 
@@ -31919,28 +31933,38 @@ nn_fc : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_fft : out,in,io_mode,_is_inverse={ 0:No | 1:Yes }
+#@cli nn_fft : out,in,io_mode,_is_inverse={ 0:No | 1:Yes },_axes.
 #@cli : Add a 'fft' layer (Fourier Transform) to the current network.
 #@cli : Argument 'io_mode' tells about the meaning of input/output data. \
 # It can be { 0:real→real | 1:(real,imag) → real | 2:real → (real,imag) | 3:(real,imag) → (real,imag) }
 #@cli : When dealing with '(real,imag)' data, the real and imaginary parts of the data (N channels each) \
 # are concatenated into a 2N-channels image.
-#@cli : Default value: 'is_inverse=0'.
+#@cli : Argument 'axes' can be { 0 (all) | x | y | z | xy | xz | yz | xyz }.
+#@cli : Default value: 'is_inverse=0', 'axes=0 (all)'.
 nn_fft : check "isvarname(['$1']) && # out
                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                 isint($3,0,3) && # mode
-                isbool(${4=0}) # is_inverse
+                isbool(${4=0}) && # is_inverse
+                isin('${5=0}','0','x','y','z','xy','xz','yz','xyz') # axes
                 "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  io_mode,is_inverse=${3-4}
+  io_mode,is_inverse,axes=${3-5}
   s0,s1="direct","inverse"
   arg0 $io_mode,"real → real","(real,imag) → real","real → (real,imag)","(real,imag) → (real,imag)"
   s_io_mode=${}
+  if ['$axes']=='0'
+    s_axes={`s=[${_${nin}_size}];S='000';k=0;s[0]>1?S[k++]=_'x';s[1]>1?S[k++]=_'y';s[2]>1?S[k++]=_'z';S[k]=0;S`}
+    ind_axes=0
+  else
+    s_axes=$axes
+    ind_axes:=indexof('$axes','0','x','y','z','xy','xz','yz','xyz');
+  fi
+  s_axes_s={`size(['$s_axes'])>1?'es':'is'`}
 
-  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"' and "\
-         ${s$is_inverse}" transformation."
+  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"', "\
+         ${s$is_inverse}" transformation, along "$s_axes"-ax"$s_axes_s"."
   if $io_mode&1" && "[${_${nin}_size}][3]%2
     error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
   fi
@@ -31949,8 +31973,8 @@ nn_fft : check "isvarname(['$1']) && # out
   _${net}_layer_types.=fft,
   _${nout}_size=$out_size
   _${nout}_input=$in
-  _${nout}_properties="io_mode="$s_io_mode
-  _${nout}_forward="begin(nn_fft_init_forward("$nout,$nin,$io_mode,$is_inverse"));"\
+  _${nout}_properties="io_mode="$s_io_mode", is_inverse="$is_inverse", ax"$s_axes_s=$s_axes
+  _${nout}_forward="begin(nn_fft_init_forward("$nout,$nin,$io_mode,$is_inverse,$ind_axes"));"\
                    "nn_fft_forward("$nout,$nin");"
   _${nout}_backward="nn_fft_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
