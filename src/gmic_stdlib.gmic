@@ -29694,7 +29694,7 @@ nn_lib :
         OUT#_imag = IN#[size(IN#)/2,size(IN#)/2];
       ):( # input is (real,0)
         OUT#_real = IN#;
-        OUT#_imag = vector(#size(OUT#_real),0);
+        OUT#_imag = vector(#size(IN#),0);
       );
       OUT#_is_inverse?ifft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
                       fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels);
@@ -29711,12 +29711,12 @@ nn_lib :
     nn_fft_backward(OUT,IN) = (
       nn_define_backward(IN#);
 
-      OUT#_io_mode&2?( # gradient input is (real,imag)
-        OUT#_dreal = d#IN[0,size(IN#)/2];
-        OUT#_dimag = d#IN[size(IN#)/2,size(IN#)/2];
-      ):( # gradient input is (real,0)
-        OUT#_dreal = d#IN;
-        OUT#_dimag = vector(#size(OUT#_dreal),0);
+      OUT#_io_mode&2?( # output is (real,imag)
+        OUT#_dreal = d#OUT[0,size(OUT#)/2];
+        OUT#_dimag = d#OUT[size(OUT#)/2,size(OUT#)/2];
+      ):( # output is (real,0)
+        OUT#_dreal = d#OUT;
+        OUT#_dimag = vector(#size(OUT#),0);
       );
 
       OUT#_is_inverse?fft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels):
@@ -29724,9 +29724,9 @@ nn_lib :
       OUT#_dreal/=OUT#_fact; # Unitary normalization
       OUT#_dimag/=OUT#_fact;
 
-      OUT#_io_mode&2?( # gradient output is (real,imag)
+      OUT#_io_mode&1?( # input is (real,imag)
         d#IN+=[ OUT#_dreal,OUT#_dimag ];
-      ):( # gradient output is (real,0)
+      ):( # input is (real,0)
         d#IN+=OUT#_dreal;
       );
     );
