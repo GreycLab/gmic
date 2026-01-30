@@ -33447,7 +33447,7 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : Value of 'scheduler_params' are:
-#@cli : (lr_min,lr_max,nb_warmup_iterations).
+#@cli : (lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,patience_up,factor_up).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
@@ -33532,16 +33532,14 @@ nn_trainer : check "isvarname(['$1']) && # out
   s_optimizer_params=$s
 
   =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:1"},0,2
-  if '$scheduler'=='constant'
-    s_scheduler_params=
-    default_scheduler_params=
-  elif '$scheduler'=='adaptive'
-    s_scheduler_params=
-    default_scheduler_params=
+  if isin('$scheduler','constant','adaptive')
+    s_scheduler_params=lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
+                       patience_up,factor_up
+    default_scheduler_params=1e-5,1e-3,500,200,500,0.5,1000,2
   fi
   if narg($default_scheduler_params) eval "copy(i(#$nout_ind,1,2),["$default_scheduler_params"])" fi
   if narg($scheduler_params) eval "copy(i(#$nout_ind,1,1),["$scheduler_params"])" fi
-  s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,1)} c=", " }
+  s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,2)} c=", " }
   s_scheduler_params=$s
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
