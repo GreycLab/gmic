@@ -28737,7 +28737,7 @@ nn_lib :
       const T#_ind = $""#T;
       const T#_loss_eps = 1 - 1e-4;
       nn_is_training = 1;
-      nn_iteration = i[##T#_ind,0];
+      nn_iteration = max(0,i[##T#_ind,0]);
       nn_optimizer_#O#_init(#T);
       nn_scheduler_#S#_init(#T);
       nn_learning_rate = i[##T#_ind,1];
@@ -28799,7 +28799,7 @@ nn_lib :
     # Adam.
     #------
     nn_optimizer_adam_init(T) = (
-      i[##T#_ind,1] = i(##T#_ind,1,1); # Set default learning rate
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_adam_beta1 = i(##T#_ind,2,1);
       nn_adam_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28823,7 +28823,7 @@ nn_lib :
     # Adamax.
     #--------
     nn_optimizer_adamax_init(T) = (
-      i[##T#_ind,1] = i(##T#_ind,1,1); # Set default learning rate
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_adamax_beta1 = i(##T#_ind,2,1);
       nn_adamax_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28845,7 +28845,7 @@ nn_lib :
     # dtschump.
     #----------
     nn_optimizer_dtschump_init(T) = (
-      i[##T#_ind,1] = i(##T#_ind,1,1); # Set default learning rate
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28862,7 +28862,7 @@ nn_lib :
     # RMSprop.
     #---------
     nn_optimizer_rmsprop_init(T) = (
-      i[##T#_ind,1] = i(##T#_ind,1,1); # Set default learning rate
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_rmsprop_beta = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28881,7 +28881,7 @@ nn_lib :
     # Stochastic gradient descent (SGD).
     #-----------------------------------
     nn_optimizer_sgd_init(T) = (
-      i[##T#_ind,1] = i(##T#_ind,1,1); # Set default learning rate
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28907,21 +28907,23 @@ nn_lib :
     # Adaptive.
     #----------
     nn_scheduler_adaptive_init(T) = (
-      nn_lr_min = i(##T#_ind,1,2);
-      nn_lr_max = i(##T#_ind,2,2);
-      nn_nb_warmup_iterations = i(##T#_ind,3,2);
-      nn_nb_cooldown_iterations = i(##T#_ind,4,2);
-      nn_patience_down = i(##T#_ind,5,2);
-      nn_factor_down = i(##T#_ind,6,2);
-      nn_patience_up = i(##T#_ind,7,2);
-      nn_factor_up = i(##T#_ind,8,2);
-      i[##T#_ind,1] = nn_lr_min;
+      T#_lr_min = i(##T#_ind,1,2);
+      T#_lr_max = i(##T#_ind,2,2);
+      T#_nb_warmup_iterations = i(##T#_ind,3,2);
+      T#_nb_cooldown_iterations = i(##T#_ind,4,2);
+      T#_patience_down = i(##T#_ind,5,2);
+      T#_factor_down = i(##T#_ind,6,2);
+      T#_patience_up = i(##T#_ind,7,2);
+      T#_factor_up = i(##T#_ind,8,2);
+      !nn_iteration?(i[##T#_ind,1] = T#_lr_min);
     );
 
     nn_scheduler_adaptive_update(T) = (
-      nn_iteration<nn_nb_warmup_iterations?(
-        i(##T#ind,1,1) = lerp(nn_lr_min,nn_lr_max,nn_iteration/nb_nb_warmup_iterations);
-      ):
+      nn_iteration<T#_nb_warmup_iterations?(
+        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/T#_nb_warmup_iterations);
+      ):(
+        i[##T#_ind,1] = T#_lr_max;
+      );
     );
 
     #----------------
@@ -33452,15 +33454,15 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { adam | adamax | dtschump | sgd | rmsprop }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
-#@cli : Value of 'optimizer_params' depends on the chosen optimizer:
+#@cli : - Value of 'optimizer_params' depends on the chosen optimizer:
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : 'dtschump': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'sgd': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
-#@cli : Value of 'scheduler_params' depends on the chosen scheduler:
-#@cli : 'constant' : (none)
-#@cli :
-#@cli : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,patience_up,factor_up ).
+#@cli : - Value of 'scheduler_params' depends on the chosen scheduler:
+#@cli : 'constant' : (none).
+#@cli : 'adaptive' : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
+# patience_up,factor_up ).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
