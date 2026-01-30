@@ -28917,17 +28917,20 @@ nn_lib :
       T#_factor_up = i(##T#_ind,8,2);
       !nn_iteration?(i[##T#_ind,1] = T#_lr_min);
 
-      # Note : i(##T#_ind,9,2) used to store last iteration where a lr change occured.
+      # Note : i(##T#_ind,9,2) is used to store last iteration where a lr change occured.
     );
 
     nn_scheduler_adaptive_update(T) = (
-      nn_iteration<T#_nb_warmup_iterations?( # If warmup phase
-        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/(T#_nb_warmup_iterations-1));
 
-      ):i(##T#_ind,9,2) + T#_nb_cooldown_iterations<nn_iteration?( # Check that last cooldown passed
+      # Warmup phase.
+      nn_iteration<T#_nb_warmup_iterations?(
+        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/max(1,T#_nb_warmup_iterations-1));
+
+      # Check that cooldown passed.
+      ):nn_iteration>i(##T#_ind,9,2) + T#_nb_cooldown_iterations?(
 
         # Test for LR down : Loss has not improved for a long time?
-        nn_iteration - i[##T#_ind,19]>T#_patience_down?(
+        nn_iteration - i[##T#_ind,19]>T#_patience_down && i[##T#_ind,17]>-T#_loss_eps*i[##T#_ind,16] ?(
           i[##T#_ind,1] = cut(T#_factor_down*i[##T#_ind,1],T#_lr_min,T#_lr_max);
           i(##T#_ind,9,2) = nn_iteration;
 
