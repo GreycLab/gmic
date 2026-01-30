@@ -28738,6 +28738,7 @@ nn_lib :
       const T#_loss_eps = 1 - 1e-4;
       nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
+      nn_learning_rate = i[##T#_ind,1];
       nn_clip_gradient_min = 0;
       nn_clip_gradient_max = inf;
       nn_optimizer_#O#_init(#T);
@@ -28747,31 +28748,31 @@ nn_lib :
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,4] = L# - i[##T#_ind,1]; i[##T#_ind,1] = L#; # loss
-      L#<i[##T#_ind,2]?(i[##T#_ind,2] = L#; i[##T#_ind,5] = nn_iteration); # New best loss
-      L#<i[##T#_ind,3]*T#_loss_eps?( # New significant loss
-        i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration;
+      i[##T#_ind,5] = L# - i[##T#_ind,2]; i[##T#_ind,2] = L#; # loss
+      L#<i[##T#_ind,3]?(i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration); # New best loss
+      L#<i[##T#_ind,4]*T#_loss_eps?( # New significant loss
+        i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration;
       );
 
-      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,7],0.9):L#; # Short-term loss
-      i[##T#_ind,10] = T#_loss - i[##T#_ind,7]; i[##T#_ind,7] = T#_loss;
-      T#_loss<i[##T#_ind,8]?(i[##T#_ind,8] = T#_loss; i[##T#_ind,11] = nn_iteration); # New best short-term loss
-      T#_loss<i[##T#_ind,9]*T#_loss_eps?( # New significant short-term loss
-        i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration;
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,8],0.9):L#; # Short-term loss
+      i[##T#_ind,11] = T#_loss - i[##T#_ind,8]; i[##T#_ind,8] = T#_loss;
+      T#_loss<i[##T#_ind,9]?(i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration); # New best short-term loss
+      T#_loss<i[##T#_ind,10]*T#_loss_eps?( # New significant short-term loss
+        i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration;
       );
 
-      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,13],0.95):L#; # Mid-term loss
-      i[##T#_ind,16] = T#_loss - i[##T#_ind,13]; i[##T#_ind,13] = T#_loss;
-      T#_loss<i[##T#_ind,14]?(i[##T#_ind,14] = T#_loss; i[##T#_ind,17] = nn_iteration); # New best mid-term loss
-      T#_loss<i[##T#_ind,15]*T#_loss_eps?( # New significant mid-term loss
-        i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration;
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,14],0.95):L#; # Mid-term loss
+      i[##T#_ind,17] = T#_loss - i[##T#_ind,18]; i[##T#_ind,14] = T#_loss;
+      T#_loss<i[##T#_ind,15]?(i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration); # New best mid-term loss
+      T#_loss<i[##T#_ind,16]*T#_loss_eps?( # New significant mid-term loss
+        i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration;
       );
 
-      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,19],0.99):L#; # Long-term loss
-      i[##T#_ind,22] = T#_loss - i[##T#_ind,19]; i[##T#_ind,19] = T#_loss;
-      T#_loss<i[##T#_ind,20]?(i[##T#_ind,20] = T#_loss; i[##T#_ind,23] = nn_iteration); # New best long-term loss
-      T#_loss<i[##T#_ind,21]*T#_loss_eps?( # New significant long-term loss
-        i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration;
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,20],0.99):L#; # Long-term loss
+      i[##T#_ind,23] = T#_loss - i[##T#_ind,20]; i[##T#_ind,20] = T#_loss;
+      T#_loss<i[##T#_ind,21]?(i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration); # New best long-term loss
+      T#_loss<i[##T#_ind,22]*T#_loss_eps?( # New significant long-term loss
+        i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration;
       );
 
       nn_scheduler_#S#_update(#T);
@@ -28798,7 +28799,7 @@ nn_lib :
     # Adam.
     #------
     nn_optimizer_adam_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      i[##T#_ind,1] = i(##T#_ind,1,1);
       nn_adam_beta1 = i(##T#_ind,2,1);
       nn_adam_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28822,7 +28823,7 @@ nn_lib :
     # Adamax.
     #--------
     nn_optimizer_adamax_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      i[##T#_ind,1] = i(##T#_ind,1,1);
       nn_adamax_beta1 = i(##T#_ind,2,1);
       nn_adamax_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28844,7 +28845,7 @@ nn_lib :
     # dtschump.
     #----------
     nn_optimizer_dtschump_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      i[##T#_ind,1] = i(##T#_ind,1,1);
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28861,7 +28862,7 @@ nn_lib :
     # RMSprop.
     #---------
     nn_optimizer_rmsprop_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      i[##T#_ind,1] = i(##T#_ind,1,1);
       nn_momentum = i(##T#_ind,2,1);
       nn_rmsprop_beta = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28880,7 +28881,7 @@ nn_lib :
     # Stochastic gradient descent (SGD).
     #-----------------------------------
     nn_optimizer_sgd_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      i[##T#_ind,1] = i(##T#_ind,1,1);
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28903,14 +28904,23 @@ nn_lib :
     nn_scheduler_constant_init(T) = 0;
     nn_scheduler_constant_update(T) = 0;
 
-    # Adaptive Learning Rate.
-    #------------------------
+    # Adaptive.
+    #----------
     nn_scheduler_adaptive_init(T) = (
-      0;
+      nn_lr_min = i(##T#_ind,1,2);
+      nn_lr_max = i(##T#_ind,2,2);
+      nn_nb_warmup_iterations = i(##T#_ind,3,2);
+      nn_nb_cooldown_iterations = i(##T#_ind,4,2);
+      nn_patience_down = i(##T#_ind,5,2);
+      nn_factor_down = i(##T#_ind,6,2);
+      nn_patience_up = i(##T#_ind,7,2);
+      nn_factor_up = i(##T#_ind,8,2);
     );
 
     nn_scheduler_adaptive_update(T) = (
-      0;
+      nn_iteration<nn_nb_warmup_iterations?(
+        i(##T#ind,1,1) = lerp(nn_lr_min,nn_lr_max,nn_iteration/nb_nb_warmup_iterations);
+      ):
     );
 
     #----------------
@@ -33443,11 +33453,13 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
 #@cli : Value of 'optimizer_params' depends on the chosen optimizer:
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'dtschump': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : Value of 'scheduler_params' are:
-#@cli : (lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,patience_up,factor_up).
+#@cli : 'dtschump': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : 'sgd': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : Value of 'scheduler_params' depends on the chosen scheduler:
+#@cli : 'constant' : (none)
+#@cli :
+#@cli : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,patience_up,factor_up ).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
@@ -33463,54 +33475,54 @@ nn_trainer : check "isvarname(['$1']) && # out
   nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
-  # Trainer matrix has size 25x3, and is organized as follow:
+  # Trainer matrix has size 26x3, and is organized as follow:
   #
-  # ( [0]: iteration
+  # ( [0]: current_iteration
+  #   [1]: current_learning_rate
   #   ---
-  #   [1]: loss
-  #   [2]: best_loss
-  #   [3]: last_significantly_improved_loss
-  #   [4]: variation_loss
-  #   [5]: iteration_best_loss
-  #   [6]: iteration_last_significantly_improved_loss
+  #   [2]: loss
+  #   [3]: best_loss
+  #   [4]: last_significantly_improved_loss
+  #   [5]: variation_loss
+  #   [6]: iteration_best_loss
+  #   [7]: iteration_last_significantly_improved_loss
   #   ---
-  #   [7]: loss_shortterm
-  #   [8]: best_loss_shortterm
-  #   [9]: last_significantly_improved_loss_shortterm
-  #   [10]: variation_loss_shortterm
-  #   [11]: iteration_best_loss_shortterm
-  #   [12]: iteration_last_significantly_improved_loss_shortterm
+  #   [8]: loss_shortterm
+  #   [9]: best_loss_shortterm
+  #   [10]: last_significantly_improved_loss_shortterm
+  #   [11]: variation_loss_shortterm
+  #   [12]: iteration_best_loss_shortterm
+  #   [13]: iteration_last_significantly_improved_loss_shortterm
   #   ---
-  #   [13]: loss_midterm
-  #   [14]: best_loss_midterm
-  #   [15]: last_significantly_improved_loss_midterm
-  #   [16]: variation_loss_midterm
-  #   [17]: iteration_best_loss_midterm
-  #   [18]: iteration_last_significantly_improved_loss_midterm
+  #   [14]: loss_midterm
+  #   [15]: best_loss_midterm
+  #   [16]: last_significantly_improved_loss_midterm
+  #   [17]: variation_loss_midterm
+  #   [18]: iteration_best_loss_midterm
+  #   [19]: iteration_last_significantly_improved_loss_midterm
   #   ---
-  #   [19]: loss_longterm
-  #   [20]: best_loss_longterm
-  #   [21]: last_significantly_improved_loss_longterm
-  #   [22]: variation_loss_longterm
-  #   [23]: iteration_best_loss_longterm
-  #   [24]: iteration_last_significantly_improved_loss_longterm
-  #   ;
+  #   [20]: loss_longterm
+  #   [21]: best_loss_longterm
+  #   [22]: last_significantly_improved_loss_longterm
+  #   [23]: variation_loss_longterm
+  #   [24]: iteration_best_loss_longterm
+  #   [25]: iteration_last_significantly_improved_loss_longterm;
   #
   #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
   #
   #   scheduler_ind={ 0:constant | 1:adaptive }, scheduler_params...
   #
   if isint(${$nout})
-    if {$nout,[w,h,d,s]!=[25,3,1,1]}
+    if {$nout,[w,h,d,s]!=[26,3,1,1]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
-                  "should be (25,3,1,1)."
+                  "should be (26,3,1,1)."
     fi
   else
-    (0,\
+    (0,0,\
      inf,inf,inf,0,-1,-1,\
      inf,inf,inf,0,-1,-1,\
      inf,inf,inf,0,-1,-1,\
-     inf,inf,inf,0,-1,-1) r. 25,3,1,1,0,0 => $nout
+     inf,inf,inf,0,-1,-1) r. 26,3,1,1,0,0 => $nout
   fi
   nout_ind=${$nout}
 
@@ -33532,7 +33544,9 @@ nn_trainer : check "isvarname(['$1']) && # out
   s_optimizer_params=$s
 
   =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:1"},0,2
-  if isin('$scheduler','constant','adaptive')
+  if '$scheduler'=='constant'
+    s_scheduler_params,default_scheduler_params=
+  elif '$scheduler'=='adaptive'
     s_scheduler_params=lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
                        patience_up,factor_up
     default_scheduler_params=1e-5,1e-3,500,200,500,0.5,1000,2
