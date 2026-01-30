@@ -28885,46 +28885,14 @@ nn_lib :
     nn_scheduler_constant_init(T) = 0;
     nn_scheduler_constant_update(T) = 0;
 
-    # Linear Decrease.
-    #-----------------
-    nn_scheduler_linear_init(T) = 0;
-    nn_scheduler_linear_update(T) = (
-      nn_learning_rate = lerp(nn_learning_rate0,1e-8,min(1,nn_iteration/1000));
-    );
-
-    # Exponential Decrease.
-    #----------------------
-    nn_scheduler_exponential_init(T) = 0;
-    nn_scheduler_exponential_update(T) = (
-      nn_learning_rate*=0.999;
-    );
-
     # Adaptive Learning Rate.
     #------------------------
     nn_scheduler_adaptive_init(T) = (
       0;
-      # nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
-      # nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
-      # nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
     );
 
     nn_scheduler_adaptive_update(T) = (
       0;
-    );
-
-    # Cosine Decrease.
-    #-----------------
-    nn_scheduler_cosine_init(T) = (
-      nn_scheduler_cosine_lr_avg = nn_learning_rate0;
-      nn_scheduler_cosine_lr_min = 10*nn_scheduler_cosine_lr_avg;
-      nn_scheduler_cosine_lr_max = 0.01*nn_scheduler_cosine_lr_avg;
-      const nn_scheduler_cosine_period = 1000;
-    );
-
-    nn_scheduler_cosine_update(T,L) = (
-      nn_learning_rate = lerp(nn_scheduler_cosine_lr_min,
-                              nn_scheduler_cosine_lr_max,
-                              0.5*(1 + cos(nn_iteration*2*pi/nn_scheduler_cosine_period)));
     );
 
     #----------------
@@ -33467,7 +33435,7 @@ nn_trainer : check "isvarname(['$1']) && # out
                     (s3 = ['${3=adam}']; isvarname(s3) &&
                      isin(s3,'adam','adamax','dtschump','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
-                      isin(s5,'constant','linear','exponential','adaptive'))
+                      isin(s5,'constant','adaptive'))
                     "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
@@ -33479,7 +33447,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   #
   # ( iteration, loss, smoothed_loss, best_loss, best_smoothed_loss, iteration_best_loss, iteration_best_smoothed_loss )
   #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
-  #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
+  #   scheduler_ind={ 0:constant | 1:adaptive }, scheduler_params...
   #
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[8,3,1,1]}
@@ -33508,14 +33476,8 @@ nn_trainer : check "isvarname(['$1']) && # out
   s,c= repeat narg($default_optimizer_params) { s.=$c${arg0\ $>,$s_optimizer_params}={$nout,_i(1+$>,1)} c=", " }
   s_optimizer_params=$s
 
-  =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"},0,2
+  =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:1"},0,2
   if '$scheduler'=='constant'
-    s_scheduler_params=
-    default_scheduler_params=
-  elif '$scheduler'=='linear'
-    s_scheduler_params=
-    default_scheduler_params=
-  elif '$scheduler'=='exponential'
     s_scheduler_params=
     default_scheduler_params=
   elif '$scheduler'=='adaptive'
