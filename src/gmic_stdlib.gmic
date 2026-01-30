@@ -28735,6 +28735,7 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
+      const T#_loss_eps = 1e-5;
       nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
       nn_clip_gradient_min = 0;
@@ -28746,17 +28747,34 @@ nn_lib :
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,1] = L#; # loss
-      i[##T#_ind,2] = !nn_iteration?L#:lerp(L#,i[##T#_ind,2],0.95); # smoothed loss
-      i[##T#_ind,1]<i[##T#_ind,3]?( # new best loss?
-        i[##T#_ind,3] = i[##T#_ind,1];
-        i[##T#_ind,5] = nn_iteration;
+      i[##T#_ind,4] = L# - i[##T#_ind,1]; i[##T#_ind,1] = L#; # loss
+      L#<i[##T#_ind,2]?(i[##T#_ind,2] = L#; i[##T#_ind,5] = nn_iteration); # New best loss
+      i[##T#_ind,3] - L#>T#_loss_eps?( # New significant loss
+        i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration;
       );
-      i[##T#_ind,2]<i[##T#_ind,4]?( # new best smoothed loss?
-        i[##T#_ind,4] = i[##T#_ind,2];
-        i[##T#_ind,6] = nn_iteration;
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,7],0.9):L#; # Short-term loss
+      i[##T#_ind,10] = T#_loss - i[##T#_ind,7]; i[##T#_ind,7] = T#_loss;
+      T#_loss<i[##T#_ind,8]?(i[##T#_ind,8] = T#_loss; i[##T#_ind,11] = nn_iteration); # New best short-term loss
+      i[##T#_ind,9] - T#_loss>T#_loss_eps?( # New significant short-term loss
+        i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration;
       );
-       nn_scheduler_#S#_update(#T);
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,13],0.95):L#; # Mid-term loss
+      i[##T#_ind,16] = T#_loss - i[##T#_ind,13]; i[##T#_ind,13] = T#_loss;
+      T#_loss<i[##T#_ind,14]?(i[##T#_ind,14] = T#_loss; i[##T#_ind,17] = nn_iteration); # New best mid-term loss
+      i[##T#_ind,15] - T#_loss>T#_loss_eps?( # New significant mid-term loss
+        i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration;
+      );
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,19],0.99):L#; # Long-term loss
+      i[##T#_ind,22] = T#_loss - i[##T#_ind,19]; i[##T#_ind,19] = T#_loss;
+      T#_loss<i[##T#_ind,20]?(i[##T#_ind,20] = T#_loss; i[##T#_ind,23] = nn_iteration); # New best long-term loss
+      i[##T#_ind,21] - T#_loss>T#_loss_eps?( # New significant long-term loss
+        i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration;
+      );
+
+      nn_scheduler_#S#_update(#T);
       i[##T#_ind,0] = ++nn_iteration;
     );
 
@@ -33428,6 +33446,8 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'dtschump': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : Value of 'scheduler_params' are:
+#@cli : (lr_min,lr_max,nb_warmup_iterations).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
@@ -33443,19 +33463,54 @@ nn_trainer : check "isvarname(['$1']) && # out
   nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
-  # Trainer matrix has size 8x3, and is organized as follow:
+  # Trainer matrix has size 25x3, and is organized as follow:
   #
-  # ( iteration, loss, smoothed_loss, best_loss, best_smoothed_loss, iteration_best_loss, iteration_best_smoothed_loss )
+  # ( [0]: iteration
+  #   ---
+  #   [1]: loss
+  #   [2]: best_loss
+  #   [3]: last_significantly_improved_loss
+  #   [4]: variation_loss
+  #   [5]: iteration_best_loss
+  #   [6]: iteration_last_significantly_improved_loss
+  #   ---
+  #   [7]: loss_shortterm
+  #   [8]: best_loss_shortterm
+  #   [9]: last_significantly_improved_loss_shortterm
+  #   [10]: variation_loss_shortterm
+  #   [11]: iteration_best_loss_shortterm
+  #   [12]: iteration_last_significantly_improved_loss_shortterm
+  #   ---
+  #   [13]: loss_midterm
+  #   [14]: best_loss_midterm
+  #   [15]: last_significantly_improved_loss_midterm
+  #   [16]: variation_loss_midterm
+  #   [17]: iteration_best_loss_midterm
+  #   [18]: iteration_last_significantly_improved_loss_midterm
+  #   ---
+  #   [19]: loss_longterm
+  #   [20]: best_loss_longterm
+  #   [21]: last_significantly_improved_loss_longterm
+  #   [22]: variation_loss_longterm
+  #   [23]: iteration_best_loss_longterm
+  #   [24]: iteration_last_significantly_improved_loss_longterm
+  #   ;
+  #
   #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
+  #
   #   scheduler_ind={ 0:constant | 1:adaptive }, scheduler_params...
   #
   if isint(${$nout})
-    if {$nout,[w,h,d,s]!=[8,3,1,1]}
+    if {$nout,[w,h,d,s]!=[25,3,1,1]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
-                  "should be (8,3,1,1)."
+                  "should be (25,3,1,1)."
     fi
   else
-    (0,inf,inf,inf,inf,0,0) r. 8,3,1,1,0,0 => $nout
+    (0,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1) r. 25,3,1,1,0,0 => $nout
   fi
   nout_ind=${$nout}
 
