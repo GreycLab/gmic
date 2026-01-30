@@ -28746,13 +28746,17 @@ nn_lib :
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,2] = i[##T#_ind,1]; # previous_loss
       i[##T#_ind,1] = L#; # loss
-      i[##T#_ind,3] = min(L#,i[##T#_ind,3]); # best_loss
-      i[##T#_ind,5] = i[##T#_ind,4]; # previous smoothed loss
-      i[##T#_ind,4] = !nn_iteration?L#:lerp(L#,i[##T#_ind,4],0.9); # smoothed loss
-      i[##T#_ind,6] = min(i[##T#_ind,4],i[##T#_ind,6]); # best_smoothed_loss
-      nn_scheduler_#S#_update(#T);
+      i[##T#_ind,2] = !nn_iteration?L#:lerp(L#,i[##T#_ind,2],0.9); # smoothed loss
+      i[##T#_ind,1]<i[##T#_ind,3]?( # new best loss?
+        i[##T#_ind,3] = i[##T#_ind,1];
+        i[##T#_ind,5] = nn_iteration;
+      );
+      i[##T#_ind,2]<i[##T#_ind,4]?( # new best smoothed loss?
+        i[##T#_ind,4] = i[##T#_ind,2];
+        i[##T#_ind,6] = nn_iteration;
+      );
+       nn_scheduler_#S#_update(#T);
       i[##T#_ind,0] = ++nn_iteration;
     );
 
@@ -33473,7 +33477,7 @@ nn_trainer : check "isvarname(['$1']) && # out
 
   # Trainer matrix has size 8x3, and is organized as follow:
   #
-  # ( iteration, loss, previous_loss, best_loss, smoothed_loss, previous_smoothed_loss, best_smoothed_loss;
+  # ( iteration, loss, smoothed_loss, best_loss, best_smoothed_loss, iteration_best_loss, iteration_best_smoothed_loss )
   #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
   #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
   #
@@ -33483,7 +33487,7 @@ nn_trainer : check "isvarname(['$1']) && # out
                   "should be (8,3,1,1)."
     fi
   else
-    (0,inf,inf,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout
+    (0,inf,inf,inf,inf,0,0) r. 8,3,1,1,0,0 => $nout
   fi
   nout_ind=${$nout}
 
