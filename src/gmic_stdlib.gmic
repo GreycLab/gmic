@@ -28735,7 +28735,7 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
-      const T#_loss_eps = 1e-5;
+      const T#_loss_eps = 1 - 1e-4;
       nn_is_training = 1;
       nn_iteration = i[##T#_ind,0];
       nn_clip_gradient_min = 0;
@@ -28749,28 +28749,28 @@ nn_lib :
     nn_trainer_update(T,L,O,S) = (
       i[##T#_ind,4] = L# - i[##T#_ind,1]; i[##T#_ind,1] = L#; # loss
       L#<i[##T#_ind,2]?(i[##T#_ind,2] = L#; i[##T#_ind,5] = nn_iteration); # New best loss
-      i[##T#_ind,3] - L#>T#_loss_eps?( # New significant loss
+      L#<i[##T#_ind,3]*T#_loss_eps?( # New significant loss
         i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,7],0.9):L#; # Short-term loss
       i[##T#_ind,10] = T#_loss - i[##T#_ind,7]; i[##T#_ind,7] = T#_loss;
       T#_loss<i[##T#_ind,8]?(i[##T#_ind,8] = T#_loss; i[##T#_ind,11] = nn_iteration); # New best short-term loss
-      i[##T#_ind,9] - T#_loss>T#_loss_eps?( # New significant short-term loss
+      T#_loss<i[##T#_ind,9]*T#_loss_eps?( # New significant short-term loss
         i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,13],0.95):L#; # Mid-term loss
       i[##T#_ind,16] = T#_loss - i[##T#_ind,13]; i[##T#_ind,13] = T#_loss;
       T#_loss<i[##T#_ind,14]?(i[##T#_ind,14] = T#_loss; i[##T#_ind,17] = nn_iteration); # New best mid-term loss
-      i[##T#_ind,15] - T#_loss>T#_loss_eps?( # New significant mid-term loss
+      T#_loss<i[##T#_ind,15]*T#_loss_eps?( # New significant mid-term loss
         i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,19],0.99):L#; # Long-term loss
       i[##T#_ind,22] = T#_loss - i[##T#_ind,19]; i[##T#_ind,19] = T#_loss;
       T#_loss<i[##T#_ind,20]?(i[##T#_ind,20] = T#_loss; i[##T#_ind,23] = nn_iteration); # New best long-term loss
-      i[##T#_ind,21] - T#_loss>T#_loss_eps?( # New significant long-term loss
+      T#_loss<i[##T#_ind,21]*T#_loss_eps?( # New significant long-term loss
         i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration;
       );
 
