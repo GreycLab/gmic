@@ -13271,7 +13271,7 @@ remove_duplicates :
     base=$> off=0
     repeat $!-$>-1 {
       comp:=$base+1+$>-$off
-      if $comp>=$! break fi
+      if $comp>=$!" || "[{$base,[w,h,d,s]}]!=[{$comp,[w,h,d,s]}] break fi
       +-[$base,$comp] abs. is_duplicate:=!is rm.
       if $is_duplicate rm[$comp] off+=1 fi
     }
@@ -18465,7 +18465,7 @@ scale2x_cnn : check "${1=1.25}>=0"
   repeat $N {
     mv[0] $! rgb2ycbcr. +r. 200%,200%,1,100%,3 channels.. 0
     +img2patches.. 32,8,3 i 64,64,100%
-    1,1,100%,1,:${-nn_lib}"
+    1,1,100%,1,:${_nn_lib}"
       IN = crop(#-2,0,0,z,0,32,32,1,1);"${_s2x_forward}"
       !t?critical(run('progress ',100*z*n/d));
       draw(#-1,s2x_RESIDUAL,0,0,z,0,64,64,1,1)" rm.
@@ -19272,7 +19272,7 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
     if $1 1,1,100%,1,$1 else +l. { s z foreach { (${-std_noise}) k. } a z max 1 } fi # Noise estimation
     $patch_size,$patch_size,100%,3
     $_denoise_cnn
-    1,1,{0,d},1,:${-nn_lib}"
+    1,1,{0,d},1,:${_nn_lib}"
       IN = crop(#0,0,0,z,w#0,h#0,1)/255;
       NL = [ i[#1,z] ];
       "${_denoise_forward}"
@@ -28544,10 +28544,10 @@ run :
 #-------------------------
 
 #@cli nn_lib :
-#@cli : Return the functions that has to be included in a math expression, when using 'nn_lib', \
-# the G'MIC neural network library.
+#@cli : Define the math functions that has to be included in a math expression, when using 'nn_lib', \
+# the G'MIC neural network library. This command sets string variable '$_nn_lib' and returns its content.
 nn_lib :
-  u "
+  if v=get('_nn_lib',0,1);!v||isnan(v) _nn_lib="
     #---------------------------------------------------------------------------
     # Definition of the library environment variables and convenience functions.
     #---------------------------------------------------------------------------
@@ -28604,6 +28604,11 @@ nn_lib :
     #---------------------------
     nn_activation_linear(z) = z;
     nn_activation_d_linear(z) = 1;
+
+    # log: Logarithm.
+    #----------------
+    nn_activation_log(z) = log(z);
+    nn_activation_d_log(z) = (1/z);
 
     # relu: Rectified Linear Unit.
     #-----------------------------
@@ -28730,23 +28735,46 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
+      const T#_loss_eps = 1 - 1e-4;
       nn_is_training = 1;
-      nn_iteration = i[##T#_ind,0];
-      nn_clip_gradient_min = 0;
-      nn_clip_gradient_max = inf;
+      nn_iteration = max(0,i[##T#_ind,0]);
       nn_optimizer_#O#_init(#T);
       nn_scheduler_#S#_init(#T);
+      nn_learning_rate = i[##T#_ind,1];
+      nn_clip_gradient_min = 0;
+      nn_clip_gradient_max = inf;
       !nn_iteration?(nn_momentum = 0);
       nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,2] = i[##T#_ind,1]; # previous_loss
-      i[##T#_ind,1] = L#; # loss
-      i[##T#_ind,3] = min(L#,i[##T#_ind,3]); # best_loss
-      i[##T#_ind,5] = i[##T#_ind,4]; # previous smoothed loss
-      i[##T#_ind,4] = !nn_iteration?L#:lerp(L#,i[##T#_ind,4],0.9); # smoothed loss
-      i[##T#_ind,6] = min(i[##T#_ind,4],i[##T#_ind,6]); # best_smoothed_loss
+      i[##T#_ind,5] = L# - i[##T#_ind,2]; i[##T#_ind,2] = L#; # loss
+      L#<i[##T#_ind,3]?(i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration); # New best loss
+      L#<i[##T#_ind,4]*T#_loss_eps?( # New significant loss
+        i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration;
+      );
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,8],0.9):L#; # Short-term loss
+      i[##T#_ind,11] = T#_loss - i[##T#_ind,8]; i[##T#_ind,8] = T#_loss;
+      T#_loss<i[##T#_ind,9]?(i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration); # New best short-term loss
+      T#_loss<i[##T#_ind,10]*T#_loss_eps?( # New significant short-term loss
+        i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration;
+      );
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,14],0.95):L#; # Mid-term loss
+      i[##T#_ind,17] = T#_loss - i[##T#_ind,18]; i[##T#_ind,14] = T#_loss;
+      T#_loss<i[##T#_ind,15]?(i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration); # New best mid-term loss
+      T#_loss<i[##T#_ind,16]*T#_loss_eps?( # New significant mid-term loss
+        i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration;
+      );
+
+      T#_loss = nn_iteration?lerp(L#,i[##T#_ind,20],0.99):L#; # Long-term loss
+      i[##T#_ind,23] = T#_loss - i[##T#_ind,20]; i[##T#_ind,20] = T#_loss;
+      T#_loss<i[##T#_ind,21]?(i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration); # New best long-term loss
+      T#_loss<i[##T#_ind,22]*T#_loss_eps?( # New significant long-term loss
+        i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration;
+      );
+
       nn_scheduler_#S#_update(#T);
       i[##T#_ind,0] = ++nn_iteration;
     );
@@ -28771,7 +28799,7 @@ nn_lib :
     # Adam.
     #------
     nn_optimizer_adam_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_adam_beta1 = i(##T#_ind,2,1);
       nn_adam_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28795,7 +28823,7 @@ nn_lib :
     # Adamax.
     #--------
     nn_optimizer_adamax_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_adamax_beta1 = i(##T#_ind,2,1);
       nn_adamax_beta2 = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28817,7 +28845,7 @@ nn_lib :
     # dtschump.
     #----------
     nn_optimizer_dtschump_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28834,7 +28862,7 @@ nn_lib :
     # RMSprop.
     #---------
     nn_optimizer_rmsprop_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_rmsprop_beta = i(##T#_ind,3,1);
       nn_weight_decay = i(##T#_ind,4,1);
@@ -28853,7 +28881,7 @@ nn_lib :
     # Stochastic gradient descent (SGD).
     #-----------------------------------
     nn_optimizer_sgd_init(T) = (
-      nn_learning_rate = i(##T#_ind,1,1);
+      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
       nn_momentum = i(##T#_ind,2,1);
       nn_weight_decay = i(##T#_ind,3,1);
       nn_clip_gradient_min = i(##T#_ind,4,1);
@@ -28876,46 +28904,42 @@ nn_lib :
     nn_scheduler_constant_init(T) = 0;
     nn_scheduler_constant_update(T) = 0;
 
-    # Linear Decrease.
-    #-----------------
-    nn_scheduler_linear_init(T) = 0;
-    nn_scheduler_linear_update(T) = (
-      nn_learning_rate = lerp(nn_learning_rate0,1e-8,min(1,nn_iteration/1000));
-    );
-
-    # Exponential Decrease.
-    #----------------------
-    nn_scheduler_exponential_init(T) = 0;
-    nn_scheduler_exponential_update(T) = (
-      nn_learning_rate*=0.999;
-    );
-
-    # Adaptive Learning Rate.
-    #------------------------
+    # Adaptive.
+    #----------
     nn_scheduler_adaptive_init(T) = (
-      0;
-      # nn_adaptive_trend_moment = i(##T#_ind,0,2,0,0);
-      # nn_adaptive_nb_decreases = i(##T#_ind,1,2,0,0);
-      # nn_adaptive_nb_increases = i(##T#_ind,2,2,0,0);
+      T#_lr_min = i(##T#_ind,1,2);
+      T#_lr_max = i(##T#_ind,2,2);
+      T#_nb_warmup_iterations = i(##T#_ind,3,2);
+      T#_nb_cooldown_iterations = i(##T#_ind,4,2);
+      T#_patience_down = i(##T#_ind,5,2);
+      T#_factor_down = i(##T#_ind,6,2);
+      T#_patience_up = i(##T#_ind,7,2);
+      T#_factor_up = i(##T#_ind,8,2);
+      !nn_iteration?(i[##T#_ind,1] = T#_lr_max);
+
+      # Note : i(##T#_ind,9,2) is used to store last iteration where a lr change occured.
     );
 
     nn_scheduler_adaptive_update(T) = (
-      0;
-    );
 
-    # Cosine Decrease.
-    #-----------------
-    nn_scheduler_cosine_init(T) = (
-      nn_scheduler_cosine_lr_avg = nn_learning_rate0;
-      nn_scheduler_cosine_lr_min = 10*nn_scheduler_cosine_lr_avg;
-      nn_scheduler_cosine_lr_max = 0.01*nn_scheduler_cosine_lr_avg;
-      const nn_scheduler_cosine_period = 1000;
-    );
+      # Warmup phase.
+      nn_iteration<T#_nb_warmup_iterations?(
+        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/max(1,T#_nb_warmup_iterations-1));
 
-    nn_scheduler_cosine_update(T,L) = (
-      nn_learning_rate = lerp(nn_scheduler_cosine_lr_min,
-                              nn_scheduler_cosine_lr_max,
-                              0.5*(1 + cos(nn_iteration*2*pi/nn_scheduler_cosine_period)));
+      # Check that cooldown passed.
+      ):nn_iteration>i(##T#_ind,9,2) + T#_nb_cooldown_iterations?(
+
+        # Test for LR down : Short-term loss has not improved for a long time?
+        nn_iteration - i[##T#_ind,13]>T#_patience_down && i[##T#_ind,11]>=0?(
+          i[##T#_ind,1] = cut(T#_factor_down*i[##T#_ind,1],T#_lr_min,T#_lr_max);
+          i(##T#_ind,9,2) = nn_iteration;
+
+        # Test for LR up : Negative long-term variation?
+        ):nn_iteration - i[##T#_ind,25]>T#_patience_up && i[##T#_ind,23]<0?(
+          i[##T#_ind,1] = cut(T#_factor_up*i[##T#_ind,1],T#_lr_min,T#_lr_max);
+          i(##T#_ind,9,2) = nn_iteration;
+        );
+      );
     );
 
     #----------------
@@ -29668,6 +29692,76 @@ nn_lib :
       );
       learning_mode&1?draw(##P#_ind,P#_params,0,0,w##P#_ind - 1,h##P#_ind);
       learning_mode&2?draw(##P#_ind,P#_biases,w##P#_ind - 1,0,1,h##P#_ind);
+    );
+
+    # fft : Fourier transform (and its inverse).
+    #-------------------------------------------
+    nn_fft_init_forward(OUT,IN,io_mode,is_inverse,ind_axes) = (
+      # 'ind_axes' can be { 0: all | 1:x | 2:y | 3:z | 4:xy | 5:xz | 6:yz | 7:xyz }.
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_io_mode = io_mode;
+      const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
+      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of each real/imaginary part
+      const OUT#_is_inverse = is_inverse;
+      OUT#_axes = ind_axes#==0?0:
+                  ind_axes#==1?'x':
+                  ind_axes#==2?'y':
+                  ind_axes#==3?'z':
+                  ind_axes#==4?'xy':
+                  ind_axes#==4?'xz':
+                  ind_axes#==5?'yz':'xyz';
+      const OUT#_fact = (isin(ind_axes#,0,7)?OUT#_width*OUT#_height*OUT#_depth:
+                         ind_axes#==1?OUT#_width:
+                         ind_axes#==2?OUT#_height:
+                         ind_axes#==3?OUT#_depth:
+                         ind_axes#==4?OUT#_width*OUT#_height:
+                         ind_axes#==5?OUT#_width*OUT#_depth:OUT#_height*OUT#_depth
+                        )^(OUT#_is_inverse?0.5:-0.5);
+    );
+
+    nn_fft_forward(OUT,IN) = (
+      OUT#_io_mode&1?( # input is (real,imag)
+        OUT#_real = IN#[0,size(IN#)/2];
+        OUT#_imag = IN#[size(IN#)/2,size(IN#)/2];
+      ):( # input is (real,0)
+        OUT#_real = IN#;
+        OUT#_imag = vector(#size(IN#),0);
+      );
+      OUT#_is_inverse?ifft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes):
+                      fft(OUT#_real,OUT#_imag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes);
+      OUT#_real*=OUT#_fact; # Unitary normalization
+      OUT#_imag*=OUT#_fact;
+
+      OUT#_io_mode&2?( # output is (real,imag)
+        OUT# = [ OUT#_real,OUT#_imag ];
+      ):( # output is (real,0)
+        ref(OUT#_real,OUT#);
+      );
+    );
+
+    nn_fft_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+
+      OUT#_io_mode&2?( # output is (real,imag)
+        OUT#_dreal = d#OUT[0,size(OUT#)/2];
+        OUT#_dimag = d#OUT[size(OUT#)/2,size(OUT#)/2];
+      ):( # output is (real,0)
+        OUT#_dreal = d#OUT;
+        OUT#_dimag = vector(#size(OUT#),0);
+      );
+
+      OUT#_is_inverse?fft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes):
+                      ifft(OUT#_dreal,OUT#_dimag,OUT#_width,OUT#_height,OUT#_depth,OUT#_channels,OUT#_axes);
+      OUT#_dreal/=OUT#_fact; # Unitary normalization
+      OUT#_dimag/=OUT#_fact;
+
+      OUT#_io_mode&1?( # input is (real,imag)
+        d#IN+=[ OUT#_dreal,OUT#_dimag ];
+      ):( # input is (real,0)
+        d#IN+=OUT#_dreal;
+      );
     );
 
     # input: Input image or vector data.
@@ -31340,6 +31434,8 @@ nn_lib :
       nn_define_backward(IN#);
       d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
     );"
+  fi
+  u $_nn_lib
 
 #@cli nn_add : out,in0,in1,_in2,_in3
 #@cli : Add an 'add' layer (element-wise addition) to the current network.
@@ -31856,6 +31952,55 @@ nn_fc : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_fft : out,in,io_mode,_is_inverse={ 0:No | 1:Yes },_axes.
+#@cli : Add a 'fft' layer (Fourier Transform) to the current network.
+#@cli : Argument 'io_mode' tells about the meaning of input/output data. \
+# It can be { 0:real → real | 1:(real,imag) → real | 2:real → (real,imag) | 3:(real,imag) → (real,imag) }
+#@cli : When dealing with '(real,imag)' data, the real and imaginary parts of the data (N channels each) \
+# are concatenated into a 2N-channels image.
+#@cli : Argument 'axes' can be { 0 (all) | x | y | z | xy | xz | yz | xyz }.
+#@cli : Default value: 'is_inverse=0', 'axes=0 (all)'.
+nn_fft : check "isvarname(['$1']) && # out
+                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                isint($3,0,3) && # mode
+                isbool(${4=0}) && # is_inverse
+                isin('${5=0}','0','x','y','z','xy','xz','yz','xyz') # axes
+                "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  io_mode,is_inverse,axes=${3-5}
+  s0,s1="direct","inverse"
+  arg0 $io_mode,"real → real","(real,imag) → real","real → (real,imag)","(real,imag) → (real,imag)"
+  s_io_mode=${}
+  if ['$axes']=='0'
+    s_axes={`s=[${_${nin}_size}];S='000';k=0;s[0]>1?S[k++]=_'x';s[1]>1?S[k++]=_'y';s[2]>1?S[k++]=_'z';S[k]=0;S`}
+    ind_axes=0
+  else
+    s_axes=$axes
+    ind_axes:=indexof('$axes','0','x','y','z','xy','xz','yz','xyz');
+  fi
+  s_axes_s={`size(['$s_axes'])>1?'es':'is'`}
+
+  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"', "\
+         ${s$is_inverse}" transformation, along "$s_axes"-ax"$s_axes_s"."
+  if $io_mode&1" && "[${_${nin}_size}][3]%2
+    error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
+  fi
+  out_size:=s=[${_${nin}_size}];[s[0,3],s[3]*arg0($io_mode,1,0.5,2,1)]
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=fft,
+  _${nout}_size=$out_size
+  _${nout}_input=$in
+  _${nout}_properties="io_mode="$s_io_mode", is_inverse="$is_inverse", ax"$s_axes_s=$s_axes
+  _${nout}_forward="begin(nn_fft_init_forward("$nout,$nin,$io_mode,$is_inverse,$ind_axes"));"\
+                   "nn_fft_forward("$nout,$nin");"
+  _${nout}_backward="nn_fft_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
 #@cli : Default value: 'network_name=nn'.
@@ -31867,6 +32012,7 @@ _nn_init : # Init new network
   _nn_network=$1
   _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update=
   _$1_init="nn_init $1\n"
+  if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
 
 #@cli nn_input : out,width,_height,_depth,_spectrum
 #@cli : Add a new 'input' to the current network.
@@ -32437,7 +32583,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' layer (nonlinearity) to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | \
+#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | log | \
 # normalize_l1 | normalize_l1_x | normalize_l1_y | normalize_l1_z | normalize_l1_c | \
 # normalize_l2 | normalize_l2_x | normalize_l2_y | normalize_l2_z | normalize_l2_c | \
 # relu | sigmoid | sin | sinc | \
@@ -33208,7 +33354,7 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _nn_previous_layer=$out
 
 #@cli nn_sum : out,in,_is_average={ 0:No | 1:Yes },_axis={ 0 | x | y | z | c }
-#@cli : Add a 'sum' layer (Sum or average computation) to the current network.
+#@cli : Add a 'sum' layer (sum or average computation) to the current network.
 #@cli : Default values: 'is_average=0' and 'axis=0'.
 nn_sum : check "isvarname(['$1']) && # out
                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -33324,11 +33470,15 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { adam | adamax | dtschump | sgd | rmsprop }.
 #@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
-#@cli : Value of 'optimizer_params' depends on the chosen optimizer:
+#@cli : - Value of 'optimizer_params' depends on the chosen optimizer:
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'dtschump': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'rmsprop': (learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'sgd': (learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : 'dtschump': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : 'sgd': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
+#@cli : - Value of 'scheduler_params' depends on the chosen scheduler:
+#@cli : 'constant' : (none).
+#@cli : 'adaptive' : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
+# patience_up,factor_up ).
 #@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
@@ -33336,7 +33486,7 @@ nn_trainer : check "isvarname(['$1']) && # out
                     (s3 = ['${3=adam}']; isvarname(s3) &&
                      isin(s3,'adam','adamax','dtschump','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
-                      isin(s5,'constant','linear','exponential','adaptive'))
+                      isin(s5,'constant','adaptive'))
                     "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
@@ -33344,19 +33494,54 @@ nn_trainer : check "isvarname(['$1']) && # out
   nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
-  # Trainer matrix has size 8x3, and is organized as follow:
+  # Trainer matrix has size 26x3, and is organized as follow:
   #
-  # ( iteration, loss, previous_loss, best_loss, smoothed_loss, previous_smoothed_loss, best_smoothed_loss;
+  # ( [0]: current_iteration
+  #   [1]: current_learning_rate
+  #   ---
+  #   [2]: loss
+  #   [3]: best_loss
+  #   [4]: last_significantly_improved_loss
+  #   [5]: variation_loss
+  #   [6]: iteration_best_loss
+  #   [7]: iteration_last_significantly_improved_loss
+  #   ---
+  #   [8]: loss_shortterm
+  #   [9]: best_loss_shortterm
+  #   [10]: last_significantly_improved_loss_shortterm
+  #   [11]: variation_loss_shortterm
+  #   [12]: iteration_best_loss_shortterm
+  #   [13]: iteration_last_significantly_improved_loss_shortterm
+  #   ---
+  #   [14]: loss_midterm
+  #   [15]: best_loss_midterm
+  #   [16]: last_significantly_improved_loss_midterm
+  #   [17]: variation_loss_midterm
+  #   [18]: iteration_best_loss_midterm
+  #   [19]: iteration_last_significantly_improved_loss_midterm
+  #   ---
+  #   [20]: loss_longterm
+  #   [21]: best_loss_longterm
+  #   [22]: last_significantly_improved_loss_longterm
+  #   [23]: variation_loss_longterm
+  #   [24]: iteration_best_loss_longterm
+  #   [25]: iteration_last_significantly_improved_loss_longterm;
+  #
   #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
-  #   scheduler_ind={ 0:constant | 1:linear | 2:exponential | 3:adaptive}, scheduler_params...
+  #
+  #   scheduler_ind={ 0:constant | 1:adaptive }, scheduler_params...
   #
   if isint(${$nout})
-    if {$nout,[w,h,d,s]!=[8,3,1,1]}
+    if {$nout,[w,h,d,s]!=[26,3,1,1]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
-                  "should be (8,3,1,1)."
+                  "should be (26,3,1,1)."
     fi
   else
-    (0,inf,inf,inf,inf,inf,inf) r. 8,3,1,1,0,0 => $nout
+    (0,0,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1,\
+     inf,inf,inf,0,-1,-1) r. 26,3,1,1,0,0 => $nout
   fi
   nout_ind=${$nout}
 
@@ -33377,23 +33562,17 @@ nn_trainer : check "isvarname(['$1']) && # out
   s,c= repeat narg($default_optimizer_params) { s.=$c${arg0\ $>,$s_optimizer_params}={$nout,_i(1+$>,1)} c=", " }
   s_optimizer_params=$s
 
-  =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:s=='linear'?1:s=='exponential'?2:s=='adaptive'?3:4"},0,2
+  =[$nout] {"s = ['"$scheduler"']; s=='constant'?0:1"},0,2
   if '$scheduler'=='constant'
-    s_scheduler_params=
-    default_scheduler_params=
-  elif '$scheduler'=='linear'
-    s_scheduler_params=
-    default_scheduler_params=
-  elif '$scheduler'=='exponential'
-    s_scheduler_params=
-    default_scheduler_params=
+    s_scheduler_params,default_scheduler_params=
   elif '$scheduler'=='adaptive'
-    s_scheduler_params=
-    default_scheduler_params=
+    s_scheduler_params=lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
+                       patience_up,factor_up
+    default_scheduler_params=1e-5,1e-3,500,200,500,0.5,1000,2
   fi
   if narg($default_scheduler_params) eval "copy(i(#$nout_ind,1,2),["$default_scheduler_params"])" fi
-  if narg($scheduler_params) eval "copy(i(#$nout_ind,1,1),["$scheduler_params"])" fi
-  s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,1)} c=", " }
+  if narg($scheduler_params) eval "copy(i(#$nout_ind,1,2),["$scheduler_params"])" fi
+  s,c= repeat narg($default_scheduler_params) { s.=$c${arg0\ $>,$s_scheduler_params}={$nout,_i(1+$>,2)} c=", " }
   s_scheduler_params=$s
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
@@ -36470,8 +36649,7 @@ fade_z : skip ${1=30},${2=70}
 sub_alpha : check ${"is_image_arg $1"}" && inrange(${2=1},0,1)"
   e[^-1] "Compute minimal alpha-channel difference between image$? and base image $1, "\
          "with alpha minimization factor $2."
-  remove_opacity
-  pass$1
+  pass$1 0 remove_opacity
   foreach[^-1] {
     nm={n} pass. rv
     100%,100%,1,{s+1},"begin(null = vector(#s,0); I_b = vector(#s#0));
@@ -53659,6 +53837,194 @@ fx_flower_preview :
   line $1%,$2%,$3%,$4%,1,0xF0F0F0F0,0
   line $1%,$2%,$3%,$4%,1,0x0F0F0F0F,255
 
+#@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Apply a geometric warp by projecting the image onto a 3D heightfield surface.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Heighfield Geometry:</b></small></span>")
+#@gui : Type = choice(1,"Custom","Sphere","Cylinder)
+#@gui : Custom Heighfield = text{"0.25*cos(3*pi*x)*sin(3*pi*y)"}
+#@gui : Factor (%) = float(100,-500,500)
+#@gui : Smoothnness (%) = float(0,0,10)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>3D Parameters:</b></small></span>")
+#@gui : Align Camera Center = bool(1)
+#@gui : Focale = float(1.5,0.5,10)
+#@gui : Light On/Off = point(80,20,-1,1,255,255,0,128,2%)
+#@gui : Ambient Light (%) = float(50,0,100)_1
+#@gui : Diffuse Shadows (%) = float(20,0,100)_1
+#@gui : Diffuse Highlights (%) = float(20,0,100)_1
+#@gui : Specular Light (%) = float(40,0,200)_1
+#@gui : Specular Material = float(30,1,100)_1
+#@gui : sep = separator()
+#@gui : Preview Grid Overlay (%) = float(20,0,100)
+#@gui : Preview Resolution = choice(1,"Full","Mid","Low")
+#@gui : Old_center = value(50,50)
+#@gui : Center = point(50,50,0,1,255,128,32,255,12)_0
+#@gui : Size / Angle = point(75,50,0,1,255,64,0,255,8)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/03</i>.</small>")
+fx_heightfield_warp : skip "${2=}"
+  heightfield_type,heightfield_formula,heightfield_factor,heightfield_smoothness,align_camera_center,focale,\
+    light_x,light_y,ambient_light,diffuse_shadows,diffuse_highlights,specular_light,specular_material,\
+    preview_grid_overlay,preview_resolution,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-20}
+  is_preview,is_light:=0$_is_preview,!isnan($light_x);
+  if !$is_preview preview_grid_overlay=0 fi
+  size_x,size_y:=$size_x+($center_x-$ocenter_x),$size_y+($center_y-$ocenter_y) # Make size/angle point follows center
+  size,angle:=dx=$size_x-$center_x;dy=$size_y-$center_y;[4*norm(dx,dy)%,rad2deg(atan2(dy,dx))]
+
+  foreach {
+    is_rgb:=s>=3
+    if $preview_resolution rs {arg1($preview_resolution,50,25)}% fi
+    if $preview_grid_overlay>0 grid 24,24,0,0,{$preview_grid_overlay}%,{ia>128?0:255} fi
+
+    # Generate heightfield.
+    if !$heightfield_type formula=$heightfield_formula # Custom formula
+    elif $heightfield_type==1 formula="const R = 0.5; -sqrt(max(0,R^2 - norm(x,y)^2))" # Sphere
+    else formula="const R = 0.5; -sqrt(max(0,R^2 - x^2))" # Cylinder
+    fi
+    l {
+      100%,100%,1,1,":begin(_R = rot(-$angle°));
+        phi(x,y) = ("$formula");
+        const _mwh = min(w,h);
+        const _cx = w*$center_x%;
+        const _cy = h*$center_y%;
+        const fact = max(1e-3,$size);
+        _P = 2/fact/_mwh*(_R*[ x - _cx, y - _cy ]);
+        phi(_P[0],_P[1])*fact;
+      "
+      onfail
+        if $_is_preview k[0] gui_error_preview "Invalid expression:\n\" \n"$formula"\n\"" return
+        else error "Invalid expression: \""$formula"\"."
+        fi
+    } => heightfield
+    mM:=im,iM b. $heightfield_smoothness% n. $mM
+
+    # Compute [2D+z]-coordinates of each point.
+    100%,100%,1,3,":
+      const mwh = min(w,h);
+      const xc = $align_camera_center?w*$center_x%:w/2;
+      const yc = $align_camera_center?h*$center_y%:h/2;
+      const f = $focale*mwh;
+      Z = (mwh*$heightfield_factor%)*i(#$heightfield);
+      Zpf = Z + f;
+      X = xc + f*(x - xc)/Zpf;
+      Y = yc + f*(y - yc)/Zpf;
+      [ X,Y,Zpf ]" => XYZ
+
+    # Compute corresponding normal map of quadrangles.
+    100%,100%,1,3,":
+      nx = x + 1; ny = y + 1;
+      P0 = I(#$XYZ,x,y);
+      P1 = I(#$XYZ,nx,y,0,0,1);
+      P3 = I(#$XYZ,x,ny,0,0,1);
+      -unitnorm(cross(P1 - P0, P3 - P0));
+    " => UVW
+
+    # Render 3D-elevated image.
+    100%,100%,1,3,infx2 => xyz,uvw
+
+    sh[XYZ] 0,1 round. rm.
+    eval[XYZ] ":begin(ret = I);
+      nx = x + 1; ny = y + 1;
+      P0 = I(x,y);
+      P1 = I(nx,y,0,0,1);
+      P2 = I(nx,ny,0,0,1);
+      P3 = I(x,ny,0,0,1);
+
+      mP = vmin(P0,P1,P2,P3); MP = vmax(P0,P1,P2,P3);
+      MP[0]>0 && mP[0]<w#$xyz && MP[1]>0 && mP[1]<h#$xyz && mP[2]>0.5?(
+        dx = max(1,MP[0] - mP[0]);
+        dy = max(1,MP[1] - mP[1]);
+        N0 = I(#$UVW,x,y);
+
+        dx<w#$xyz/2 && dy<h#$xyz/2?(
+          col0 = [ x,y ];
+          max(dx,dy)==1?( # Draw single point
+            P0[2]<i(#$xyz,P0[0],P0[1],0,2)?(
+              Q = P0[0,2];
+              I(#$xyz,Q) = [ col0,P0[2] ];
+              I(#$uvw,Q) = N0;
+            );
+            0
+          ):( # Draw quadrangle.
+            col1 = [ nx,y ]; col2 = [ nx,ny ]; col3 = [ x,ny ];
+            repeat (dy,v,
+              vdy = v/dy;
+              P03 = lerp(P0,P3,vdy); col03 = lerp(col0,col3,vdy);
+              P12 = lerp(P1,P2,vdy); col12 = lerp(col1,col2,vdy);
+              repeat (dx,u,
+                udx = u/dx;
+                P = round(lerp(P03,P12,udx)); col = lerp(col03,col12,udx);
+                P[2]<i(#$xyz,P[0],P[1],0,2)?(
+                  Q = P[0,2];
+                  I(#$xyz,Q) = [ col,P[2] ];
+                  I(#$uvw,Q) = N0;
+                );
+              );
+            );
+          );
+        );
+      );
+      ret"
+    rm[-5--3]
+    channels.. 0,1
+    f.. "begin(is_inf = 0); isinf(i)?(is_inf = 1; -1):i; end(merge(is_inf,+); set('is_inf',is_inf))"
+    if $is_inf to_a[0] fi
+    warp[0] ..,0,2,0
+    rm..
+
+    # Render lighting.
+    if $is_light
+      sh[0] 0,{$is_rgb?2:0}
+      eval[uvw] ":
+        begin(
+          const alpha = max($specular_material,1);
+          const light_x = 2*(($light_x%) - 0.5);
+          const light_y = 2*(($light_y%) - 0.5);
+          const light_z = -sqrt(max(0,1 - norm(light_x,light_y)));
+          L = unitnorm([ light_x,light_y,light_z ]);
+        );
+        N = unitnorm(I);
+        dotNL = dot(N,L);
+        R = 2*dotNL*N - L;
+        I(#-1)+=255*(lerp(-$diffuse_shadows%,$diffuse_highlights%,max(0,dotNL)) + ($ambient_light - 50)%);
+        I(#-1)+=255*$specular_light%*max(0,-R[2])^alpha;
+      "
+      c. 0,255 rm.
+    fi
+    rm.
+
+    if $is_preview
+      coords=$center_x%,$center_y%,$size_x%,$size_y%
+      line $coords,1,0x0F0F0F0F,0,0,0,255 line $coords,1,0xF0F0F0F0,255
+    fi
+  }
+
+  visibility_formula:=$heightfield_type?1:2
+  visibility_light:=$is_light?2:1
+  u "{"$heightfield_type"}"\
+    "{"$heightfield_formula"}_"$visibility_formula\
+    "{"$heightfield_factor"}"\
+    "{"$heightfield_smoothness"}"\
+    "{"$align_camera_center"}"\
+    "{"$focale"}"\
+    "{"$light_x,$light_y"}"\
+    "{"$ambient_light"}_"$visibility_light\
+    "{"$diffuse_shadows"}_"$visibility_light\
+    "{"$diffuse_highlights"}_"$visibility_light\
+    "{"$specular_light"}_"$visibility_light\
+    "{"$specular_material"}_"$visibility_light\
+    "{"$preview_grid_overlay"}"\
+    "{"$preview_resolution"}"\
+    "{"$center_x,$center_y"}"\
+    "{"$center_x,$center_y"}"\
+    "{"$size_x,$size_y"}"
+
+fx_heightfield_warp_preview :
+  _is_preview=1
+  fx_heightfield_warp $"*"
+
 #@gui Kaleidoscope [Blended] : fx_rotoidoscope, fx_rotoidoscope(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Creates a kaleidoscope effect with blended rotations.
@@ -54413,7 +54779,7 @@ fx_warp_interactive_preview :
 # your image</small>")
 #@gui : sep = separator()
 #@gui : Previous Target Mode = value(0)
-#@gui : Boundary Conditions = choice(3,"Dirichlet","Neumann","Periodic","Mirror")
+#@gui : Boundary = choice(3,"Dirichlet","Neumann","Periodic","Mirror")
 #@gui : Lock = choice(2,"Disable","Lock Corners","Lock Edges")
 #@gui : Phi(r) = choice{2,"sqrt(r)","r","r.log(1+r)"}
 #@gui : sep = separator()
@@ -55021,7 +55387,7 @@ _fx_blur_motion_preview_circle :
 #@gui : sep = separator()
 #@gui : Smoothness = float(150,0,1024)
 #@gui : Kernel type = choice(0,"Mono-Directional","Bi-Directional")
-#@gui : Boundary conditions = choice(1,"Dirichlet","Neumann","Periodic","Mirror")
+#@gui : Boundary = choice(1,"Dirichlet","Neumann","Periodic","Mirror")
 #@gui : Sharpness = float(0,0,1000)
 #@gui : Blend Mode = choice{2,"Min","Max","Average","Edges-0.5 (beware: memory-consuming!)",
 #@gui : "Edges-1 (beware: memory-consuming!)","Edges-2 (beware: memory-consuming!)",
