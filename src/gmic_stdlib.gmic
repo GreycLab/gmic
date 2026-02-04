@@ -53858,6 +53858,7 @@ fx_flower_preview :
 #@gui : Specular Material = float(30,1,100)_1
 #@gui : sep = separator()
 #@gui : Preview Grid Overlay (%) = float(20,0,100)
+#@gui : Preview Resolution = choice(1,"Full","Mid","Low")
 #@gui : Old_center = value(50,50)
 #@gui : Center = point(50,50,0,1,255,128,32,255,12)_0
 #@gui : Size / Angle = point(75,50,0,1,255,64,0,255,8)_0
@@ -53866,7 +53867,7 @@ fx_flower_preview :
 fx_heightfield_warp : skip "${2=}"
   heightfield_type,heightfield_formula,heightfield_factor,heightfield_smoothness,align_camera_center,focale,\
     light_x,light_y,ambient_light,diffuse_shadows,diffuse_highlights,specular_light,specular_material,\
-    preview_grid_overlay,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-19}
+    preview_grid_overlay,preview_resolution,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-20}
   is_preview,is_light:=0$_is_preview,!isnan($light_x);
   if !$is_preview preview_grid_overlay=0 fi
   size_x,size_y:=$size_x+($center_x-$ocenter_x),$size_y+($center_y-$ocenter_y) # Make size/angle point follows center
@@ -53874,7 +53875,7 @@ fx_heightfield_warp : skip "${2=}"
 
   foreach {
     is_rgb:=s>=3
-    if $is_preview rs 50% fi
+    if $preview_resolution rs {arg1($preview_resolution,50,25)}% fi
     if $preview_grid_overlay>0 grid 24,24,0,0,{$preview_grid_overlay}%,{ia>128?0:255} fi
 
     # Generate heightfield.
@@ -53996,7 +53997,7 @@ fx_heightfield_warp : skip "${2=}"
 
     if $is_preview
       coords=$center_x%,$center_y%,$size_x%,$size_y%
-      line $coords,1,0x0F0F0F0F,0 line $coords,1,0xF0F0F0F0,255
+      line $coords,1,0x0F0F0F0F,0,0,0,255 line $coords,1,0xF0F0F0F0,255
     fi
   }
 
@@ -54015,6 +54016,7 @@ fx_heightfield_warp : skip "${2=}"
     "{"$specular_light"}_"$visibility_light\
     "{"$specular_material"}_"$visibility_light\
     "{"$preview_grid_overlay"}"\
+    "{"$preview_resolution"}"\
     "{"$center_x,$center_y"}"\
     "{"$center_x,$center_y"}"\
     "{"$size_x,$size_y"}"
