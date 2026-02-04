@@ -53837,6 +53837,191 @@ fx_flower_preview :
   line $1%,$2%,$3%,$4%,1,0xF0F0F0F0,0
   line $1%,$2%,$3%,$4%,1,0x0F0F0F0F,255
 
+#@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Apply a geometric warp by projecting the image onto a 3D heightfield surface.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>Heighfield Geometry:</b></small></span>")
+#@gui : Type = choice(1,"Custom","Sphere","Cylinder)
+#@gui : Custom Heighfield = text{"0.25*cos(3*pi*x)*sin(3*pi*y)"}
+#@gui : Factor (%) = float(100,-500,500)
+#@gui : Smoothnness (%) = float(0,0,10)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><small><b>3D Parameters:</b></small></span>")
+#@gui : Align Camera Center = bool(1)
+#@gui : Focale = float(1.5,0.5,10)
+#@gui : Light On/Off = point(80,20,-1,1,255,255,0,128,2%)
+#@gui : Ambient Light (%) = float(50,0,100)_1
+#@gui : Diffuse Shadows (%) = float(20,0,100)_1
+#@gui : Diffuse Highlights (%) = float(20,0,100)_1
+#@gui : Specular Light (%) = float(40,0,200)_1
+#@gui : Specular Material = float(30,1,100)_1
+#@gui : sep = separator()
+#@gui : Preview Grid Overlay (%) = float(20,0,100)
+#@gui : Old_center = value(50,50)
+#@gui : Center = point(50,50,0,1,255,128,32,255,12)_0
+#@gui : Size / Angle = point(75,50,0,1,255,64,0,255,8)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/03</i>.</small>")
+fx_heightfield_warp : skip "${2=}"
+  heightfield_type,heightfield_formula,heightfield_factor,heightfield_smoothness,align_camera_center,focale,\
+    light_x,light_y,ambient_light,diffuse_shadows,diffuse_highlights,specular_light,specular_material,\
+    preview_grid_overlay,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-19}
+  is_preview,is_light:=0$_is_preview,!isnan($light_x);
+  if !$is_preview preview_grid_overlay=0 fi
+  size_x,size_y:=$size_x+($center_x-$ocenter_x),$size_y+($center_y-$ocenter_y) # Make size/angle point follows center
+  size,angle:=dx=$size_x-$center_x;dy=$size_y-$center_y;[4*norm(dx,dy)%,rad2deg(atan2(dy,dx))]
+
+  foreach {
+    is_rgb:=s>=3
+    if $preview_grid_overlay>0 grid 24,24,0,0,{$preview_grid_overlay}%,{ia>128?0:255} fi
+
+    # Generate heightfield.
+    if !$heightfield_type formula=$heightfield_formula # Custom formula
+    elif $heightfield_type==1 formula="const R = 0.5; -sqrt(max(0,R^2 - norm(x,y)^2))" # Sphere
+    else formula="const R = 0.5; -sqrt(max(0,R^2 - x^2))" # Cylinder
+    fi
+    l {
+      100%,100%,1,1,":begin(_R = rot(-$angle°));
+        phi(x,y) = ("$formula");
+        const _mwh = min(w,h);
+        const _cx = w*$center_x%;
+        const _cy = h*$center_y%;
+        const fact = max(1e-3,$size);
+        _P = 2/fact/_mwh*(_R*[ x - _cx, y - _cy ]);
+        phi(_P[0],_P[1])*fact;
+      "
+      onfail
+        if $_is_preview k[0] gui_error_preview "Invalid expression:\n\" \n"$formula"\n\"" return
+        else error "Invalid expression: \""$formula"\"."
+        fi
+    } => heightfield
+    mM:=im,iM b. $heightfield_smoothness% n. $mM
+
+    # Compute [2D+z]-coordinates of each point.
+    100%,100%,1,3,":
+      const mwh = min(w,h);
+      const xc = $align_camera_center?w*$center_x%:w/2;
+      const yc = $align_camera_center?h*$center_y%:h/2;
+      const f = $focale*mwh;
+      Z = (mwh*$heightfield_factor%)*i(#$heightfield);
+      Zpf = Z + f;
+      X = xc + f*(x - xc)/Zpf;
+      Y = yc + f*(y - yc)/Zpf;
+      [ X,Y,Zpf ]" => XYZ
+
+    # Compute corresponding normal map of quadrangles.
+    100%,100%,1,3,":
+      nx = x + 1; ny = y + 1;
+      P0 = I(#$XYZ,x,y);
+      P1 = I(#$XYZ,nx,y,0,0,1);
+      P3 = I(#$XYZ,x,ny,0,0,1);
+      -unitnorm(cross(P1 - P0, P3 - P0));
+    " => UVW
+
+    # Render 3D-elevated image.
+    100%,100%,1,3,infx2 => xyz,uvw
+
+    sh[XYZ] 0,1 round. rm.
+    eval[XYZ] ":begin(ret = I);
+      nx = x + 1; ny = y + 1;
+      P0 = I(x,y);
+      P1 = I(nx,y,0,0,1);
+      P2 = I(nx,ny,0,0,1);
+      P3 = I(x,ny,0,0,1);
+
+      mP = vmin(P0,P1,P2,P3); MP = vmax(P0,P1,P2,P3);
+      MP[0]>0 && mP[0]<w#$xyz && MP[1]>0 && mP[1]<h#$xyz && mP[2]>0.5?(
+        dx = max(1,MP[0] - mP[0]);
+        dy = max(1,MP[1] - mP[1]);
+        N0 = I(#$UVW,x,y);
+
+        dx<w#$xyz/2 && dy<h#$xyz/2?(
+          col0 = [ x,y ];
+          max(dx,dy)==1?( # Draw single point
+            P0[2]<i(#$xyz,P0[0],P0[1],0,2)?(
+              Q = P0[0,2];
+              I(#$xyz,Q) = [ col0,P0[2] ];
+              I(#$uvw,Q) = N0;
+            );
+            0
+          ):( # Draw quadrangle.
+            col1 = [ nx,y ]; col2 = [ nx,ny ]; col3 = [ x,ny ];
+            repeat (dy,v,
+              vdy = v/dy;
+              P03 = lerp(P0,P3,vdy); col03 = lerp(col0,col3,vdy);
+              P12 = lerp(P1,P2,vdy); col12 = lerp(col1,col2,vdy);
+              repeat (dx,u,
+                udx = u/dx;
+                P = round(lerp(P03,P12,udx)); col = lerp(col03,col12,udx);
+                P[2]<i(#$xyz,P[0],P[1],0,2)?(
+                  Q = P[0,2];
+                  I(#$xyz,Q) = [ col,P[2] ];
+                  I(#$uvw,Q) = N0;
+                );
+              );
+            );
+          );
+        );
+      );
+      ret"
+    rm[-5--3]
+    channels.. 0,1
+    f.. "begin(is_inf = 0); isinf(i)?(is_inf = 1; -1):i; end(merge(is_inf,+); set('is_inf',is_inf))"
+    if $is_inf to_a[0] fi
+    warp[0] ..,0,2,0
+    rm..
+
+    # Render lighting.
+    if $is_light
+      sh[0] 0,{$is_rgb?2:0}
+      eval[uvw] ":
+        begin(
+          const alpha = max($specular_material,1);
+          const light_x = 2*(($light_x%) - 0.5);
+          const light_y = 2*(($light_y%) - 0.5);
+          const light_z = -sqrt(max(0,1 - norm(light_x,light_y)));
+          L = unitnorm([ light_x,light_y,light_z ]);
+        );
+        N = unitnorm(I);
+        dotNL = dot(N,L);
+        R = 2*dotNL*N - L;
+        I(#-1)+=255*(lerp(-$diffuse_shadows%,$diffuse_highlights%,max(0,dotNL)) + ($ambient_light - 50)%);
+        I(#-1)+=255*$specular_light%*max(0,-R[2])^alpha;
+      "
+      c. 0,255 rm.
+    fi
+    rm.
+
+    if $is_preview
+      coords=$center_x%,$center_y%,$size_x%,$size_y%
+      line $coords,1,0x0F0F0F0F,0 line $coords,1,0xF0F0F0F0,255
+    fi
+  }
+
+  visibility_formula:=$heightfield_type?1:2
+  visibility_light:=$is_light?2:1
+  u "{"$heightfield_type"}"\
+    "{"$heightfield_formula"}_"$visibility_formula\
+    "{"$heightfield_factor"}"\
+    "{"$heightfield_smoothness"}"\
+    "{"$align_camera_center"}"\
+    "{"$focale"}"\
+    "{"$light_x,$light_y"}"\
+    "{"$ambient_light"}_"$visibility_light\
+    "{"$diffuse_shadows"}_"$visibility_light\
+    "{"$diffuse_highlights"}_"$visibility_light\
+    "{"$specular_light"}_"$visibility_light\
+    "{"$specular_material"}_"$visibility_light\
+    "{"$preview_grid_overlay"}"\
+    "{"$center_x,$center_y"}"\
+    "{"$center_x,$center_y"}"\
+    "{"$size_x,$size_y"}"
+
+fx_heightfield_warp_preview :
+  _is_preview=1
+  fx_heightfield_warp $"*"
+
 #@gui Kaleidoscope [Blended] : fx_rotoidoscope, fx_rotoidoscope(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Creates a kaleidoscope effect with blended rotations.
