@@ -26660,28 +26660,19 @@ pca_patch3d : check "isint(${1=7},1) && isint(${2=1000},1) && isint(${3=3000},1)
 #@cli : $ image.jpg luminance rescale2d ,100 threshold 50% mul 255 pointcloud3d color3d[-1] 255,255,255
 pointcloud3d :
   e[^-1] "Convert image$? to 3D point cloud."
-  foreach {
-    nm={n} s z
-    foreach {
-      +norm !=. 0
-      i.. (1,{w};1,{w}^1,1;{h},{h}) r.. .,.,1,2,3 *[-2,-1] round. permute. cxyz
-      l. { s -,0 a y is_points=$! }
-      if $is_points
-        -. 1 r. 2,{h/2},1,1,-1 permute. cyzx +warp.. .,0,0,1 rm...
-        permute.. cyzx i.. 1,{h},1,1,$> a[-3,-2] x # Coordinates
-        i... ('CImg3d') i... ({h},{h}) # Header and size
-        i.. 1,{h},1,1,1 i.. 1,{h},1,1,y a[-3,-2] x # Primitives
-        permute. cyzx # Colors
-        if w==1 r. 3,{h},1,1
-        elif w>3 i.. 4,{h},1,1,-128,1,1,{w} a[-2,-1] x
-        else r. 3,{h},1,1,0
-        fi
-        1,{h},1,1,1 # Opacities
-        y[-6--1] a[-6--1] y
-      else rm empty3d
-      fi
-    }
-    +3d => $nm
+  foreach { nm={n}
+    ({'CImg3d'},0,0:y) 0x4 # [1]:header, [2]:pts, [3]:primitives, [4]:colors, [5]:opacity
+    eval[0] ">begin(nbp = 0); I = I; max(I)?(
+        opac = size(I)>3?I[3]/255:1;
+        opac>0?(
+          RGB = size(I)==1?[ I[0],I[0],I[0] ]:size(I)==2?[ I[0,2],0 ]:I[0,3];
+          da_push(#2,x,y,z);
+          da_push(#3,1,ui2f(nbp++));
+          da_push(#4,RGB[0],RGB[1],RGB[2]);
+          da_push(#5,opac);
+        );
+      ); I; end(repeat(4,k,da_freeze(#k + 2)); i[#1,6] = i[#1,7] = ui2f(nbp))"
+    a[1--1] y k. => $nm
   }
 
 #@cli pose3d : p1,...,p12
