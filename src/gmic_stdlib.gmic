@@ -15592,28 +15592,20 @@ count_colors : check "isint(${1=0},0)"
   fi
   res,sep=
   foreach {
-    # Compute hashcode map.
-    +n. 0,255 f. "ret = vectors(); H = 0; repeat (s,p,(H*=31)+=j(0,0,0,p)); ret[0] = H%2048; ret"
-    channels. 0 equalize. 2048 n. 0,2047 round. 1
-
-    # Find single occurrence of each color/vector.
-    0x2048
-    eval[0] ">
+    +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
+    rm.. equalize. 2048 n. 0,2047 round. 1
+    0x2048 eval[0] "> # Find single occurrence of each color/vector.
+      begin(size = vector2048(); nb = 0; ret = vectors());
       const max_nb = $1;
-      begin(sizes = vector2048(); nb = 0; ret = vectors());
       !max_nb || nb<max_nb?(
-        col_s = I;
-        H = i#1; indH = H + 2;
-        sH = sizes[H];
-        !sH || find(#indH,col_s,s#0*(sH - 1),-s#0)<0?( # Color not found
-          sH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
-          copy(i(#indH,0,sH,0,0),col_s);
-          ++sizes[H];
-          ++nb;
+        I = I; H = i#1; indH = H + 2; sizH = size[H];
+        !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
+          sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
+          copy(i(#indH,0,sizH,0,0),I);
+          ++size[H]; ++nb;
         );
       );
-      ret;
-      end(set('nb',sum(sizes)))"
+      ret; end(set('nb',sum(size)))"
     k[0] res.=$sep$nb sep=,
   }
   u $res
