@@ -15472,100 +15472,92 @@ colorblind : check "isint($1,0,7)"
   foreach { split_opacity l[0] { to_rgb srgb2rgb mix_channels ${type$1} rgb2srgb } a c }
 
 #@cli colormap : nb_levels>=0,_method={ 0:Median-cut | 1:K-means },_sort_vectors
-#@cli : Estimate best-fitting colormap with 'nb_colors' entries, to index selected images.
-#@cli : Set 'nb_levels==0' to extract all existing colors of an image.
-#@cli : 'sort_vectors' can be { 0:Unsorted | 1:By increasing norm | 2:By decreasing occurrence }.
+#@cli : Estimate best-fitting colormap with 'nb_levels' entries, to index selected images.
+#@cli : Specify 'nb_levels==0' to extract all existing colors of an image.
+#@cli : 'sort_vectors' can be { 0:Do not sort | 1:By increasing norm | 2:By decreasing occurrence }.
 #@cli : Default value: 'method=1' and 'sort_vectors=1'.
 #@cli : $ image.jpg +colormap[0] 4 +colormap[0] 8 +colormap[0] 16
 #@cli : $$ https://gmic.eu/oldtutorial/_colormap
 colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
-  m0,m1="median-cut","k-means"
-  s0,s1,s2="",", sorted by increasing norm",", sorted by decreasing occurrence"
+  m0,m1="median-cut","k-means" s0,s1,s2="",", sorted by increasing norm",", sorted by decreasing occurrence"
   if $1 e[0--3] "Estimate colormap with $1 entries for image$?, by "${m$2}" method"${s$3}"."
   else e[0--3] "Estimate full colormap for image$?"${s$3}"."
   fi
-  foreach {
-    nm={b} is_half=${-is_half}
-    r {whd},1,1,100%,-1
+  if $1!=0 m "$0_mc : 1,1,1,100%,:C=crop(#$""1,0,0,0,c,w#$""1,h#$""1,d#$""1,1);max(C)-min(C) j.. .,$""1 rm." fi
 
-    if $1 # Estimate quantized colormap
-      if ${"count_colors. {$1+1}"}<=$1 +colormap 0,0,0 # Check that 'nb_levels' is lower than number of used colors
-      else
-        +_colormap $1 # Median-cut algorithm
-        if $2 # Add k-means step
-          max_diff:=(iM-im+1)/8192
-          do
-            +index.. . # Find nearest cluster for each color
-            if $is_half
-              ..,1,1,{1,s}
-              eval "
-                csum = vector(#w*s#0);
-                cocc = vector(#w,0);
-                repeat (w#2,k,
-                  ind = i[#2,k];
-                  repeat (s#0,c,csum[ind + c*w]+=i(#0,k,0,0,c));
-                  ++cocc[ind];
-                );
-                off = 0;
-                repeat (s#0,c,
-                  repeat (w,k,occ = cocc[k]; occ?(csum[off++]/=occ));
-                );
-                draw(#3,csum)"
-              rm..
-            else
-              ..,1,1,{1,s+1}
-              f.. ">I[#3,i]+=[ I[#0,x],1 ]" rm..
-              f. "s = i(x,0,0,s-1); s?I/s:[ I[#1,x], 0 ]"
-            fi
-            +-.. . abs. diff:=iM/w rm. # Compute colormap difference
-            j.. . rm.
-          while $diff>$max_diff
-        fi
-      fi
+  foreach { nm={n}
 
-    else # Extract full colormap
+    # Extract full colormap (avoid duplicated colors).
+    +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
+    rm.. equalize. 2048 n. 0,2047 round. 1
+    0x2048 eval[0] "> # Find single occurrence of each color/vector
+      begin(size = vector2048(); ret = vectors());
+      I = I; H = i#1; indH = H + 2; sizH = size[H];
+      !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
+        sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
+        copy(i(#indH,0,sizH,0,0),I);
+        ++size[H];
+      );
+      ret; end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0)))"
+    a[2--1] y permute. yzcx rm..
 
-      # Compute hashcode map.
-      +n. 0,255 f. "ret = vectors(); H = 0; repeat (s,p,(H*=31)+=j(0,0,0,p)); ret[0] = H%2048; ret"
-      channels. 0 equalize. 2048 n. 0,2047 round. 1
+    if $1<w
 
-      # Find single occurrence of each color/vector.
-      0x2048
-      eval[0] ">
-        begin(sizes = vector2048(); ret = vectors());
-        col_s = I;
-        H = i#1; indH = H + 2;
-        sH = sizes[H];
-        !sH || find(#indH,col_s,s#0*(sH - 1),-s#0)<0?( # Color not found
-          sH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
-          copy(i(#indH,0,sH,0,0),col_s);
-          ++sizes[H];
-        );
-        ret;
-        end(fill(sizes,k,resize(#k + 2,s#0,sizes[k],1,1,0)))"
-      a[2--1] y permute. yzcx rm..
+      # Median-cut algorithm.
+      +l. {
+        1,1,1,{s} $0_mc 0 # Initialize box ranges
+        repeat $1-1 {
+          b,a:=xM,cM # b = box with highest range, a = axis with highest range
+          l[$b] { shift 0,0,0,-$a,2 sort +,x shift 0,0,0,$a,2 xm:=int(w/2) }
+          if {$b,w>1} +z[$b] $xm,100% z[$b] 0,{$xm-1} else 1,1,1,100% fi
+          rv[-2,-1] z. 0,{w}
+          $0_mc $b $0_mc {$!-2} # Update box ranges
+        }
+        rm. r 1,1,1,100%,2 a x # Average value in each box and append as final colormap
+      }
+
+      # K-means.
+      if $2 l[-2,-1] {
+        max_diff:=(iM-im+1)/8192
+        do
+          +index.. . # Find nearest cluster for each color
+          if $is_half
+            ..,1,1,{1,s}
+            eval "
+              csum = vector(#w*s#0);
+              cocc = vector(#w,0);
+              repeat (w#2,k,
+                ind = i[#2,k];
+                repeat (s#0,c,csum[ind + c*w]+=i(#0,k,0,0,c));
+                ++cocc[ind];
+              );
+              off = 0;
+              repeat (s#0,c,
+                repeat (w,k,occ = cocc[k]; occ?(csum[off++]/=occ));
+              );
+              draw(#3,csum)"
+            rm..
+          else
+            ..,1,1,{1,s+1}
+            f.. ">I[#3,i]+=[ I[#0,x],1 ]" rm..
+            f. "s = i(x,0,0,s-1); s?I/s:[ I[#1,x], 0 ]"
+          fi
+          +-.. . abs. diff:=iM/w rm. # Compute colormap difference
+          j.. . rm.
+        while $diff>$max_diff
+      } fi
+
+      rm..
     fi
 
-    # Sort colormap if requested.
+    # Sort colormap.
     if $3==1 k. +norm rv a c sort +,x channels 1,100% # Sort by increasing norm
     elif $3==2 index.. .,0,0 histogram.. {[w,0,w-1]} a y sort -,x rows 1 # Sort by decreasing occurrence
     else k.
     fi
-    => "[colormap of "$nm"]"
+    => "[colormap of '"$nm"']"
   }
-
-_colormap : # Implementation of the median-cut algorithm
-  m "__colormap : 1,1,1,100%,:C=crop(#$""1,0,0,0,c,w#$""1,h#$""1,d#$""1,1);max(C)-min(C) j.. .,$""1 rm."
-  1,1,1,{s} __colormap 0 # Initialize image of box ranges
-  repeat $1-1 {
-    b,a:=xM,cM # b = box with highest range, a = axis with highest range
-    l[$b] { shift 0,0,0,-$a,2 sort +,x shift 0,0,0,$a,2 xm:=int(w/2) }
-    if {$b,w>1} +z[$b] $xm,100% z[$b] 0,{$xm-1} else 1,1,1,100% fi
-    rv[-2,-1] z. 0,{w}
-    __colormap $b __colormap {$!-2} # Update box ranges
-  }
-  rm. r 1,1,1,100%,2 a x # Average value in each box and append as final colormap
-  um __colormap
+  um $0_mc
 
 #@cli compose_channels : _operator
 #@cli : Compose all channels of each selected image, using specified arithmetic operator (+,-,or,min,...).
