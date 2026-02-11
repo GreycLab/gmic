@@ -15508,15 +15508,43 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
 
       # Median-cut algorithm.
       +l. {
-        1,1,1,{s} $0_mc 0 # Initialize box ranges
-        repeat $1-1 {
-          b,a:=xM,cM # b = box with highest range, a = axis with highest range
-          l[$b] { shift 0,0,0,-$a,2 sort +,x shift 0,0,0,$a,2 xm:=int(w/2) }
-          if {$b,w>1} +z[$b] $xm,100% z[$b] 0,{$xm-1} else 1,1,1,100% fi
-          rv[-2,-1] z. 0,{w}
-          $0_mc $b $0_mc {$!-2} # Update box ranges
-        }
-        rm. r 1,1,1,100%,2 a x # Average value in each box and append as final colormap
+        $1,1,1,100%
+        eval "
+          const N = $1;
+          const bsiz = 2 + s; # Buffer size for each box
+          box = vector(#N*bsiz,-1); # Each box is encoded as (ind0,ind1,range_0,range_1,...,range_s-1)
+
+          update_box(k,_ind0,_ind1) = (
+            ref(_ind0,ind0); ref(_ind1,ind1);
+            off = k*bsiz;
+            box[off++] = ind0; box[off++] = ind1;
+            repeat (s,a,box[off++] = run('+z.. ',ind0,',0,0,',a,',',ind1,',0,0,',a,' u {iM-im} rm.'));
+          );
+
+          n = 1; update_box(0,0,w#0 - 1); # Set up initial box.
+          while (n<N,
+
+            # Step 1: Find box/axis to split.
+            max_b = max_a = max_r = -1;
+            repeat (n,b,repeat (s,a,r = box[b*bsiz + a + 2]; r>max_r?(max_r = r; max_a = a; max_b = b)));
+            max_r<=0?break();
+
+            # Step 2: Split box along axis.
+            B = box[max_b*bsiz,2];
+            run('+z.. ',B[0],',',B[1],' shift. 0,0,0,-',max_a,',2 sort. +,x shift. 0,0,0,',max_a,',2 j[0] .,',B[0],' rm.');
+            pivot = int(lerp(B[0],B[1],0.5));
+
+            update_box(max_b,B[0],pivot); update_box(n,pivot + 1,B[1]); ++n;
+          );
+
+          # Fill resulting colormap.
+          repeat (N,n,
+            off = n*bsiz;
+            ind0 = box[off];
+            delta = box[off + 1] - ind0 + 1;
+            C = vectors(0); repeat (delta,k,C+=I[#0,ind0 + k]);
+            I[#-1,n] = (C/=delta);
+          )"
       }
 
       # K-means.
