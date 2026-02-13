@@ -10647,13 +10647,41 @@ _select :
   ir:=round($1)
   if !$ir 0
   else l[] {
-      2048,1,1,1,"t = x*2*pi/w; 16*sin(t)^3"
-      2048,1,1,1,"t = x*2*pi/w; 13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t)"
-      a c display_parametric $ir,$ir,1,0,0,0
-      flood 50%,50%,0,0,0,1,0
-      ==. 0
+    2048,1,1,1,"t = x*2*pi/w; 16*sin(t)^3"
+    2048,1,1,1,"t = x*2*pi/w; 13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t)"
+    a c display_parametric $ir,$ir,1,0,0,0
+    flood 50%,50%,0,0,0,1,0
+    ==. 0
   } fi
   => "[2D heart shape]"
+
+
+#@cli shape_hilbert : _size>=0,_nb_recursions>=0
+#@cli : Input a 2D hilbert curve with specified size.
+#@cli : Default values: 'size=512' and 'nb_recursions=5'.
+#@cli : $ shape_hilbert ,
+shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
+  e[^-1] "Input a $1x$1 hilbert curve shape."
+  ir:=round($1)
+  if !$ir 0
+  else l[] {
+    $ir,$ir
+    eval "
+      const n = $2 + 1;
+      const N = 1<<n;
+      const f = w/N;
+      px = py = 0;
+      repeat (N^2,d,
+        for (x = y = 0; t = d; s = 1, s<N, s<<=1,
+          rx = 1&(t>>1); ry = 1&xor(t,rx);
+          !ry?(rx==1?(x = s - 1 - x; y = s - 1 - y); swap(x,y));
+          x+=s*rx; y+=s*ry; t>>=2;
+        );
+        d?polygon(#-1,2,round([f*px,f*py,f*x,f*y]+f/2),1,1);
+        px = x; py = y;
+      )"
+  } fi
+  => "[2D hilbert curve]"
 
 #@cli shape_menger : _nb_iterations>=0
 #@cli : Input a 3D voxelized representation of the Menger sponge.
