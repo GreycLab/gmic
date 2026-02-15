@@ -1,0 +1,51 @@
+#!/usr/bin/env gmic
+# File : hilbert_curve.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Hilbert Curve" e[] "" animate 60
+
+# Main function
+go :
+  v 0
+
+  # Precompute Hilbert curve.
+  0 eval "
+    const n = 3 + 1;
+    const N = 1<<n;
+    repeat (N^2,d,
+      for (x = y = 0; t = d; s = 1, s<N, s<<=1,
+        rx = 1&(t>>1); ry = 1&xor(t,rx);
+        !ry?(rx==1?(x = s - 1 - x; y = s - 1 - y); swap(x,y));
+        x+=s*rx; y+=s*ry; t>>=2;
+      );
+      da_push([x,y]);
+    ); da_freeze()" => pts
+  r. 1,{h*3},1,2,5 b. y,0.1% n. -0.5,0.5
+
+  # Generate curve generation frames.
+  repeat {pts,h} { f=$>
+    e[] "\r  > Frame "{$f+1}/{pts,h}
+    +rows[pts] 0,$> 370,370
+    eval.. "
+      begin(
+        const zoom = lerp(15,0.7,$%^0.1);
+        const fact = 0.95*w#-1*zoom;
+        angle = lerp(0,360*4,$%^0.2)°;
+        R = rot(angle);
+        Pc = I[-1,2];
+      );
+      pP = J[-1,1]; P = I;
+      pP = Pc + R*(pP - Pc); P = Pc + R*(P - Pc);
+      Off = lerp(Pc,0,$%^10); pP-=Off; P-=Off;
+      polygon(#-1,2,round(w#-1/2 + pP*fact),round(w#-1/2 + P*fact),1,1)"
+
+    distance. 1 <=. {lerp(20,2.5,$%^0.25)}
+    +b. {lerp(8,0.5,$%^0.25)}%,3 *. 600 c. 0,255
+    *.. 255 to_rgb.. map. hot max[-2,-1]
+    r. 350,350,1,3,0,0,0.5,0.5
+    rm..
+  }
+  .x40
+
+# End of file.
