@@ -5061,7 +5061,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
     boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0;
   char end, sep = 0, sep0 = 0, sep1 = 0, sepx = 0, sepy = 0, sepz = 0, sepc = 0, axis = 0;
   double vmin = 0, vmax = 0, value, value0, value1, nvalue, nvalue0, nvalue1;
-  bool is_cond, _is_get = false, is_end_local = false, check_elif = false, run_main_ = false;
+  bool _is_get = false, check_elif = false, is_cond, is_end_local = false, run_main_ = false;
   float opacity = 0;
   int err;
 
@@ -7218,8 +7218,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           continue;
         }
 
-        // 'else' and 'elif'.
-        if (no_get_selection && (id_builtin_command==id_else || (!check_elif && id_builtin_command==id_elif))) {
+        // 'elif' and 'else'.
+        if (no_get_selection && ((!check_elif && id_builtin_command==id_elif) || id_builtin_command==id_else)) {
           const CImg<char> &s = callstack.back();
           if (s[0]!='*' || s[1]!='i')
             error(true,0,0,
