@@ -2136,7 +2136,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
         switch (loop_type) {
         case 0 : { // repeat...done
           const unsigned int *const rd = gmic_instance.repeatdones.data(0,gmic_instance.nb_repeatdones - 1);
-          res = *str=='>'?(double)rd[1]:*str=='<'?rd[2] - 1.0:rd[1]/(rd[1] + rd[2] - 1.0);
+          res = *str=='>'?(double)rd[1]:*str=='<'?rd[2] - 1.0:rd[1] + rd[2]<=1?0.0:rd[1]/(rd[1] + rd[2] - 1.0);
         } break;
         case 1 : { // do...while
           const unsigned int *const dw = gmic_instance.dowhiles.data(0,gmic_instance.nb_dowhiles - 1);
@@ -2148,7 +2148,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
         } break;
         case 3 : { // foreach...done
           const unsigned int *const fed = gmic_instance.foreachdones.data(0,gmic_instance.nb_foreachdones - 1);
-          res = *str=='>'?(double)fed[0]:*str=='<'?fed[1] - 1.0:fed[0]/(fed[0] + fed[1] - 1.0);
+          res = *str=='>'?(double)fed[0]:*str=='<'?fed[1] - 1.0:fed[0] + fed[1]<=1?0.0:fed[0]/(fed[0] + fed[1] - 1.0);
         } break;
         }
       }
@@ -4840,7 +4840,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           } else if (nsource[1]=='%') {
             if (loop_type==1 || loop_type==2) std::strcpy(substr,"nan");
             else if (bwd==~0U || !fwd) std::strcpy(substr,"0");
-            else cimg_snprintf(substr,substr.width(),"%.17g",(double)fwd/(fwd + bwd));
+            else cimg_snprintf(substr,substr.width(),"%.17g",fwd/((double)fwd + bwd));
           }
         }
         CImg<char>::string(substr,false,true).append_string_to(substituted_items,ptr_sub);
