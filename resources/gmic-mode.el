@@ -89,9 +89,9 @@
   "G'MIC control flow keywords.")
 
 (defvar gmic--builtin-commands
-  ;; Commandes natives G'MIC, hard-codées en C++ — liste stable.
-  ;; Les opérateurs purement symboliques (!=, %, &, *, +, -, /, etc.)
-  ;; sont gérés séparément via font-lock-operator-face.
+  ;; Native G'MIC commands, hard-coded in C++ — stable list.
+  ;; Purely symbolic operators (!=, %, &, *, +, -, /, etc.)
+  ;; are handled separately via their own font-lock rule.
   '("abs" "abscut" "acos" "acosh" "add" "add3d" "and"
     "append" "asin" "asinh" "atan" "atan2" "atanh"
     "b" "bilateral" "blur" "boxfilter" "break" "bsl" "bsr"
@@ -159,8 +159,8 @@
 (defconst gmic-font-lock-keywords
   (list
    ;; 1. Command definitions: "name :" or "name(args) :"
-   ;;    Le ':' ne doit pas être suivi de '=' (sinon c'est une affectation var:=)
-   ;;    On utilise :[^=] ou : en fin de ligne (pas de lookahead en Emacs regexp)
+   ;;    ':' must not be followed by '=' (otherwise it is a var:= assignment).
+   ;;    Use :[^=] or ':' at end of line (no lookahead in Emacs regexp).
    '("^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*\\(([^)]*)\\s-*\\)?:\\([^=]\\|$\\)"
      (1 'gmic-command-name-face))
 
@@ -214,12 +214,12 @@
   "Font-lock keywords for `gmic-mode'.")
 
 ;;;; -------------------------------------------------------------------------
-;;;; Indentation — comptage des ouvrants/fermants sur chaque ligne
+;;;; Indentation — counting opening/closing keywords per line
 
 (defvar gmic--indent-open-re
-  ;; Seuls les mots-clés comptent comme ouvrants.
-  ;; '{' n'est jamais compté : c'est un raccourci syntaxique pour le mot-clé
-  ;; qui le précède, lequel est déjà compté.
+  ;; Only keywords count as openers.
+  ;; '{' is never counted: it is a syntactic shortcut for the keyword
+  ;; that precedes it, which is already counted.
   (concat "\\_<"
           (regexp-opt '("repeat" "for" "foreach" "do"
                         "if" "elif" "else"
@@ -229,8 +229,8 @@
   "Regexp matching block-opening keywords in G'MIC.")
 
 (defvar gmic--indent-close-re
-  ;; '}' isolé (précédé d'un blanc ou en début de ligne, suivi d'un blanc ou fin)
-  ;; + mots-clés fermants.
+  ;; Isolated '}' (preceded by whitespace or start of line, followed by whitespace or end)
+  ;; plus closing keywords.
   (concat "\\(?:\\(?:^\\|\\s-\\)}\\(?:\\s-\\|$\\)\\|\\_<"
           (regexp-opt '("done" "fi" "elif" "else" "while") t)
           "\\_>\\)")
@@ -312,13 +312,13 @@ A command definition line counts as net +1 (it opens a command body)."
                                         "local" "l") t)
                           "\\_>"))
          (opens  (gmic--count-occurrences open-re stripped))
-         ;; Fermants sur la même ligne qu'un ouvrant annulent cet ouvrant.
-         ;; Ex: "repeat 6 { ... done" sur une ligne = delta 0.
-         ;; On ne compte que les fermants qui suivent un ouvrant sur la ligne.
+         ;; Closers on the same line as an opener cancel that opener.
+         ;; e.g. "repeat 6 { ... done" on one line = delta 0.
+         ;; Only count closers that appear AFTER the first opener on the line.
          (close-re (concat "\\(?:\\(?:^\\|\\s-\\)}\\(?:\\s-\\|$\\)\\|\\_<"
                            (regexp-opt '("done" "fi" "while") t)
                            "\\_>\\)"))
-         ;; Fermants qui apparaissent APRÈS le premier ouvrant de la ligne
+         ;; Closers appearing AFTER the first opener on the line
          (first-open-pos (if (string-match open-re stripped)
                              (match-beginning 0)
                            nil))
@@ -337,12 +337,13 @@ by one level per leading closer.
 'elif' and 'else' dedent by exactly one level (back to the 'if' level)
 but are not counted via the general closer mechanism."
   (let* ((stripped (gmic--strip-comments-and-strings line-str))
+         ;; elif/else: always -1 level relative to the previous line
          (leading-elif-else
           (if (string-match-p
                (concat "^\\s-*\\_<\\(?:elif\\|else\\)\\_>")
                stripped)
               1 0))
-         ;; Autres fermants : done, fi, while, '}' isolé — avant le premier ouvrant
+         ;; Other closers: done, fi, while, isolated '}' — before the first opener
          (first-open
           (let ((pos (and (string-match
                            (concat "\\_<"
@@ -373,7 +374,7 @@ but are not counted via the general closer mechanism."
           (setq count (1+ count)
                 in-string (not in-string)))
          ((and (not in-string) (= ch ?#))
-          (setq i len)))) ; fin de ligne : commentaire
+          (setq i len)))) ; end of line: comment
       (setq i (1+ i)))
     count))
 
@@ -385,7 +386,7 @@ An odd total means we are inside an open string."
   (let ((total-quotes 0))
     (save-excursion
       (beginning-of-line)
-      ;; Remonter jusqu'à la définition de commande englobante ou le début du buffer
+      ;; Walk back to the enclosing command definition or buffer start
       (let ((limit (save-excursion
                      (if (re-search-backward gmic--command-def-re nil t)
                          (line-beginning-position)
@@ -437,17 +438,16 @@ Algorithm:
           (forward-line -1)
           (let ((prev (gmic--current-line-string)))
             (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
-              ;; N'utiliser cette ligne comme référence que si elle
-              ;; n'est pas elle-même à l'intérieur d'une chaîne
+              ;; Only use this line as reference if it is not itself inside a string
               (let ((prev-in-string (gmic--in-multiline-string-p)))
                 (unless prev-in-string
                   (setq indent (+ (gmic--line-indentation prev)
                                   (gmic--line-delta prev)))
                   (setq found t))))))))
-    ;; Indentation supplémentaire si on est dans une chaîne multiligne
+    ;; Extra indentation if we are inside a multiline string
     (when in-string
       (setq indent (+ indent gmic-indent-offset)))
-    ;; Une définition de commande est toujours à la colonne 0
+    ;; A command definition is always at column 0
     (when (gmic--line-is-command-def-p (gmic--current-line-string))
       (setq indent 0))
     ;; Adjust for leading closers on the current line
