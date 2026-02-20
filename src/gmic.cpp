@@ -5016,7 +5016,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   CImg<float> vertices;
   CImg<T> g_img;
 
-  CImg<char> name, o_status, _argument_text, _argx, _argy, _argz, _argc, _title, _indices, _message, _formula, _color,
+  CImg<char> gmic_selection, name, o_status,
+    _argument_text, _argx, _argy, _argz, _argc, _title, _indices, _message, _formula, _color,
     _command(257), _s_selection(256);
   char _c0 = 0,
     *argument_text = &_c0,
@@ -5486,7 +5487,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
       // Generate string for displaying image selections when verbosity>=1.
       // (only done for commands that takes image selections).
-      CImg<char> gmic_selection;
       if (is_debug || (verbosity>=1 && !is_command_check && !is_command_skip && !is_command_verbose &&
                        !is_command_echo && !is_command_error && !is_command_warn))
         switch (id_builtin_command) {
