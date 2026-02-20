@@ -3932,87 +3932,51 @@ CImg<char>& gmic::selection2string(const CImg<unsigned int>& selection,
                                    const CImgList<char>& image_names,
                                    const unsigned int output_type,
                                    CImg<char>& res) const {
-  if (res.size()<128) res.assign(128);
-  if (output_type<2) {
-    const char *const bl = output_type?"[":"", *const br = output_type?"]":"";
-    switch (selection.height()) {
-    case 0:
-      cimg_snprintf(res.data(),res.width()," %s%s",bl,br);
-      break;
-    case 1:
-      cimg_snprintf(res.data(),res.width()," %s%u%s",
-                    bl,selection[0],br);
-      break;
-    case 2:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u%s",
-                    bl,selection[0],selection[1],br);
-      break;
-    case 3:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],br);
-      break;
-    case 4:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],selection[3],br);
-      break;
-    case 5:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],selection[3],selection[4],br);
-      break;
-    case 6:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],
-                    selection[3],selection[4],selection[5],br);
-      break;
-    case 7:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],selection[3],
-                    selection[4],selection[5],selection[6],br);
-      break;
-    default:
-      cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,(...),%u,%u,%u%s",
-                    bl,selection[0],selection[1],selection[2],
-                    selection[selection.height() - 3],
-                    selection[selection.height() - 2],
-                    selection[selection.height() - 1],br);
-    }
-    return res;
-  }
-
+  if (res.size()<96) res.assign(96);
+  const char *const bl = output_type?"[":"", *const br = output_type?"]":"";
   switch (selection.height()) {
   case 0:
-    *res = 0;
+    cimg_snprintf(res.data(),res.width()," %s%s",bl,br);
     break;
   case 1:
-    cimg_snprintf(res.data(),res.width(),"%s",
-                  basename(image_names[selection[0]]));
+    cimg_snprintf(res.data(),res.width()," %s%u%s",
+                  bl,selection[0],br);
     break;
   case 2:
-    cimg_snprintf(res.data(),res.width(),"%s, %s",
-                  basename(image_names[selection[0]]),
-                  basename(image_names[selection[1]]));
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u%s",
+                  bl,selection[0],selection[1],br);
     break;
   case 3:
-    cimg_snprintf(res.data(),res.width(),"%s, %s, %s",
-                  basename(image_names[selection[0]]),
-                  basename(image_names[selection[1]]),
-                  basename(image_names[selection[2]]));
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],br);
     break;
   case 4:
-    cimg_snprintf(res.data(),res.width(),"%s, %s, %s, %s",
-                  basename(image_names[selection[0]]),
-                  basename(image_names[selection[1]]),
-                  basename(image_names[selection[2]]),
-                  basename(image_names[selection[3]]));
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],selection[3],br);
+    break;
+  case 5:
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],selection[3],selection[4],br);
+    break;
+  case 6:
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],
+                  selection[3],selection[4],selection[5],br);
+    break;
+  case 7:
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,%u,%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],selection[3],
+                  selection[4],selection[5],selection[6],br);
     break;
   default:
-    cimg_snprintf(res.data(),res.width(),"%s, (...), %s",
-                  basename(image_names[selection[0]]),
-                  basename(image_names[selection.back()]));
+    cimg_snprintf(res.data(),res.width(),"s %s%u,%u,%u,(...),%u,%u,%u%s",
+                  bl,selection[0],selection[1],selection[2],
+                  selection[selection.height() - 3],
+                  selection[selection.height() - 2],
+                  selection[selection.height() - 1],br);
   }
   return res;
 }
-
 
 template<typename T>
 bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *const command) {
