@@ -14823,12 +14823,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                         gmic_argument_text());
                 else {
                   const char *misspelled = 0;
-                  if (callstack.size()<2) {
+                  const int len = (int)std::strlen(filename);
+                  int dmin = 3;
+                  if (callstack.size()<2 && len>3) {
                     CImg<char>::string(filename).move_to(name);
                     const unsigned int foff = (*name=='+' || *name=='-');
                     char *const posb = std::strchr(name,'[');
                     if (posb) *posb = 0; // Discard selection from the command name
-                    int dmin = 3;
                     // Look for a built-in command.
                     for (unsigned int l = 0; l<sizeof(builtin_command_names)/sizeof(char*); ++l) {
                       const char *const c = builtin_command_names[l];
