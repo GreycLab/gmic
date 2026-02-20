@@ -3932,7 +3932,7 @@ CImg<char>& gmic::selection2string(const CImg<unsigned int>& selection,
                                    const CImgList<char>& image_names,
                                    const unsigned int output_type,
                                    CImg<char>& res) const {
-  if (res.size()<256) res.assign(256);
+  if (res.size()<128) res.assign(128);
   if (output_type<2) {
     const char *const bl = output_type?"[":"", *const br = output_type?"]":"";
     switch (selection.height()) {
