@@ -236,9 +236,10 @@
           "\\_>\\)")
   "Regexp matching block-closing keywords or isolated '}' in G'MIC.")
 
-(defun gmic--strip-comments (line-str)
-  "Return LINE-STR with any trailing G'MIC comment removed.
-A comment starts at '#' unless it is inside a double-quoted string."
+(defun gmic--strip-comments-and-strings (line-str)
+  "Return LINE-STR with comments and string contents removed.
+Keeps the quote delimiters themselves to preserve quote counting,
+but removes everything between them."
   (let ((result "")
         (in-string nil)
         (i 0)
@@ -246,16 +247,37 @@ A comment starts at '#' unless it is inside a double-quoted string."
     (while (< i len)
       (let ((ch (aref line-str i)))
         (cond
-         ((and (not in-string) (= ch ?\"))
-          (setq in-string t result (concat result (string ch))))
-         ((and in-string (= ch ?\") )
-          (setq in-string nil result (concat result (string ch))))
+         ((= ch ?\")
+          (setq in-string (not in-string))
+          (setq result (concat result "\"")))
          ((and (not in-string) (= ch ?#))
           (setq i len))               ; stop — rest is comment
+         ((not in-string)
+          (setq result (concat result (string ch))))))
+      (setq i (1+ i)))
+    result))
+
+(defun gmic--strip-comments (line-str)
+  "Return LINE-STR with any trailing G'MIC comment removed.
+A comment starts at '#' unless it is inside a double-quoted string.
+String contents are preserved (unlike `gmic--strip-comments-and-strings')."
+  (let ((result "")
+        (in-string nil)
+        (i 0)
+        (len (length line-str)))
+    (while (< i len)
+      (let ((ch (aref line-str i)))
+        (cond
+         ((= ch ?\")
+          (setq in-string (not in-string))
+          (setq result (concat result "\"")))
+         ((and (not in-string) (= ch ?#))
+          (setq i len))
          (t
           (setq result (concat result (string ch))))))
       (setq i (1+ i)))
     result))
+
 
 (defun gmic--count-occurrences (re str)
   "Count non-overlapping matches of RE in STR."
@@ -283,7 +305,7 @@ counted here: their effect on the current line's position is handled by
 `gmic--line-leading-close-delta', and they do not affect the next line.
 Only opening keywords produce a positive delta.
 A command definition line counts as net +1 (it opens a command body)."
-  (let* ((stripped (gmic--strip-comments line-str))
+  (let* ((stripped (gmic--strip-comments-and-strings line-str))
          (open-re (concat "\\_<"
                           (regexp-opt '("repeat" "for" "foreach" "do"
                                         "if" "elif" "else"
@@ -314,8 +336,7 @@ When a line starts with closing keywords or isolated '}', pull it back
 by one level per leading closer.
 'elif' and 'else' dedent by exactly one level (back to the 'if' level)
 but are not counted via the general closer mechanism."
-  (let* ((stripped (gmic--strip-comments line-str))
-         ;; elif/else : toujours -1 niveau par rapport à la ligne précédente
+  (let* ((stripped (gmic--strip-comments-and-strings line-str))
          (leading-elif-else
           (if (string-match-p
                (concat "^\\s-*\\_<\\(?:elif\\|else\\)\\_>")
@@ -339,6 +360,45 @@ but are not counted via the general closer mechanism."
          (leading-others (gmic--count-occurrences other-close-re substr)))
     (* (+ leading-elif-else leading-others) gmic-indent-offset)))
 
+(defun gmic--count-unescaped-quotes (str)
+  "Count double-quote characters in STR, stopping at an unquoted '#' comment."
+  (let ((count 0)
+        (in-string nil)
+        (i 0)
+        (len (length str)))
+    (while (< i len)
+      (let ((ch (aref str i)))
+        (cond
+         ((= ch ?\")
+          (setq count (1+ count)
+                in-string (not in-string)))
+         ((and (not in-string) (= ch ?#))
+          (setq i len)))) ; fin de ligne : commentaire
+      (setq i (1+ i)))
+    count))
+
+(defun gmic--in-multiline-string-p ()
+  "Return t if point is currently inside a multiline G'MIC string.
+Counts all double-quote characters from the start of the current
+command definition (or buffer start) up to the previous line.
+An odd total means we are inside an open string."
+  (let ((total-quotes 0))
+    (save-excursion
+      (beginning-of-line)
+      ;; Remonter jusqu'à la définition de commande englobante ou le début du buffer
+      (let ((limit (save-excursion
+                     (if (re-search-backward gmic--command-def-re nil t)
+                         (line-beginning-position)
+                       (point-min)))))
+        (while (> (point) limit)
+          (forward-line -1)
+          (let ((line (gmic--current-line-string)))
+            (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" line)
+              (setq total-quotes
+                    (+ total-quotes
+                       (gmic--count-unescaped-quotes line))))))))
+    (= (% total-quotes 2) 1)))
+
 (defun gmic--current-line-string ()
   "Return the content of the current line as a string."
   (buffer-substring-no-properties
@@ -352,29 +412,41 @@ but are not counted via the general closer mechanism."
       (setq i (1+ i)))
     i))
 
+(defun gmic--line-opens-string-p (line-str)
+  "Return t if LINE-STR opens a multiline string (odd number of quotes)."
+  (= (% (gmic--count-unescaped-quotes line-str) 2) 1))
+
 (defun gmic-indent-line ()
   "Indent the current line for `gmic-mode'.
 
 Algorithm:
-  1. Find the previous non-empty, non-comment line (call it PREV).
-  2. Start from PREV's indentation column.
-  3. Add the net delta of PREV (opens minus closes on that line).
-  4. Subtract the leading-close contribution of the CURRENT line
-     (closing keywords/braces that appear before any opener on this line).
-  5. Clamp to zero."
+  1. Determine if the current line is inside a multiline string.
+  2. Find the previous non-empty line that is NOT inside a multiline
+     string (i.e. the last structural reference line).
+  3. Start from that line's indentation + delta.
+  4. If we are inside a multiline string, add one extra level.
+  5. Subtract the leading-close contribution of the CURRENT line.
+  6. Clamp to zero."
   (interactive)
-  (let ((indent 0))
+  (let* ((in-string (gmic--in-multiline-string-p))
+         (indent 0))
     (save-excursion
       (beginning-of-line)
       (let ((found nil))
         (while (and (not found) (not (bobp)))
           (forward-line -1)
           (let ((prev (gmic--current-line-string)))
-            ;; Skip blank lines and pure comment lines
             (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
-              (setq indent (+ (gmic--line-indentation prev)
-                              (gmic--line-delta prev)))
-              (setq found t))))))
+              ;; N'utiliser cette ligne comme référence que si elle
+              ;; n'est pas elle-même à l'intérieur d'une chaîne
+              (let ((prev-in-string (gmic--in-multiline-string-p)))
+                (unless prev-in-string
+                  (setq indent (+ (gmic--line-indentation prev)
+                                  (gmic--line-delta prev)))
+                  (setq found t))))))))
+    ;; Indentation supplémentaire si on est dans une chaîne multiligne
+    (when in-string
+      (setq indent (+ indent gmic-indent-offset)))
     ;; Une définition de commande est toujours à la colonne 0
     (when (gmic--line-is-command-def-p (gmic--current-line-string))
       (setq indent 0))
