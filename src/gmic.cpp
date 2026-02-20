@@ -14825,7 +14825,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   const char *misspelled = 0;
                   const int len = (int)std::strlen(filename);
                   int dmin = 3;
-                  if (callstack.size()<2 && len>3) {
+                  if (callstack.size()<2 && len>1) {
                     CImg<char>::string(filename).move_to(name);
                     const unsigned int foff = (*name=='+' || *name=='-');
                     char *const posb = std::strchr(name,'[');
@@ -14846,7 +14846,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                         if (d<dmin) { dmin = d; misspelled = command_names[i][l].data(); }
                       }
                   }
-                  if (misspelled)
+                  if (misspelled && dmin<=len/2)
                     error(true,0,0,
                           "Unknown command or filename '%s'; did you mean '%s'?",
                           gmic_argument_text(),misspelled + (*misspelled=='+'?1:0));
