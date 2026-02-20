@@ -2299,7 +2299,6 @@ double gmic::mp_name(const unsigned int ind, double *const out_str, const unsign
   return cimg::type<double>::nan();
 }
 
-// This method is not thread-safe. Ensure it's never run in parallel!
 template<typename T>
 double gmic::mp_run(char *const str, const bool is_parallel_run,
                     void *const p_list, const T& pixel_type) {
@@ -4813,7 +4812,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           case 0 : { // repeat...done
             const unsigned int *const rd = repeatdones.data(0,nb_repeatdones - 1);
             fwd = rd[1];
-            bwd = rd[2]==~0U?~0U:rd[2] - 1;
+            bwd = rd[2]==~0U?~0U:rd[2]?rd[2] - 1:0U;
           } break;
           case 1 : { // do...while
             const unsigned int *const dw = dowhiles.data(0,nb_dowhiles - 1);
@@ -4828,7 +4827,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           case 3 : { // foreach...done
             const unsigned int *const fed = foreachdones.data(0,nb_foreachdones - 1);
             fwd = fed[0];
-            bwd = fed[1] - 1;
+            bwd = fed[1]?fed[1] - 1:0U;
           } break;
           }
 
