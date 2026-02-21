@@ -5104,7 +5104,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         substitute_item(initial_item,images,image_names,parent_images,parent_image_names,
                         variable_sizes,command_selection,false).move_to(_item);
       else
-        _item.assign(command_line[position],true);
+        CImg<char>::string(initial_item).move_to(_item);
 
       char *item = _item;
       const char *argument = initial_argument;
