@@ -3405,7 +3405,7 @@ CImg<char> gmic::get_variable(const char *const name,
       cimg_snprintf(res,res.width(),"%u",ind);
       if (varlength) *varlength = res._width - 1;
     } else { // Variable name may stand for an environment variable
-      const char *const env = *name!='_'?std::getenv(name):0;
+      const char *const env = std::getenv(name);
       if (env) {
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;
