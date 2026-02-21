@@ -391,7 +391,7 @@ struct gmic {
               float *const p_progress, bool *const p_is_abort);
 
   gmic_image<char> get_variable(const char *const name, const unsigned int *const variable_sizes=0,
-                                const gmic_list<char> *const image_names=0, unsigned int *const varlength=0) const;
+                                const gmic_list<char> *const image_names=0, unsigned int *const varlength=0);
   const char *set_variable(const char *const name, const char operation='=', const char *const value=0,
                            const double dvalue=0, const unsigned int *const variable_sizes=0);
   const char *set_variable(const char *const name, const gmic_image<unsigned char>& value,
