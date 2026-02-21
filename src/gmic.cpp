@@ -2702,7 +2702,6 @@ const char* gmic::basename(const char *const str)  {
 #define gmic_display_window(n) (*(CImgDisplay*)display_windows[n])
 
 CImg<char> gmic::stdlib = CImg<char>::empty();
-CImgList<char> gmic::getenv_tests = CImgList<char>::empty();
 
 gmic::gmic():gmic_new_attr {
   assign();
@@ -3406,20 +3405,7 @@ CImg<char> gmic::get_variable(const char *const name,
       cimg_snprintf(res,res.width(),"%u",ind);
       if (varlength) *varlength = res._width - 1;
     } else { // Variable name may stand for an environment variable
-
-      // Check if variable has already been tested with getenv() and returned an empty string.
-      cimg::mutex(21);
-      cimglist_rof(getenv_tests,l) if (!std::strcmp(name,getenv_tests[l])) { ind = l; break; }
-      const char *const env = ind==~0U?std::getenv(name):0;
-      if (!env && ind==~0U) { // If empty and not already stored, store it as an already tested getenv variable
-        if (getenv_tests._width>=4096) getenv_tests.assign();
-        ind = getenv_tests._width;
-        CImg<char>::string(name).move_to(getenv_tests);
-        if (ind!=getenv_tests._width - 1) { // Modify slot position of variable to make it more accessible next time
-          const unsigned int indm = (getenv_tests._width + ind)/2;
-          getenv_tests[ind].swap(getenv_tests[indm]);
-        }
-      }
+      const char *const env = std::getenv(name);
       if (env) {
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;

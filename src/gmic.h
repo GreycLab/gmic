@@ -465,7 +465,6 @@ struct gmic {
   // Class attributes.
   static const char *builtin_command_names[];
   static const int builtin_command_ids[];
-  static gmic_list<char> getenv_tests;
   static gmic_image<int> builtin_commands_bounds;
   static gmic_image<char> stdlib;
   static bool is_display_available;
