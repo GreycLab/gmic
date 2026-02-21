@@ -3405,16 +3405,19 @@ CImg<char> gmic::get_variable(const char *const name,
       cimg_snprintf(res,res.width(),"%u",ind);
       if (varlength) *varlength = res._width - 1;
     } else { // Variable name may stand for an environment variable
-      const char *const env = std::getenv(name);
+      const char *const env = *name!='_'?std::getenv(name):0;
       if (env) {
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;
-      } else if (varlength) *varlength = 0;
 
-      // Add environment variable as a local variable for faster access next time.
-      if (is_thread_global) cimg::mutex(30,0);
-      set_variable(name,0,env?env:"",0,variable_sizes);
-      return res;
+        // Define environment variable as a new G'MIC variable, for faster access next time.
+        ind = vars._width;
+        if (ind>=varlengths._width) varlengths.resize(std::max(8U,2*varlengths._width + 1),1,1,1,0);
+        varlengths[ind] = res._width - 1;
+        CImg<char>::string(name).move_to(varnames);
+        vars.insert(res);
+
+      } else if (varlength) *varlength = 0;
 
     } // Otherwise, 'res' is empty
   }
@@ -5111,7 +5114,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         substitute_item(initial_item,images,image_names,parent_images,parent_image_names,
                         variable_sizes,command_selection,false).move_to(_item);
       else
-        CImg<char>::string(initial_item).move_to(_item);
+//        CImg<char>::string(initial_item).move_to(_item);
+        CImg<char>::string(initial_item,true,true).move_to(_item);
 
       char *item = _item;
       const char *argument = initial_argument;
