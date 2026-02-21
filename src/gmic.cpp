@@ -3409,19 +3409,9 @@ CImg<char> gmic::get_variable(const char *const name,
       if (env) {
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;
-
-        // Define environment variable as a new G'MIC variable, for faster access next time.
-        ind = vars._width;
-        if (ind>=varlengths._width) varlengths.resize(std::max(8U,2*varlengths._width + 1),1,1,1,0);
-        varlengths[ind] = res._width - 1;
-        CImg<char>::string(name).move_to(varnames);
-        vars.insert(res);
-
       } else if (varlength) *varlength = 0;
-
     } // Otherwise, 'res' is empty
   }
-
   if (is_thread_global) cimg::mutex(30,0);
   return res;
 }
