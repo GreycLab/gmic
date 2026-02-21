@@ -52,7 +52,7 @@
 */
 
 #ifndef gmic_version
-#define gmic_version 370
+#define gmic_version 371
 
 #ifndef gmic_pixel_type
 #define gmic_pixel_type float
@@ -391,7 +391,7 @@ struct gmic {
               float *const p_progress, bool *const p_is_abort);
 
   gmic_image<char> get_variable(const char *const name, const unsigned int *const variable_sizes=0,
-                                const gmic_list<char> *const image_names=0, unsigned int *const varlength=0) const;
+                                const gmic_list<char> *const image_names=0, unsigned int *const varlength=0);
   const char *set_variable(const char *const name, const char operation='=', const char *const value=0,
                            const double dvalue=0, const unsigned int *const variable_sizes=0);
   const char *set_variable(const char *const name, const gmic_image<unsigned char>& value,
@@ -414,7 +414,7 @@ struct gmic {
                                           const gmic_list<char>& names, const char *const command,
                                           const bool is_selection=true);
 
-  gmic_image<char>& selection2string(const gmic_image<unsigned int>& selection, const gmic_list<char>& image_names,
+  gmic_image<char>& selection2string(const gmic_image<unsigned int>& selection,
                                      const unsigned int display_selection, gmic_image<char>& res) const;
 
   gmic_list<char> command_line_to_CImgList(const char *const command_line);

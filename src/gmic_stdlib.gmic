@@ -794,6 +794,8 @@ reference : skip "${2=}"
 "* 'I': current vector-valued processed pixel in the associated image, if any ('0' otherwise). "\
 "The number of vector components is equal to the number of image channels (e.g. 'I' = `[ R,G,B ]` for a "\
 "`RGB` image)."\n\
+"* 'null': A vector whose dimension is equal to the number of channels of the associated image, and whose values "\
+"are all 0."\n\
 "* You may add '#ind' to any of the variable name above to retrieve the information for any "\
 "numbered image '[ind]' of the list (when this makes sense). For instance 'ia#0' denotes the average value of the "\
 "first image of the list)."\n\
@@ -4782,6 +4784,7 @@ _display_voxels3d :
   foreach[$nb_images--1] { => ${nm$>} }
   _display_3d_rendering_mode=2
   _display_3d_is_bounding_box=1
+  _display_3d_side_mode=0
   _display[$nb_images--1] "",0,$[] rm[$nb_images--1]
   is_change 0
 
@@ -8763,7 +8766,7 @@ parse_gui_images :
         type=${_f${f}_p${p}_type}
         arg0=${_f${f}_p${p}_a0}
         if isin(['$type'],'file','filein','fileout','folder','value')
-          if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"./\"
+          if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"$type\"
           else
             args= ac=
             repeat ${_f${f}_p${p}_nb_args} { a=$> args.=$ac${_f${f}_p${p}_a${a}} ac=, }
@@ -8797,7 +8800,7 @@ parse_gui_images :
         elif ['$type']=='color'
           if ${_f${f}_p${p}_nb_args}==1" && "['$arg0'][0]==_'#' # Convert colors specified as '#RRGGBB[AA]'
             l[] {
-              ('$arg0') autocrop. {'#'} s x,-2 _f${f}_p${p}_nb_args=$!
+              ('$arg0') autocrop. {'"#"'} s x,-2 _f${f}_p${p}_nb_args=$!
               repeat $! { a=$> hex2dec {$>,t} _f${f}_p${p}_a${a}=${} } rm
             }
           fi
@@ -9088,7 +9091,7 @@ parse_gui_update :
          "#  Generated on : "${-date}", "${-time}\n\
          "#"\n')
   ('"\n# Local Variables:"\n\
-    "# mode: sh"\n\
+    "# mode: gmic"\n\
     "# End:"\n\
     "#"\n\
     "# (End of G\47MIC update file)"')
@@ -10647,13 +10650,41 @@ _select :
   ir:=round($1)
   if !$ir 0
   else l[] {
-      2048,1,1,1,"t = x*2*pi/w; 16*sin(t)^3"
-      2048,1,1,1,"t = x*2*pi/w; 13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t)"
-      a c display_parametric $ir,$ir,1,0,0,0
-      flood 50%,50%,0,0,0,1,0
-      ==. 0
+    2048,1,1,1,"t = x*2*pi/w; 16*sin(t)^3"
+    2048,1,1,1,"t = x*2*pi/w; 13*cos(t) - 5*cos(2*t) - 2*cos(3*t) - cos(4*t)"
+    a c display_parametric $ir,$ir,1,0,0,0
+    flood 50%,50%,0,0,0,1,0
+    ==. 0
   } fi
   => "[2D heart shape]"
+
+
+#@cli shape_hilbert : _size>=0,_nb_recursions>=0
+#@cli : Input a 2D hilbert curve with specified size.
+#@cli : Default values: 'size=512' and 'nb_recursions=5'.
+#@cli : $ shape_hilbert ,
+shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
+  e[^-1] "Input a $1x$1 hilbert curve shape."
+  ir:=round($1)
+  if !$ir 0
+  else l[] {
+    $ir,$ir
+    eval "
+      const n = $2 + 1;
+      const N = 1<<n;
+      const f = w/N;
+      px = py = 0;
+      repeat (N^2,d,
+        for (x = y = 0; t = d; s = 1, s<N, s<<=1,
+          rx = 1&(t>>1); ry = 1&xor(t,rx);
+          !ry?(rx==1?(x = s - 1 - x; y = s - 1 - y); swap(x,y));
+          x+=s*rx; y+=s*ry; t>>=2;
+        );
+        d?polygon(#-1,2,round([f*px,f*py,f*x,f*y]+f/2),1,1);
+        px = x; py = y;
+      )"
+  } fi
+  => "[2D hilbert curve]"
 
 #@cli shape_menger : _nb_iterations>=0
 #@cli : Input a 3D voxelized representation of the Menger sponge.
@@ -11011,7 +11042,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.7.0').
+# $1 = version number (e.g. '3.7.1').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -11971,7 +12002,6 @@ _update_gmicol : # Keep only a subset of existing filters
   "Artistic/Make Squiggly",\
   "Artistic/Paint With Brush",\
   "Artistic/Painting",\
-  "Artistic/Pen Drawing",\
   "Artistic/Photoillustration",\
   "Artistic/Polygonize [Delaunay]",\
   "Artistic/Polygonize [Energy]",\
@@ -12915,7 +12945,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=370,$_version
+  versions=370,371,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -15499,14 +15529,14 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
     +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
     rm.. equalize. 2048 n. 0,2047 round. 1
     0x2048 eval[0] "> # Find single occurrence of each color/vector
-      begin(size = vector2048(); ret = vectors());
+      begin(size = vector2048(); null = vectors());
       I = I; H = i#1; indH = H + 2; sizH = size[H];
       !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
         sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
         copy(i(#indH,0,sizH,0,0),I);
         ++size[H];
       );
-      ret; end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0)))"
+      null; end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0)))"
     a[2--1] y permute. yzcx rm..
 
     if $1" && "$1<w
@@ -15631,7 +15661,7 @@ count_colors : check "isint(${1=0},0)"
     +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
     rm.. equalize. 2048 n. 0,2047 round. 1
     0x2048 eval[0] "> # Find single occurrence of each color/vector.
-      begin(size = vector2048(); nb = 0; ret = vectors());
+      begin(size = vector2048(); nb = 0; null = vectors());
       const max_nb = $1;
       !max_nb || nb<max_nb?(
         I = I; H = i#1; indH = H + 2; sizH = size[H];
@@ -15641,7 +15671,7 @@ count_colors : check "isint(${1=0},0)"
           ++size[H]; ++nb;
         );
       );
-      ret; end(set('nb',sum(size)))"
+      null; end(set('nb',sum(size)))"
     k[0] res.=$sep$nb sep=,
   }
   u $res
@@ -21833,13 +21863,13 @@ img2patches : check "isint($1,1) && ${2=0}>=0 && isint(${3=0},0,3)"
     # Extract patches.
     $1,$1,{$Nw*$Nh},100%
     eval.. "*
-      begin(ret = vector(#s); const boundary = $3);
+      begin(null = vector(#s); const boundary = $3);
       (x%$step) + (y%$step)==0?(
         P = crop(x,y,$psiz,$psiz);
         ind = (y*$Nw + x)/$step;
         draw(#1,P,0,0,ind,0,$psiz,$psiz,1,s);
       );
-      ret"
+      null"
     k. => $nm
   }
 
@@ -21867,7 +21897,7 @@ isophotes : skip ${1=64}
 #@cli : Label connected components for non-zero values (foreground) in selected images.
 #@cli : Similar to 'label' except that 0-valued pixels are not labeled.
 #@cli : If 'is_L2_norm=1', tolerances are compared against L2-norm, otherwise L1-norm is used.
-#@cli : Default value: 'is_high_connectivity=0'.
+#@cli : Default value: 'is_high_connectivity=0' and 'is_L2_norm=1'.
 label_fg : check "$1>=0 && isbool(${2=0}) && isbool(${3=1})"
   e[^-1] "Label foreground connected components on image [1], with tolerance $1 (L"{$3+1}"-norm) and "\
          ${arg0\ !$2,high,low}" connectivity."
@@ -45483,7 +45513,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.7.0</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.0 - Linux 64 bits - 3.7.1</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45514,12 +45544,11 @@ fx_gmicky_preview :
 #@gui : - <b>2024/06/14</b> : version <i>3.4.0</i>.\n
 #@gui : - <b>2024/12/31</b> : version <i>3.5.0</i>.\n
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
-#@gui : - <b>2025/12/29</b> : version <i>3.7.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2026/02/13</b> : version <i>3.7.0</i> (Current stable).</span>\n
-##@gui : - <b>2026/02/XX</b> : version <i>3.7.1</i> (Current pre-release).\n
+#@gui : - <b>2026/02/16</b> : version <i>3.7.1</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
-##@gui : url = link{"View changelog for next major version (3.7)","https://discuss.pixls.us/t/on-the-road-to-3-7"}
+#@gui : url = link{"View changelog for next major version (3.8)","https://discuss.pixls.us/t/on-the-road-to-gmic-3-8"}
 #@gui : url = link{"View changelog for current major version (3.7)","https://discuss.pixls.us/t/release-of-gmic-3-7"}
 
 #@gui Send Feedback : _none_,fx_send_feedback
@@ -66129,6 +66158,8 @@ fx_solve_maze_preview :
 
 #@cli _gallery_codesamples
 #@cli : This entry defines some examples of coding fun filters for the G'MIC gallery page.
+#@cli : $ https://gmic.eu/samples/rotating_dla.gmic go _fps=15 _label="Rotating~Diffusion-Limited~Aggregation"
+#@cli : $ https://gmic.eu/samples/hilbert_curve.gmic go _fps=15 _label="Hilbert~Curve"
 #@cli : $ https://gmic.eu/samples/french_flag.gmic go _fps=20 _label="French~Flag"
 #@cli : $ https://gmic.eu/samples/snow.gmic go _fps=20 _label="Snow"
 #@cli : $ https://gmic.eu/samples/fire.gmic go _fps=15 _label="Fire"
@@ -66146,7 +66177,7 @@ fx_solve_maze_preview :
 #@cli : $ https://gmic.eu/samples/rotozoom.gmic go _fps=15 _label="Rotozoom"
 
 # Local Variables:
-# mode: sh
+# mode: gmic
 # End:
 #
 # (End of G'MIC custom commands)

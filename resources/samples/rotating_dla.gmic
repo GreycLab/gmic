@@ -1,0 +1,35 @@
+#!/usr/bin/env gmic
+# File : rotating_dla.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Rotating Diffusion Limited Aggregation" e[] "" animate 60
+
+# Main function
+go :
+  v 0
+  480,480 noise 0.001,2 != 0
+  nbf=300
+  repeat $nbf { f=$>
+    e[] "\r  > Frame "{$f+1}/$nbf
+    +>[0] 0.45 distance. 1 b. 1 g. xy,6 a[-2--1] c orientation.
+    1000,1,1,1,":
+      do (x = v(w#0 - 1); y = v(h#0 - 1), i(#0,x,y));
+      repeat (w#0,k,
+        G = I(#-1,x,y,0,1);
+        dl = 1/max(abs(G));
+        nx = x - dl*G[0];
+        ny = y - dl*G[1];
+        i(#0,round(nx),round(ny))?break();
+        x = nx; y = ny;
+      );
+      i(#0,x,y) = 1"
+    rm[-2,-1]
+
+    # Render frame.
+    +b[0] 2,3 *. 800 c. 0,255 map. curl
+    rotate[0] 2,1,0,50%,50% zoom[0] 0.97
+  }
+  rm[0]
+
+# End of file.
