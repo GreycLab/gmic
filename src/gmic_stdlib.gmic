@@ -14717,7 +14717,7 @@ normalize_sum :
 #@cli : $$
 orientation :
   e[^-1] "Compute pointwise orientation vectors, in image$?."
-  repeat $! { +norm[$>] replace. 0,1 /[$>,-1] }
+  foreach { +norm replace. 0,1 / }
 
 #@cli otsu : _nb_levels>0
 #@cli : Hard-threshold selected images using Otsu's method.
@@ -14962,6 +14962,15 @@ threshold : check "isexpr($1) && isbool(${2=0})"
        i<=-value?i + value:0"
   else ge $1
   fi
+
+#@cli unitnorm : _p>=0
+#@cli : Compute the pointwise Lp-norm in selected images.
+#@cli : Default value: 'p=2'.
+#@cli : $ image.jpg +unitnorm 2
+unitnorm : skip "${1=2}"
+  l[] { if isnum($1) p=$1 else p=2 noarg fi onfail p=2 noarg }
+  e[^-1] "Compute pointwise L"$p"-norm, in image$?."
+  foreach { +normp $p replace. 0,1 / }
 
 #@cli vector2tensor
 #@cli : Convert selected vector fields to corresponding tensor fields.
