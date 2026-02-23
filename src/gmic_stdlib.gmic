@@ -47547,6 +47547,7 @@ fx_lylejk_painting :
 #@gui : Radius (px) = float(4,1,32)
 #@gui : Opacity (%) = float(10,0,100)
 #@gui : Inertia (%) = float(15,0,100)
+#@gui : Curviness (%) = float(100,0,300)
 #@gui : Anisotropy (%) = float(85,0,100)
 #@gui : Smoothness = float(0.5,0,5)
 #@gui : Coherence = float(3,0,16)
@@ -47558,7 +47559,8 @@ fx_lylejk_painting :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/23</i>.</small>")
 __fx_marker_drawing :
-  length,radius,opacity,inertia,anisotropy,smoothness,coherence,nb_iterations,b_type,b_blur,b_R,b_G,b_B,b_A=${1-14}
+  length,radius,opacity,inertia,curviness,anisotropy,smoothness,coherence,nb_iterations,\
+    b_type,b_blur,b_R,b_G,b_B,b_A=${1-15}
 
 fx_marker_drawing :
   __fx_marker_drawing $*
@@ -47591,6 +47593,7 @@ fx_marker_drawing :
         const radius = $radius;
         const opacity = $opacity%;
         const inertia = length*$inertia%;
+        const curviness = length*$curviness%;
 
         # Randomly pick a starting location and a starting orientation.
         do (X = v([w#$img,h#$img] - 1), i(#$binary,X));
@@ -47620,7 +47623,7 @@ fx_marker_drawing :
           # Draw spline.
           pind = (ind + 1)%length; pind4 = 4*pind;
           Xp = XUs[pind4,2]; Up = XUs[pind4 + 2,2];
-          Xp[0]>=0?(spline(Xp,length*unitnorm(Up),X,length*unitnorm(U)));
+          Xp[0]>=0?(spline(Xp,curviness*unitnorm(Up),X,curviness*unitnorm(U)));
         )" rm.
     }
     k[canvas] => $nm
@@ -47629,7 +47632,8 @@ fx_marker_drawing :
 fx_marker_drawing_preview :
   __fx_marker_drawing $*
   fx_marker_drawing $*
-  u "{"$length"}{"$radius"}{"$opacity"}{"$intertia"}{"$anisotropy"}{"$smoothness"}{"$coherence"}{"$iterations"}"\
+  u "{"$length"}{"$radius"}{"$opacity"}{"$inertia"}{"$curviness"}"\
+    "{"$anisotropy"}{"$smoothness"}{"$coherence"}{"$iterations"}"\
     "{"$b_type"}{"$b_blur"}_"{$b_type==0?2:1}"{"$b_R,$b_G,$b_B,$b_A"}_"{$b_type==1?2:1}
 
 #@gui Paint With Brush : fx_paint_with_brush, fx_paint_with_brush_preview(0)
