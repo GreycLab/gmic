@@ -500,9 +500,11 @@ Outside multiline strings:
   3. Subtract the leading-close contribution of the current line.
 
 Inside multiline strings (math expressions):
-  1. Find the previous non-empty line (may itself be inside the string).
-  2. Start from that line's indentation + paren/bracket delta.
-  3. Subtract leading closing parens/brackets of the current line.
+  1. If the line starts with ')' or ']', locate the matching opener and
+     align with its indentation.  This check is done before the backward
+     scan so that point is still on the current line when the search runs.
+  2. Otherwise find the previous non-empty line, start from its indentation
+     + paren/bracket delta, and subtract leading closers.
 
 In both cases: clamp to zero."
   (interactive)
@@ -511,41 +513,54 @@ In both cases: clamp to zero."
          (indent 0))
     (save-excursion
       (beginning-of-line)
-      (let ((found nil))
-        (while (and (not found) (not (bobp)))
-          (forward-line -1)
-          (let ((prev (gmic--current-line-string)))
-            (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
-              (if in-string
-                  ;; Inside a math string: use paren/bracket counting.
-                  ;; If current line starts with ) or ], find the matching opener.
-                  (let ((matching (gmic--find-matching-open-indent current-line)))
-                    (if matching
-                        (progn (setq indent matching) (setq found t))
+      ;; Inside a multiline string a line beginning with ) or ] must align
+      ;; with the line that opened the matching paren/bracket.  We resolve
+      ;; this HERE, while point is still on the current line, because
+      ;; gmic--find-matching-open-indent scans backward from (point) and
+      ;; would produce wrong results if called after forward-line -1 below.
+      (let ((matching (when in-string
+                        (gmic--find-matching-open-indent current-line))))
+        (if matching
+            (setq indent matching)
+          ;; General case: scan backward for the previous non-empty line.
+          (let ((found nil))
+            (while (and (not found) (not (bobp)))
+              (forward-line -1)
+              (let ((prev (gmic--current-line-string)))
+                (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
+                  (if in-string
+                      ;; Inside a math string: base indent on paren delta of
+                      ;; the previous line.
+                      ;; We add back paren-leading-close-delta of the previous
+                      ;; line because those leading closers were already
+                      ;; "spent" to dedent the previous line itself — they
+                      ;; must not reduce the next line's indent a second time.
+                      ;; Example: after "    );" (indent=4, delta=-2, leading=2)
+                      ;; the next line should sit at 4+(-2)+2=4, not 4+(-2)=2.
                       (progn
                         (setq indent (+ (gmic--line-indentation prev)
-                                        (gmic--paren-delta prev)))
+                                        (gmic--paren-delta prev)
+                                        (gmic--paren-leading-close-delta prev)))
                         (when (gmic--line-opens-string-p prev)
                           (setq indent (+ indent gmic-indent-offset)))
-                        (setq found t))))
-                ;; Outside strings: skip lines that are inside a string
-                (let ((prev-in-string (gmic--in-multiline-string-p)))
-                  (unless prev-in-string
-                    (setq indent (+ (gmic--line-indentation prev)
-                                    (gmic--line-delta prev)))
-                    (setq found t)))))))))
-    ;; Extra indentation if we are inside a multiline string
-    ;; is now handled above (only on the first line after the opening quote).
-    ;; A command definition is always at column 0
+                        (setq found t))
+                    ;; Outside strings: skip lines that are inside a string.
+                    (let ((prev-in-string (gmic--in-multiline-string-p)))
+                      (unless prev-in-string
+                        (setq indent (+ (gmic--line-indentation prev)
+                                        (gmic--line-delta prev)))
+                        (setq found t)))))))))))
+    ;; A command definition is always at column 0.
     (when (gmic--line-is-command-def-p current-line)
       (setq indent 0))
-    ;; Adjust for leading closers on the current line
+    ;; Adjust for leading closers on the current line.
+    ;; The matching-open path already returns the final column, so skip the
+    ;; subtraction in that case.
     (if in-string
-        ;; leading closers already handled by gmic--find-matching-open-indent
         (unless (gmic--find-matching-open-indent current-line)
           (setq indent (- indent (gmic--paren-leading-close-delta current-line))))
       (setq indent (- indent (gmic--line-leading-close-delta current-line))))
-    ;; Clamp
+    ;; Clamp to zero.
     (setq indent (max 0 indent))
     (indent-line-to indent)))
 
