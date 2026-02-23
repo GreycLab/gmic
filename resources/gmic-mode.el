@@ -283,6 +283,12 @@ The ':' must not be followed by '=' to avoid matching 'var:=value'.")
   "Return t if LINE-STR is a G'MIC command definition."
   (string-match-p gmic--command-def-re line-str))
 
+(defun gmic--line-is-cli-gui-comment-p (line-str)
+  "Return t if LINE-STR is a G'MIC special documentation comment.
+Lines starting with `#@cli' or `#@gui' (possibly preceded by whitespace)
+have a special status in G'MIC and must always be indented at column 0."
+  (string-match-p "^[[:space:]]*#@\\(?:cli\\|gui\\)" line-str))
+
 (defun gmic--line-delta (line-str)
   "Return the net indentation delta produced by LINE-STR.
 Positive means the *next* line should be indented further.
@@ -535,7 +541,10 @@ Inside multiline strings (math expressions):
   2. Otherwise find the previous non-empty line, start from its indentation
      + paren/bracket delta, and subtract leading closers.
 
-In both cases: clamp to zero."
+In both cases: clamp to zero.
+Special cases forced to column 0 regardless of context:
+  - G'MIC command definitions (name :)
+  - `#@cli' and `#@gui' documentation comment lines."
   (interactive)
   (let* ((in-string (gmic--in-multiline-string-p))
          (current-line (gmic--current-line-string))
@@ -587,7 +596,8 @@ In both cases: clamp to zero."
     ;; A command definition is always at column 0.
     ;; (Skipped when we already handled a lone closing-quote line above.)
     (unless (and in-string (gmic--line-is-closing-quote-p current-line))
-      (when (gmic--line-is-command-def-p current-line)
+      (when (or (gmic--line-is-command-def-p current-line)
+                (gmic--line-is-cli-gui-comment-p current-line))
         (setq indent 0))
       ;; Adjust for leading closers on the current line.
       ;; The matching-open path already returns the final column, so skip the
