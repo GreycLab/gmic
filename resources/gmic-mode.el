@@ -490,6 +490,35 @@ Returns nil if not inside a multiline string or line doesn't start with a closer
   "Return t if LINE-STR opens a multiline string (odd number of quotes)."
   (= (% (gmic--count-unescaped-quotes line-str) 2) 1))
 
+(defun gmic--line-is-closing-quote-p (line-str)
+  "Return t if LINE-STR consists solely of a closing double-quote
+\(possibly surrounded by whitespace).  Such a line ends a multiline
+string and should be indented at the same level as the line that
+opened it, not at the indentation level of the string contents."
+  (string-match-p "^[[:space:]]*\"[[:space:]]*$" line-str))
+
+(defun gmic--find-string-opener-indent ()
+  "Scan backward from the current line to find the line that opened the
+current multiline string, and return its indentation column.
+Returns 0 if the opener cannot be found."
+  (save-excursion
+    (beginning-of-line)
+    (let ((quotes 0)
+          (result 0)
+          (found nil))
+      ;; Walk backward; accumulate quote counts.  When the running total
+      ;; becomes odd we have found the line that contains the unmatched
+      ;; opening quote.
+      (while (and (not found) (not (bobp)))
+        (forward-line -1)
+        (let ((line (gmic--current-line-string)))
+          (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" line)
+            (setq quotes (+ quotes (gmic--count-unescaped-quotes line)))
+            (when (= (% quotes 2) 1)
+              (setq result (gmic--line-indentation line))
+              (setq found t)))))
+      result)))
+
 
 (defun gmic-indent-line ()
   "Indent the current line for `gmic-mode'.
@@ -511,6 +540,11 @@ In both cases: clamp to zero."
   (let* ((in-string (gmic--in-multiline-string-p))
          (current-line (gmic--current-line-string))
          (indent 0))
+    ;; Special case: a line containing only a closing `"` ends a multiline
+    ;; string.  It must be indented at the same column as the line that
+    ;; opened the string, not at the indentation of the string body.
+    (if (and in-string (gmic--line-is-closing-quote-p current-line))
+        (indent-line-to (gmic--find-string-opener-indent))
     (save-excursion
       (beginning-of-line)
       ;; Inside a multiline string a line beginning with ) or ] must align
@@ -549,20 +583,22 @@ In both cases: clamp to zero."
                       (unless prev-in-string
                         (setq indent (+ (gmic--line-indentation prev)
                                         (gmic--line-delta prev)))
-                        (setq found t)))))))))))
+                        (setq found t))))))))))))
     ;; A command definition is always at column 0.
-    (when (gmic--line-is-command-def-p current-line)
-      (setq indent 0))
-    ;; Adjust for leading closers on the current line.
-    ;; The matching-open path already returns the final column, so skip the
-    ;; subtraction in that case.
-    (if in-string
-        (unless (gmic--find-matching-open-indent current-line)
-          (setq indent (- indent (gmic--paren-leading-close-delta current-line))))
-      (setq indent (- indent (gmic--line-leading-close-delta current-line))))
-    ;; Clamp to zero.
-    (setq indent (max 0 indent))
-    (indent-line-to indent)))
+    ;; (Skipped when we already handled a lone closing-quote line above.)
+    (unless (and in-string (gmic--line-is-closing-quote-p current-line))
+      (when (gmic--line-is-command-def-p current-line)
+        (setq indent 0))
+      ;; Adjust for leading closers on the current line.
+      ;; The matching-open path already returns the final column, so skip the
+      ;; subtraction in that case.
+      (if in-string
+          (unless (gmic--find-matching-open-indent current-line)
+            (setq indent (- indent (gmic--paren-leading-close-delta current-line))))
+        (setq indent (- indent (gmic--line-leading-close-delta current-line))))
+      ;; Clamp to zero.
+      (setq indent (max 0 indent))
+      (indent-line-to indent))))
 
 ;;;; -------------------------------------------------------------------------
 ;;;; Imenu support — navigate to command definitions
