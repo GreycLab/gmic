@@ -47542,6 +47542,83 @@ fx_lylejk_painting :
     texturize_canvas. $4,4 => $nm
   }
 
+#@gui Marker Drawing : fx_marker_drawing, fx_marker_drawing(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generate marker drawing effect.
+#@gui : "}, sep = separator()
+#@gui : Length (px) = int(70,0,256)
+#@gui : Radius (px) = float(4,1,32)
+#@gui : Opacity (%) = float(10,0,100)
+#@gui : Inertia (%) = float(20,0,100)
+#@gui : Anisotropy (%) = float(85,0,100)
+#@gui : Smoothness = float(0.5,0,5)
+#@gui : Coherence = float(3,0,16)
+#@gui : Iterations = int(3,1,64)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/23</i>.</small>")
+fx_marker_drawing :
+  length,radius,opacity,inertia,anisotropy,smoothness,coherence,nb_iterations=${1-8}
+
+  foreach { nm={n} to_rgb => img
+    +diffusiontensors 0,{$anisotropy%},$smoothness,$coherence,0 channels. 0,3 f. "[ i0,i1,i1,i2 ]" => tensors
+    {img,[w,h,1,1]} => binary
+    {img,[w,h,1,4]} => canvas
+
+    repeat $nb_iterations {
+      {round(wh*3%)},1,1,1,":
+        spline(_X0,_U0,_X1,_U1) = (
+          ref(_X0,sp_X0); ref(_U0,sp_U0); ref(_X1,sp_X1); ref(_U1,sp_U1);
+          sp_C = transpose(solve([ 0,0,0,1,1,1,1,1,0,0,1,0,3,2,1,0 ],[ sp_X0,sp_X1,sp_U0,sp_U1 ],2),2);
+          sp_N = ceil(norm(sp_X1 - sp_X0) + 0.5*(norm(sp_U0) + norm(sp_U1)))/4;
+          repeat (sp_N,sp_n,
+            sp_t = lerp(0,1,sp_n/(sp_N - 1));
+            sp_X = mul(sp_C,[ sp_t^3, sp_t^2, sp_t, 1 ],1);
+            sp_U = mul(sp_C,[ 3*sp_t^2, 2*sp_t, 1, 0 ],1);
+            sp_ang = atan2(sp_U[1],sp_U[0]);
+            ellipse(#$canvas,round(sp_X),3*radius,radius,sp_ang,opacity,RGB,255);
+            i(#$binary,round(sp_X)) = 1;
+          );
+        );
+
+        const length = $length;
+        const radius = $radius;
+        const opacity = $opacity%;
+        const inertia = length*$inertia%;
+
+        # Randomly pick a starting location and a starting orientation.
+        do (X = v([w#$img,h#$img] - 1), i(#$binary,X));
+
+        !i(#$binary,X)?(
+          U = cexp([0,u(360°)]);
+          RGB = I(#$img,X);
+          XUs = vector(#4*length,-1);
+          copy(XUs[0],X); copy(XUs[2],U);
+
+          # Explore streamline.
+          ind = 1;
+          nb_cross = 0;
+          repeat (512,
+            T = I(#$tensors,X,1,1);
+            U = T*U;
+            U/=max(1e-8,abs(U));
+            nX = X + U;
+            i(#$binary,nX,1)?++nb_cross;
+            nb_cross>inertia?break();
+            X = nX;
+            ind4 = ind*4;
+            copy(XUs[ind4],X); copy(XUs[ind4 + 2],U);
+            ind = (ind + 1)%length;
+          );
+
+          # Draw spline.
+          pind = (ind + 1)%length; pind4 = 4*pind;
+          Xp = XUs[pind4,2]; Up = XUs[pind4 + 2,2];
+          Xp[0]>=0?(spline(Xp,length*unitnorm(Up),X,length*unitnorm(U)));
+        )" rm.
+    }
+    k[canvas] => $nm
+  }
+
 #@gui Paint With Brush : fx_paint_with_brush, fx_paint_with_brush_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Repaint image using a virtual brush.
