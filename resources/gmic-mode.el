@@ -133,28 +133,6 @@
     "z")
   "G'MIC native built-in commands, hard-coded in C++.")
 
-(defvar gmic--math-functions
-  '("abs" "acos" "arg" "argkth" "argmax" "argmin" "argmaxabs" "argminabs"
-    "asin" "atan" "atan2" "avg" "begin" "begin_t" "bool" "cbrt" "ceil"
-    "complex" "conj" "copy" "correlate" "cos" "cosh" "critical" "cross"
-    "cut" "da_back" "da_capacity" "da_find" "da_freeze" "da_insert"
-    "da_pop" "da_push" "da_remove" "da_resize" "da_size" "date" "debug"
-    "det" "diag" "dot" "e" "eig" "ellipse" "end" "end_t" "eval" "exp"
-    "expr" "eye" "f2ui" "fact" "find" "floor" "fsize" "gauss"
-    "haar" "ihaar" "id" "if" "ilog2" "im" "inf" "inrange" "int"
-    "inv" "isfile" "isdir" "isinf" "isnan" "isnum" "isvec"
-    "kth" "lerp" "linear" "log" "log2" "log10" "logit" "lowercase"
-    "lu" "map" "max" "maxabs" "median" "merge" "min" "minabs"
-    "mul" "nan" "norm" "normP" "norminf" "normalize" "o" "permute"
-    "pi" "print" "prod" "pseudoinv" "q" "qr" "rand" "re" "resize"
-    "reverse" "rol" "ror" "rot" "round" "run"
-    "s" "same" "set" "sign" "sin" "sinc" "sinh" "size" "solve" "sort"
-    "sqr" "sqrt" "std" "stod" "store" "strcat" "strcmp" "strcopy"
-    "strpbrk" "strrstr" "strstr" "strtod" "strtol" "strupr"
-    "sum" "svd" "tan" "tanh" "trace" "transpose" "trunc" "type" "ui2f"
-    "unitnorm" "uppercase" "var" "vector" "vmax" "vmin"
-    "whiledo" "xor")
-  "G'MIC math expression functions.")
 
 (defconst gmic-font-lock-keywords
   (list
@@ -188,28 +166,22 @@
      (1 font-lock-preprocessor-face)
      (2 font-lock-builtin-face))
 
-   ;; 7. Math functions inside double-quoted strings or braces
-   (cons (concat "\\_<"
-                 (regexp-opt gmic--math-functions)
-                 "\\s-*(")
-         '(0 font-lock-type-face))
-
-   ;; 8. Native built-in commands — anywhere on the line, at word boundary
+   ;; 7. Native built-in commands — anywhere on the line, at word boundary
    (cons (concat "\\_<" (regexp-opt gmic--builtin-commands t) "\\_>")
          'font-lock-builtin-face)
 
-   ;; 9. Symbolic native operators: +3d -3d *3d /3d m* m/ => != == <= >= << >>
+   ;; 8. Symbolic native operators: +3d -3d *3d /3d m* m/ => != == <= >= << >>
    '("\\(?:\\+3d\\|-3d\\|\\*3d\\|/3d\\|m\\*\\|m/\\|!=\\|==\\|<=\\|>=\\|<<\\|>>\\|=>\\)"
      . font-lock-builtin-face)
 
-   ;; 10. Numeric literals (integers and floats, including degree notation)
+   ;; 8. Numeric literals (integers and floats, including degree notation)
    '("\\b\\([0-9]+\\.?[0-9]*\\(?:e[+-]?[0-9]+\\)?°?\\)\\b"
      (1 font-lock-constant-face))
 
-   ;; 11. Shebang line
+   ;; 9. Shebang line
    '("^#!.*$" . font-lock-comment-face)
 
-   ;; 12. Special constants
+   ;; 10. Special constants
    '("\\_<\\(pi\\|inf\\|nan\\|true\\|false\\)\\_>" . font-lock-constant-face))
   "Font-lock keywords for `gmic-mode'.")
 
@@ -236,10 +208,20 @@
           "\\_>\\)")
   "Regexp matching block-closing keywords or isolated '}' in G'MIC.")
 
+(defun gmic--comment-start-p (str i)
+  "Return t if '#' at position I in STR starts a comment.
+A '#' is a comment only when at line start (after whitespace) or
+preceded by a space or tab.  A '#' immediately following a non-blank
+character is a G'MIC image selector (e.g. '#$var', '#0')."
+  (or (= i 0)
+      (let ((prev (aref str (1- i))))
+        (or (= prev ?\s) (= prev ?\t)))))
+
 (defun gmic--strip-comments-and-strings (line-str)
   "Return LINE-STR with comments and string contents removed.
 Keeps the quote delimiters themselves to preserve quote counting,
-but removes everything between them."
+but removes everything between them.
+A '#' is only a comment when preceded by a space/tab or at line start."
   (let ((result "")
         (in-string nil)
         (i 0)
@@ -250,7 +232,9 @@ but removes everything between them."
          ((= ch ?\")
           (setq in-string (not in-string))
           (setq result (concat result "\"")))
-         ((and (not in-string) (= ch ?#))
+         ((and (not in-string)
+               (= ch ?#)
+               (gmic--comment-start-p line-str i))
           (setq i len))               ; stop — rest is comment
          ((not in-string)
           (setq result (concat result (string ch))))))
@@ -259,8 +243,8 @@ but removes everything between them."
 
 (defun gmic--strip-comments (line-str)
   "Return LINE-STR with any trailing G'MIC comment removed.
-A comment starts at '#' unless it is inside a double-quoted string.
-String contents are preserved (unlike `gmic--strip-comments-and-strings')."
+String contents are preserved (unlike `gmic--strip-comments-and-strings').
+A '#' is only a comment when preceded by a space/tab or at line start."
   (let ((result "")
         (in-string nil)
         (i 0)
@@ -271,8 +255,10 @@ String contents are preserved (unlike `gmic--strip-comments-and-strings')."
          ((= ch ?\")
           (setq in-string (not in-string))
           (setq result (concat result "\"")))
-         ((and (not in-string) (= ch ?#))
-          (setq i len))
+         ((and (not in-string)
+               (= ch ?#)
+               (gmic--comment-start-p line-str i))
+          (setq i len))               ; stop — rest is comment
          (t
           (setq result (concat result (string ch))))))
       (setq i (1+ i)))
@@ -413,23 +399,115 @@ An odd total means we are inside an open string."
       (setq i (1+ i)))
     i))
 
+(defun gmic--paren-delta (line-str)
+  "Return the net paren/bracket delta for LINE-STR.
+Counts '(' and '[' as openers, ')' and ']' as closers.
+Characters inside nested strings (double-quoted) are ignored.
+A '#' is only treated as a comment when preceded by a space/tab or at
+line start; '#$var' and '#N' are G'MIC image selectors, not comments."
+  (let ((delta 0)
+        (in-string nil)
+        (i 0)
+        (len (length line-str)))
+    (while (< i len)
+      (let ((ch (aref line-str i)))
+        (cond
+         ((= ch ?\")
+          (setq in-string (not in-string)))
+         ((not in-string)
+          (cond
+           ((or (= ch ?\() (= ch ?\[)) (setq delta (1+ delta)))
+           ((or (= ch ?\)) (= ch ?\])) (setq delta (1- delta)))
+           ((= ch ?#)
+            (when (gmic--comment-start-p line-str i)
+              (setq i len)))))))  ; stop — rest is comment
+      (setq i (1+ i)))
+    (* delta gmic-indent-offset)))
+
+(defun gmic--paren-leading-close-delta (line-str)
+  "Return the dedent for LINE-STR itself due to leading ')' or ']'.
+Counts consecutive closing parens/brackets (possibly separated by
+spaces) that appear before any opener on the line."
+  (let ((delta 0)
+        (i 0)
+        (len (length line-str)))
+    ;; Skip leading whitespace
+    (while (and (< i len)
+                (let ((ch (aref line-str i)))
+                  (or (= ch ?\s) (= ch ?\t))))
+      (setq i (1+ i)))
+    ;; Count leading closers — stop at anything that is not ) ] or space
+    (while (< i len)
+      (let ((ch (aref line-str i)))
+        (cond
+         ((or (= ch ?\s) (= ch ?\t))
+          (setq i (1+ i)))
+         ((or (= ch ?\)) (= ch ?\]))
+          (setq delta (1+ delta))
+          (setq i (1+ i)))
+         (t
+          (setq i len)))))
+    (* delta gmic-indent-offset)))
+
+(defun gmic--find-matching-open-indent (line-str)
+  "For a LINE-STR starting with ')' or ']', find the indentation of the
+line that opened the corresponding paren/bracket.
+Returns nil if not inside a multiline string or line doesn't start with a closer."
+  (let* ((stripped (string-trim-left line-str))
+         (first-char (and (> (length stripped) 0) (aref stripped 0))))
+    (when (and first-char (or (= first-char ?\)) (= first-char ?\])))
+      ;; Count how many leading closers we need to match
+      (let ((need 0)
+            (i 0)
+            (len (length stripped)))
+        (while (and (< i len)
+                    (let ((ch (aref stripped i)))
+                      (or (= ch ?\)) (= ch ?\]) (= ch ?\s) (= ch ?\t))))
+          (let ((ch (aref stripped i)))
+            (when (or (= ch ?\)) (= ch ?\]))
+              (setq need (1+ need))))
+          (setq i (1+ i)))
+        (save-excursion
+          (beginning-of-line)
+          (let ((balance need)
+                (result nil))
+            (while (and (> balance 0) (not (bobp)))
+              (forward-line -1)
+              (let ((prev (gmic--current-line-string)))
+                (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
+                  (let* ((d (/ (gmic--paren-delta prev) gmic-indent-offset))
+                         (new-balance (- balance d)))
+                    (when (<= new-balance 0)
+                      ;; The closing paren aligns with the indentation of
+                      ;; the line that opened the corresponding block.
+                      (setq result (gmic--line-indentation prev)))
+                    (setq balance new-balance)))))
+            result))))))
+
+
+
 (defun gmic--line-opens-string-p (line-str)
   "Return t if LINE-STR opens a multiline string (odd number of quotes)."
   (= (% (gmic--count-unescaped-quotes line-str) 2) 1))
 
+
 (defun gmic-indent-line ()
   "Indent the current line for `gmic-mode'.
 
-Algorithm:
-  1. Determine if the current line is inside a multiline string.
-  2. Find the previous non-empty line that is NOT inside a multiline
-     string (i.e. the last structural reference line).
-  3. Start from that line's indentation + delta.
-  4. If we are inside a multiline string, add one extra level.
-  5. Subtract the leading-close contribution of the CURRENT line.
-  6. Clamp to zero."
+Outside multiline strings:
+  1. Find the previous non-empty line that is not inside a multiline string.
+  2. Start from that line's indentation + keyword delta.
+  3. Subtract the leading-close contribution of the current line.
+
+Inside multiline strings (math expressions):
+  1. Find the previous non-empty line (may itself be inside the string).
+  2. Start from that line's indentation + paren/bracket delta.
+  3. Subtract leading closing parens/brackets of the current line.
+
+In both cases: clamp to zero."
   (interactive)
   (let* ((in-string (gmic--in-multiline-string-p))
+         (current-line (gmic--current-line-string))
          (indent 0))
     (save-excursion
       (beginning-of-line)
@@ -438,21 +516,35 @@ Algorithm:
           (forward-line -1)
           (let ((prev (gmic--current-line-string)))
             (unless (string-match-p "^\\s-*\\(?:#.*\\)?$" prev)
-              ;; Only use this line as reference if it is not itself inside a string
-              (let ((prev-in-string (gmic--in-multiline-string-p)))
-                (unless prev-in-string
-                  (setq indent (+ (gmic--line-indentation prev)
-                                  (gmic--line-delta prev)))
-                  (setq found t))))))))
+              (if in-string
+                  ;; Inside a math string: use paren/bracket counting.
+                  ;; If current line starts with ) or ], find the matching opener.
+                  (let ((matching (gmic--find-matching-open-indent current-line)))
+                    (if matching
+                        (progn (setq indent matching) (setq found t))
+                      (progn
+                        (setq indent (+ (gmic--line-indentation prev)
+                                        (gmic--paren-delta prev)))
+                        (when (gmic--line-opens-string-p prev)
+                          (setq indent (+ indent gmic-indent-offset)))
+                        (setq found t))))
+                ;; Outside strings: skip lines that are inside a string
+                (let ((prev-in-string (gmic--in-multiline-string-p)))
+                  (unless prev-in-string
+                    (setq indent (+ (gmic--line-indentation prev)
+                                    (gmic--line-delta prev)))
+                    (setq found t)))))))))
     ;; Extra indentation if we are inside a multiline string
-    (when in-string
-      (setq indent (+ indent gmic-indent-offset)))
+    ;; is now handled above (only on the first line after the opening quote).
     ;; A command definition is always at column 0
-    (when (gmic--line-is-command-def-p (gmic--current-line-string))
+    (when (gmic--line-is-command-def-p current-line)
       (setq indent 0))
     ;; Adjust for leading closers on the current line
-    (let ((cur (gmic--current-line-string)))
-      (setq indent (- indent (gmic--line-leading-close-delta cur))))
+    (if in-string
+        ;; leading closers already handled by gmic--find-matching-open-indent
+        (unless (gmic--find-matching-open-indent current-line)
+          (setq indent (- indent (gmic--paren-leading-close-delta current-line))))
+      (setq indent (- indent (gmic--line-leading-close-delta current-line))))
     ;; Clamp
     (setq indent (max 0 indent))
     (indent-line-to indent)))
