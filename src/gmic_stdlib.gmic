@@ -47542,7 +47542,7 @@ fx_lylejk_painting :
     texturize_canvas. $4,4 => $nm
   }
 
-#@gui Marker Drawing : fx_marker_drawing, fx_marker_drawing(0)
+#@gui Marker Drawing : fx_marker_drawing, fx_marker_drawing_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generate marker drawing effect.
 #@gui : "}, sep = separator()
@@ -47555,13 +47555,16 @@ fx_lylejk_painting :
 #@gui : Coherence = float(3,0,16)
 #@gui : Iterations = int(3,1,64)
 #@gui : sep = separator()
-#@gui : Background Type = choice("Blurred Image","Solid Color")
-#@gui : Background Blur = float(20,0,128)
-#@gui : Background Color = color(255,255,255,0)
+#@gui : Background Type = choice(1,"Blurred","Color")
+#@gui : Background Blur = float(20,0,128)_1
+#@gui : Background Color = color(255,255,255,255)_2
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/23</i>.</small>")
-fx_marker_drawing :
+__fx_marker_drawing :
   length,radius,opacity,inertia,anisotropy,smoothness,coherence,nb_iterations,b_type,b_blur,b_R,b_G,b_B,b_A=${1-14}
+
+fx_marker_drawing :
+  __fx_marker_drawing $*
 
   foreach { nm={n} to_rgb => img
     +diffusiontensors 0,{$anisotropy%},$smoothness,$coherence,0 channels. 0,3 f. "[ i0,i1,i1,i2 ]" => tensors
@@ -47625,6 +47628,12 @@ fx_marker_drawing :
     }
     k[canvas] => $nm
   }
+
+fx_marker_drawing_preview :
+  __fx_marker_drawing $*
+  fx_marker_drawing $*
+  u "{"$length"}{"$radius"}{"$opacity"}{"$intertia"}{"$anisotropy"}{"$smoothness"}{"$coherence"}{"$iterations"}"\
+    "{"$b_type"}{"$b_blur"}_"{$b_type==0?2:1}"{"$b_R,$b_G,$b_B,$b_A"}_"{$b_type==1?2:1}
 
 #@gui Paint With Brush : fx_paint_with_brush, fx_paint_with_brush_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
