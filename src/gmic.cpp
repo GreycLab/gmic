@@ -2167,7 +2167,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
       gmic_instance.get_variable(str,variable_sizes,&image_names);
     if (value && *value) {
       char end;
-      if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = 0;
+      if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = cimg::type<double>::nan();
     }
   }
   }
