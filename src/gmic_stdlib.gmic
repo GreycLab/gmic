@@ -47595,14 +47595,14 @@ fx_marker_drawing :
         const inertia = length*$inertia%;
         const curviness = length*$curviness%;
 
-        # Randomly pick a starting location and a starting orientation.
-        do (X = v([w#$img,h#$img] - 1), i(#$binary,X));
+        # Randomly pick a starting location.
+        do (X0 = v([w#$img,h#$img] - 1), i(#$binary,X0));
 
-        !i(#$binary,X)?(
+        !i(#$binary,X0)?(
+          X = X0;
           U = cexp([0,u(360°)]);
-          RGB = I(#$img,X);
           XUs = vector(#4*length,-1);
-          copy(XUs[0],X); copy(XUs[2],U);
+          copy(XUs[0],[ X,U ]);
 
           # Explore streamline.
           ind = 1;
@@ -47616,14 +47616,14 @@ fx_marker_drawing :
             nb_cross>inertia || !min(inrange(nX,[0,0],[w#$img,h#$img]))?break();
             X = nX;
             ind4 = ind*4;
-            copy(XUs[ind4],X); copy(XUs[ind4 + 2],U);
+            copy(XUs[ind4],[ X,U ]);
             ind = (ind + 1)%length;
           );
 
           # Draw spline.
           pind = (ind + 1)%length; pind4 = 4*pind;
           Xp = XUs[pind4,2]; Up = XUs[pind4 + 2,2];
-          Xp[0]>=0?(spline(Xp,curviness*unitnorm(Up),X,curviness*unitnorm(U)));
+          Xp[0]>=0?(RGB = I(#$img,X0); spline(Xp,curviness*unitnorm(Up),X,curviness*unitnorm(U)));
         )" rm.
     }
     k[canvas] => $nm
