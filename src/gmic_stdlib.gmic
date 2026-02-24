@@ -4653,7 +4653,7 @@ _display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2)"
     +norm. /.. {max(1e-6,iM)} rm. # Normalize vector values
     {$1*w},{$1*h},1,{"1<<cut($3,0,2)"}
     eval.. "
-      begin(C = resize([255],s#1,1));
+      begin(null = I; C = resize([255],s#1,1));
       "${-math_lib}"
       len = norm(I(x,y));
       ang = atan2(i(x,y,0,1),i(x,y,0,0))*180/pi;
@@ -4673,7 +4673,7 @@ _display_quiver : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2)"
         i1 = arg0(k,2,10,6);
         i2 = arg0(k,12,12,8);
         polygon(#1,3,X[i0,2],X[i1,2],X[i2,2],1,C);
-      ); I"
+      ); null"
     rm..
   }
 
@@ -4727,7 +4727,7 @@ _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2
     * {($2*$1/2)/max(abs(im),abs(iM))} # Normalize tensor values
     {$1*w},{$1*h},1,{"1<<cut($3,0,2)"}
     f.. "
-      begin(C = resize([255],s#1,1); Co = resize([0],s#1,1); Co[s#1 - 1] = $3?255:0);
+      begin(null = I; C = resize([255],s#1,1); Co = resize([0],s#1,1); Co[s#1 - 1] = $3?255:0);
       "${-math_lib}"
       X = ([ x,y ]+=0.5)*$1;
       T = [ R, G, G, B ];
@@ -4743,7 +4743,7 @@ _display_tensors : check "${1=16}>0 && ${2=1.5}>=0 && isint(${3=2},0,2) && ${4=2
         );
       );
       for (k = 1, k>=0, --k, ellipse(#1,X,r1 + k*$4,r2 + k*$4,ang°,1,arg0(k,C,Co)));
-      I"
+      null"
     rm..
   }
 
@@ -10568,7 +10568,7 @@ _select :
     repeat $2 { +f "begin(C = I["$ind"]; R = rot(90°)); R*(I - C) + C" ind:=2*h a y }
     s c -.. {-2,ia} -. {ia} a c / {max(abs(im),abs(iM))}
     angle:=$3-atan2(i1,i0)*180/pi f. "begin(R = rot("$angle"°)); R*I"
-    n 0,{$1-1} round $1,$1,1,1 eval.. "!x?polygon(#1,2,I(0,y),I(1,y),1,1); I" k.
+    n 0,{$1-1} round $1,$1,1,1 eval.. "begin(null = I); !x?polygon(#1,2,I(0,y),I(1,y),1,1); null" k.
   } fi
   => "[2D dragon shape]"
 
@@ -14035,22 +14035,23 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
 
   # Transform Huffman tree to codebook to speed up encoding.
   if ['$2']==0 # Retrieve max integer value of all tree leafs
-    eval. ">begin(Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); I"
+    eval. ">begin(null = I; Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); null"
   else
     Mlv=$2
   fi
   1,{$Mlv+1},1,2 # codebook -> [ code,nb_bits ] for each tree leaf
-  eval.. ":i2<0?( # Leaf
-    ind = y;
-    code = nb_bits = 0;
-    while (ind>=0, # Iteratively go up to root node
-      par = i(0,ind,0,1);
-      par>=0?((code<<=1)|=(i(0,par,0,2)!=ind); ++nb_bits);
-      ind = par;
-    );
-    ncode = 0; repeat (nb_bits,(ncode<<=1)|=(code&1); code>>=1); # Reverse bit order
-    I[#-1,i0] = [ ncode,nb_bits ];
-  ); I"
+  eval.. ":begin(null = I);
+    i2<0?( # Leaf
+      ind = y;
+      code = nb_bits = 0;
+      while (ind>=0, # Iteratively go up to root node
+        par = i(0,ind,0,1);
+        par>=0?((code<<=1)|=(i(0,par,0,2)!=ind); ++nb_bits);
+        ind = par;
+      );
+      ncode = 0; repeat (nb_bits,(ncode<<=1)|=(code&1); code>>=1); # Reverse bit order
+      I[#-1,i0] = [ ncode,nb_bits ];
+    ); null"
   rm..
 
   # Encode input data.
@@ -20018,13 +20019,14 @@ inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3)
     repeat $nb_scales {
       {0,"S = 2^"$<"; round([ max(1,w/S), max(1,h/S), max(1,d/S), s ])"}
       100%,100%,100%
-      eval[1] "const wl1 = w#-1 - 1;    const hl1 = h#-1 - 1;    const dl1 = d#-1 - 1;
-               const w1 = max(1,w - 1); const h1 = max(1,h - 1); const d1 = max(1,d - 1);
-               !i?(
-                 X = round(x*wl1/w1); Y = round(y*hl1/h1); Z = round(z*dl1/d1);
-                 I(#-2,X,Y,Z) += I(#0,x,y,z);
-                 ++i(#-1,X,Y,Z)
-               );I"
+      eval[1] "begin(null = I);
+        const wl1 = w#-1 - 1;    const hl1 = h#-1 - 1;    const dl1 = d#-1 - 1;
+        const w1 = max(1,w - 1); const h1 = max(1,h - 1); const d1 = max(1,d - 1);
+        !i?(
+          X = round(x*wl1/w1); Y = round(y*hl1/h1); Z = round(z*dl1/d1);
+          I(#-2,X,Y,Z) += I(#0,x,y,z);
+          ++i(#-1,X,Y,Z)
+        ); null"
       +max. 1 /[-3,-1] !=. 0
 
       if !$> # First scale: Initialize by value propagation
@@ -21739,14 +21741,16 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
       histogram $nb_levels,$vmin,$vmax
     elif s==2 # 2d
       $nb_levels,$nb_levels
-      eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
-              inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax)?
-              ++i(#-1,ind(i0),ind(i1),0,0); I"
+      eval.. "begin(null = I);
+        ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
+        inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax)?
+        ++i(#-1,ind(i0),ind(i1),0,0); null"
     else # 3d
       $nb_levels,$nb_levels,$nb_levels
-      eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
-              inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax) && inrange(i2,$vmin,$vmax)?
-              ++i(#-1,ind(i0),ind(i1),ind(i2),0); I"
+      eval.. "begin(null = I);
+        ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
+        inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax) && inrange(i2,$vmin,$vmax)?
+        ++i(#-1,ind(i0),ind(i1),ind(i2),0); null"
     fi
     k. => $nm
   }
@@ -22608,14 +22612,15 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
     fi
     r. {wh},1,1,2,-1
     100%,1,1,{0,s},"I(#0,I#1)" a[-2,-1] c # Add superpixels colors
-    [0],[0],1,2 eval.. "I(#-1,i0,i1) = [ x + 1,1 ]; I" s. c distance. 1 *. -1 watershed.. . rm. channels. 0,1
+    [0],[0],1,2 eval.. "begin(null = I); I(#-1,i0,i1) = [ x + 1,1 ]; null"
+    s. c distance. 1 *. -1 watershed.. . rm. channels. 0,1
 
     # Start iteration loop.
     repeat $nb_iter {
 
       # Assign best superpixel to each pixel.
       sh[2] 1 f. inf rm.
-      eval[1] "
+      eval[1] "begin(null = I);
         const m = "$m";
         const S = "$S";
         k = x;
@@ -22635,12 +22640,11 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
               I(#-1,x,y) = [ k,delta ];
             );
           )
-        );
-      I"
+        ); null"
 
       # Update superpixels.
       f[1] 0 channels[1] 0,{-2,s}
-      eval[2] "I[#1,i0]+=[ x,y,I#0,1 ];I"
+      eval[2] "begin(null = I); I[#1,i0]+=[ x,y,I#0,1 ]; null"
       s[1] c,-{1,s-1} max[2] 1 /[1,2]
 
     }
@@ -36529,7 +36533,7 @@ _blend_shapeprevalent :
 
   # Extract most frequent occurrence for each distinct region.
   1,$nb_labels,1,{0,s}
-  eval.. "P = I; region = P[size(P) - 1]; i[#-1,region]<P[0]?(I[#-1,region] = P[0,size(P) - 1]); I"
+  eval.. "P = I; region = P[size(P) - 1]; i[#-1,region]<P[0]?(I[#-1,region] = P[0,size(P) - 1]); P"
   channels. 1,100% +channels[0] 100%
   map. .. rm[-3,-2] channels.. 0,{0,s-2}
 
@@ -42448,11 +42452,12 @@ x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
               const radius1 = "$radius_keypoints";
               const radius2 = radius1 + 2;
               const opacity = min(1,3/"($radius_keypoints-1)");
+              null = I;
             );
             X = round((I)[2*"$frame",2]*fact);
             y=="$selected_keypoint"?(ellipse(#-1,X,radius2+2,radius2+2,0,1,255));
             ellipse(#-1,X,radius2,radius2,0,opacity,0);
-            ellipse(#-1,X,radius1,radius1,0,opacity,I[#"$colormap",i4]); I"
+            ellipse(#-1,X,radius1,radius1,0,opacity,I[#"$colormap",i4]); null"
         fi
         w. -1,-1,0,"[G'MIC] Interactive Morph ("${"s0=Source s1=Target u ${s"$frame"}"}")"
       fi
@@ -44669,10 +44674,11 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
               const radius1 = "$radius_keypoints";
               const radius2 = radius1 + 2;
               const opacity = min(1,3/"($radius_keypoints-1)");
+              null = I;
             );
             X = round((I)[0,2]*fact);
             ellipse(#-1,X,radius2,radius2,0,opacity,0);
-            ellipse(#-1,X,radius1,radius1,0,opacity,y<"$N0"?col1:col2); I"
+            ellipse(#-1,X,radius1,radius1,0,opacity,y<"$N0"?col1:col2); null"
         fi
         w.
       fi
@@ -47362,7 +47368,7 @@ fx_ghost :
     split_opacity l[0] {
       diffusiontensors. 1,1,$2,$3 eigen. compose_channels.. + sqrt.. n.. 1,100 ^.. $4 n.. 0,$1
       100%,100%
-      eval.. "*
+      eval.. "*begin(null = I);
         ca = i(x,y,0,0);
         sa = i(x,y,0,1);
         N = i(#-3,x,y);
@@ -47371,7 +47377,7 @@ fx_ghost :
         x1 = x - N*ca;
         y1 = y - N*sa;
         polygon(#-1,2,x0,y0,x1,y1,-1,1);
-        I"
+        null"
       k. normalize_local $5,$6
       n 0,255 if $7 negate fi
     }
@@ -52945,6 +52951,7 @@ _fx_tune_hsv :
           val = norm([tR,tG,tB]-[R,G,B]);
           val<best_#color?(best_#color = val; color# = I(#-2));
         );
+        null = I;
       );
       test_color(red,255,0,0);
       test_color(yellow,255,255,0);
@@ -52959,7 +52966,7 @@ _fx_tune_hsv :
             ' cyan=',v2s(cyan),
             ' blue=',v2s(blue),
             ' magenta=',v2s(magenta))
-      ); I"
+      ); null"
 
     # Compute color mapping.
     if narg($colors)
@@ -54951,10 +54958,11 @@ fx_warp_interactive_preview :
         const radius1 = 3;
         const radius2 = radius1 + 2;
         fact = ([ w#0,h#0 ] - 1)%
+        null = I;
       );
       X = (I)[0,2]*fact;
       ellipse(#0,X,radius2,radius2,0,1,0);
-      ellipse(#0,X,radius1,radius1,0,1,col1); I"
+      ellipse(#0,X,radius1,radius1,0,1,col1); null"
     rm.
 
     if narg($__x_warp_keypoints)
@@ -55530,14 +55538,14 @@ fx_blur_motion_preview :
     else ($x0,$x1,$x2,$x3,$x4^$y0,$y1,$y2,$y3,$y4^1,0.75,0.5,0.25,0)
     fi
     r. {max(w#0,h#0)},1,1,3,5 $palette
-    eval.. ">begin(pP = round([i0*(w#0-1)%,i1*(h#0-1)%]));
+    eval.. ">begin(null = I; pP = round([i0*(w#0-1)%,i1*(h#0-1)%]));
       x>0?(
         P = round([i0*(w#0-1)%,i1*(h#0-1)%]);
         col = [ I(#-1,i2*(w#-1-1),0,0,1),255 ];
         polygon(#0,4,pP - [1,0],pP + [1,0],P + [1,0],P - [1,0],1,col);
         polygon(#0,4,pP - [0,1],pP + [0,1],P + [0,1],P - [0,1],1,col);
         pP = P;
-      ); I"
+      ); null"
     rm[-2,-1]
 
     # Draw control points.
@@ -60192,12 +60200,12 @@ fx_pack_ellipses :
     da_freeze[set]
     W,H={img,[w,h]}
     {img,round($render_factor*[w,h])} => mask
-    eval[set] "
+    eval[set] "begin(null = I);
       const fact = $render_factor;
       r1 = fact*(i2 + $radius_dilation);
       r2 = max(1,r1*i(#$isotropy,i0,i1));
       ellipse(#$mask,round(fact*i0),round(fact*i1),r1,r2,i(#$angles,i0,i1),1,y + 1);
-      I"
+      null"
 
     r[img] {mask,[w,h]},1,100%,3
     blend[img] [mask],shapeaverage0
@@ -62148,7 +62156,7 @@ fx_gradient_from_curve_preview : skip "${19=}"
         push(${2-3}); $1>2?push(${4-5}); $1>3?push(${6-7}); $1>4?push(${8-9}); $1>5?push(${10-11}); push(${12-13});
         da_freeze()"
       r. 1,1000%,1,2,5 round.
-      eval. "y?(P0 = J[-1]; P1 = I; polygon(#1,2,P0[0],P0[1],P1[0],P1[1],1,255)); I" rm.
+      eval. "begin(null = I); y?(P0 = J[-1]; P1 = I; polygon(#1,2,P0[0],P0[1],P1[0],P1[1],1,255)); null" rm.
       +dilate. 3 to_colormode.. {0,s} j[0] [1],0,0,0,0,1,[2],255 k[0]
       eval "
         draw_circle(x,y,R,G,B) = (
@@ -63269,7 +63277,7 @@ fx_sine_curve :
 
     # Draw curve (as an alpha-channel).
     $rW,$rH
-    eval.. "*
+    eval.. "*begin(null = I):
       const mwh = min(w#-1,h#-1)*5%;
       const r1 = max(0.01,mwh*"$radius1"%);
       const r2 = max(0.01,mwh*"$radius2"%);
@@ -63288,7 +63296,7 @@ fx_sine_curve :
         ang = atan2(dY,dX)*180/pi;
         ellipse(#-1,X,Y,r1,r2,ang°,opacity,255);
       );
-      I"
+      null"
     rm..
     r. $W,$H,1,1,2 n 0,255
     i[0] 100%,100%,1,3 fc[0] $colR,$colG,$colB
