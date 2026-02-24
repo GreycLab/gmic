@@ -2167,7 +2167,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
       gmic_instance.get_variable(str,variable_sizes,&image_names);
     if (value && *value) {
       char end;
-      if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = 0;
+      if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = cimg::type<double>::nan();
     }
   }
   }
@@ -3388,7 +3388,7 @@ CImg<char> gmic::get_variable(const char *const name,
     res.assign(vars[ind],true);
     if (varlength) *varlength = varlengths[ind];
     if (ind!=vars._width - 1) { // Modify slot position of variable to make it more accessible next time
-      unsigned int indm = (vars._width + ind)/2;
+      const unsigned int indm = (vars._width + ind)/2;
       vars[ind].swap(vars[indm]);
       varnames[ind].swap(varnames[indm]);
       cimg::swap(varlengths[ind],varlengths[indm]);
@@ -3410,6 +3410,8 @@ CImg<char> gmic::get_variable(const char *const name,
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;
       } else if (varlength) *varlength = 0;
+      cimg::mutex(21,0);
+
     } // Otherwise, 'res' is empty
   }
   if (is_thread_global) cimg::mutex(30,0);

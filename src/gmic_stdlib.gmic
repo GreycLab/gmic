@@ -14717,7 +14717,7 @@ normalize_sum :
 #@cli : $$
 orientation :
   e[^-1] "Compute pointwise orientation vectors, in image$?."
-  repeat $! { +norm[$>] replace. 0,1 /[$>,-1] }
+  foreach { +norm replace. 0,1 / }
 
 #@cli otsu : _nb_levels>0
 #@cli : Hard-threshold selected images using Otsu's method.
@@ -14962,6 +14962,15 @@ threshold : check "isexpr($1) && isbool(${2=0})"
        i<=-value?i + value:0"
   else ge $1
   fi
+
+#@cli unitnorm : _p>=0
+#@cli : Compute the pointwise Lp-norm in selected images.
+#@cli : Default value: 'p=2'.
+#@cli : $ image.jpg +unitnorm 2
+unitnorm : skip "${1=2}"
+  l[] { if isnum($1) p=$1 else p=2 noarg fi onfail p=2 noarg }
+  e[^-1] "Compute pointwise L"$p"-norm, in image$?."
+  foreach { +normp $p replace. 0,1 / }
 
 #@cli vector2tensor
 #@cli : Convert selected vector fields to corresponding tensor fields.
@@ -19671,14 +19680,15 @@ _gradient : skip "${1=}"
 #@cli : Default values: 'scheme=0' and 'boundary_conditions=1'.
 #@cli : $ image.jpg gradient_norm equalize
 #@cli : $$ https://gmic.eu/oldtutorial/_gradient_norm
-gradient_norm : skip "${1=},${2=}"
-  scheme,boundary=0,1
+gradient_norm :
+  $=arg scheme,boundary=0,1
   l[] {
-    if "isint($1,-1,6) && ($#==1 || ($#==2 && isint($2,0,3)))" scheme=$1 if $#==2 boundary=$2 fi
+    if "isint("$arg1",-1,6) && ($#==1 || ($#==2 && isint("$arg2",0,3)))" scheme=$arg1 if $#==2 boundary=$arg2 fi
     else scheme,boundary=0,1 noarg
     fi
     onfail scheme,boundary=0,1 noarg
   }
+
   e[^-1] "Compute gradient norm of image$?, with "\
    ${"arg0 $scheme+1,backward,centered,forward,sobel,rotation-invariant,deriche,vanvliet,fb-maxabs"}" scheme and "\
    ${"arg0 $boundary,dirichlet,neumann,periodic,mirror"}" boundary conditions."
@@ -21237,17 +21247,13 @@ unsharp_octave : check "${1=4}>0 && ${3=2}>=0" skip ${2=1},${4=0}
 
 #@cli voronoi
 #@cli : Compute the discrete Voronoi diagram of non-zero pixels in selected images.
-#@cli : $ 400,400 noise 0.2,2 eq 1 +label_fg 0 voronoi[-1] +gradient[-1] xy,1 append[-2,-1] c \
-# norm[-1] ==[-1] 0 map[-2] 2,2 mul[-2,-1] normalize[-2] 0,255 dilate_circ[-2] 4 reverse max
+#@cli : $ 400,400,1,3 eval "repeat(50,I(v([w,w]-1)) = v([255,255,255]))" +voronoi +gradient_norm. eq. 0 *[-2,-1]
 voronoi :
   e[^-1] "Compute the discrete Voronoi diagram of non-zero pixels in image$?."
   foreach {
-    s c
-    foreach {
-      +!=. 0 distance. 1 *. -1
-      watershed.. . rm.
-    }
-    a c
+    +colormap 0,0,1 index.. .,0,0
+    +!=.. 0 distance. 1 *. -1
+    watershed... . map... .. k...
   }
 
 #@cli watermark_fourier : text,_size>0
@@ -47533,6 +47539,103 @@ fx_lylejk_painting :
     texturize_canvas. $4,4 => $nm
   }
 
+#@gui Marker Drawing : fx_marker_drawing, fx_marker_drawing_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generate marker drawing effect.
+#@gui : "}, sep = separator()
+#@gui : Length (px) = int(70,0,256)
+#@gui : Radius (px) = float(4,1,32)
+#@gui : Opacity (%) = float(10,0,100)
+#@gui : Inertia (%) = float(15,0,100)
+#@gui : Curviness (%) = float(100,0,200)
+#@gui : Anisotropy (%) = float(85,0,100)
+#@gui : Smoothness = float(0.5,0,5)
+#@gui : Coherence = float(3,0,16)
+#@gui : Iterations = int(3,1,64)
+#@gui : sep = separator()
+#@gui : Background Type = choice(1,"Blur","Color")
+#@gui : Background Blur = float(20,0,128)_1
+#@gui : Background Color = color(255,255,255,255)_2
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/23</i>.</small>")
+__fx_marker_drawing :
+  length,radius,opacity,inertia,curviness,anisotropy,smoothness,coherence,nb_iterations,\
+    b_type,b_blur,b_R,b_G,b_B,b_A=${1-15}
+
+fx_marker_drawing :
+  __fx_marker_drawing $*
+
+  foreach { nm={n} to_rgb => img
+    +diffusiontensors 0,{$anisotropy%},$smoothness,$coherence,0 channels. 0,3 f. "[ i0,i1,i1,i2 ]" => tensors
+    {img,[w,h,1,1]} => binary
+    if $b_type==0 +b[img] $b_blur
+    else {img,[w,h,1,4]} fc. $b_R,$b_G,$b_B,$b_A
+    fi
+    => canvas
+
+    repeat $nb_iterations {
+      {round(wh*3%)},1,1,1,":
+        spline(_X0,_U0,_X1,_U1) = (
+          ref(_X0,sp_X0); ref(_U0,sp_U0); ref(_X1,sp_X1); ref(_U1,sp_U1);
+          sp_C = transpose(solve([ 0,0,0,1,1,1,1,1,0,0,1,0,3,2,1,0 ],[ sp_X0,sp_X1,sp_U0,sp_U1 ],2),2);
+          sp_N = ceil(norm(sp_X1 - sp_X0) + 0.5*(norm(sp_U0) + norm(sp_U1)))/4;
+          repeat (sp_N,sp_n,
+            sp_t = lerp(0,1,sp_n/(sp_N - 1));
+            sp_X = mul(sp_C,[ sp_t^3, sp_t^2, sp_t, 1 ],1);
+            sp_U = mul(sp_C,[ 3*sp_t^2, 2*sp_t, 1, 0 ],1);
+            sp_ang = atan2(sp_U[1],sp_U[0]);
+            ellipse(#$canvas,round(sp_X),3*radius,radius,sp_ang,opacity,RGB,255);
+            i(#$binary,round(sp_X)) = 1;
+          );
+        );
+
+        const length = $length;
+        const radius = $radius;
+        const opacity = $opacity%;
+        const inertia = length*$inertia%;
+        const curviness = length*$curviness%;
+
+        # Randomly pick a starting location.
+        do (X0 = v([w#$img,h#$img] - 1), i(#$binary,X0));
+
+        !i(#$binary,X0)?(
+          X = X0;
+          U = cexp([0,u(360°)]);
+          XUs = vector(#4*length,-1);
+          copy(XUs[0],[ X,U ]);
+
+          # Explore streamline.
+          ind = 1;
+          nb_cross = 0;
+          repeat (length,
+            T = I(#$tensors,X,1,1);
+            U = T*U;
+            U/=max(1e-8,abs(U));
+            nX = X + U;
+            i(#$binary,nX,1)?++nb_cross;
+            nb_cross>inertia || !min(inrange(nX,[0,0],[w#$img,h#$img]))?break();
+            X = nX;
+            ind4 = ind*4;
+            copy(XUs[ind4],[ X,U ]);
+            ind = (ind + 1)%length;
+          );
+
+          # Draw spline.
+          pind = (ind + 1)%length; pind4 = 4*pind;
+          Xp = XUs[pind4,2]; Up = XUs[pind4 + 2,2];
+          Xp[0]>=0?(RGB = I(#$img,X0); spline(Xp,curviness*unitnorm(Up),X,curviness*unitnorm(U)));
+        )" rm.
+    }
+    k[canvas] => $nm
+  }
+
+fx_marker_drawing_preview :
+  __fx_marker_drawing $*
+  fx_marker_drawing $*
+  u "{"$length"}{"$radius"}{"$opacity"}{"$inertia"}{"$curviness"}"\
+    "{"$anisotropy"}{"$smoothness"}{"$coherence"}{"$iterations"}"\
+    "{"$b_type"}{"$b_blur"}_"{$b_type==0?2:1}"{"$b_R,$b_G,$b_B,$b_A"}_"{$b_type==1?2:1}
+
 #@gui Paint With Brush : fx_paint_with_brush, fx_paint_with_brush_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Repaint image using a virtual brush.
@@ -66176,8 +66279,4 @@ fx_solve_maze_preview :
 #@cli : $ https://gmic.eu/samples/distortion.gmic go _fps=20 _label="Distortion"
 #@cli : $ https://gmic.eu/samples/rotozoom.gmic go _fps=15 _label="Rotozoom"
 
-# Local Variables:
-# mode: gmic
-# End:
-#
 # (End of G'MIC custom commands)
