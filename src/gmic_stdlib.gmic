@@ -10568,7 +10568,7 @@ _select :
     repeat $2 { +f "begin(C = I["$ind"]; R = rot(90°)); R*(I - C) + C" ind:=2*h a y }
     s c -.. {-2,ia} -. {ia} a c / {max(abs(im),abs(iM))}
     angle:=$3-atan2(i1,i0)*180/pi f. "begin(R = rot("$angle"°)); R*I"
-    n 0,{$1-1} round $1,$1,1,1 eval.. "!x?polygon(#1,2,I(0,y),I(1,y),1,1); I" k.
+    n 0,{$1-1} round $1,$1,1,1 eval.. "!x?polygon(#1,2,I(0,y),I(1,y),1,1); [0]" k.
   } fi
   => "[2D dragon shape]"
 
@@ -14035,7 +14035,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
 
   # Transform Huffman tree to codebook to speed up encoding.
   if ['$2']==0 # Retrieve max integer value of all tree leafs
-    eval. ">begin(Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); I"
+    eval. ">begin(Mlv = -inf); i2<0 && i3<0?Mlv = max(Mlv,i0); end(set('Mlv',Mlv)); [0]"
   else
     Mlv=$2
   fi
@@ -14050,7 +14050,7 @@ compress_huffman : check ${"is_image_arg $1"} skip "${2=}"
     );
     ncode = 0; repeat (nb_bits,(ncode<<=1)|=(code&1); code>>=1); # Reverse bit order
     I[#-1,i0] = [ ncode,nb_bits ];
-  ); I"
+  ); [0]"
   rm..
 
   # Encode input data.
@@ -18031,12 +18031,12 @@ extract : check "isint(${2=0},0,5)"
     "xyzc-coords + scalar value","xyz-coords + vector-values"
   e[^-1] "Extract "$s$2" from image$? verifying condition '$1'."
   str=">begin(run('1,32,1,',arg0($2,4,3,1,s,5,3 + s)));($1)?("
-  if !$2     str.="da_push([x,y,z,c]));i"
-  elif $2==1 str.="da_push([x,y,z]));I"
-  elif $2==2 str.="da_push(i));i"
-  elif $2==3 str.="da_push(I));I"
-  elif $2==4 str.="da_push([x,y,z,c,i]));i"
-  else str.="da_push([x,y,z,I]));I"
+  if !$2     str.="da_push([x,y,z,c]));0"
+  elif $2==1 str.="da_push([x,y,z]));[0]"
+  elif $2==2 str.="da_push(i));0"
+  elif $2==3 str.="da_push(I));[0]"
+  elif $2==4 str.="da_push([x,y,z,c,i]));0"
+  else str.="da_push([x,y,z,I]));[0]"
   fi
   str.=";end(da_freeze())"
   repeat $! { nm={$>,n} eval[$>] $str => $nm rv[$>,-1] rm. }
@@ -20024,7 +20024,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3)
                  X = round(x*wl1/w1); Y = round(y*hl1/h1); Z = round(z*dl1/d1);
                  I(#-2,X,Y,Z) += I(#0,x,y,z);
                  ++i(#-1,X,Y,Z)
-               );I"
+               );[0]"
       +max. 1 /[-3,-1] !=. 0
 
       if !$> # First scale: Initialize by value propagation
@@ -21741,12 +21741,12 @@ histogram_nd : check $1>0 skip ${2=0%},${3=100%}
       $nb_levels,$nb_levels
       eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
               inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax)?
-              ++i(#-1,ind(i0),ind(i1),0,0); I"
+              ++i(#-1,ind(i0),ind(i1),0,0); [0]"
     else # 3d
       $nb_levels,$nb_levels,$nb_levels
       eval.. "ind(p) = cut(int($nb_levels*(p - $vmin)/($vmax - $vmin)),0,$nb_levels - 1);
               inrange(i0,$vmin,$vmax) && inrange(i1,$vmin,$vmax) && inrange(i2,$vmin,$vmax)?
-              ++i(#-1,ind(i0),ind(i1),ind(i2),0); I"
+              ++i(#-1,ind(i0),ind(i1),ind(i2),0); [0]"
     fi
     k. => $nm
   }
