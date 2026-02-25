@@ -22374,12 +22374,12 @@ pointcloud : check "${1=0}<=3 && ${2=0}>=0 && ${3=0}>=0 && ${4=0}>=0"
 
     else # Retrieve set of point coordinates from rendered point cloud image
       16,1,1,{s+3}
-      f.. ">
+      eval.. ">
         begin(N = 0; zero = vectors(0));
-        I!=zero?I[#-1,N++] = [ x,y,z,I ];
+        I!=zero?(I[#-1,N++] = [ x,y,z,I ]);
         N>=w(#-1)?resize(#-1,1.5*w(#-1),1,1,s#-1,0);
         end(resize(#-1,N,1,1,s#-1,0));
-        I"
+        [0]"
     fi
     k. => $nm
   }
@@ -22605,7 +22605,7 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
     fi
     r. {wh},1,1,2,-1
     100%,1,1,{0,s},"I(#0,I#1)" a[-2,-1] c # Add superpixels colors
-    [0],[0],1,2 eval.. "I(#-1,i0,i1) = [ x + 1,1 ]; I" s. c distance. 1 *. -1 watershed.. . rm. channels. 0,1
+    [0],[0],1,2 eval.. "I(#-1,i0,i1) = [ x + 1,1 ]; [0]" s. c distance. 1 *. -1 watershed.. . rm. channels. 0,1
 
     # Start iteration loop.
     repeat $nb_iter {
@@ -22632,12 +22632,11 @@ slic : check "${1=16}>0 && ${2=10}>=0 && ${3=10}>0"
               I(#-1,x,y) = [ k,delta ];
             );
           )
-        );
-      I"
+        ); [0]"
 
       # Update superpixels.
       f[1] 0 channels[1] 0,{-2,s}
-      eval[2] "I[#1,i0]+=[ x,y,I#0,1 ];I"
+      eval[2] "I[#1,i0]+=[ x,y,I#0,1 ]; [0]"
       s[1] c,-{1,s-1} max[2] 1 /[1,2]
 
     }
@@ -23429,7 +23428,7 @@ close_binary :
 
       # Detect pairs of keypoints preserving the spline constraints.
       256,1,1,3 => keypairs
-      f[keycoords] ">
+      eval[keycoords] ">
         begin(ind = 0);
         for (nx = x + 1, nx<w, ++nx,
           const cosmin = cos("$spline_anglemax"*pi/180);
@@ -23451,8 +23450,7 @@ close_binary :
             I[#"$keypairs",ind++] = [ quality,x,nx ];
           );
         );
-        end(resize(#"$keypairs",ind,1,1,3,0));
-        I"
+        end(resize(#"$keypairs",ind,1,1,3,0)); [0]"
       if {keypairs,w} sort[keypairs] -,x
       else rm[keypairs]
       fi
@@ -23462,7 +23460,7 @@ close_binary :
       ind_strokes:=$allow_self_intersections?$strokes:$new_strokes
 
       if narg($keypairs)
-        f[keypairs] ">"$_edgel_lib"
+        eval[keypairs] ">"$_edgel_lib"
           for_spline(code) = for (t = 0, t<=1, t+=dt,
             t3 = t*(t2 = t*t);
             P = round(mul([t3,t2,t,1],C,2));
@@ -23578,14 +23576,14 @@ close_binary :
                 );
               );
             );
-          ); I"
+          ); [0]"
         rm[keypairs]
       fi
 
       # Find and connect segments.
       ==[new_strokes] 0 # Negate values to consider boundary pixels (0) as strokes
 
-      f[keycoords] ">"$_edgel_lib"
+      eval[keycoords] ">"$_edgel_lib"
         for_segment(code) = for (t = 0, t<=tmax, ++t,
           P = round(S + t*ST);
           code#;
@@ -23686,7 +23684,7 @@ close_binary :
               if (is_cond, ++i(#"$keycoords",x,0,0,2));
             );
           );
-        ); I"
+        ); [0]"
       ==[new_strokes] 0
       if !0$_keep_keycoords rm[keycoords] fi # Small hack used by the plug-in preview
     fi
@@ -27833,7 +27831,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
     # Create 3D object.
     if $2 sphere3d 1,{$2-1} else box3d 1 fi
     N,P:=i[6],i[7] siz:=h n3d. c3d. .x{0,whd-1}
-    f[0] "
+    eval[0] "
       const N = "$N";
       const P = "$P";
       const siz = "$siz";
@@ -27862,7 +27860,7 @@ tensors3d : check "${1=1}>=0 && isint(${2=2},0) && ${3=0.05}>=0"
         col = resize(col0,3*P,0,2);
         const off = siz - 4*P;
         draw(#ind,col,0,off,0,0,1,size(col),1,1);
-        0); I"
+        0); [0]"
     rm[0] +3d
   }
 
