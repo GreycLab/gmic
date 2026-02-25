@@ -189,10 +189,10 @@
 ;;;; Indentation — counting opening/closing keywords per line
 
 (defvar gmic--indent-open-re
-  ;; Only keywords count as openers.
-  ;; '{' is never counted: it is a syntactic shortcut for the keyword
-  ;; that precedes it, which is already counted.
-  (concat "\\_<"
+  ;; Only keywords count as openers, whether standalone or after a prefix
+  ;; operator (+, -, *).  '{' is never counted: it is a syntactic shortcut for
+  ;; the keyword that precedes it, which is already counted.
+  (concat "\\(?:^\\|\\s-\\|[+*-]\\)"
           (regexp-opt '("repeat" "for" "foreach" "do"
                         "if" "elif" "else"
                         "local" "l")
@@ -298,7 +298,13 @@ counted here: their effect on the current line's position is handled by
 Only opening keywords produce a positive delta.
 A command definition line counts as net +1 (it opens a command body)."
   (let* ((stripped (gmic--strip-comments-and-strings line-str))
-         (open-re (concat "\\_<"
+         ;; Recognise openers whether they appear standalone or prefixed by a
+         ;; G'MIC operator (+, -, *).  We use an explicit leading-context
+         ;; alternative (^, whitespace, or an operator character) instead of
+         ;; \\_< so that "+l[]" and "-local[]" are detected correctly
+         ;; regardless of the runtime syntax table.  regexp-opt with t wraps
+         ;; the keywords in group 1, which we use with match-beginning 1.
+         (open-re (concat "\\(?:^\\|\\s-\\|[+*-]\\)"
                           (regexp-opt '("repeat" "for" "foreach" "do"
                                         "if" "elif" "else"
                                         "local" "l") t)
@@ -310,9 +316,11 @@ A command definition line counts as net +1 (it opens a command body)."
          (close-re (concat "\\(?:\\(?:^\\|\\s-\\)}\\(?:\\s-\\|$\\)\\|\\_<"
                            (regexp-opt '("done" "fi" "while") t)
                            "\\_>\\)"))
-         ;; Closers appearing AFTER the first opener on the line
+         ;; Closers appearing AFTER the first opener on the line.
+         ;; Use match-beginning 1 (the keyword group) so the position points
+         ;; to the keyword itself, not to the optional prefix operator.
          (first-open-pos (if (string-match open-re stripped)
-                             (match-beginning 0)
+                             (match-beginning 1)
                            nil))
          (trailing-closes
           (if first-open-pos
@@ -335,15 +343,19 @@ but are not counted via the general closer mechanism."
                (concat "^\\s-*\\_<\\(?:elif\\|else\\)\\_>")
                stripped)
               1 0))
-         ;; Other closers: done, fi, while, isolated '}' — before the first opener
+         ;; Other closers: done, fi, while, isolated '}' — before the first opener.
+         ;; Use the same prefix-aware regex as gmic--line-delta so that
+         ;; "+l[]", "-local[]", etc. are correctly identified as openers and
+         ;; the closing '}' that appears after them is not mistaken for a
+         ;; leading closer.  match-beginning 1 gives the keyword position.
          (first-open
           (let ((pos (and (string-match
-                           (concat "\\_<"
+                           (concat "\\(?:^\\|\\s-\\|[+*-]\\)"
                                    (regexp-opt '("repeat" "for" "foreach" "do"
                                                  "if" "local" "l") t)
                                    "\\_>")
                            stripped)
-                          (match-beginning 0))))
+                          (match-beginning 1))))
             (or pos (length stripped))))
          (substr (substring stripped 0 first-open))
          (other-close-re
