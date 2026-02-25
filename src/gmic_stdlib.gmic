@@ -1885,9 +1885,9 @@ compress_to_keypoints : check "inrange(${1=3},0,3) && isint(${2=0}) && ${3=1%}>=
     do
       +da_freeze[1]
 
-      if $dim==3 [0],[0],[0] eval.. "begin(null = I); i(#-1,i0,i1,i2) = 1; null"
-      elif $dim==2 [0],[0] eval.. "begin(null = I); i(#-1,i0,i1) = 1; null"
-      else [0] eval.. "begin(null = I); i[#-1,i0] = 1; null"
+      if $dim==3 [0],[0],[0] eval.. "i(#-1,i0,i1,i2) = 1; [0]"
+      elif $dim==2 [0],[0] eval.. "i(#-1,i0,i1) = 1; [0]"
+      else [0] eval.. "i[#-1,i0] = 1; [0]"
       fi
       distance. 1 n. 0.1,1
       decompress_from_keypoints.. , rv[-2,-1]
@@ -15538,14 +15538,14 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
     +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
     rm.. equalize. 2048 n. 0,2047 round. 1
     0x2048 eval[0] "> # Find single occurrence of each color/vector
-      begin(size = vector2048(); null = vectors());
+      begin(size = vector2048());
       I = I; H = i#1; indH = H + 2; sizH = size[H];
       !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
         sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
         copy(i(#indH,0,sizH,0,0),I);
         ++size[H];
       );
-      null; end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0)))"
+      end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); [0]"
     a[2--1] y permute. yzcx rm..
 
     if $1" && "$1<w
@@ -15670,7 +15670,7 @@ count_colors : check "isint(${1=0},0)"
     +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
     rm.. equalize. 2048 n. 0,2047 round. 1
     0x2048 eval[0] "> # Find single occurrence of each color/vector.
-      begin(size = vector2048(); nb = 0; null = vectors());
+      begin(size = vector2048(); nb = 0);
       const max_nb = $1;
       !max_nb || nb<max_nb?(
         I = I; H = i#1; indH = H + 2; sizH = size[H];
@@ -15680,7 +15680,7 @@ count_colors : check "isint(${1=0},0)"
           ++size[H]; ++nb;
         );
       );
-      null; end(set('nb',sum(size)))"
+      end(set('nb',sum(size))); [0]"
     k[0] res.=$sep$nb sep=,
   }
   u $res
@@ -20823,11 +20823,11 @@ remove_pixels : check "$1>=0"
   e[^-1] "Remove $1 of the non-zero pixels in image$?."
   foreach {
     # Extract zero-valued pixels.
-    1,1,1,4 eval.. "begin(N = 0; null = I); norm(I)?(++N; da_push([u,x,y,z])); null; end(set('N',N); da_freeze())"
+    1,1,1,4 eval.. "begin(N = 0); norm(I)?(++N; da_push([u,x,y,z])); end(set('N',N); da_freeze()); [0]"
     N:=round(ispercentage($1)?$N*cut($1,0,1):$1)
 
     # Remove subset of this pixel set.
-    sort. +,y r. 1,$N,1,100%,0 eval. "begin(null = I); I(#-2,i1,i2,i3) = 0; null" rm.
+    sort. +,y r. 1,$N,1,100%,0 eval. "I(#-2,i1,i2,i3) = 0; [0]" rm.
   }
 
 #@cli rolling_guidance : std_deviation_s[%]>=0,std_deviation_r[%]>=0,_precision>=0
@@ -21870,13 +21870,12 @@ img2patches : check "isint($1,1) && ${2=0}>=0 && isint(${3=0},0,3)"
     # Extract patches.
     $1,$1,{$Nw*$Nh},100%
     eval.. "*
-      begin(null = vector(#s); const boundary = $3);
+      begin(const boundary = $3);
       (x%$step) + (y%$step)==0?(
         P = crop(x,y,$psiz,$psiz);
         ind = (y*$Nw + x)/$step;
         draw(#1,P,0,0,ind,0,$psiz,$psiz,1,s);
-      );
-      null"
+      ); [0]"
     k. => $nm
   }
 
@@ -22259,7 +22258,6 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
           const nb_randomizations = $6;
           const nb_propagations = d#$patches>1?3:2;
           get_score(P,Q,occ) = sqrt(norm(P - Q)^2 + occ*size(P)*penalization%);
-          null = [ 0,0,0,0 ];
         );
 
         is_bwd?(X = w - 1 - x; Y = h - 1 - y; Z = d - 1 - z):(ref(x,X); ref(y,Y); ref(z,Z));
@@ -22301,8 +22299,7 @@ matchpatch_alt : check ${"is_image_arg $1"}" && isint($2,1) && isint(${3=$2},1) 
             I(X,Y,Z) = [ best_u,best_v,best_w,best_score ];
             penalization>1?++i(#$occurrences,best_u,best_v,best_w);
           );
-        );
-        null"
+        ); [0]"
     }
     if narg($occurrences) rm[occurrences] fi
     s[map] c,-3
@@ -23721,13 +23718,12 @@ curve : check ${"is_image_arg $1"}" && ${2=0}>=0 && isnum(${3=45}) && inrange(${
     # Ensure consecutive curve points are at a minimal distance from each others.
     1,1,1,2
     eval.. ">
-      begin(null = [ 0,0 ]; pP = I);
+      begin(pP = I);
       P = I; norm(P - pP)>1e-3?(da_push(pP); pP = P);
       end(
         da_size()?(norm(P - da_back())>1e-3?da_push(P)):da_push(I[0]);
         da_freeze();
-      );
-      null"
+      ); [0]"
     rm..
 
     # Estimate (tilted) normals.
@@ -23841,13 +23837,12 @@ graph : check ${"is_image_arg $1"}" && isint(${2=1},0,3) && isint(${3=1},0,7)" s
             d_color = color*0.75;
             const h1 = h#0 - 1;
             const y_zero = cut($ytop*h1/max(1e-8,$ytop-$ybottom),0,h1); # y-coordinate of the x-axis
-            null = I
           );
           x0 = i0; y0 = i1;
           x1 = x<w - 1?j[1] - 1:w#0 - 1;
           polygon(#0,4,x0,y_zero,x0,y0,x1,y0,x1,y_zero,opacity,color);
           (x1 - x0)>1?polygon(#0,-3,x0,y_zero,x0,y0,x1,y0,opacity,-0xFFFFFFFF,d_color);
-          null"
+          [0]"
       else
         permute. cxyz polygon[0] .,$opacity,-$pattern,$color # Curve plot
       fi
@@ -36718,10 +36713,10 @@ sub_alpha : check ${"is_image_arg $1"}" && inrange(${2=1},0,1)"
   pass$1 0 remove_opacity
   foreach[^-1] {
     nm={n} pass. rv
-    100%,100%,1,{s+1},"begin(null = vector(#s,0); I_b = vector(#s#0));
+    100%,100%,1,{s+1},"begin(zero = vector(#s); I_b = vector(#s#0));
       I_a = I(#0);
       I_c = I(#1);
-      I_c==I_a?null:(
+      I_c==I_a?zero:(
         dI_ac = I_a - I_c;
         fill(I_b,k,I_c[k]>I_a[k]?lerp(I_c[k],255,$2):lerp(I_c[k],0,$2));
         alpha_b = max(dI_ac/(I_a - I_b));
@@ -48402,7 +48397,7 @@ fx_stringify :
       sh[$p] 100% f. "arg0((j[1,2]-i)%4,0,1,0,-1)" is_hole:=is!=4 rm.
       if !$is_hole" || "$fill_holes
         channels[$p] 0,1 rs[$p] ,$sampling%,1
-        eval[$p] ":begin(color = [ "$color" ]; const offset = h/($link + 2)*$offset%; null = I);
+        eval[$p] ":begin(color = [ "$color" ]; const offset = h/($link + 2)*$offset%);
           P = I;
           $link==3?(repeat (h,k,polygon(#2,2,P,I[k],$opacity%,color))):( # All-points link
             Q = J[offset,2];
@@ -48412,7 +48407,7 @@ fx_stringify :
                 S = J[3*offset,2]; polygon(#2,-4,P,R,Q,S,$opacity%,0xFFFFFFFF,color) # 4-points link
               );
             );
-          ); null"
+          ); [0]"
       fi
       progress {lerp(75,100,($>+1)/($>+$<+1))}
     }
@@ -54118,7 +54113,7 @@ fx_heightfield_warp : skip "${2=}"
     100%,100%,1,3,infx2 => xyz,uvw
 
     sh[XYZ] 0,1 round. rm.
-    eval[XYZ] ":begin(null = I);
+    eval[XYZ] ":
       nx = x + 1; ny = y + 1;
       P0 = I(x,y);
       P1 = I(nx,y,0,0,1);
@@ -54159,7 +54154,7 @@ fx_heightfield_warp : skip "${2=}"
           );
         );
       );
-      null"
+      [0]"
     rm[-5--3]
     channels.. 0,1
     f.. "begin(is_inf = 0); isinf(i)?(is_inf = 1; -1):i; end(merge(is_inf,+); set('is_inf',is_inf))"
