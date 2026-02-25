@@ -36521,7 +36521,7 @@ _blend_shapeprevalent :
 
   # Extract most frequent occurrence for each distinct region.
   1,$nb_labels,1,{0,s}
-  eval.. "P = I; region = P[size(P) - 1]; i[#-1,region]<P[0]?(I[#-1,region] = P[0,size(P) - 1]); I"
+  eval.. "P = I; region = P[size(P) - 1]; i[#-1,region]<P[0]?(I[#-1,region] = P[0,size(P) - 1]); P"
   channels. 1,100% +channels[0] 100%
   map. .. rm[-3,-2] channels.. 0,{0,s-2}
 
@@ -42444,7 +42444,7 @@ x_morph : check "isint(${1=16}) && isint(${2=3},0,4)" check_display $0
             X = round((I)[2*"$frame",2]*fact);
             y=="$selected_keypoint"?(ellipse(#-1,X,radius2+2,radius2+2,0,1,255));
             ellipse(#-1,X,radius2,radius2,0,opacity,0);
-            ellipse(#-1,X,radius1,radius1,0,opacity,I[#"$colormap",i4]); I"
+            ellipse(#-1,X,radius1,radius1,0,opacity,I[#"$colormap",i4]); [0]"
         fi
         w. -1,-1,0,"[G'MIC] Interactive Morph ("${"s0=Source s1=Target u ${s"$frame"}"}")"
       fi
@@ -44664,7 +44664,7 @@ x_warp : check "isint(${1=2},2) && isint(${2=$1},2) && isint(${3=0},0) && isint(
             );
             X = round((I)[0,2]*fact);
             ellipse(#-1,X,radius2,radius2,0,opacity,0);
-            ellipse(#-1,X,radius1,radius1,0,opacity,y<"$N0"?col1:col2); I"
+            ellipse(#-1,X,radius1,radius1,0,opacity,y<"$N0"?col1:col2); [0]"
         fi
         w.
       fi
@@ -46183,7 +46183,7 @@ _fx_drawn_montage :
 
   # Get bounding boxes for each associated color in layout layer, as well as labeled layout layer.
   to_rgb[0] to_rgba[^0] $nb_layers,1,1,4,[inf,inf,-inf,-inf] [0],[0]
-  f[0] "
+  eval[0] "
     begin(colors = [ "$cols" ]);
     repeat ("$nb_layers",l,
       I==colors[3*l,3]?(
@@ -46193,7 +46193,7 @@ _fx_drawn_montage :
         if (y>i(#-2,l,0,0,3), i(#-2,l,0,0,3) = y);
         i(#-1,x,y) = l + 1;
       );
-    ); I"
+    ); [0]"
 
   thumbnail=0 boundaries=0
   if $-1
@@ -47363,7 +47363,7 @@ fx_ghost :
         x1 = x - N*ca;
         y1 = y - N*sa;
         polygon(#-1,2,x0,y0,x1,y1,-1,1);
-        I"
+        [0]"
       k. normalize_local $5,$6
       n 0,255 if $7 negate fi
     }
@@ -47929,16 +47929,16 @@ fx_polygonize_delaunay :
 
     # Render filling.
     if $5==4 # Linear
-      +f[0] 0 f... "*i?(
+      +f[0] 0 eval... "*i?(
         p = I(#1); P0 = I[#2,p[0]]; P1 = I[#2,p[1]]; P2 = I[#2,p[2]];
         W = solve([P0[0],P1[0],P2[0],P0[1],P1[1],P2[1],1,1,1],[x,y,1]);
         I(#-1) = cut(W[0]*I(#0,P0) + W[1]*I(#0,P1) + W[2]*I(#0,P2),0,255);
-      );I"
+      ); [0]"
     elif $5==3 # Average
-      +f[0] 0 f... "*i?(
+      +f[0] 0 eval... "*i?(
         p = I(#1); P0 = I[#2,p[0]]; P1 = I[#2,p[1]]; P2 = I[#2,p[2]];
         I(#-1) = (I(#0,P0) + I(#0,P1) + I(#0,P2))/3;
-      );I"
+      ); [0]"
     elif $5==2 # Random
       +norm[1] label_fg. 0 {iM+1},1,1,3 rand. 0,255 to_rgba. point. 0 map.. . rm.
     else # Black or white
@@ -48092,7 +48092,7 @@ fx_quadtree :
     channels[0] 0,3 f[0] 0
 
     if !$mode # Squares
-      f. ">
+      eval. ">
         rectangle(ind,P0,P1,opacity,color) = (
           _P0 = P0;
           _P2 = P1;
@@ -48110,11 +48110,10 @@ fx_quadtree :
         _(else),
           rectangle(#0,Xpp,Xnn,1,colo);
           rectangle(#0,Xpp + "$outline",Xnn - "$outline",1,col);
-        );
-        I"
+        ); [0]"
 
     elif $mode==1 # Sierpinski design
-      f. ">
+      eval. ">
         P = I;
         Xpp = P[0,2];
         Xnn = P[2,2];
@@ -48131,11 +48130,10 @@ fx_quadtree :
         _(else),
           polygon(#0,3,Xnp,Xnn,Xpn,1,col1);
           polygon(#0,3,Xnp,Xpp,Xpn,1,col2)
-        );
-        I"
+        ); [0]"
 
     else # Ellipse painting
-      f. ">
+      eval. ">
         begin(colo = [ 0,0,0,255 ]);
         P = I;
         Xpp = P[0,2];
@@ -48152,7 +48150,7 @@ fx_quadtree :
         angle = atan2(eig[5],eig[4])*180/pi;
         if ("$outline">0, ellipse(#0,Xcc,R,r,angle°,1,colo));
         ellipse(#0,Xcc,R - "$outline",r - "$outline",angle°,1,col);
-        I"
+        [0]"
       if !$outline sh[0] 100% if !im solidify[0] 10% fi fi
     fi
     k[0]
@@ -49117,16 +49115,16 @@ _fx_colorize_lineart_smart :
       +negate[strokes] *. 255 to_rgb.
       +-[new_strokes] [strokes] dilate. 2
       100%,100%,1,3,[0,128,255] j... .,0,0,0,0,1,.. rm[-2,-1]
-      if narg($keycoords) f[keycoords] "ellipse(#-1,(I)[0,2],3,3,0,1,[255,0,0]);I" rm[keycoords] fi
+      if narg($keycoords) eval[keycoords] "ellipse(#-1,(I)[0,2],3,3,0,1,[255,0,0]); [0]" rm[keycoords] fi
       => geometry
     fi
 
     # Label color regions and inpaint strokes.
     if $1==1 # Mode: Color spots-guided colorization
       to_rgba[$colors] [colors],[colors]
-      f[colors] "i(#-1) = A<255?0:norm(R,G+0.3,B+0.6);I"
+      eval[colors] "i(#-1) = A<255?0:norm(R,G+0.3,B+0.6); [0]"
       label_fg. 0 {1+iM},1,1,{colors,s+1}
-      f.. ">I[#-1,i]+=[ I(#"$colors"),1 ];I"
+      eval.. ">I[#-1,i]+=[ I(#"$colors"),1 ];[0]"
       s. c,{-s+1} /[-2,-1]
       +l[new_strokes] { * -1 + 1 +b 1% b.. 1 min }
       watershed... .,0 rm. map.. . rm.
@@ -49851,7 +49849,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
   if $!<2 error "At least two input layers are needed to run this filter." fi
   repeat $!-1 { l[$<,-1] {
     nm=${gui_layer_name..}
-    i[0] {a=0$_is_preview?32:64;[a,a,a]},4 f[1] ">I(#0,round(I(#2)*(w#0-1)/255))+=[R,G,B,1]; I"
+    i[0] {a=0$_is_preview?32:64;[a,a,a]},4 eval[1] ">I(#0,round(I(#2)*(w#0-1)/255))+=[R,G,B,1]; [0]"
     l[0] {
       s c,-3 +max. 1 /[-3,-1] ==. 0 inpaint_pde.. .,75%,1 distance. 0 *. {-1/(1+$6)} exp.
       f.. "f = i(#-1); f*I + (1-f)*[x,y,z]*255/(w-1)" rm.
@@ -52951,7 +52949,7 @@ _fx_tune_hsv :
             ' cyan=',v2s(cyan),
             ' blue=',v2s(blue),
             ' magenta=',v2s(magenta))
-      ); I"
+      ); [0]"
 
     # Compute color mapping.
     if narg($colors)
@@ -54946,7 +54944,7 @@ fx_warp_interactive_preview :
       );
       X = (I)[0,2]*fact;
       ellipse(#0,X,radius2,radius2,0,1,0);
-      ellipse(#0,X,radius1,radius1,0,1,col1); I"
+      ellipse(#0,X,radius1,radius1,0,1,col1); [0]"
     rm.
 
     if narg($__x_warp_keypoints)
@@ -55529,7 +55527,7 @@ fx_blur_motion_preview :
         polygon(#0,4,pP - [1,0],pP + [1,0],P + [1,0],P - [1,0],1,col);
         polygon(#0,4,pP - [0,1],pP + [0,1],P + [0,1],P - [0,1],1,col);
         pP = P;
-      ); I"
+      ); [0]"
     rm[-2,-1]
 
     # Draw control points.
@@ -60189,7 +60187,7 @@ fx_pack_ellipses :
       r1 = fact*(i2 + $radius_dilation);
       r2 = max(1,r1*i(#$isotropy,i0,i1));
       ellipse(#$mask,round(fact*i0),round(fact*i1),r1,r2,i(#$angles,i0,i1),1,y + 1);
-      I"
+      [0]"
 
     r[img] {mask,[w,h]},1,100%,3
     blend[img] [mask],shapeaverage0
@@ -62140,7 +62138,7 @@ fx_gradient_from_curve_preview : skip "${19=}"
         push(${2-3}); $1>2?push(${4-5}); $1>3?push(${6-7}); $1>4?push(${8-9}); $1>5?push(${10-11}); push(${12-13});
         da_freeze()"
       r. 1,1000%,1,2,5 round.
-      eval. "y?(P0 = J[-1]; P1 = I; polygon(#1,2,P0[0],P0[1],P1[0],P1[1],1,255)); I" rm.
+      eval. "y?(P0 = J[-1]; P1 = I; polygon(#1,2,P0[0],P0[1],P1[0],P1[1],1,255)); [0]" rm.
       +dilate. 3 to_colormode.. {0,s} j[0] [1],0,0,0,0,1,[2],255 k[0]
       eval "
         draw_circle(x,y,R,G,B) = (
@@ -63280,7 +63278,7 @@ fx_sine_curve :
         ang = atan2(dY,dX)*180/pi;
         ellipse(#-1,X,Y,r1,r2,ang°,opacity,255);
       );
-      I"
+      [0]"
     rm..
     r. $W,$H,1,1,2 n 0,255
     i[0] 100%,100%,1,3 fc[0] $colR,$colG,$colB
