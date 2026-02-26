@@ -5277,7 +5277,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command) { *command = item0; command[1] = item1; command[2] = item2; command[3] = 0; }
       }
 
-      // Detect built-in command (second pass for other command lenghts).
+      // Detect built-in command (second pass for other command lengths).
       bool is_command = (bool)id_builtin_command;
       if (!is_command) {
         *command = sep0 = sep1 = sep = 0;
@@ -5341,7 +5341,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       const bool no_get = !is_get;
 
       // Retrieve command selection.
-      if (_s_selection.width()>512) { // If needed, go back to a reasonnable size for selection string
+      if (_s_selection.width()>512) { // If needed, go back to a reasonable size for selection string
         _s_selection.assign(256);
         s_selection = _s_selection.data();
         *s_selection = 0;
@@ -9520,7 +9520,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
           if (cimg_sscanf(argument,"%11[a-zA-Z0-9]:%4095[^,],%255s", // Detect forced file format
                           cext,_filename.data(),options.data())<2 ||
-              !cext[1]) { // Length of preprend 'ext' must be >=2 (avoid case 'C:\\...' on Windows)
+              !cext[1]) { // Length of prepend 'ext' must be >=2 (avoid case 'C:\\...' on Windows)
             *cext = *_filename = *options = 0;
             if (cimg_sscanf(argument,"%4095[^,],%255s",_filename.data(),options.data())!=2) {
               std::strncpy(_filename,argument,_filename.width() - 1);

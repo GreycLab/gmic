@@ -22,7 +22,7 @@ Before submitting a report, please check if the issue has already been reported.
 Here are the different links you can use, depending on the type of bug to be reported.
 Using the right link will optimize the chance of resolution, but if you don't know which one to use, just use the first one:
 
-- [Issues about the G'MIC core functionnalities](https://github.com/dtschump/gmic/issues), i.e. concerning all about the G'MIC language interpreter and the image processing algorithms.
+- [Issues about the G'MIC core functionalities](https://github.com/dtschump/gmic/issues), i.e. concerning all about the G'MIC language interpreter and the image processing algorithms.
 - [Issues about the G'MIC-Qt interface](https://github.com/GreycLab/gmic-qt/issues/), i.e. bugs related to the Qt-based interface of G'MIC.
 - [Issues specifically about the 8bf plug-in](https://github.com/0xC0000054/gmic-8bf/) (e.g. installation issues).
 
