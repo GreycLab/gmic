@@ -3367,7 +3367,7 @@ gmic& gmic::error(const bool output_header, const CImg<unsigned int> *const call
 CImg<char> gmic::get_variable(const char *const name,
                               const unsigned int *const variable_sizes,
                               const CImgList<char> *const image_names,
-                              unsigned int *const varlength) {
+                              unsigned int *const varlength) const {
   const bool
     is_global = *name=='_',
     is_thread_global = is_global && name[1]=='_';
@@ -3410,7 +3410,6 @@ CImg<char> gmic::get_variable(const char *const name,
         res.assign(CImg<char>::string(env,true,true),true);
         if (varlength) *varlength = res._width - 1;
       } else if (varlength) *varlength = 0;
-      cimg::mutex(21,0);
 
     } // Otherwise, 'res' is empty
   }
