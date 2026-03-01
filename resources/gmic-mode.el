@@ -632,13 +632,36 @@ Special cases forced to column 0 regardless of context:
 ;;;; -------------------------------------------------------------------------
 ;;;; Run support
 
+(defun gmic--current-command-name ()
+  "Return the name of the G'MIC command definition enclosing point.
+Scans backward from the current position for a line matching the
+pattern `name :' (command definition).  Returns the command name
+as a string, or nil if none is found."
+  (save-excursion
+    (end-of-line)
+    (let ((found nil))
+      (while (and (not found) (not (bobp)))
+        (beginning-of-line)
+        (when (looking-at "^\\s-*\\([a-zA-Z_][a-zA-Z0-9_]*\\)\\s-*\\(([^)]*)\\s-*\\)?:\\([^=]\\|$\\)")
+          (setq found (match-string-no-properties 1)))
+        (unless found (forward-line -1)))
+      found)))
+
 (defun gmic-run ()
-  "Run the current G'MIC script buffer using `gmic-executable'."
+  "Run the G'MIC command enclosing point using `gmic-executable'.
+The command executed is: gmic FILENAME COMMAND_NAME
+where COMMAND_NAME is the name of the command definition at or
+above point.  If no command definition is found, falls back to
+running the whole file without a command argument."
   (interactive)
   (let ((file (buffer-file-name)))
-    (if file
-        (compile (concat gmic-executable " " (shell-quote-argument file)))
-      (user-error "Buffer has no associated file; save it first"))))
+    (if (not file)
+        (user-error "Buffer has no associated file; save it first")
+      (let* ((cmd (gmic--current-command-name))
+             (shell-cmd (concat gmic-executable
+                                " " (shell-quote-argument file)
+                                (when cmd (concat " " cmd)))))
+        (compile shell-cmd)))))
 
 (defun gmic-run-region (beg end)
   "Run the G'MIC commands in the selected region BEG to END."
