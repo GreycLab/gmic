@@ -5450,6 +5450,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
       // Generate string for displaying image selections when verbosity>=1.
       // (only done for commands that takes image selections).
+      if (gmic_selection.width()>=1024) gmic_selection.assign();
       if (is_debug || (verbosity>=1 && !is_command_check && !is_command_skip && !is_command_verbose &&
                        !is_command_echo && !is_command_error && !is_command_warn))
         switch (id_builtin_command) {
@@ -5464,6 +5465,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         }
 
       if (is_debug) {
+        if (!gmic_selection) { gmic_selection.assign(8); std::strcpy(gmic_selection," []"); }
         if (std::strcmp(item,initial_item))
           debug("Item[%u]: '%s' -> '%s', selection%s.",position_item,initial_item,item,gmic_selection.data());
         else
