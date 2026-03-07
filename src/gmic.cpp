@@ -4995,7 +4995,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
     *color = &_c0,
     *const command = _command.data(1),
     *s_selection = _s_selection.data();
-  const char *it = 0, *csb = 0;
+  const char *it = 0, *nit = 0;
   *_command = '+';
 
 // Macros below allows to allocate memory for string variables only when necessary.
@@ -5018,7 +5018,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     (!std::strncmp("foreach",it,7) && (!it[7] || it[7]=='.' || it[7]=='[')))))
 
 #define gmic_elif_flr \
-  else if (!_is_get && ((*it=='}' && !it[1] && std::strcmp("*do",csb)) || !std::strcmp("done",it)))
+  else if (!_is_get && ((*it=='}' && !it[1] && (!nit || std::strcmp(nit,"while"))) || !std::strcmp("done",it)))
 
   unsigned int next_debug_line = ~0U, next_debug_filename = ~0U, is_high_connectivity, uind = 0,
     boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0;
@@ -7607,7 +7607,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
           if (!is_cond) {
             int nb_levels = 0;
-            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -7615,6 +7614,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               else {
                 _is_get = *it=='+';
                 it+=(_is_get || *it=='-');
+                nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                 gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
               }
             }
@@ -7644,7 +7644,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!selection) {
             if (is_very_verbose) print(0,"Skip 'foreach...done' block.");
             int nb_levels = 0;
-            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -7652,6 +7651,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               else {
                 _is_get = *it=='+';
                 it+=(_is_get || *it=='-');
+                nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                 gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
               }
             }
@@ -7715,7 +7715,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               } catch (gmic_exception &e) {
                 check_elif = false;
                 int nb_levels = 0;
-                csb = callstack.back();
                 for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
                   it = command_line[position];
                   if (*it==1)
@@ -7726,6 +7725,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                       is_debug_info|=get_debug_info(command_line[position].data(),next_debug_line,next_debug_filename);
                     else {
                       it+=(_is_get || *it=='-');
+                      nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                       gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                     }
                   }
@@ -8566,7 +8566,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } catch (gmic_exception &e) {
             check_elif = false;
             int nb_levels = 1 + nb_remaining_fr;
-            csb = callstack.back();
             for (; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -8577,6 +8576,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   is_debug_info|=get_debug_info(command_line[position].data(),next_debug_line,next_debug_filename);
                 else {
                   it+=(_is_get || *it=='-');
+                  nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                   gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                   else if (!_is_get && nb_levels==1 && !std::strcmp("onfail",it)) break;
                 }
@@ -9476,7 +9476,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'onfail'.
         if (id_builtin_command==id_onfail && no_get_selection) {
-          csb = callstack.back();
+          const char *const csb = callstack.back();
           if (csb[0]!='*' || csb[1]!='l')
             error(true,0,0,
                   "Command 'onfail': Not associated to a 'local' command within the same scope.");
@@ -9487,6 +9487,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             else {
               _is_get = *it=='+';
               it+=(_is_get || *it=='-');
+              nit = position + 1<command_line._width?command_line[position + 1]._data:0;
               gmic_if_flr ++nb_levels; gmic_elif_flr { if (!--nb_levels) --position; }
             }
           }
@@ -10750,7 +10751,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (!nb) {
             if (is_very_verbose) print(0,"Skip 'repeat...done' block (0 iterations).");
             int nb_levels = 0;
-            csb = callstack.back();
             for (nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
               it = command_line[position];
               if (*it==1)
@@ -10758,6 +10758,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               else {
                 _is_get = *it=='+';
                 it+=(_is_get || *it=='-');
+                nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                 gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
               }
             }
@@ -12949,7 +12950,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const char *stb = 0, *ste = 0;
             unsigned int callstack_ind = 0;
             int nb_levels = 0;
-            csb = callstack.back();
             if (callstack_repeat) {
               print(0,"%s %scurrent 'repeat...done' block.",
                     Com,is_continue?"to next iteration of ":"");
@@ -12960,6 +12960,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else {
                   _is_get = *it=='+';
                   it+=(_is_get || *it=='-');
+                  nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                   gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                 }
               }
@@ -12986,6 +12987,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else {
                   _is_get = *it=='+';
                   it+=(_is_get || *it=='-');
+                  nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                   gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                 }
               }
@@ -13001,6 +13003,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else {
                   _is_get = *it=='+';
                   it+=(_is_get || *it=='-');
+                  nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                   gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                 }
               }
@@ -13016,6 +13019,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 else {
                   _is_get = *it=='+';
                   it+=(_is_get || *it=='-');
+                  nit = position + 1<command_line._width?command_line[position + 1]._data:0;
                   gmic_if_flr ++nb_levels; gmic_elif_flr --nb_levels;
                 }
               }
