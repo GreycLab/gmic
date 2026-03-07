@@ -7017,7 +7017,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'done'.
         if (id_builtin_command==id_done && no_get_selection) {
           const CImg<char> &s = callstack.back();
-          if (s[0]=='*' && s[1]=='d') continue;
           if (s[0]!='*' || (s[1]!='f' && s[1]!='l' && s[1]!='r'))
             error(true,0,0,
                   "Command 'done': Not associated to a 'for', 'foreach', 'local' or 'repeat' command "
