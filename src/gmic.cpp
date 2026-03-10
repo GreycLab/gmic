@@ -6619,7 +6619,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           print(0,"Delete file%s '%s' (%u file%s).",
                 g_list_c.size()!=1?"s":"",gmic_argument_text_printed(),
                 g_list_c.size(),g_list_c.size()!=1?"s":"");
-          cimglist_for(g_list_c,l) { strreplace_fw(g_list_c[l]); std::remove(g_list_c[l]); }
+          cimglist_for(g_list_c,l) {
+            strreplace_fw(g_list_c[l]);
+            err = std::remove(g_list_c[l]);
+            if (err) warn(0,"Command 'delete': Could not remove file '%s' (error code: %d)",
+                          g_list_c[l].data(),err);
+          }
           g_list_c.assign();
           ++position;
           continue;
