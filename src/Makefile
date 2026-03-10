@@ -458,17 +458,21 @@ opencv: # Default: With OpenCV support
 
 half: # Using float16 rather than float32 to store images: HIGHLY EXPERIMENTAL, DO NOT EXPECT MUCH FROM THAT!
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(STRIP) gmic$(EXE)
 
 double: # Using float64 rather than float32 to store images
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=double" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(STRIP) gmic$(EXE)
 
 native: # Optimized with architecture-specific flags, with OpenCV support
 	$(MAKE) "OPT_CFLAGS=-O3 -march=native -mtune=native -funroll-loops -fno-math-errno" opencv
+	$(STRIP) gmic$(EXE)
 
 # Debug builds.
 #
 dev: # Without optimizations enabled, used for quick compile
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(STRIP) gmic$(EXE)
 
 debug: # With sanitize-address enabled and symbols kept, to track bugs
 	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
