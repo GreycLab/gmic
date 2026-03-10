@@ -155,14 +155,12 @@ EXE = .exe
 PIC =
 endif
 
-ifneq (,$(findstring g++,$(CXX)))
-IS_GCC = 1
-endif
 ifneq (,$(findstring clang++,$(CXX)))
 IS_CLANG = 1
-endif
-ifneq (,$(findstring icpc,$(CXX)))
+else ifneq (,$(findstring icpc,$(CXX)))
 IS_ICPC = 1
+else ifneq (,$(findstring g++,$(CXX)))
+IS_GCC = 1
 endif
 
 ifdef NOSTRIP
