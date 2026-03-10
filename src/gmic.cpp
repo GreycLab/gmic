@@ -6011,9 +6011,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (is_first_item && callstack.size()>1 && callstack.back()[0]!='*')
               error(true,0,callstack.back(),"Command '%s': Invalid argument '%s'.",
                     callstack.back().data(),_gmic_argument_text(parent_arguments,gmic_use_argument_text,true));
-            else error(true,0,0,
-                       "Command 'check': Expression '%s' is false.",
-                       gmic_argument_text());
+            else {
+              it = 0;
+              cimglist_rof(callstack,l) if (callstack[l] && callstack(l,0)!='*') { it = callstack[l]; break; }
+              error(true,0,it,
+                    "Command 'check': Expression '%s' is false.",
+                    gmic_argument_text());
+            }
           }
           ++position;
           continue;
