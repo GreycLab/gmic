@@ -2060,7 +2060,7 @@ inline void* get_tid() {
 #if defined(__MACOSX__) || defined(__APPLE__)
   void* tid = (void*)(cimg_ulong)getpid();
 #elif cimg_OS==1
-#if defined(__NetBSD__) || defined(cimg_use_pthread) || cimg_display==1
+#if defined(__NetBSD__) || cimg_use_pthread==1
   void* tid = (void*)(cimg_ulong)pthread_self();
 #else
   void* tid = (void*)(cimg_ulong)syscall(SYS_gettid);
