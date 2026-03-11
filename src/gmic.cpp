@@ -2950,7 +2950,7 @@ bool gmic::init_rc(const char *const custom_path) {
   }
   try { cimg::create_directory(dirname); }
   catch (CImgIOException&) {
-//    warn(0,"Could not create G'MIC resource directory '%s'",dirname.data());
+    warn("Could not create G'MIC resource directory '%s'",dirname.data());
   }
   return true;
 }
@@ -3153,6 +3153,27 @@ gmic& gmic::print(const CImg<unsigned int> *const callstack_selection, const cha
 
 // Print warning message.
 //-----------------------
+void gmic::warn(const char *const format, ...) {
+  va_list ap;
+  va_start(ap,format);
+  CImg<char> message(1024);
+  message[message.width() - 2] = 0;
+  cimg_vsnprintf(message,message.width(),format,ap);
+  strreplace_fw(message);
+  if (message[message.width() - 2]) cimg::strellipsize(message,message.width() - 2);
+  va_end(ap);
+
+  // Display message.
+  cimg::mutex(29);
+  const bool is_cr = *message=='\r';
+  if (is_cr) std::fputc('\r',cimg::output()); else std::fputc('\n',cimg::output());
+  std::fprintf(cimg::output(),
+               "[gmic] %s%s*** Warning *** %s%s",
+               cimg::t_magenta,cimg::t_bold,message.data() + (is_cr?1:0),cimg::t_normal);
+  std::fflush(cimg::output());
+  cimg::mutex(29,0);
+}
+
 gmic& gmic::warn(const CImg<unsigned int> *const callstack_selection,
                  const char *const format, ...) {
   if (verbosity<1 && !is_debug) return *this;

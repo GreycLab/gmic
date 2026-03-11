@@ -384,6 +384,7 @@ struct gmic {
   static char *strreplace_bw(char *const str);
   static unsigned int strescape(const char *const str, char *const res);
   static const gmic_image<char>& decompress_stdlib();
+  static void warn(const char *format, ...);
 
   template<typename T>
   gmic& _gmic(const char *const command_line, gmic_list<T>& images, gmic_list<char>& image_names,
