@@ -1,6 +1,6 @@
 ;---------------------------------------------
 ;
-; File : gmic_gimp3.0_win64.iss
+; File : gmic_gimp3.2_win64.iss
 ;
 ; Description : Inno Setup Script to create
 ;               a Windows installer for
