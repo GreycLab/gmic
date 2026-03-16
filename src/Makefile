@@ -87,7 +87,9 @@ INCLUDE ?= include
 PIC = -fPIC
 EXE =
 WGET = wget --no-check-certificate --quiet -O
-GIMPTOOL = $(shell command -v gimptool-3.0 >/dev/null 2>&1 && echo gimptool-3.0 || echo gimptool-2.0)
+GIMPTOOL = $(shell command -v gimptool-3.2 >/dev/null 2>&1 && echo gimptool-3.2 || \
+           command -v gimptool-3.0 >/dev/null 2>&1 && echo gimptool-3.0 || \
+           echo gimptool-2.0)
 PLUGIN = $(shell $(GIMPTOOL) --gimpplugindir)/plug-ins
 SHARE = $(PREFIX)/share
 BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion || echo $(SHARE)/bash-completion/completions)
