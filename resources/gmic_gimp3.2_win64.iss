@@ -17,7 +17,7 @@
 AppName={#AppName}
 AppVersion=XXX
 AppPublisherURL=https://gmic.eu/
-DefaultDirName={userappdata}\GIMP\3.0\plug-ins\gmic_gimp_qt\
+DefaultDirName={userappdata}\GIMP\3.2\plug-ins\gmic_gimp_qt\
 DefaultGroupName={#AppName}
 UninstallDisplayIcon={app}\gmic_gimp_qt.exe
 LicenseFile={#file AddBackslash(SourcePath) + "CeCILL.rtf"}
@@ -29,7 +29,7 @@ DirExistsWarning=no
 WizardImageFile=gmic_instimg.bmp
 WizardSmallImageFile=gmic_instimg_small.bmp
 PrivilegesRequired=lowest
-OutputBaseFilename=gmic_XXX_gimp3.0_win64
+OutputBaseFilename=gmic_XXX_gimp3.2_win64
 
 [Files]
 Source: build64-gimp\platforms\qdirect2d.dll; DestDir: {app}\platforms
