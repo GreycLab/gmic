@@ -3845,10 +3845,14 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
     if (ind<index_end) return CImg<unsigned int>::vector(ind);
   } else if (*string=='^') {
     if (string[1]=='-' && string[2]=='1' && !string[3]) { // ^-1
-      res.assign(1,index_end - 1); cimg_forY(res,y) res[y] = (unsigned int)y; return res;
+      if (index_end>=1) {
+        res.assign(1,index_end - 1); cimg_forY(res,y) res[y] = (unsigned int)y; return res;
+      }
     }
     if (string[1]=='0' && !string[2]) { // ^0
-      res.assign(1,index_end - 1); cimg_forY(res,y) res[y] = (unsigned int)y + 1; return res;
+      if (index_end>=1) {
+        res.assign(1,index_end - 1); cimg_forY(res,y) res[y] = (unsigned int)y + 1; return res;
+      }
     }
   }
 
