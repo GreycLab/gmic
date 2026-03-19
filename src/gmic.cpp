@@ -8648,7 +8648,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               for (unsigned int i = 0; i<nb; ++i) {
                 uind = selection[i];
                 if (images[uind].is_shared()) {
-                  images[uind] = g_list[i];
+                  try { images[uind] = g_list[i]; } catch (CImgException&) { cimg::mutex(27,0); throw; }
                   g_list[i].assign();
                 } else images[uind].swap(g_list[i]);
                 image_names[uind].swap(g_list_c[i]);
