@@ -5782,17 +5782,20 @@ output_565 : check "isbool(${2=0})"
   }
   is_change 0
 
-#@cli output_csv : "filename",_column_separator
+#@cli output_csv : "filename",_column_separator,_write_data_as={ 0:Numbers | 1:Strings }
 #@cli : Output selected ascii-encoded arrays as .csv files.
-#@cli : Default value: 'column_separator=,'.
-output_csv : skip "${2=,}"
-  e[^-1] "Output ascii-encoded array$? as file '"{/"$1"}"', with column separator '$2'."
+#@cli : Default values: 'column_separator=,' and 'write_data_as=1'.
+output_csv : skip "${2=,}" check "isbool(${3=1})"
+  s0,s1="number","string"
+  e[^-1] "Output "${s$3}" array$? as file '"{/"$1"}"', with column separator '$2'."
   N=$! +foreach {
     if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
-    0 eval.. ">
-      str = I; for (k = 0, k<s && str[k], ++k, da_push(str[k]));
+    0
+    eval.. ">begin($3?(ret = I):(ret = 0));
+      $3?(str = I):(str = v2s(i));
+      for (k = 0, k<size(str) && str[k], ++k, da_push(str[k]));
       da_push(x==w-1?_'\n':_'$2');
-      end(da_freeze()); str"
+      end(da_freeze()); ret"
     ot. $fn rm
   }
   is_change 0
