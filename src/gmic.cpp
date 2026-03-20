@@ -2083,13 +2083,11 @@ const CImg<void*> gmic::current_run(const char *const func_name, void *const p_l
     if (gr && ((p_list && gr[1]==(void*)p_list) || (!p_list && gr[7]==tid))) break;
   }
   if (p<0) { // Instance not found!
-    if (p_list) {
-      cimg::mutex(24,0);
+    if (p_list)
       throw CImgArgumentException("[" cimg_appname "] Function '%s': "
                                   "Cannot determine instance of the G'MIC interpreter.",
                                   func_name);
-    }
-    else return CImg<void*>::empty(); // Empty instance can be returned, only when called from 'gmic_current_is_abort()'
+    return CImg<void*>::empty(); // Empty instance can be returned, only when called from 'gmic_current_is_abort()'
   }
   grl.back().swap(grl[p]); // Make same search faster next time
   return grl.back().get_shared();
@@ -2098,9 +2096,12 @@ const CImg<void*> gmic::current_run(const char *const func_name, void *const p_l
 // Return 'is_abort' value related to current G'MIC instance.
 bool* gmic::current_is_abort() {
   cimg::mutex(24);
-  static bool def = false;
-  CImg<void*> gr = gmic::current_run("gmic_abort_init()",0);
-  bool *const res = gr?((gmic*)(gr[0]))->is_abort:&def;
+  bool *res = 0;
+  try {
+    static bool def = false;
+    CImg<void*> gr = gmic::current_run("gmic_abort_init()",0);
+    res = gr?((gmic*)(gr[0]))->is_abort:&def;
+  } catch (...) { cimg::mutex(24,0); throw; }
   cimg::mutex(24,0);
   return res;
 }
@@ -2286,15 +2287,17 @@ double gmic::mp_set(const double *const ptrs, const unsigned int siz, const char
 double gmic::mp_name(const unsigned int ind, double *const out_str, const unsigned int siz,
                      void *const p_list) {
   cimg::mutex(24);
-  const CImg<void*> gr = current_run("Function 'name()'",p_list);
-  CImgList<char> &image_names = *(CImgList<char>*)gr[2];
-  std::memset(out_str,0,siz*sizeof(double));
-  if (ind<image_names.size()) {
-    const char *ptrs = image_names[ind];
-    unsigned int k;
-    for (k = 0; k<siz && ptrs[k]; ++k) out_str[k] = (double)ptrs[k];
-    if (k<siz) out_str[k] = 0;
-  }
+  try {
+    const CImg<void*> gr = current_run("Function 'name()'",p_list);
+    CImgList<char> &image_names = *(CImgList<char>*)gr[2];
+    std::memset(out_str,0,siz*sizeof(double));
+    if (ind<image_names.size()) {
+      const char *ptrs = image_names[ind];
+      unsigned int k;
+      for (k = 0; k<siz && ptrs[k]; ++k) out_str[k] = (double)ptrs[k];
+      if (k<siz) out_str[k] = 0;
+    }
+  } catch (...) { cimg::mutex(24,0); throw; }
   cimg::mutex(24,0);
   return cimg::type<double>::nan();
 }
@@ -3649,140 +3652,142 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
                          unsigned int *count_new, unsigned int *count_replaced, bool *const is_main_) {
   if (!data_commands || !*data_commands) return *this;
   cimg::mutex(23);
-  CImg<char> s_body(256*1024), s_line(256*1024), s_name(257), debug_info(32);
-  unsigned int line_number = 0, hash = ~0U, pos = ~0U;
-  bool is_last_slash = false, _is_last_slash = false, is_newline = false;
-  int l_debug_info = 0;
-  char sep = 0, *ptr_body = 0;
-  if (command_file) {
-    CImg<char>::string(command_file).move_to(command_files);
-    CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'
-    CImg<unsigned char> tmp;
-    (command_files>'x').move_to(tmp);
-    tmp.resize(tmp.width() + 4,1,1,1,0,0,1);
-    tmp[0] = 'G'; tmp[1] = 'M'; tmp[2] = 'Z'; tmp[3] = 0;
-    tmp.unroll('y').move_to(ltmp);
-    const char *const _path_commands = "_path_commands";
-    ltmp.get_serialize(false,(unsigned int)(9 + std::strlen(_path_commands))).move_to(tmp);
-    cimg_snprintf((char*)tmp.data(),tmp._height,"%c*store/%s",gmic_store,_path_commands);
-    set_variable(_path_commands,tmp,0);
-  }
-  if (count_new) *count_new = 0;
-  if (count_replaced) *count_replaced = 0;
-  if (is_main_) *is_main_ = false;
-  line_number = 1;
-
-  for (const char *data = data_commands; *data; is_last_slash = _is_last_slash,
-         line_number+=is_newline?1:0) {
-
-    // Read new line.
-    char *_line = s_line, *const line_end = s_line.end();
-    while (*data!='\n' && *data && _line<line_end) *(_line++) = *(data++);
-    if (_line<line_end) *_line = 0; else *(line_end - 1) = 0;
-    if (*data=='\n') { is_newline = true; ++data; } else is_newline = false; // Skip next '\n'
-
-    // Remove comments.
-    _line = s_line;
-    if (*_line=='#') *_line = 0; else do { // Remove comments
-        if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
-      } while (_line++);
-
-    // Remove useless trailing spaces.
-    char *linee = s_line.data() + std::strlen(s_line) - 1;
-    while (linee>=s_line && is_blank(*linee)) --linee;
-    *(linee + 1) = 0;
-    char *lines = s_line; while (is_blank(*lines)) ++lines; // Remove useless leading spaces
-    if (!*lines) continue; // Empty line
-
-    // Check if last character is a '\'...
-    _is_last_slash = false;
-    for (_line = linee; _line>=lines && *_line=='\\'; --_line) _is_last_slash = !_is_last_slash;
-    if (_is_last_slash) *(linee--) = 0; // ... and remove it if necessary
-    if (!*lines) continue; // Empty line found
-    *s_body = 0;
-    const bool is_plus = *lines=='+';
-    char
-      *const nlines = lines + (is_plus?1:0),
-      *const ns_name = s_name.data() + (is_plus?1:0);
-    if (is_plus) *s_name = '+';
-    *ns_name = sep = 0;
-
-    const char *const prev_ptr_body = ptr_body;
-    const unsigned int prev_hash = hash;
-    unsigned int prev_pos = pos;
-
-    if ((!is_last_slash && std::strchr(lines,':') && // Check for a command definition (or implicit '_main_')
-         cimg_sscanf(nlines,"%255[a-zA-Z0-9_] %c%262143[^\n]",ns_name,&sep,s_body.data())>=2 &&
-         (*nlines<'0' || *nlines>'9') && sep==':' && *s_body!='=') || ((*s_name=0), hash==~0U)) {
-      const char *_s_body = s_body;
-      if (sep==':') while (*_s_body && cimg::is_blank(*_s_body)) ++_s_body;
-      CImg<char> body = CImg<char>::string(hash==~0U && !*s_name?lines:_s_body);
-      if (hash==~0U && !*s_name) std::strcpy(s_name,"_main_");
-      if (is_main_ && !std::strcmp(s_name,"_main_")) *is_main_ = true;
-      hash = hashcode(s_name,false);
-
-      if (add_debug_info) { // Insert debug info code in body
-        if (command_files.width()<2)
-          l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x",line_number);
-        else
-          l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x,%x",
-                                            line_number,command_files.width() - 1);
-        if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
-        debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
-
-        CImg<char> nbody(body._width + l_debug_info + 2);
-        std::memcpy(nbody.data(),debug_info.data(),l_debug_info + 2);
-        std::memcpy(nbody.data() + l_debug_info + 2,body.data(),body._width);
-        nbody.move_to(body);
-      }
-
-      if (!search_sorted(s_name,command_names[hash],command_names[hash].size(),pos)) {
-        command_names[hash].insert(1,pos);
-        commands[hash].insert(1,pos);
-        command_has_arguments[hash].insert(1,pos);
-        if (prev_hash==hash && prev_pos!=~0U && prev_pos>=pos)
-          ++prev_pos; // Make sure 'prev_pos' still links to the desired command
-        if (count_new) ++*count_new;
-      } else if (count_replaced) ++*count_replaced;
-
-      CImg<char>::string(s_name).move_to(command_names[hash][pos]);
-      CImg<char>::vector((char)has_arguments(body)).move_to(command_has_arguments[hash][pos]);
-      commands[hash][pos].assign(512);
-      ptr_body = commands[hash][pos];
-      *ptr_body = 0;
-      body.append_string_to(commands[hash][pos],ptr_body);
-
-      if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
-        if (commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
-          commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
-        else
-          commands[prev_hash][prev_pos]._width = prev_ptr_body - commands[prev_hash][prev_pos].data() + 1;
-      }
-
-    } else { // Continuation of a previous line
-      if (!is_last_slash) CImg<char>::append_string_to(' ',commands[hash][pos],ptr_body);
-      const CImg<char> body = CImg<char>(lines,(unsigned int)(linee - lines + 2));
-      command_has_arguments[hash](pos,0) |= (char)has_arguments(body);
-      if (add_debug_info && !is_last_slash) { // Insert code with debug info
-        if (command_files.width()<2)
-          l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x",line_number);
-        else
-          l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x,%x",
-                                       line_number,command_files.width() - 1);
-        if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
-        debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
-        CImg<char>(debug_info,l_debug_info + 2,1,1,1,true).append_string_to(commands[hash][pos],ptr_body);
-        body.append_string_to(commands[hash][pos],ptr_body);
-      } else body.append_string_to(commands[hash][pos],ptr_body); // Insert code without debug info
+  try {
+    CImg<char> s_body(256*1024), s_line(256*1024), s_name(257), debug_info(32);
+    unsigned int line_number = 0, hash = ~0U, pos = ~0U;
+    bool is_last_slash = false, _is_last_slash = false, is_newline = false;
+    int l_debug_info = 0;
+    char sep = 0, *ptr_body = 0;
+    if (command_file) {
+      CImg<char>::string(command_file).move_to(command_files);
+      CImgList<unsigned char> ltmp(command_files.size()); // Update global variable '$_path_commands'
+      CImg<unsigned char> tmp;
+      (command_files>'x').move_to(tmp);
+      tmp.resize(tmp.width() + 4,1,1,1,0,0,1);
+      tmp[0] = 'G'; tmp[1] = 'M'; tmp[2] = 'Z'; tmp[3] = 0;
+      tmp.unroll('y').move_to(ltmp);
+      const char *const _path_commands = "_path_commands";
+      ltmp.get_serialize(false,(unsigned int)(9 + std::strlen(_path_commands))).move_to(tmp);
+      cimg_snprintf((char*)tmp.data(),tmp._height,"%c*store/%s",gmic_store,_path_commands);
+      set_variable(_path_commands,tmp,0);
     }
-  }
+    if (count_new) *count_new = 0;
+    if (count_replaced) *count_replaced = 0;
+    if (is_main_) *is_main_ = false;
+    line_number = 1;
 
-  if (hash!=~0U && pos!=~0U && ptr_body) { // Freeze body of latest processed command
-    if (commands[hash][pos].end() - ptr_body>256)
-      commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
-    else
-      commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
-  }
+    for (const char *data = data_commands; *data; is_last_slash = _is_last_slash,
+           line_number+=is_newline?1:0) {
+
+      // Read new line.
+      char *_line = s_line, *const line_end = s_line.end();
+      while (*data!='\n' && *data && _line<line_end) *(_line++) = *(data++);
+      if (_line<line_end) *_line = 0; else *(line_end - 1) = 0;
+      if (*data=='\n') { is_newline = true; ++data; } else is_newline = false; // Skip next '\n'
+
+      // Remove comments.
+      _line = s_line;
+      if (*_line=='#') *_line = 0; else do { // Remove comments
+          if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
+        } while (_line++);
+
+      // Remove useless trailing spaces.
+      char *linee = s_line.data() + std::strlen(s_line) - 1;
+      while (linee>=s_line && is_blank(*linee)) --linee;
+      *(linee + 1) = 0;
+      char *lines = s_line; while (is_blank(*lines)) ++lines; // Remove useless leading spaces
+      if (!*lines) continue; // Empty line
+
+      // Check if last character is a '\'...
+      _is_last_slash = false;
+      for (_line = linee; _line>=lines && *_line=='\\'; --_line) _is_last_slash = !_is_last_slash;
+      if (_is_last_slash) *(linee--) = 0; // ... and remove it if necessary
+      if (!*lines) continue; // Empty line found
+      *s_body = 0;
+      const bool is_plus = *lines=='+';
+      char
+        *const nlines = lines + (is_plus?1:0),
+        *const ns_name = s_name.data() + (is_plus?1:0);
+      if (is_plus) *s_name = '+';
+      *ns_name = sep = 0;
+
+      const char *const prev_ptr_body = ptr_body;
+      const unsigned int prev_hash = hash;
+      unsigned int prev_pos = pos;
+
+      if ((!is_last_slash && std::strchr(lines,':') && // Check for a command definition (or implicit '_main_')
+           cimg_sscanf(nlines,"%255[a-zA-Z0-9_] %c%262143[^\n]",ns_name,&sep,s_body.data())>=2 &&
+           (*nlines<'0' || *nlines>'9') && sep==':' && *s_body!='=') || ((*s_name=0), hash==~0U)) {
+        const char *_s_body = s_body;
+        if (sep==':') while (*_s_body && cimg::is_blank(*_s_body)) ++_s_body;
+        CImg<char> body = CImg<char>::string(hash==~0U && !*s_name?lines:_s_body);
+        if (hash==~0U && !*s_name) std::strcpy(s_name,"_main_");
+        if (is_main_ && !std::strcmp(s_name,"_main_")) *is_main_ = true;
+        hash = hashcode(s_name,false);
+
+        if (add_debug_info) { // Insert debug info code in body
+          if (command_files.width()<2)
+            l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x",line_number);
+          else
+            l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x,%x",
+                                         line_number,command_files.width() - 1);
+          if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
+          debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
+
+          CImg<char> nbody(body._width + l_debug_info + 2);
+          std::memcpy(nbody.data(),debug_info.data(),l_debug_info + 2);
+          std::memcpy(nbody.data() + l_debug_info + 2,body.data(),body._width);
+          nbody.move_to(body);
+        }
+
+        if (!search_sorted(s_name,command_names[hash],command_names[hash].size(),pos)) {
+          command_names[hash].insert(1,pos);
+          commands[hash].insert(1,pos);
+          command_has_arguments[hash].insert(1,pos);
+          if (prev_hash==hash && prev_pos!=~0U && prev_pos>=pos)
+            ++prev_pos; // Make sure 'prev_pos' still links to the desired command
+          if (count_new) ++*count_new;
+        } else if (count_replaced) ++*count_replaced;
+
+        CImg<char>::string(s_name).move_to(command_names[hash][pos]);
+        CImg<char>::vector((char)has_arguments(body)).move_to(command_has_arguments[hash][pos]);
+        commands[hash][pos].assign(512);
+        ptr_body = commands[hash][pos];
+        *ptr_body = 0;
+        body.append_string_to(commands[hash][pos],ptr_body);
+
+        if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
+          if (commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
+            commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
+          else
+            commands[prev_hash][prev_pos]._width = prev_ptr_body - commands[prev_hash][prev_pos].data() + 1;
+        }
+
+      } else { // Continuation of a previous line
+        if (!is_last_slash) CImg<char>::append_string_to(' ',commands[hash][pos],ptr_body);
+        const CImg<char> body = CImg<char>(lines,(unsigned int)(linee - lines + 2));
+        command_has_arguments[hash](pos,0) |= (char)has_arguments(body);
+        if (add_debug_info && !is_last_slash) { // Insert code with debug info
+          if (command_files.width()<2)
+            l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x",line_number);
+          else
+            l_debug_info = cimg_snprintf(debug_info.data() + 1,debug_info.width() - 2,"%x,%x",
+                                         line_number,command_files.width() - 1);
+          if (l_debug_info>=debug_info.width() - 1) l_debug_info = debug_info.width() - 2;
+          debug_info[0] = 1; debug_info[l_debug_info + 1] = ' ';
+          CImg<char>(debug_info,l_debug_info + 2,1,1,1,true).append_string_to(commands[hash][pos],ptr_body);
+          body.append_string_to(commands[hash][pos],ptr_body);
+        } else body.append_string_to(commands[hash][pos],ptr_body); // Insert code without debug info
+      }
+    }
+
+    if (hash!=~0U && pos!=~0U && ptr_body) { // Freeze body of latest processed command
+      if (commands[hash][pos].end() - ptr_body>256)
+        commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
+      else
+        commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
+    }
+  } catch (...) { cimg::mutex(23,0); throw; }
   cimg::mutex(23,0);
   return *this;
 }
