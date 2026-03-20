@@ -2825,7 +2825,7 @@ gmic::~gmic() {
 // Decompress G'MIC standard library commands.
 //---------------------------------------------
 const CImg<char>& gmic::decompress_stdlib() {
-  cimg::mutex(22);
+  cimg::mutex(28);
   if (!stdlib) try {
       CImgList<char>::get_unserialize(CImg<unsigned char>(data_gmic,1,size_data_gmic,1,1,true))[0].
         move_to(stdlib);
@@ -2838,7 +2838,7 @@ const CImg<char>& gmic::decompress_stdlib() {
       cimg::mutex(29,0);
       stdlib.assign(1,1,1,1,0);
     }
-  cimg::mutex(22,0);
+  cimg::mutex(28,0);
   return stdlib;
 }
 
@@ -4093,7 +4093,7 @@ gmic& gmic::_gmic(const char *const command_line,
   cimg::exception_mode(0);
 
   // Initialize class attributes.
-  cimg::mutex(22);
+  cimg::mutex(28);
   if (!builtin_commands_bounds) { // First call
     builtin_commands_bounds.assign(128,2,1,1,-1);
     for (unsigned int i = 0; builtin_command_names[i]; ++i) {
@@ -4104,7 +4104,7 @@ gmic& gmic::_gmic(const char *const command_line,
     try { is_display_available = (bool)CImgDisplay::screen_width(); } catch (CImgDisplayException&) { }
     cimg::srand();
   }
-  cimg::mutex(22,0);
+  cimg::mutex(28,0);
 
   // Initialize instance attributes.
   setlocale(LC_NUMERIC,"C");
