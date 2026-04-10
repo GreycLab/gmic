@@ -207,7 +207,7 @@ namespace gmic_library {
 #define cimg_appname "gmic"
 #endif
 
-#if defined(gmic_is_parallel) && cimg_OS!=2
+#if gmic_is_parallel
 #include <pthread.h>
 #endif
 
