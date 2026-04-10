@@ -2397,17 +2397,17 @@ struct _gmic_parallel {
   gmic_exception exception;
   gmic gmic_instance;
 #ifdef gmic_is_parallel
-#ifdef PTHREAD_CANCEL_ENABLE
+#ifdef gmic_parallel_use_pthread
   pthread_t thread_id;
 #elif cimg_OS==2
   HANDLE thread_id;
-#endif // #ifdef PTHREAD_CANCEL_ENABLE
+#endif // #ifdef gmic_parallel_use_pthread
 #endif // #ifdef gmic_is_parallel
   _gmic_parallel() { variable_sizes.assign(gmic_varslots); }
 };
 
 template<typename T>
-#if cimg_OS==2 && !defined(PTHREAD_CANCEL_ENABLE)
+#if cimg_OS==2
 DWORD WINAPI gmic_parallel(LPVOID arg) {
 #else
 static void *gmic_parallel(void *arg) {
@@ -2425,9 +2425,9 @@ static void *gmic_parallel(void *arg) {
     st.exception._command.assign(e._command);
     st.exception._message.assign(e._message);
   }
-#if defined(gmic_is_parallel) && defined(PTHREAD_CANCEL_ENABLE)
+#if defined(gmic_is_parallel) && defined(gmic_parallel_use_pthread)
   pthread_exit(0);
-#endif // #if defined(gmic_is_parallel) && defined(PTHREAD_CANCEL_ENABLE)
+#endif // #if defined(gmic_is_parallel) && defined(gmic_parallel_use_pthread)
   return 0;
 }
 
@@ -2637,12 +2637,12 @@ void gmic::wait_threads(void *const p_gmic_threads, const bool try_abort, const 
     if (gmic_threads[l].is_thread_running) {
       gmic_threads[l].is_thread_running = false;
       cimg::mutex(25,0);
-#ifdef PTHREAD_CANCEL_ENABLE
+#ifdef gmic_parallel_use_pthread
       pthread_join(gmic_threads[l].thread_id,0);
-#elif cimg_OS==2 // #ifdef PTHREAD_CANCEL_ENABLE
+#elif cimg_OS==2 // #ifdef gmic_parallel_use_pthread
       WaitForSingleObject(gmic_threads[l].thread_id,INFINITE);
       CloseHandle(gmic_threads[l].thread_id);
-#endif // #ifdef PTHREAD_CANCEL_ENABLE
+#endif // #ifdef gmic_parallel_use_pthread
     } else cimg::mutex(25,0);
 
     is_change|=gmic_threads[l].gmic_instance.is_change;
@@ -10282,7 +10282,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             // Run threads.
             cimg_forY(_gmic_threads,l) {
 #ifdef gmic_is_parallel
-#ifdef PTHREAD_CANCEL_ENABLE
+#ifdef gmic_parallel_use_pthread
 
 #if defined(__MACOSX__) || defined(__APPLE__) || defined(__clang__)
               const cimg_uint64 stacksize = (cimg_uint64)8*1024*1024;
@@ -10294,10 +10294,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 #endif // #if defined(__MACOSX__) || defined(__APPLE__)
                 pthread_create(&_gmic_threads[l].thread_id,0,gmic_parallel<T>,(void*)&_gmic_threads[l]);
 
-#elif cimg_OS==2 // #ifdef PTHREAD_CANCEL_ENABLE
+#elif cimg_OS==2 // #ifdef gmic_parallel_use_pthread
               _gmic_threads[l].thread_id = CreateThread(0,0,(LPTHREAD_START_ROUTINE)gmic_parallel<T>,
                                                         (void*)&_gmic_threads[l],0,0);
-#endif // #ifdef PTHREAD_CANCEL_ENABLE
+#endif // #ifdef gmic_parallel_use_pthread
 #else // #ifdef gmic_is_parallel
               gmic_parallel<T>((void*)&_gmic_threads[l]);
 #endif // #ifdef gmic_is_parallel
