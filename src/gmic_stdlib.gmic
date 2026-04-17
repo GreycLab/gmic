@@ -5219,58 +5219,52 @@ _input_bytes :
   e[0--3] "Input file '"{/"$*"}"' as a 1D array of bytes."
   i raw:"$*",uint8
 
-#@cli input_csv : "filename",_read_data_as={ 0:Numbers | 1:Strings | _Variable_name }
-#@cli : Insert number of string array from specified .csv file.
-#@cli : If 'variable_name' is provided, the string of each cell is stored in a numbered variable '_variable_name_x_y', \
-# where 'x' and 'y' are the indices of the cell column and row respectively (starting from '0').
-#@cli : Otherwise, a 'WxH' image is inserted at the end of the list, with each vector-valued pixel 'I(x,y)' encoding \
-# the number or the string of each cell.
-#@cli : This command returns the 'W,H' dimension of the read array, as the status.
-#@cli : Default value: 'read_data_as=1'.
-+input_csv : check "isvarname('${2=1}') || isin($2,0,1,2)"
-  l[] {
-    is_var:="s = ['$2']; s!='0' && s!='1'"
-    if $is_var # Read data as new variables
-      e[0--4] "Input string array from file '"{/"$1"}"', in variable '$2'."
-      it "$1" replace {'" "'},255 s -,{'\n'}
-      W,H=0,$!
-      repeat $! { _input_csv_var[] $2,$>,${u\ {$>,t}} W:=max($W,${}) }
-      rm u $W,$H
-    else # Read data as a new image
-      s0,s1="number","string"
-      e[0--4] "Input "${s$2}" array from file '"{/"$1"}"'."
-      it "$1" s -,{'\n'} replace {'" "'},255
-      if $2 repeat $! { _input_csv_str[] ${u\ {$>,t}} rv[$>,-1] rm. } a y replace 255,{'" "'} # Read as strings
-      else repeat $! { _input_csv_val[] ${u\ {$>,t}} rv[$>,-1] rm. } a y # Read as values
-      fi
-      => "$1" u {[w,h]}
-    fi
-  }
+#@cli input_csv : "filename",_delimiter,_read_data_as={ 0:Numbers | 1:Strings }
+#@cli : Insert array of strings or numbers, read from specified .csv file.
+#@cli : A 'WxH' image is inserted at the end of the list, with each vector-valued pixel 'I(x,y)' encoding \
+# the content (number or string) of each cell.
+#@cli : Default values: 'delimiter=,' and 'read_data_as=1'.
++input_csv : skip "${2=,}" check "isbool(${3=1})"
+  s0,s1=number,string
+  e[^-1] "Input .csv file '"{/"$1"}"' as a "${s$3}" array$?, with delimiter '$2'."
+  it "$1"
 
-_input_csv_var :
-  $=arg
-  W:=$#-2
-  repeat $W {
-   arg=${arg{3+$>}}
-   if ['$arg']!=0 ({'${arg{3+$>}}'}) replace. 255,{'" "'} $1_$>_$2={t} rm. else $1_$>_$2= fi
-  }
-  u $W
+  # Determine table size and maximum cell length (excluding double quotes).
+  eval. ">begin(is_quoted = x = y = l = W = L = 0); i = i;
+    new_cell() = (
+      l>0?(j[-l]==_'\"' && j[-1]==_'\"'?(l-=2); L = max(L,l));
+      l = is_quoted = 0;
+    );
+    i==_'$2' && !is_quoted?(new_cell(); ++x):
+    i==_'\n'?(new_cell(); W = max(W,++x); ++y; x = 0):
+    i=='\"' && j[-1]!=_'\\'?(is_quoted = !is_quoted; ++l):++l;
+    end(
+      i!=_'\n'?(new_cell(); W = max(W,++x); ++y);
+      set('width',W); set('height',y); set('length',L)
+    )"
 
-_input_csv_str :
-  $=arg
-  repeat $# {
-    arg=${arg{1+$>}}
-    if ['$arg']!=0 ({'$arg'}:c) else (0) fi
-  }
-  a x
-
-_input_csv_val :
-  $=arg
-  repeat $# {
-    arg=${arg{1+$>}}
-    if ['$arg']!=0 ({s2v(['$arg'])}) else (nan) fi
-  }
-  a x
+  # Fill table.
+  $width,$height,1,{$3?$length:1}
+  eval.. ">begin(is_quoted = x = y = l = 0; str = vector32()); i = i;
+    new_cell() = (
+      l>0?(
+        off = -l;
+        j[-l]==_'\"' && j[-1]==_'\"'?(++off; l-=2);
+        l>0?(
+          $3?copy(i(#-1,x,y),j[off],l,wh#-1):(
+            nl = min(size(str),l); copy(str,j[off],nl); str[nl] = 0; i(#-1,x,y) = s2v(str);
+          );
+        );
+      );
+      l = is_quoted = 0;
+    );
+    i==_'$2' && !is_quoted?(new_cell(); ++x):
+    i==_'\n'?(new_cell(); x = 0; ++y):
+    i=='\"' && j[-1]!=_'\\'?(is_quoted = !is_quoted; ++l):++l;
+    end(
+      i!=_'\n'?new_cell();
+    )"
+  rm..
 
 #@cli input_cube : "filename",_convert_1d_cluts_to_3d={ 0:No | 1:Yes }.
 #@cli : Insert CLUT data from a .cube filename (Adobe CLUT file format).
@@ -5782,12 +5776,12 @@ output_565 : check "isbool(${2=0})"
   }
   is_change 0
 
-#@cli output_csv : "filename",_column_separator,_write_data_as={ 0:Numbers | 1:Strings }
+#@cli output_csv : "filename",_delimiter,_write_data_as={ 0:Numbers | 1:Strings }
 #@cli : Output selected ascii-encoded arrays as .csv files.
-#@cli : Default values: 'column_separator=,' and 'write_data_as=1'.
+#@cli : Default values: 'delimiter=,' and 'write_data_as=1'.
 output_csv : skip "${2=,}" check "isbool(${3=1})"
-  s0,s1="number","string"
-  e[^-1] "Output "${s$3}" array$? as file '"{/"$1"}"', with column separator '$2'."
+  s0,s1=number,string
+  e[^-1] "Output "${s$3}" array$? as file '"{/"$1"}"', with delimiter '$2'."
   N=$! +foreach {
     if $N>1 fn=${"filename \"$1\",$>"} else fn="$1" fi
     0
