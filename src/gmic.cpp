@@ -4232,6 +4232,9 @@ gmic& gmic::_gmic(const char *const command_line,
 #ifdef cimg_use_png
     ",png"
 #endif
+#if cimg_display==3
+    ",sdl3"
+#endif
 #ifdef cimg_use_tiff
     ",tiff"
 #endif
