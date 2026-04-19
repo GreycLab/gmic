@@ -45124,6 +45124,12 @@ gui_check_version :
   else u 1
   fi
 
+gui_check_x11_gdi32 :
+  if find('$_flags','x11')<0" && "find('$_flags','gdi32')<0
+    str="This filter requires the X11 or GDI32 graphic library to work properly."
+    if $1 gui_error_preview $str q else error $str fi
+  fi
+
 # Function to auto-crop layers and set their positions.
 gui_autocrop_layers :
   foreach {
@@ -48761,7 +48767,7 @@ fx_charcoal :
 #@gui : "http://www.davidrevoy.com/article240/gmic-line-art-colorization")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2016/07/12</i>.</small>")
-fx_colorize_interactive : skip "${4=},${5=},${6=}"
+fx_colorize_interactive : skip "${4=},${5=},${6=}" gui_check_x11_gdi32 0
   N=$! nm={n}
   resolution:=arg0($3,512,1024,2048,0)
   => "[G'MIC] Colorize"
@@ -48803,7 +48809,7 @@ fx_colorize_interactive : skip "${4=},${5=},${6=}"
   if !narg($status) status=-1 fi
   u \{$1\}\{$2\}\{$3\}\{"$4"\}\{"$5"\}\{"$6"\}\{0\}\{{w},{h}\}\{$status\}
 
-fx_colorize_interactive_preview : skip "${4=},${5=},${6=}"
+fx_colorize_interactive_preview : skip "${4=},${5=},${6=}" gui_check_x11_gdi32 1
   if $7 # Clear control points
     gui_print_preview "No preview\n  available",,"(Control points cleared)"
     u \{$1\}\{$2\}\{$3\}\{"$4"\}\{"$5"\}\{"$6"\}\{0\}\{{w},{h}\}\{-1\}
@@ -51296,7 +51302,7 @@ fx_colormap_preview :
 #@gui : </small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>01/20/2017</i>.</small>")
-fx_mask_color :
+fx_mask_color : gui_check_x11_gdi32 0
   cs=rgb,rgb_r,rgb_g,rgb_b,lrgb,lrgb_r,lrgb_g,lrgb_b,ycbcr_y,ycbcr_cbcr,ycbcr_cb,ycbcr_cr,ycbcr_cg,\
      lab,lab_l,lab_ab,lab_a,lab_b,lch,lch_c,lch_h,hsv,hsv_h,hsv_s,hsv_v,hsi,hsi_i,hsl,hsl_l,\
      cmyk_c,cmyk_m,cmyk_y,cmyk_k,yiq_y,yiq_iq
@@ -51341,7 +51347,7 @@ fx_mask_color :
 #@gui : </small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>09/28/2014</i>.</small>")
-fx_curves_interactive :
+fx_curves_interactive : gui_check_x11_gdi32 0
   => "Color curves"
   repeat 5 { __xcc_C$>=0,0,100,100 }
   if $4==$1 l[] { ($5) s -,-1 repeat $! { __xcc_C$>={$>,^} } rm } fi
@@ -51359,7 +51365,7 @@ fx_curves_interactive :
     x_color_curves. last
   fi
 
-fx_curves_interactive_preview :
+fx_curves_interactive_preview : gui_check_x11_gdi32 1
   fx_curves_interactive $1,0,1,$4,"$5"
 
 #@gui Customize CLUT : fx_customize_clut,fx_customize_clut_preview(1)+
@@ -53303,7 +53309,7 @@ fx_edge_offsets :
 #@gui : </small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/09/29</i>.</small>")
-fx_extract_foreground :
+fx_extract_foreground : gui_check_x11_gdi32 0
   if !$! return fi
   resolution:=arg0($3,512,1024,2048,0)
   foreach {
@@ -54280,7 +54286,7 @@ fx_symmetrizoscope :
 #@gui : "}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/04/16</i>.</small>")
-fx_morph_interactive :
+fx_morph_interactive : gui_check_x11_gdi32 0
   if [$3][0]!=-1 __x_morph_keypoints=$3 fi
   rv
   x_morph $1,$2
@@ -54288,7 +54294,7 @@ fx_morph_interactive :
   rv
   u "{$1}{$2}{"$__x_morph_keypoints"}"
 
-fx_morph_interactive_preview :
+fx_morph_interactive_preview : gui_check_x11_gdi32 1
   if $!<2 gui_warning_preview "This filter requires at least two input layers!" return fi
   rs ${-max_wh},3 + n 0,255
   if [$3][0]!=-1 gui_warning_preview "No preview available\n\nKeypoints from previous\nrun have been saved"
@@ -54889,12 +54895,12 @@ fx_twirl :
 #@gui : "}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/04/08</i>.</small>")
-fx_warp_interactive :
+fx_warp_interactive : gui_check_x11_gdi32 0
   if [$4][0]!=-1 __x_warp_keypoints=$4 fi
   x_warp $2,$2,$3,$1
   u "{$1}{$2}{$3}{"$__x_warp_keypoints"}"
 
-fx_warp_interactive_preview :
+fx_warp_interactive_preview : gui_check_x11_gdi32 1
   if [$4][0]!=-1 __x_warp_keypoints=$4 fi
   foreach {
     rs $_preview_area_width,$_preview_area_height,3 to_color drgba
