@@ -17350,31 +17350,24 @@ solarize :
   e[^-1] "Solarize image$?."
   luminance n 0,128 map 1
 
-#@cli split_colors : _tolerance>=0,_max_nb_outputs>0,_min_area>0
-#@cli : Split selected images as several image containing a single color.
+#@cli split_colors : _max_nb_outputs>=0
+#@cli : Split selected images as several single-colored outputs.
 #@cli : One selected image can be split as at most 'max_nb_outputs' images.
-#@cli : Output images are sorted by decreasing area of extracted color regions and have an additional alpha-channel.
-#@cli : Default values: 'tolerance=0', 'max_nb_outputs=256' and 'min_area=8'.
+#@cli : Output images are sorted by decreasing color occurence and have an additional alpha-channel.
+#@cli : If 'max_nb_outputs==0', there are as many outputs as different colors in the input images.
+#@cli : Default values: 'max_nb_outputs=0'.
 #@cli : $ image.jpg quantize 5 +split_colors , display_rgba
-split_colors : check "${1=0}>=0 && isint(${2=256},1) && ${3=8}>=1"
-  e[^-1] "Split image$? as single color outputs, with tolerance $1, $2 maximal outputs and minimal color area $3."
-  foreach {
-    +label 0,1 norm. area. 0,1
-
-    # Loop over biggest color regions.
-    repeat $2-1 {
-      coordsM={1,[xM,yM,zM,cM]}
-      if {1,i($coordsM)<$3} break fi
-      color={0,I($coordsM)}
-      +select_color[0] $1,$color
-      ==. 0 *[1] . ==. 0
-    }
-    if iM#1 !=[1] 0 mv[1] $! # Residual mask, if any
-    else rm[1] fi
-    r[^0] [0],[0],[0],{0,s+1}
-    N:=$!-1
-    sh[^0] 0,{s-2} *[-$N--1] [0] rm[-$N--1]
-    sh[^0] 100% *[-$N--1] 255 rm[0,-$N--1]
+split_colors : check "isint(${1=0},0)"
+  s0,s1=,", with $1 maximum outputs"
+  e[^-1] "Split image$? as single-colored outputs"${s{!!$1}}"."
+  foreach { nm={n}
+    if w
+      +colormap 0,0,2 index.. .,0,0 to_rgba.
+      N:=min($1?$1:inf,w)
+      ..,..,..,100% => $nm if $N>1 .x{$N-1} fi
+      eval[0] "i = i; i<$N?copy(i(#2 + i,x,y,z),i[#1,i],s#1,whd#2,whd#1)"
+      rm[0,1]
+    fi
   }
 
 #@cli split_opacity
