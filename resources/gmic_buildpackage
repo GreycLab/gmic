@@ -42,6 +42,8 @@
 #
 
 set -euo pipefail
+trap 'echo "Error line $LINENO : command \"$BASH_COMMAND\" failed"' ERR
+MODE=${1:-}
 
 # Handle package building on Windows.
 #------------------------------------
@@ -80,7 +82,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
     GIMPTOOL=$(command -v gimptool-3.2 >/dev/null && echo gimptool-3.2 || echo gimptool-2.0)
     GIMPVER=$(echo `$GIMPTOOL --version` | cut -d. -f1-2)
 
-    if [ "$1" == "final" ]; then
+    if [ "$MODE" == "final" ]; then
         SUFFIX="";
         sed "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile > /tmp/Makefile
         mv /tmp/Makefile Makefile
@@ -125,7 +127,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
         make CXX="clang++" EXTRA_CFLAGS="-m${BITS}" cli lib libc # libc_static
     fi
     cd $HOME/gmic-qt && rm -rf .obj
-    if [ "$1" == "final" ]; then
+    if [ "$MODE" == "final" ]; then
         qmake COMPILER=clang PRERELEASE= HOST=none gmic_qt.pro && make clean
         sed "s/-fno-keep-inline-dllexport //" Makefile.Release > /tmp/Makefile
         mv /tmp/Makefile Makefile.Release
@@ -203,10 +205,9 @@ fi
 #-----------------------------------------------------
 DIST=`lsb_release -d | tail -c+13 | xargs`
 BITS=`uname -m`
-
-IS_320=`grep \(3\) /usr/include/gimp-3.2/libgimpbase/gimpversion.h | wc -l`
-IS_300=`grep \(3\) /usr/include/gimp-3.0/libgimpbase/gimpversion.h | wc -l`
-IS_210=`grep \(10\) /usr/include/gimp-2.0/libgimpbase/gimpversion.h | wc -l`
+IS_320=$(grep '(3)' /usr/include/gimp-3.2/libgimpbase/gimpversion.h 2>/dev/null | wc -l || true)
+IS_300=$(grep '(3)' /usr/include/gimp-3.0/libgimpbase/gimpversion.h 2>/dev/null | wc -l || true)
+IS_210=$(grep '(10)' /usr/include/gimp-2.0/libgimpbase/gimpversion.h 2>/dev/null | wc -l || true)
 
 if [ "$IS_320" == "1" ]; then GIMPVER=3.2
 elif [ "$IS_300" == "1" ]; then GIMPVER=3.0
@@ -215,9 +216,9 @@ else GIMPVER=2.8
 fi
 
 if [ "$HOSTNAME" != "C302L-G26P03.png.unicaen.fr" ] &&
-       [ "$HOSTNAME" != "C302L-G17P17.png.unicaen.fr" ] &&
-       [ "$HOSTNAME" != "C302L-G14F15.png.unicaen.fr" ] &&
-       [ "$HOSTNAME" != "C302L-G23P04.png.unicaen.fr" ]; then
+   [ "$HOSTNAME" != "C302L-G17P17.png.unicaen.fr" ] &&
+   [ "$HOSTNAME" != "C302L-G14F15.png.unicaen.fr" ] &&
+   [ "$HOSTNAME" != "C302L-G23P04.png.unicaen.fr" ]; then
     SF_HOME=/media/sf_tschumperle
     cd ${SF_HOME}/work/src
     RELEASE0=`grep "#define gmic_version" gmic/src/gmic.h | tail -c5`
@@ -230,7 +231,7 @@ if [ "$HOSTNAME" != "C302L-G26P03.png.unicaen.fr" ] &&
     CODENAME="${CODENAME//./-}"
     BITS=`uname -m`
     if [ "$BITS" == "x86_64" ]; then BITS=64; ARCH=amd64; PARCH=x86_64; else BITS=32; ARCH=i386; PARCH=i386; fi
-    if [ "$1" == "final" ]; then SUFFIX=""; else SUFFIX=_pre; fi
+    if [ "$MODE" == "final" ]; then SUFFIX=""; else SUFFIX=_pre; fi
 
     TARFILE=gmic_${SVERSION}${SUFFIX}.tar
     OUTDIR=gmic-${SVERSION}${SUFFIX}
@@ -290,7 +291,7 @@ CODENAME=`. /etc/os-release && echo "${ID}${VERSION_ID}_${VERSION_CODENAME}"`
 CODENAME="${CODENAME//./-}"
 BITS=`uname -m`
 if [ "$BITS" == "x86_64" ]; then BITS=64; ARCH=amd64; PARCH=x86_64; else BITS=32; ARCH=i386; PARCH=i386; fi
-if [ "$1" == "final" ]; then SUFFIX=""; LSUFFIX=""; else SUFFIX=_pre; LSUFFIX=_pre`date +%y%m%d%H`; fi
+if [ "$MODE" == "final" ]; then SUFFIX=""; LSUFFIX=""; else SUFFIX=_pre; LSUFFIX=_pre`date +%y%m%d%H`; fi
 DIR=/tmp/gmic-${SVERSION}${SUFFIX}
 rm -f gmic_*${SVERSION}${SUFFIX}* deb_gmic_*
 
@@ -308,10 +309,10 @@ git checkout develop
 cd ..
 
 cd gmic
-git checkout master
-git merge develop -m "."
-git push
-git checkout develop
+git checkout master || true
+git merge develop -m "." || true
+git push || true
+git checkout develop || true
 rm -rf gmic-qt
 ln -fs ../gmic-qt .
 
@@ -341,7 +342,7 @@ ln -fs ../../gmic-community/libcgmic/gmic_libc.h .
 ln -fs ../../gmic-community/libcgmic/use_libcgmic.c .
 gmic _version=$VERSION update_instimg
 
-if [ "$1" == "final" ]; then
+if [ "$MODE" == "final" ]; then
     gmic _update_header_html ../html/header.html,${VERSION},0
     gmic _update_header_html ../html/header1.html,${VERSION},0
     git push --delete origin v.$VERSION
@@ -350,8 +351,6 @@ if [ "$1" == "final" ]; then
     git tag v.$SVERSION
     gmic_commit "Final release "${SVERSION}
     git push --tags
-#    COMMIT=$(git -C $HOME/work/src/gmic-qt log -1 | head -1 | cut -d' ' -f 2)  # Get the SHA1 of the latest commit
-#    wget -O /dev/null --timeout=10 "${GMIC_FOUREY_URL}?version=v.${SVERSION}&commit=${COMMIT}"
 else
     gmic _update_header_html ../html/header.html,${VERSION},1
     gmic _update_header_html ../html/header1.html,${VERSION},1
@@ -428,7 +427,7 @@ sed s\/_gmic_version\/$SVERSION\/ changelog > /tmp/changelog
 mv /tmp/changelog changelog
 
 cd $DIR/src
-if [ "$1" == "final" ]; then
+if [ "$MODE" == "final" ]; then
     sed "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile > /tmp/Makefile
     mv /tmp/Makefile Makefile
     sed "s/PRERELEASE = /NO_PRERELEASE = /" Makefile > /tmp/Makefile
@@ -469,40 +468,13 @@ tar chvf ${TARFILE} `basename $DIR`
 gzip ${TARFILE}
 cp -f ${TARFILE}.gz ${HOME}/work/src/
 
-if [ "$1" == "final" ]; then
+if [ "$MODE" == "final" ]; then
     lftp sftp://$GMIC_LOGIN:@ovh -e "put -O /home/"$GMIC_LOGIN"/www/gmic/files/source/ ${HOME}/work/src/${TARFILE}.gz; quit";
 fi
 
 lftp sftp://$GMIC_LOGIN:@ovh -e "mrm /home/"$GMIC_LOGIN"/www/gmic/files/prerelease/*.tar.gz; quit"
 lftp sftp://$GMIC_LOGIN:@ovh -e "put -O /home/"$GMIC_LOGIN"/www/gmic/files/prerelease ${HOME}/work/src/${TARFILE}.gz -o gmic_prerelease.tar.gz; quit"
 lftp sftp://$GMIC_LOGIN:@ovh -e "put -O /home/"$GMIC_LOGIN"/www/gmic/files/prerelease ${HOME}/work/src/${TARFILE}.gz -o gmic_${SVERSION}${LSUFFIX}.tar.gz; quit"
-
-# Create debian packages for debian/ubuntu 64 bits.
-#--------------------------------------------------
-# echo " - Create debian packages."
-# OUTPAK=gmic_${SVERSION}${SUFFIX}_${CODENAME}_${ARCH}.deb
-# OUTZIP_GIMP=gmic_${SVERSION}${SUFFIX}_gimp${GIMPVER}_${CODENAME}_${ARCH}.zip
-# OUTDIR=gmic-${SVERSION}${SUFFIX}
-
-# cp ${HOME}/work/src/deb_${TARFILE}.gz /tmp/ &&
-#     cd /tmp/ &&
-#     rm -rf gmic_gimp_qt $OUTPAK $OUTZIP_GIMP *.deb &&
-#     touch deb_${TARFILE}.gz &&
-#     tar zxvf deb_${TARFILE}.gz &&
-#     find gmic-${SVERSION}${SUFFIX} -exec touch {} \; &&
-#     cd $OUTDIR/src &&
-#     sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile &&
-#     mv /tmp/Makefile Makefile && cd ../..
-
-# cd /tmp/$OUTDIR &&
-#     dpkg-buildpackage -d -j4 -rfakeroot &&
-#     mv ../*.deb ../$OUTPAK &&
-#     mkdir -p gmic_gimp_qt &&
-#     rm -f gmic-qt/gmic_gimp_qt &&
-#     make gimp &&
-#     cp -f gmic-qt/gmic_gimp_qt README gmic_gimp_qt/ &&
-#     zip -r -9 ../$OUTZIP_GIMP gmic_gimp_qt &&
-#     cp -f ../$OUTPAK ../$OUTZIP_GIMP $HOME/work/src/
 
 echo MAIN_DONE
 
