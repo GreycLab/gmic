@@ -55323,7 +55323,7 @@ fx_blur_dof_preview :
 
 _fx_blur_dof :
   if !$3 # Gaussian DOF
-    foreach {
+    foreach { nm={n}
       if $11 drgba fi
       split_opacity l[0] {
         rmax:=(w*w+h*h)^0.5 R:=$7*$rmax/100 r:=$8*$rmax/100
@@ -55337,20 +55337,20 @@ _fx_blur_dof :
           +isoline3d[1] {0.1*$1} col3d. 255,255,0
           +isoline3d[1] {0.5*$1} col3d. 255,128,0
           +3d[-2--1]
-          __fx_dof_blur[0,1] $2,$ms,$Ms,$4
+          __fx_blur_dof[0,1] $2,$ms,$Ms,$4
           [0],[0],1,3 j3d. ..,0,0,0,1,1,0,0 rm..
           circle. $5%,$6%,3,1,255,255,255
           +compose_channels. + !=. 0 dilate. 3
           j[0] ..,0,0,0,0,0.5,.,1 rm[-2,-1]
-        else __fx_dof_blur[0,1] $2,$ms,$Ms,$4 # Without preview
+        else __fx_blur_dof[0,1] $2,$ms,$Ms,$4 # Without preview
         fi
       }
-      if $11 k[0] fi a c
+      if $11 k[0] fi a c => $nm
     }
   elif $!>1 # User-defined DOF (as bottom layer)
     luminance. n. 0,1 ^. {10^$12}
-    repeat $!-1 { +r. {$>,w},{$>,h},1,1,3 l[$>,-1] {
-      split_opacity[0] __fx_dof_blur[0,-1] $2,0,$1,$4 a c
+    repeat $!-1 { +r. {$>,w},{$>,h},1,1,3 l[$>,-1] { nm={0,n}
+      split_opacity[0] __fx_blur_dof[0,-1] $2,0,$1,$4 a c => $nm
     } } rm.
   else drgba to "Depth-of-field (bottom layer) is missing !",2,2,13,2,1,255
   fi
@@ -55362,7 +55362,7 @@ _fx_blur_dof :
 # $2 = minimal blur level.
 # $3 = maximal blur level.
 # $4 = invert blur.
-__fx_dof_blur :
+__fx_blur_dof :
   n[1] 0,{$1-1} round[1]
   [0],[0],1,{0,s+1}
   s=0
