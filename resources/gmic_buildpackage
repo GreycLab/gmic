@@ -249,21 +249,23 @@ if [ "$HOSTNAME" != "C302L-G26P03.png.unicaen.fr" ] &&
 
     while [ ! -f deb_${TARFILE}.gz ]; do sleep 10; done
     sleep 10
-    cp deb_${TARFILE}.gz /tmp/ &&
-        cd /tmp/ &&
-        rm -rf gmic_gimp_qt $OUTDIR $OUTPAK $OUTZIP_GIMP $GENERIC_OUTZIP_GIMP *.deb &&
-        touch deb_${TARFILE}.gz &&
-        tar zxvf deb_${TARFILE}.gz &&
-        find gmic-${SVERSION}${SUFFIX} -exec touch {} ;
+    cp deb_${TARFILE}.gz /tmp/
+    cd /tmp/
+    rm -rf gmic_gimp_qt $OUTDIR $OUTPAK $OUTZIP_GIMP $GENERIC_OUTZIP_GIMP *.deb
+    touch deb_${TARFILE}.gz
+    tar zxvf deb_${TARFILE}.gz
+    find gmic-${SVERSION}${SUFFIX} -exec touch {} || true
 
     cd $OUTDIR/src
-    sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile && mv /tmp/Makefile Makefile;
-    sed "s/\&\& \$(MAKE) clean//g" Makefile > /tmp/Makefile && mv /tmp/Makefile Makefile;  # Prevent 'qmake not found' bug when using dpkg-buildpackage, still don't know why.
+    sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile
+    mv /tmp/Makefile Makefile;
+    sed "s/\&\& \$(MAKE) clean//g" Makefile > /tmp/Makefile
+    mv /tmp/Makefile Makefile;  # Prevent 'qmake not found' bug when using dpkg-buildpackage, still don't know why.
 
-    cd /tmp/$OUTDIR &&
-        dpkg-buildpackage -d -j4 -rfakeroot &&
-        mv ../*.deb ../$OUTPAK &&
-        cp -f ../$OUTPAK $SF_HOME/work/src/
+    cd /tmp/$OUTDIR
+    dpkg-buildpackage -d -j4 -rfakeroot
+    mv ../*.deb ../$OUTPAK
+    cp -f ../$OUTPAK $SF_HOME/work/src/
 
     mkdir -p gmic_gimp_qt
     rm -f gmic-qt/gmic_gimp_qt
@@ -438,7 +440,8 @@ mv /tmp/Makefile Makefile
 make clean
 rm -f gmic_buildpackage
 for i in *.h *.cpp *.c *.gmic *.scm; do
-    sed -e 's/ *$//' $i >/tmp/gmic_buildpackage$$ && mv /tmp/gmic_buildpackage$$ $i
+    sed -e 's/ *$//' $i >/tmp/gmic_buildpackage$$
+    mv /tmp/gmic_buildpackage$$ $i
 done
 
 cd $DIR
