@@ -183,8 +183,10 @@ PRERELEASE = $(shell date +%y%m%d%H)
 PRERELEASE_CFLAGS = -Dgmic_prerelease="\\\"$(PRERELEASE)\\\""
 
 # Minimal set of flags mandatory to compile G'MIC.
-MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(shell pkg-config --cflags zlib || echo -I$(PREFIX)/$(INCLUDE)) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
-MANDATORY_LIBS = $(shell pkg-config --libs zlib || echo -lz) $(EXTRA_LIBS)
+ZLIB_CFLAGS := $(shell pkg-config --cflags zlib 2>/dev/null || echo -I$(PREFIX)/$(INCLUDE))
+ZLIB_LIBS   := $(shell pkg-config --libs zlib 2>/dev/null || echo -lz)
+MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
+MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
 
 ifndef NO_STDLIB
 MANDATORY_CFLAGS += -std=c++11 -pedantic
@@ -213,11 +215,11 @@ endif
 FLTO = -flto
 ifdef IS_GCC
 OPT_CFLAGS = -O3 -mtune=generic # '-Ofast' makes things unstable
-OPT_LIBS = # ${FLTO}
+OPT_LIBS = # $(FLTO)
 endif
 ifdef IS_CLANG
 OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++ # '-Ofast' makes things unstable
-OPT_LIBS = ${FLTO}
+OPT_LIBS = $(FLTO)
 endif
 ifdef IS_ICPC
 OPT_CFLAGS = -fast
@@ -322,8 +324,8 @@ HEIF_LIBS = -lheif
 
 # Enable native support of MINC2 image files, using the MINC2 library.
 # ( http://en.wikibooks.org/wiki/MINC/Reference/MINC2.0_Users_Guide )
-MINC2_CFLAGS = -Dcimg_use_minc2 -I${HOME}/local/include
-MINC2_LIBS = -lminc_io -lvolume_io2 -lminc2 -lnetcdf -lhdf5 -lz -L${HOME}/local/lib
+MINC2_CFLAGS = -Dcimg_use_minc2 -I$(HOME)/local/include
+MINC2_LIBS = -lminc_io -lvolume_io2 -lminc2 -lnetcdf -lhdf5 -lz -L$(HOME)/local/lib
 
 # Enable native support for downloading files from the network.
 # ( http://curl.haxx.se/libcurl/ )
@@ -361,15 +363,15 @@ WEBP_LIBS = $(shell pkg-config --libs libwebp || echo -lwebp)
 
 # Define default display flags (depending on the target OS).
 ifeq ($(BUILD_OS),Unix) # Unix
-DISPLAY_CFLAGS = ${X11_CFLAGS}
-DISPLAY_LIBS = ${X11_LIBS}
+DISPLAY_CFLAGS = $(X11_CFLAGS)
+DISPLAY_LIBS = $(X11_LIBS)
 else
 ifeq ($(BUILD_OS),Darwin) # MacOSX
-DISPLAY_CFLAGS = ${X11_CFLAGS}
-DISPLAY_LIBS = ${X11_LIBS}
+DISPLAY_CFLAGS = $(X11_CFLAGS)
+DISPLAY_LIBS = $(X11_LIBS)
 else # Windows
-DISPLAY_CFLAGS = ${GDI32_CFLAGS}
-DISPLAY_LIBS = ${GDI32_LIBS}
+DISPLAY_CFLAGS = $(GDI32_CFLAGS)
+DISPLAY_LIBS = $(GDI32_LIBS)
 endif
 endif
 
@@ -392,6 +394,17 @@ endif
 #-------------------------------
 # Define main Makefile entries
 #-------------------------------
+.PHONY: all lib libc libc_static cli cli_shared cli_static \
+        gimp gimp_shared gimp_debug gimp_sdl3 \
+        gmic_qt gmic_qt_shared gmic_qt_debug gmic_qt_sdl3 \
+        zart zart_shared \
+        opencv half double native dev debug valgrind perf gprof \
+        cli_sdl3 opencv_sdl3 displayless gmicol \
+        install uninstall clean distclean \
+        man bashcompletion \
+        do_gmic_stdlib_community.h \
+        gmic_qt_files zart_files libcgmic_files \
+        check_cimg_version
 
 # Multi-targets
 #---------------
@@ -514,7 +527,7 @@ cli_shared: lib
 
 # CLI (static)
 #--------------
-GMIC_STATIC_CLI_PATH ?= $(PREFIX)/$(LIB)/x86_64-linux-gnu
+GMIC_STATIC_CLI_PATH ?= $(PREFIX)/$(LIB)/$(shell $(CC) -dumpmachine)
 GMIC_STATIC_CLI_EXTRA =
 GMIC_STATIC_CLI_CFLAGS = -Dcimg_display=0 $(MANDATORY_CFLAGS) $(OPENMP_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(FFTW_CFLAGS)
 GMIC_STATIC_CLI_LIBS = ./libgmic.o $(PARALLEL_LIBS) \
@@ -670,7 +683,7 @@ gmic_qt_sdl3: gmic_qt_files CImg.h gmic_stdlib_community.h
 
 gmic_qt_files:
 	@if [ ! -e ../gmic-qt ]; then \
-	   curr_pwd=`pwd`; \
+	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../gmic-qt ]; then \
 	     echo "**"; \
 	     echo "** Warning: folder 'gmic-qt' was not found !"; \
@@ -722,7 +735,7 @@ endif
 
 zart_files:
 	@if [ ! -e ../zart ]; then \
-	   curr_pwd=`pwd`; \
+	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../zart ]; then \
 	     echo "**"; \
 	     echo "** Warning: folder 'zart' was not found !"; \
