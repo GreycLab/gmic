@@ -108,10 +108,6 @@ else
 CIMG_VERSION = $(VERSION)
 endif
 
-ifneq ($(VERSION),$(CIMG_VERSION))
-REMOVE_CIMG_H := $(shell rm -f CImg.h)
-endif
-
 ifeq ($(OS),Linux)
 OS = Unix
 endif
@@ -747,7 +743,7 @@ zart_files:
 
 # Get header files
 #------------------
-CImg.h:
+CImg.h: check_cimg_version
 	@echo "> Retrieve CImg Library..."
 	@if [ -f ../../CImg/CImg.h ]; then \
           if [ ! -f ./CImg.h ]; then ln -s ../../CImg/CImg.h .; fi; \
@@ -756,6 +752,12 @@ CImg.h:
           touch CImg.h; \
         fi
 	@echo " done!"
+
+check_cimg_version:
+	@if [ -f CImg.h ] && [ "$(VERSION)" != "$(CIMG_VERSION)" ]; then \
+	  echo "> CImg.h version mismatch, removing..."; \
+	  rm -f CImg.h; \
+	fi
 
 gmic_stdlib_community.h: gmic_stdlib.gmic
 	@echo "> Retrieve G'MIC Standard Library + Community Contributions..."
