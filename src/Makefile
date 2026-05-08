@@ -221,7 +221,7 @@ ifdef IS_CLANG
 OPT_CFLAGS = -O3 -mtune=generic --stdlib=libc++ # '-Ofast' makes things unstable
 OPT_LIBS = ${FLTO}
 endif
-ifdef icpc
+ifdef IS_ICPC
 OPT_CFLAGS = -fast
 OPT_LIBS =
 endif
@@ -583,18 +583,18 @@ use_libcgmic: use_libcgmic.c gmic_libc.h libcgmic.so
 # libcgmic (static)
 #-------------------
 GMIC_LIBC_STATIC_CFLAGS = $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS)
-ifeq ($(OS),Window)
+ifeq ($(OS),Windows)
 GMIC_LIBC_STATIC_LIBS = -Bstatic -lpthread
 endif
 GMIC_LIBC_STATIC_LIBS += $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(PNG_LIBS) $(JPEG_LIBS)
-ifeq ($(OS),Unix) # Unix.
+ifeq ($(OS),Unix) # Unix
 GMIC_LIBC_STATIC_CFLAGS += $(OPENMP_CFLAGS) $(X11_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(OPENMP_LIBS) $(X11_LIBS)
 else
-ifeq ($(OS),Darwin) # MacOSX.
+ifeq ($(OS),Darwin) # MacOSX
 GMIC_LIBC_STATIC_CFLAGS += $(X11_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(X11_LIBS)
-else # Windows.
+else # Windows
 GMIC_LIBC_STATIC_CFLAGS += $(OPENMP_CFLAGS) $(GDI32_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(OPENMP_LIBS) $(GDI32_LIBS)
 endif
