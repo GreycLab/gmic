@@ -86,7 +86,7 @@ BIN ?= bin
 INCLUDE ?= include
 PIC = -fPIC
 EXE =
-WGET = wget --no-check-certificate --quiet -O
+WGET ?= wget --no-check-certificate --quiet -O
 GIMPTOOL = $(shell \
   if command -v gimptool-3.2 >/dev/null 2>&1; then echo gimptool-3.2; \
   elif command -v gimptool-3.0 >/dev/null 2>&1; then echo gimptool-3.0; \
@@ -417,7 +417,7 @@ _lib: libgmic.so use_libgmic
 libgmic.so: libgmic.o
 	ar rcs libgmic.a libgmic.o
 ifeq ($(OS),Darwin)
-	$(CXX) -dynamiclib -o libgmic.$(SOVERSION).dylib -install_name $(PREFIX)/lib/libgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libgmic.o $(LIBS)
+	$(CXX) -dynamiclib -o libgmic.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libgmic.o $(LIBS)
 else
 ifdef IS_CLANG
 	$(CXX) -shared -std=c++11 -pedantic -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
@@ -512,7 +512,7 @@ cli_shared: lib
 
 # CLI (static)
 #--------------
-GMIC_STATIC_CLI_PATH = $(PREFIX)/$(LIB)/x86_64-linux-gnu
+GMIC_STATIC_CLI_PATH ?= $(PREFIX)/$(LIB)/x86_64-linux-gnu
 GMIC_STATIC_CLI_EXTRA =
 GMIC_STATIC_CLI_CFLAGS = -Dcimg_display=0 $(MANDATORY_CFLAGS) $(OPENMP_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(FFTW_CFLAGS)
 GMIC_STATIC_CLI_LIBS = ./libgmic.o $(PARALLEL_LIBS) \
@@ -553,7 +553,7 @@ libcgmic_files:
 libcgmic.so: libcgmic.o libgmic.o
 	ar rcs libcgmic.a libcgmic.o
 ifeq ($(OS),Darwin)
-	$(CXX) -dynamiclib -o libcgmic.$(SOVERSION).dylib -install_name $(PREFIX)/lib/libcgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
+	$(CXX) -dynamiclib -o libcgmic.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libcgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
 ifeq ($(OS),Windows)
 	$(CXX) -shared -o libcgmic-$(VERSION1).dll libcgmic.o libgmic.o -Wl,--output-def,libcgmic.def,--out-implib,libcgmic.a $(LIBS)
@@ -607,7 +607,7 @@ _libc_static: libcgmic_files libcgmic_static.so use_libcgmic_static
 libcgmic_static.so: libcgmic_static.o
 	ar rcs libcgmic_static.a libcgmic_static.o
 ifeq ($(OS),Darwin)
-	$(CXX) -dynamiclib -o libcgmic_static.$(SOVERSION).dylib -install_name $(PREFIX)/lib/libcgmic_static.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
+	$(CXX) -dynamiclib -o libcgmic_static.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libcgmic_static.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
 ifeq ($(OS),Windows)
 	$(CXX) -shared -static -o libcgmic_static-$(VERSION1).dll libcgmic_static.o libgmic.o $(PIC) -Wl,--output-def,libcgmic_static.def,--out-implib,libcgmic_static.a $(CFLAGS) $(LIBS)
@@ -632,7 +632,7 @@ use_libcgmic_static: use_libcgmic.c gmic_libc.h
 
 # G'MIC Online
 #--------------
-GMICOL_LIB_PATH = /usr/lib/x86_64-linux-gnu/
+GMICOL_LIB_PATH ?= /usr/lib/x86_64-linux-gnu/
 GMICOL_CFLAGS = $(MANDATORY_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) -Dcimg_display=0 # $(OPENMP_CFLAGS)
 GMICOL_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a # $(OPENMP_LIBS)
 
