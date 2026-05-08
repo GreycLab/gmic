@@ -84,6 +84,7 @@ PREFIX ?= /usr
 LIB ?= lib
 BIN ?= bin
 INCLUDE ?= include
+INSTALL ?= install
 PIC = -fPIC
 EXE =
 WGET ?= wget --no-check-certificate --quiet -O
@@ -99,6 +100,7 @@ VERSION1 = $(shell grep -F 'gmic_version ' gmic.h | tail -c4 | head -c1)
 VERSION2 = $(shell grep -F 'gmic_version ' gmic.h | tail -c3 | head -c1)
 VERSION3 = $(shell grep -F 'gmic_version ' gmic.h | tail -c2 | head -c1)
 SVERSION=$(VERSION1).$(VERSION2).$(VERSION3)
+SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
 
 # Check that versions of files 'CImg.h' and 'gmic.h' match.
@@ -184,7 +186,7 @@ PRERELEASE_CFLAGS = -Dgmic_prerelease="\\\"$(PRERELEASE)\\\""
 MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(shell pkg-config --cflags zlib || echo -I$(PREFIX)/$(INCLUDE)) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
 MANDATORY_LIBS = $(shell pkg-config --libs zlib || echo -lz) $(EXTRA_LIBS)
 
-ifndef NO_SRIPDLIB
+ifndef NO_STDLIB
 MANDATORY_CFLAGS += -std=c++11 -pedantic
 endif
 MANDATORY_LIBS += -L. -L$(PREFIX)/$(LIB) -Wl,-rpath,.
