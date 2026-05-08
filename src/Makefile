@@ -79,7 +79,7 @@
 #---------------------------
 
 # Try to auto-detect target OS.
-OS = $(shell uname)
+BUILD_OS = $(shell uname)
 PREFIX ?= /usr
 LIB ?= lib
 BIN ?= bin
@@ -108,38 +108,38 @@ else
 CIMG_VERSION = $(VERSION)
 endif
 
-ifeq ($(OS),Linux)
-OS = Unix
+ifeq ($(BUILD_OS),Linux)
+BUILD_OS = Unix
 endif
 
-ifeq ($(OS),GNU/kFreeBSD)
-OS = Unix
+ifeq ($(BUILD_OS),GNU/kFreeBSD)
+BUILD_OS = Unix
 endif
 
-ifeq ($(OS),GNU)
-OS = Unix
+ifeq ($(BUILD_OS),GNU)
+BUILD_OS = Unix
 endif
 
-ifeq ($(OS),FreeBSD)
-OS = Unix
+ifeq ($(BUILD_OS),FreeBSD)
+BUILD_OS = Unix
 PREFIX = /usr/local
 endif
 
-ifeq ($(OS),DragonFly)
-OS = Unix
+ifeq ($(BUILD_OS),DragonFly)
+BUILD_OS = Unix
 PREFIX = /usr/local
 endif
 
-ifeq ($(OS),NetBSD)
-OS = Unix
+ifeq ($(BUILD_OS),NetBSD)
+BUILD_OS = Unix
 endif
 
-ifneq (,$(findstring MINGW,$(OS)))
-OS = Windows
+ifneq (,$(findstring MINGW,$(BUILD_OS)))
+BUILD_OS = Windows
 PREFIX = /mingw64
 endif
 
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 ifeq (,$(wildcard /opt/local))
 PREFIX = /usr/local
 PLUGIN = $(HOME)/Library/Application\ Support/Gimp/plug-ins
@@ -149,7 +149,7 @@ endif
 WGET = curl -k -L --silent -o
 endif
 
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 EXE = .exe
 PIC =
 endif
@@ -195,15 +195,15 @@ ifeq ($(GCC_VER_GTEQ5),1)
 MANDATORY_CFLAGS += -Wshadow
 endif
 endif
-ifeq ($(OS),Unix)
+ifeq ($(BUILD_OS),Unix)
 MANDATORY_CFLAGS += -Dcimg_use_vt100
 endif
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 ifndef NO_STDLIB
 MANDATORY_CFLAGS += -stdlib=libc++
 endif
 endif
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 MANDATORY_LIBS += -Wl,--stack,16777216
 endif
 
@@ -224,7 +224,7 @@ endif
 
 # Enable multi-threading support.
 PARALLEL_CFLAGS = -Dgmic_is_parallel
-ifneq ($(OS),Windows)
+ifneq ($(BUILD_OS),Windows)
 PARALLEL_LIBS = -lpthread
 endif
 
@@ -240,7 +240,7 @@ endif
 
 # Enable software debugging.
 # (Use address sanitizer and thus slows down the code)
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 DEBUG_CFLAGS = -pedantic -Dcimg_verbosity=3 -Dcimg_strict_warnings -g
 else
 DEBUG_CFLAGS = -pedantic -Dcimg_verbosity=3 -Dcimg_strict_warnings -g -fsanitize=address # -fsanitize=thread # -fsanitize=undefined # Removed '-ansi' as it (silently) disables c++11.
@@ -248,7 +248,7 @@ endif
 
 # Enable extra checking of image buffer pointers.
 # (Useful for debug, also slows down the code)
-ifneq ($(OS),Darwin)
+ifneq ($(BUILD_OS),Darwin)
 CHECKIMAGE_CFLAGS = # -Dgmic_check_image
 endif
 
@@ -257,7 +257,7 @@ ABORT_CFLAGS = -Dcimg_use_abort
 
 # Enable image display, using X11 (Unix).
 # (Keep /usr/ dirname here since X11 is located in /usr/ on Mac too)
-ifneq ($(OS),Darwin)
+ifneq ($(BUILD_OS),Darwin)
 X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 || echo -I/usr/X11R6/include) #-Dcimg_use_xrandr
 X11_LIBS = $(shell pkg-config --libs x11 || echo -L/usr/X11R6/lib -lX11) -lpthread # $(shell pkg-config --libs xrandr || echo -lXrandr)
 else
@@ -285,7 +285,7 @@ GDI32_LIBS = -lgdi32
 
 # Enable native support of PNG image files, using the PNG library.
 # (http://www.libpng.org/pub/png/libpng.html)
-ifneq ($(OS),Darwin)
+ifneq ($(BUILD_OS),Darwin)
 PNG_CFLAGS = -Dcimg_use_png $(shell pkg-config --cflags libpng)
 PNG_LIBS = $(shell pkg-config --libs libpng || echo -lpng -lz)
 else
@@ -358,11 +358,11 @@ WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
 WEBP_LIBS = $(shell pkg-config --libs libwebp || echo -lwebp)
 
 # Define default display flags (depending on the target OS).
-ifeq ($(OS),Unix) # Unix
+ifeq ($(BUILD_OS),Unix) # Unix
 DISPLAY_CFLAGS = ${X11_CFLAGS}
 DISPLAY_LIBS = ${X11_LIBS}
 else
-ifeq ($(OS),Darwin) # MacOSX
+ifeq ($(BUILD_OS),Darwin) # MacOSX
 DISPLAY_CFLAGS = ${X11_CFLAGS}
 DISPLAY_LIBS = ${X11_LIBS}
 else # Windows
@@ -374,11 +374,11 @@ endif
 # Define set of default used flags, depending on the target OS.
 GMIC_STD_CFLAGS = $(MANDATORY_CFLAGS) $(DISPLAY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(TIFF_CFLAGS)
 GMIC_STD_LIBS = $(MANDATORY_LIBS) $(DISPLAY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(TIFF_LIBS)
-ifeq ($(OS),Unix) # Unix
+ifeq ($(BUILD_OS),Unix) # Unix
 GMIC_STD_CFLAGS += $(OPENMP_CFLAGS) $(OPENEXR_CFLAGS) $(WEBP_CFLAGS)
 GMIC_STD_LIBS += $(OPENMP_LIBS) $(OPENEXR_LIBS) $(WEBP_LIBS)
 else
-ifeq ($(OS),Darwin) # MacOSX
+ifeq ($(BUILD_OS),Darwin) # MacOSX
 GMIC_STD_CFLAGS += $(OPENEXR_CFLAGS)
 GMIC_STD_LIBS += $(OPENEXR_LIBS)
 else # Windows
@@ -395,10 +395,10 @@ endif
 #---------------
 all:
 	@echo "**"
-ifeq ($(OS),Unix)
+ifeq ($(BUILD_OS),Unix)
 	@echo "** Start building G'MIC with default Unix configuration."
 else
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	@echo "** Start building G'MIC with default MacOSX configuration."
 else
 	@echo "** Start building G'MIC with default Windows configuration."
@@ -416,7 +416,7 @@ _lib: libgmic.so use_libgmic
 
 libgmic.so: libgmic.o
 	ar rcs libgmic.a libgmic.o
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	$(CXX) -dynamiclib -o libgmic.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libgmic.o $(LIBS)
 else
 ifdef IS_CLANG
@@ -425,10 +425,10 @@ else
 	$(CXX) -shared -std=c++11 -pedantic -Wl,-soname,libgmic.so.$(VERSION1) -o libgmic.so.$(VERSION) libgmic.o $(LIBS)
 endif
 endif
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	ln -fs libgmic.$(SOVERSION).dylib libgmic.dylib
 else
-ifneq ($(OS),Windows)
+ifneq ($(BUILD_OS),Windows)
 	ln -fs libgmic.so.$(VERSION) libgmic.so.$(VERSION1)
 	ln -fs libgmic.so.$(VERSION1) libgmic.so
 endif
@@ -552,19 +552,19 @@ libcgmic_files:
 
 libcgmic.so: libcgmic.o libgmic.o
 	ar rcs libcgmic.a libcgmic.o
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	$(CXX) -dynamiclib -o libcgmic.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libcgmic.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 	$(CXX) -shared -o libcgmic-$(VERSION1).dll libcgmic.o libgmic.o -Wl,--output-def,libcgmic.def,--out-implib,libcgmic.a $(LIBS)
 else
 	$(CXX) -shared -Wl,-soname,libcgmic.so.$(VERSION1) -o libcgmic.so.$(VERSION) libcgmic.o libgmic.o $(LIBS)
 endif
 endif
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	ln -fs libcgmic.$(SOVERSION).dylib libcgmic.dylib
 else
-ifneq ($(OS),Windows)
+ifneq ($(BUILD_OS),Windows)
 	ln -fs libcgmic.so.$(VERSION) libcgmic.so.$(VERSION1)
 	ln -fs libcgmic.so.$(VERSION1) libcgmic.so
 endif
@@ -579,15 +579,15 @@ use_libcgmic: use_libcgmic.c gmic_libc.h libcgmic.so
 # libcgmic (static)
 #-------------------
 GMIC_LIBC_STATIC_CFLAGS = $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS)
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 GMIC_LIBC_STATIC_LIBS = -Bstatic -lpthread
 endif
 GMIC_LIBC_STATIC_LIBS += $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(PNG_LIBS) $(JPEG_LIBS)
-ifeq ($(OS),Unix) # Unix
+ifeq ($(BUILD_OS),Unix) # Unix
 GMIC_LIBC_STATIC_CFLAGS += $(OPENMP_CFLAGS) $(X11_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(OPENMP_LIBS) $(X11_LIBS)
 else
-ifeq ($(OS),Darwin) # MacOSX
+ifeq ($(BUILD_OS),Darwin) # MacOSX
 GMIC_LIBC_STATIC_CFLAGS += $(X11_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(X11_LIBS)
 else # Windows
@@ -597,7 +597,7 @@ endif
 endif
 
 libc_static:
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 	rm libgmic.o
 endif
 	$(MAKE) "CFLAGS+=$(GMIC_LIBC_STATIC_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_LIBC_STATIC_LIBS) $(OPT_LIBS)" _lib _libc_static
@@ -606,19 +606,19 @@ _libc_static: libcgmic_files libcgmic_static.so use_libcgmic_static
 
 libcgmic_static.so: libcgmic_static.o
 	ar rcs libcgmic_static.a libcgmic_static.o
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	$(CXX) -dynamiclib -o libcgmic_static.$(SOVERSION).dylib -install_name $(PREFIX)/$(LIB)/libcgmic_static.$(SOVERSION).dylib -compatibility_version $(SOVERSION) -current_version $(SVERSION) $(MANDATORY_CFLAGS) libcgmic.o libgmic.o $(LIBS)
 else
-ifeq ($(OS),Windows)
+ifeq ($(BUILD_OS),Windows)
 	$(CXX) -shared -static -o libcgmic_static-$(VERSION1).dll libcgmic_static.o libgmic.o $(PIC) -Wl,--output-def,libcgmic_static.def,--out-implib,libcgmic_static.a $(CFLAGS) $(LIBS)
 else
 	$(CXX) -shared -Wl,-soname,libcgmic_static.so.$(VERSION1) -o libcgmic_static.so libcgmic_static.o libgmic.o $(PIC) $(CFLAGS) $(LIBS)
 endif
 endif
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	ln -fs libcgmic_static.$(SOVERSION).dylib libcgmic_static.dylib
 else
-ifneq ($(OS),Windows)
+ifneq ($(BUILD_OS),Windows)
 	ln -fs libcgmic_static.so.$(VERSION) libcgmic_static.so.$(VERSION1)
 	ln -fs libcgmic_static.so.$(VERSION1) libcgmic_static.so
 endif
@@ -703,7 +703,7 @@ gmic_qt_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
 # ZArt
 #------
 zart_shared: zart_files CImg.h gmic_stdlib_community.h
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
 else
 	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart
@@ -711,7 +711,7 @@ endif
 	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
 
 zart: zart_files CImg.h gmic_stdlib_community.h
-ifeq ($(OS),Darwin)
+ifeq ($(BUILD_OS),Darwin)
 	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
 else
 	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart
