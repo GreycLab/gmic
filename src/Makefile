@@ -99,7 +99,7 @@ VERSION1 = $(shell grep -F 'gmic_version ' gmic.h | tail -c4 | head -c1)
 VERSION2 = $(shell grep -F 'gmic_version ' gmic.h | tail -c3 | head -c1)
 VERSION3 = $(shell grep -F 'gmic_version ' gmic.h | tail -c2 | head -c1)
 SVERSION=$(VERSION1).$(VERSION2).$(VERSION3)
-SRC_PATH=$(shell pwd)
+SRC_PATH ?= $(CURDIR)
 
 # Check that versions of files 'CImg.h' and 'gmic.h' match.
 ifneq (,$(wildcard CImg.h))
