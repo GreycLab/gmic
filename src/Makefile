@@ -94,7 +94,7 @@ GIMPTOOL = $(shell \
   else echo gimptool-2.0; fi)
 PLUGIN = $(shell $(GIMPTOOL) --gimpplugindir)/plug-ins
 SHARE = $(PREFIX)/share
-BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion || echo $(SHARE)/bash-completion/completions)
+BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion 2>/dev/null || echo $(SHARE)/bash-completion/completions)
 
 VERSION = $(shell grep -oP 'gmic_version\s+\K[0-9]+' gmic.h)
 VERSION1 = $(shell grep -oP 'gmic_version\s+\K.' gmic.h)
@@ -244,26 +244,26 @@ ABORT_CFLAGS = -Dcimg_use_abort
 # Enable image display, using X11 (Unix).
 # (Keep /usr/ dirname here since X11 is located in /usr/ on Mac too)
 ifneq ($(BUILD_OS),Darwin)
-X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 || echo -I/usr/X11R6/include) #-Dcimg_use_xrandr
-X11_LIBS = $(shell pkg-config --libs x11 || echo -L/usr/X11R6/lib -lX11) -lpthread # $(shell pkg-config --libs xrandr || echo -lXrandr)
+X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 2>/dev/null || echo -I/usr/X11R6/include) #-Dcimg_use_xrandr
+X11_LIBS = $(shell pkg-config --libs x11 2>/dev/null || echo -L/usr/X11R6/lib -lX11) -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 else
 ifeq (,$(wildcard /usr/X11))
 X11_CFLAGS = -Dcimg_display=0 #-Dcimg_use_xrandr
-X11_LIBS = -lpthread # $(shell pkg-config --libs xrandr || echo -lXrandr)
+X11_LIBS = -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 else
-X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 || echo -I/usr/X11/include) #-Dcimg_use_xrandr
-X11_LIBS = -L/usr/X11/lib -lX11 -lpthread # $(shell pkg-config --libs xrandr || echo -lXrandr)
+X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 2>/dev/null || echo -I/usr/X11/include) #-Dcimg_use_xrandr
+X11_LIBS = -L/usr/X11/lib -lX11 -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 endif
 endif
 
 # Enable faster X11 display, using XShm extension.
 # (ftp://www.x.org/pub/X11R7.7/doc/man/man3/XShm.3.xhtml)
-XSHM_CFLAGS = -Dcimg_use_xshm $(shell pkg-config --cflags xcb-shm)
-XSHM_LIBS = $(shell pkg-config --libs xcb-shm || echo -L$(PREFIX)/X11R6/lib) -lXext
+XSHM_CFLAGS = -Dcimg_use_xshm $(shell pkg-config --cflags xcb-shm 2>/dev/null)
+XSHM_LIBS = $(shell pkg-config --libs xcb-shm 2>/dev/null || echo -L$(PREFIX)/X11R6/lib) -lXext
 
 # Enable image display, using SDL (All platforms).
-SDL3_CFLAGS = -Dcimg_display=3 $(shell pkg-config --cflags sdl3 || echo -I/usr/local/include)
-SDL3_LIBS = $(shell pkg-config --libs sdl3 || echo -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib)
+SDL3_CFLAGS = -Dcimg_display=3 $(shell pkg-config --cflags sdl3 2>/dev/null || echo -I/usr/local/include)
+SDL3_LIBS = $(shell pkg-config --libs sdl3 2>/dev/null || echo -L/usr/local/lib -lSDL3 -Wl,-rpath,/usr/local/lib)
 
 # Enable image display, using GDI32 (Windows).
 GDI32_CFLAGS = -Dcimg_display=2
@@ -272,12 +272,12 @@ GDI32_LIBS = -lgdi32
 # Enable native support of PNG image files, using the PNG library.
 # (http://www.libpng.org/pub/png/libpng.html)
 ifneq ($(BUILD_OS),Darwin)
-PNG_CFLAGS = -Dcimg_use_png $(shell pkg-config --cflags libpng)
-PNG_LIBS = $(shell pkg-config --libs libpng || echo -lpng -lz)
+PNG_CFLAGS = -Dcimg_use_png $(shell pkg-config --cflags libpng 2>/dev/null)
+PNG_LIBS = $(shell pkg-config --libs libpng 2>/dev/null || echo -lpng -lz)
 else
 ifeq (,$(wildcard /tmp/skl))
-PNG_CFLAGS = -Dcimg_use_png $(shell pkg-config --cflags libpng)
-PNG_LIBS = $(shell pkg-config --libs libpng || echo -lpng -lz)
+PNG_CFLAGS = -Dcimg_use_png $(shell pkg-config --cflags libpng 2>/dev/null)
+PNG_LIBS = $(shell pkg-config --libs libpng 2>/dev/null || echo -lpng -lz)
 else
 PNG_CFLAGS = -Dcimg_use_png
 PNG_LIBS = -lpng -lz
@@ -286,18 +286,18 @@ endif
 
 # Enable native support of JPEG image files, using the JPEG library.
 # (http://libjpeg.sourceforge.net/)
-JPEG_CFLAGS = -Dcimg_use_jpeg $(shell pkg-config --cflags libjpeg)
-JPEG_LIBS = $(shell pkg-config --libs libjpeg || echo -ljpeg)
+JPEG_CFLAGS = -Dcimg_use_jpeg $(shell pkg-config --cflags libjpeg 2>/dev/null)
+JPEG_LIBS = $(shell pkg-config --libs libjpeg 2>/dev/null || echo -ljpeg)
 
 # Enable native support of JPEG XL image files, using the JXL library.
 # (https://en.wikipedia.org/wiki/JPEG_XL)
-JXL_CFLAGS = -Dcimg_use_jxl $(shell pkg-config --cflags libjxl)
-JXL_LIBS = $(shell pkg-config --libs libjxl || echo -ljxl)
+JXL_CFLAGS = -Dcimg_use_jxl $(shell pkg-config --cflags libjxl 2>/dev/null)
+JXL_LIBS = $(shell pkg-config --libs libjxl 2>/dev/null || echo -ljxl)
 
 # Enable native support of TIFF image files, using the TIFF library.
 # (http://www.libtiff.org/)
-TIFF_CFLAGS = -Dcimg_use_tiff $(shell pkg-config --cflags libtiff-4)
-TIFF_LIBS = $(shell pkg-config --libs libtiff-4 || echo -ltiff)
+TIFF_CFLAGS = -Dcimg_use_tiff $(shell pkg-config --cflags libtiff-4 2>/dev/null)
+TIFF_LIBS = $(shell pkg-config --libs libtiff-4 2>/dev/null || echo -ltiff)
 
 # Enable native support for loading HEIC/AVIF image files, using the libheif library.
 # ( https://github.com/strukturag/libheif )
@@ -311,37 +311,37 @@ MINC2_LIBS = -lminc_io -lvolume_io2 -lminc2 -lnetcdf -lhdf5 -lz -L$(HOME)/local/
 
 # Enable native support for downloading files from the network.
 # ( http://curl.haxx.se/libcurl/ )
-CURL_CFLAGS = -Dcimg_use_curl $(shell pkg-config --cflags libcurl)
-CURL_LIBS = $(shell pkg-config --libs libcurl || echo -lcurl)
+CURL_CFLAGS = -Dcimg_use_curl $(shell pkg-config --cflags libcurl 2>/dev/null)
+CURL_LIBS = $(shell pkg-config --libs libcurl 2>/dev/null || echo -lcurl)
 
 # Enable native support of webcams and video streaming, using the OpenCV library.
 # (https://opencv.org/)
-OPENCV_CFLAGS = -Dcimg_use_opencv $(shell pkg-config opencv --cflags) -I/usr/include/opencv -I/usr/include/opencv4
-OPENCV_LIBS = $(shell pkg-config opencv --libs || echo -lopencv_core -lopencv_highgui -lopencv_videoio)
+OPENCV_CFLAGS = -Dcimg_use_opencv $(shell pkg-config opencv --cflags 2>/dev/null) -I/usr/include/opencv -I/usr/include/opencv4
+OPENCV_LIBS = $(shell pkg-config opencv --libs 2>/dev/null || echo -lopencv_core -lopencv_highgui -lopencv_videoio)
 
 # Enable support of most classical image file formats, using the GraphicsMagick++ library.
 # (http://www.graphicsmagick.org/Magick++/)
-MAGICK_CFLAGS = -Dcimg_use_magick $(shell pkg-config --cflags GraphicsMagick++ || echo -I$(PREFIX)/$(INCLUDE)/GraphicsMagick)
-MAGICK_LIBS = $(shell pkg-config --libs GraphicsMagick++ || echo -lGraphicsMagick++)
+MAGICK_CFLAGS = -Dcimg_use_magick $(shell pkg-config --cflags GraphicsMagick++ 2>/dev/null || echo -I$(PREFIX)/$(INCLUDE)/GraphicsMagick)
+MAGICK_LIBS = $(shell pkg-config --libs GraphicsMagick++ 2>/dev/null || echo -lGraphicsMagick++)
 
 # Enable native support of EXR image files, using the OpenEXR library.
 # (http://www.openexr.com/)
-OPENEXR_CFLAGS = -Dcimg_use_openexr $(shell pkg-config --cflags OpenEXR || echo -I$(PREFIX)/$(INCLUDE)/OpenEXR)
-OPENEXR_LIBS = $(shell pkg-config --libs OpenEXR || echo -lIlmImf -lHalf)
+OPENEXR_CFLAGS = -Dcimg_use_openexr $(shell pkg-config --cflags OpenEXR 2>/dev/null || echo -I$(PREFIX)/$(INCLUDE)/OpenEXR)
+OPENEXR_LIBS = $(shell pkg-config --libs OpenEXR 2>/dev/null || echo -lIlmImf -lHalf)
 ifdef IS_GCC
 OPENEXR_CFLAGS += -Wno-class-memaccess
 endif
 
 # Enable Fast Fourier Transforms, using the FFTW3 library.
 # (http://www.fftw.org/)
-FFTW_CFLAGS = -Dcimg_use_fftw3 $(shell pkg-config --cflags fftw3)
-FFTW_LIBS = $(shell pkg-config --libs fftw3 || echo -lfftw3)
+FFTW_CFLAGS = -Dcimg_use_fftw3 $(shell pkg-config --cflags fftw3 2>/dev/null)
+FFTW_LIBS = $(shell pkg-config --libs fftw3 2>/dev/null || echo -lfftw3)
 FFTW_LIBS += -lfftw3_threads
 
 # Enable native support of WebP image files, using the WebP library.
 # (https://chromium.googlesource.com/webm/libwebp/)
-WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp)
-WEBP_LIBS = $(shell pkg-config --libs libwebp || echo -lwebp)
+WEBP_CFLAGS = -Dcimg_use_webp $(shell pkg-config --cflags libwebp 2>/dev/null)
+WEBP_LIBS = $(shell pkg-config --libs libwebp 2>/dev/null || echo -lwebp)
 
 # Define default display flags (depending on the target OS).
 ifeq ($(BUILD_OS),Unix) # Unix
