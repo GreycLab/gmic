@@ -211,7 +211,7 @@ endif
 # Enable multi-threading support.
 PARALLEL_CFLAGS = -Dgmic_is_parallel
 ifneq ($(BUILD_OS),Windows)
-PARALLEL_LIBS = -lpthread
+PARALLEL_LIBS = -pthread
 endif
 
 # Enable parallelization, using OpenMP.
@@ -245,14 +245,14 @@ ABORT_CFLAGS = -Dcimg_use_abort
 # (Keep /usr/ dirname here since X11 is located in /usr/ on Mac too)
 ifneq ($(BUILD_OS),Darwin)
 X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 2>/dev/null || echo -I/usr/X11R6/include) #-Dcimg_use_xrandr
-X11_LIBS = $(shell pkg-config --libs x11 2>/dev/null || echo -L/usr/X11R6/lib -lX11) -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
+X11_LIBS = $(shell pkg-config --libs x11 2>/dev/null || echo -L/usr/X11R6/lib -lX11) -pthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 else
 ifeq (,$(wildcard /usr/X11))
 X11_CFLAGS = -Dcimg_display=0 #-Dcimg_use_xrandr
-X11_LIBS = -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
+X11_LIBS = -pthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 else
 X11_CFLAGS = -Dcimg_display=1 $(shell pkg-config --cflags x11 2>/dev/null || echo -I/usr/X11/include) #-Dcimg_use_xrandr
-X11_LIBS = -L/usr/X11/lib -lX11 -lpthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
+X11_LIBS = -L/usr/X11/lib -lX11 -pthread # $(shell pkg-config --libs xrandr 2>/dev/null || echo -lXrandr)
 endif
 endif
 
@@ -577,7 +577,7 @@ use_libcgmic: use_libcgmic.c gmic_libc.h libcgmic.so
 #-------------------
 GMIC_LIBC_STATIC_CFLAGS = $(MANDATORY_CFLAGS) $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS)
 ifeq ($(BUILD_OS),Windows)
-GMIC_LIBC_STATIC_LIBS = -Bstatic -lpthread
+GMIC_LIBC_STATIC_LIBS = -Bstatic -pthread
 endif
 GMIC_LIBC_STATIC_LIBS += $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(FFTW_LIBS) $(PNG_LIBS) $(JPEG_LIBS)
 ifeq ($(BUILD_OS),Unix) # Unix
