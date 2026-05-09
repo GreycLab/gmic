@@ -111,30 +111,11 @@ else
 CIMG_VERSION = $(VERSION)
 endif
 
-ifeq ($(BUILD_OS),Linux)
+ifneq (,$(filter FreeBSD DragonFly NetBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
 BUILD_OS = Unix
-endif
-
-ifeq ($(BUILD_OS),GNU/kFreeBSD)
-BUILD_OS = Unix
-endif
-
-ifeq ($(BUILD_OS),GNU)
-BUILD_OS = Unix
-endif
-
-ifeq ($(BUILD_OS),FreeBSD)
-BUILD_OS = Unix
+ifeq ($(filter FreeBSD DragonFly,$(ORIGINAL_OS)),$(ORIGINAL_OS))
 PREFIX = /usr/local
 endif
-
-ifeq ($(BUILD_OS),DragonFly)
-BUILD_OS = Unix
-PREFIX = /usr/local
-endif
-
-ifeq ($(BUILD_OS),NetBSD)
-BUILD_OS = Unix
 endif
 
 ifneq (,$(findstring MINGW,$(BUILD_OS)))
