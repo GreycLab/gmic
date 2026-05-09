@@ -104,7 +104,6 @@ SVERSION=$(VERSION1).$(VERSION2).$(VERSION3)
 SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
 
-# Check that versions of files 'CImg.h' and 'gmic.h' match.
 ifneq (,$(wildcard CImg.h))
 CIMG_VERSION = $(shell grep -oP 'cimg_version\s+\K[0-9]+' CImg.h)
 else
@@ -756,7 +755,7 @@ CImg.h: check_cimg_version
         fi
 	@echo " done!"
 
-check_cimg_version:
+check_cimg_version: # Check that versions of files 'CImg.h' and 'gmic.h' match.
 	@if [ -f CImg.h ] && [ "$(VERSION)" != "$(CIMG_VERSION)" ]; then \
 	  echo "> CImg.h version mismatch, removing..."; \
 	  rm -f CImg.h; \
