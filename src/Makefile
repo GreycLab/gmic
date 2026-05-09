@@ -219,8 +219,6 @@ endif
 ifdef IS_CLANG
 OPENMP_CFLAGS = -Dcimg_use_openmp -fopenmp=libomp
 OPENMP_LIBS = $(shell pkg-config --libs libomp 2>/dev/null || echo -lomp)
-#OPENMP_CFLAGS = -I/usr/lib/gcc/x86_64-linux-gnu/9/include -Dcimg_use_openmp -fopenmp=libomp
-#OPENMP_LIBS = -lomp
 else
 OPENMP_CFLAGS = -fopenmp -Dcimg_use_openmp
 OPENMP_LIBS = -lgomp
