@@ -407,7 +407,7 @@ endif
 # libgmic
 #---------
 lib:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib
 
 _lib: libgmic.so use_libgmic
 
@@ -443,44 +443,44 @@ use_libgmic: use_libgmic.cpp libgmic.so
 # Regular builds.
 #
 cli: # Default: Without OpenCV support
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 opencv: # Default: With OpenCV support
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) $(OPENCV_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS) $(OPENCV_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) $(OPENCV_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS) $(OPENCV_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 half: # Using float16 rather than float32 to store images: HIGHLY EXPERIMENTAL, DO NOT EXPECT MUCH FROM THAT!
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 double: # Using float64 rather than float32 to store images
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=double" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=double" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 native: # Optimized with architecture-specific flags, with OpenCV support
-	$(MAKE) "OPT_CFLAGS=-O3 -march=native -mtune=native -funroll-loops -fno-math-errno" opencv
+	$(MAKE) --no-print-directory "OPT_CFLAGS=-O3 -march=native -mtune=native -funroll-loops -fno-math-errno" opencv
 	$(STRIP) gmic$(EXE)
 
 # Debug builds.
 #
 dev: # Without optimizations enabled, used for quick compile
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 debug: # With sanitize-address enabled and symbols kept, to track bugs
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
 valgrind: # With symbols kept, to track bugs with valgrind
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 # Profiling builds.
 #
 perf: # With optimization enabled and symbols kept, for code profiling
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 gprof: # With optimization enabled, symbols kept and gprof enabled, for code profiling
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g -pg" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g -pg" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 _cli: gmic$(EXE)
 
@@ -493,18 +493,18 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 # Testing builds.
 #
 cli_sdl3:
-	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" cli
+	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" cli
 
 opencv_sdl3:
-	$(MAKE) "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
+	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
 
 displayless:
-	$(MAKE) "DISPLAY_CFLAGS=-Dcimg_display=0" "DISPLAY_LIBS=" "OPT_CFLAGS=" cli
+	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=-Dcimg_display=0" "DISPLAY_LIBS=" "OPT_CFLAGS=" cli
 
 # CLI (shared)
 #--------------
 cli_shared: lib
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli
 	$(STRIP) gmic$(EXE)
 
 # CLI (static)
@@ -521,13 +521,13 @@ GMIC_STATIC_CLI_LIBS = ./libgmic.o $(PARALLEL_LIBS) \
 
 cli_static:
 	rm -f libgmic.o
-	$(MAKE) "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 # libcgmic
 #----------
 libc:
-	$(MAKE) "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib _libc
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib _libc
 
 _libc: libcgmic_files libcgmic.so use_libcgmic
 
@@ -597,7 +597,7 @@ libc_static:
 ifeq ($(BUILD_OS),Windows)
 	rm libgmic.o
 endif
-	$(MAKE) "CFLAGS+=$(GMIC_LIBC_STATIC_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_LIBC_STATIC_LIBS) $(OPT_LIBS)" _lib _libc_static
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_LIBC_STATIC_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_LIBC_STATIC_LIBS) $(OPT_LIBS)" _lib _libc_static
 
 _libc_static: libcgmic_files libcgmic_static.so use_libcgmic_static
 
@@ -634,7 +634,7 @@ GMICOL_CFLAGS = $(MANDATORY_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLA
 GMICOL_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a # $(OPENMP_LIBS)
 
 gmicol:
-	$(MAKE) "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMICOL_LIBS) $(OPT_LIBS)" _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMICOL_LIBS) $(OPT_LIBS)" _cli
 	$(STRIP) gmic$(EXE)
 
 # G'MIC-Qt
