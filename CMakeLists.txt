@@ -66,7 +66,7 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
-set(CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(gmic CXX C)
 
@@ -207,8 +207,12 @@ endif()
 if(FFTW_FOUND)
   message(STATUS "fftw3 found — enabling FFT support (-Dcimg_use_fftw3)")
   list(APPEND GMIC_OPTIONAL_COMPILE_FLAGS -Dcimg_use_fftw3)
-  # fftw3_threads est lié séparément (comme dans le Makefile : -lfftw3_threads)
-  list(APPEND GMIC_OPTIONAL_LIBS ${FFTW_LIBRARIES} fftw3_threads)
+  find_library(FFTW3_THREADS_LIB fftw3_threads)
+  if(FFTW3_THREADS_LIB)
+    list(APPEND GMIC_OPTIONAL_LIBS ${FFTW_LIBRARIES} ${FFTW3_THREADS_LIB})
+  else()
+    list(APPEND GMIC_OPTIONAL_LIBS ${FFTW_LIBRARIES})
+  endif()
 endif()
 
 if(CURL_FOUND)
@@ -226,7 +230,7 @@ endif()
 # source files
 set(CLI_Sources src/gmic.cpp)
 
-macro(gmic_apply_common_deps target_name)
+function(gmic_apply_common_deps target_name)
   target_link_libraries(${target_name} PRIVATE ZLIB::ZLIB)
 
   if(OpenMP_CXX_FOUND)
@@ -240,7 +244,7 @@ macro(gmic_apply_common_deps target_name)
   if(GMIC_OPTIONAL_COMPILE_FLAGS)
     target_compile_options(${target_name} PRIVATE ${GMIC_OPTIONAL_COMPILE_FLAGS})
   endif()
-endmacro()
+endfunction()
 
 if(BUILD_LIB)
   add_library(libgmic SHARED ${CLI_Sources})
@@ -260,7 +264,7 @@ if(BUILD_LIB)
   gmic_apply_common_deps(libgmic)
 
   install(TARGETS libgmic EXPORT GmicTargets
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -316,7 +320,10 @@ if(BUILD_CLI)
     endif()
   endif()
 
-  install(TARGETS gmic RUNTIME DESTINATION bin LIBRARY DESTINATION lib)
+  install(TARGETS gmic
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  )
 endif()
 
 if(BUILD_MAN)
