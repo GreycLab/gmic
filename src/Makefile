@@ -5,7 +5,7 @@
 #  Description : This Makefile exposes the following entries:
 #
 #                 . 'all':
-#                   Equivalent to 'lib','cli','gimp','gmic_qt','libc','zart' (see below).
+#                   Equivalent to 'lib','cli','gimp','gmic_qt','libc' (see below).
 #
 #                 . 'lib':
 #                   C++ API for the G'MIC library. Generate files 'src/libgmic.*'.
@@ -106,14 +106,15 @@ SRC_PATH ?= $(CURDIR)
 
 # Check that versions of files 'CImg.h' and 'gmic.h' match.
 ifneq (,$(wildcard CImg.h))
-CIMG_VERSION = $(shell grep -F 'cimg_version ' CImg.h | tail -c4 | head -c3)
+CIMG_VERSION = $(shell grep -oP 'cimg_version\s+\K[0-9]+' CImg.h)
 else
 CIMG_VERSION = $(VERSION)
 endif
 
+ORIGINAL_OS := $(BUILD_OS)
 ifneq (,$(filter FreeBSD DragonFly NetBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
 BUILD_OS = Unix
-ifeq ($(filter FreeBSD DragonFly,$(ORIGINAL_OS)),$(ORIGINAL_OS))
+ifneq (,$(filter FreeBSD DragonFly,$(ORIGINAL_OS)))
 PREFIX = /usr/local
 endif
 endif
@@ -641,7 +642,8 @@ gmicol:
 
 # G'MIC-Qt
 #----------
-QMAKE_COMMON = GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=off
+QMAKE_BASE = GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE)
+QMAKE_COMMON = $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=off
 
 gimp: gmic_qt_files CImg.h gmic_stdlib_community.h
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
@@ -694,11 +696,11 @@ gmic_qt_files:
 # G'MIC-Qt (shared)
 #-------------------
 gimp_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=on HOST=gimp gmic_qt.pro && $(MAKE)
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=gimp gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
 
 gmic_qt_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE) GMIC_DYNAMIC_LINKING=on HOST=none gmic_qt.pro && $(MAKE)
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
 # ZArt
