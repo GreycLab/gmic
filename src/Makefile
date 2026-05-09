@@ -96,10 +96,10 @@ PLUGIN = $(shell $(GIMPTOOL) --gimpplugindir)/plug-ins
 SHARE = $(PREFIX)/share
 BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion 2>/dev/null || echo $(SHARE)/bash-completion/completions)
 
-VERSION = $(shell grep -oP 'gmic_version\s+\K[0-9]+' gmic.h)
-VERSION1 = $(shell grep -oP 'gmic_version\s+\K.' gmic.h)
-VERSION2 = $(shell grep -oP 'gmic_version\s+.\K.' gmic.h)
-VERSION3 = $(shell grep -oP 'gmic_version\s+..\K.' gmic.h)
+VERSION := $(shell awk '/gmic_version[[:space:]]/ {print $$3; exit}' gmic.h)
+VERSION1 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", int(v/100); exit}' gmic.h)
+VERSION2 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", int((v%100)/10); exit}' gmic.h)
+VERSION3 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", v%10; exit}' gmic.h)
 SVERSION=$(VERSION1).$(VERSION2).$(VERSION3)
 SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
