@@ -112,7 +112,7 @@ CIMG_VERSION = $(VERSION)
 endif
 
 ORIGINAL_OS := $(BUILD_OS)
-ifneq (,$(filter FreeBSD DragonFly NetBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
+ifneq (,$(filter Linux FreeBSD DragonFly NetBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
 BUILD_OS = Unix
 ifneq (,$(filter FreeBSD DragonFly,$(ORIGINAL_OS)))
 PREFIX = /usr/local
