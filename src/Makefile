@@ -236,8 +236,10 @@ endif
 # Enable parallelization, using OpenMP.
 # (http://www.openmp.org/)
 ifdef IS_CLANG
-OPENMP_CFLAGS = -I/usr/lib/gcc/x86_64-linux-gnu/9/include -Dcimg_use_openmp -fopenmp=libomp
-OPENMP_LIBS = -lomp
+OPENMP_CFLAGS = -Dcimg_use_openmp -fopenmp=libomp
+OPENMP_LIBS = $(shell pkg-config --libs libomp 2>/dev/null || echo -lomp)
+#OPENMP_CFLAGS = -I/usr/lib/gcc/x86_64-linux-gnu/9/include -Dcimg_use_openmp -fopenmp=libomp
+#OPENMP_LIBS = -lomp
 else
 OPENMP_CFLAGS = -fopenmp -Dcimg_use_openmp
 OPENMP_LIBS = -lgomp
@@ -628,7 +630,7 @@ else
 ifeq ($(BUILD_OS),Windows)
 	$(CXX) -shared -static -o libcgmic_static-$(VERSION1).dll libcgmic_static.o libgmic.o $(PIC) -Wl,--output-def,libcgmic_static.def,--out-implib,libcgmic_static.a $(CFLAGS) $(LIBS)
 else
-	$(CXX) -shared -Wl,-soname,libcgmic_static.so.$(VERSION1) -o libcgmic_static.so libcgmic_static.o libgmic.o $(PIC) $(CFLAGS) $(LIBS)
+	$(CXX) -shared -Wl,-soname,libcgmic_static.so.$(VERSION1) -o libcgmic_static.so.$(VERSION) libcgmic_static.o libgmic.o $(PIC) $(CFLAGS) $(LIBS)
 endif
 endif
 ifeq ($(BUILD_OS),Darwin)
