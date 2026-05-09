@@ -25,7 +25,7 @@
 #
 #                 . 'gmic_qt' and 'gmic_qt_shared':
 #                   G'MIC-Qt stand-alone application. Generate file 'gmic-qt/gmic_qt'.
-#                   'gimp_qt_shared' generates a binary that is dynamically linked with 'libgmic'.
+#                   'gmic_qt_shared' generates a binary that is dynamically linked with 'libgmic'.
 #
 #                 . 'zart':
 #                   ZArt interface for real-time processing of videos coming from webcams or files.
@@ -125,10 +125,10 @@ endif
 
 ifeq ($(BUILD_OS),Darwin)
 ifeq (,$(wildcard /opt/local))
-PREFIX = /usr/local
+PREFIX ?= /usr/local
 PLUGIN = $(HOME)/Library/Application\ Support/Gimp/plug-ins
 else
-PREFIX = /opt/local
+PREFIX ?= /opt/local
 endif
 WGET = curl -k -L --silent -o
 endif
@@ -733,7 +733,7 @@ zart_files:
 CImg.h: check_cimg_version
 	@echo "> Retrieve CImg Library..."
 	@if [ -f ../../CImg/CImg.h ]; then \
-          if [ ! -f ./CImg.h ]; then ln -s ../../CImg/CImg.h .; fi; \
+          if [ ! -f ./CImg.h ]; then ln -sf ../../CImg/CImg.h .; fi; \
         elif [ ! -e ./CImg.h ]; then \
           $(WGET) CImg.h https://github.com/GreycLab/CImg/raw/master/CImg.h; \
           touch CImg.h; \
