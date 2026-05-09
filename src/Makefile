@@ -25,7 +25,7 @@
 #
 #                 . 'gmic_qt' and 'gmic_qt_shared':
 #                   G'MIC-Qt stand-alone application. Generate file 'gmic-qt/gmic_qt'.
-#                   'gimp_shared' generates a binary that is dynamically linked with 'libgmic'.
+#                   'gimp_qt_shared' generates a binary that is dynamically linked with 'libgmic'.
 #
 #                 . 'zart':
 #                   ZArt interface for real-time processing of videos coming from webcams or files.
@@ -105,22 +105,22 @@ SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
 
 ifneq (,$(wildcard CImg.h))
-CIMG_VERSION = $(shell grep -oP 'cimg_version\s+\K[0-9]+' CImg.h)
+CIMG_VERSION := $(shell awk '/cimg_version[[:space:]]/ {print $$3; exit}' CImg.h)
 else
 CIMG_VERSION = $(VERSION)
 endif
 
 ORIGINAL_OS := $(BUILD_OS)
-ifneq (,$(filter Linux FreeBSD DragonFly NetBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
+ifneq (,$(filter Linux FreeBSD DragonFly NetBSD OpenBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
 BUILD_OS = Unix
-ifneq (,$(filter FreeBSD DragonFly,$(ORIGINAL_OS)))
-PREFIX = /usr/local
+ifneq (,$(filter FreeBSD DragonFly OpenBSD,$(ORIGINAL_OS)))
+PREFIX ?= /usr/local
 endif
 endif
 
 ifneq (,$(findstring MINGW,$(BUILD_OS)))
 BUILD_OS = Windows
-PREFIX = /mingw64
+PREFIX ?= /mingw64
 endif
 
 ifeq ($(BUILD_OS),Darwin)
@@ -143,6 +143,8 @@ IS_CLANG = 1
 else ifneq (,$(findstring icpc,$(CXX)))
 IS_ICPC = 1
 else ifneq (,$(findstring g++,$(CXX)))
+IS_GCC = 1
+else
 IS_GCC = 1
 endif
 
@@ -173,10 +175,18 @@ MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
 ifndef NO_STDLIB
 MANDATORY_CFLAGS += -std=c++11 -pedantic
 endif
+
+ifeq ($(BUILD_OS),Darwin)
+MANDATORY_LIBS += -L. -L$(PREFIX)/$(LIB)
+else ifneq ($(BUILD_OS),Windows)
 MANDATORY_LIBS += -L. -L$(PREFIX)/$(LIB) -Wl,-rpath,.
+else
+MANDATORY_LIBS += -L. -L$(PREFIX)/$(LIB)
+endif
+
 ifdef IS_GCC
 MANDATORY_CFLAGS += -Wall -Wextra -Wfatal-errors -Werror=unknown-pragmas -Werror=unused-label
-GCC_VER_GTEQ5 = $(shell expr `$(CXX) -dumpversion | cut -f1 -d.` \>= 5)
+GCC_VER_GTEQ5 = $(shell $(CXX) -dumpversion | awk -F. '{ print ($$1 >= 5) }')
 ifeq ($(GCC_VER_GTEQ5),1)
 MANDATORY_CFLAGS += -Wshadow
 endif
@@ -423,11 +433,11 @@ else
 endif
 endif
 ifeq ($(BUILD_OS),Darwin)
-	ln -fs libgmic.$(SOVERSION).dylib libgmic.dylib
+	ln -sf libgmic.$(SOVERSION).dylib libgmic.dylib
 else
 ifneq ($(BUILD_OS),Windows)
-	ln -fs libgmic.so.$(VERSION) libgmic.so.$(VERSION1)
-	ln -fs libgmic.so.$(VERSION1) libgmic.so
+	ln -sf libgmic.so.$(VERSION) libgmic.so.$(VERSION1)
+	ln -sf libgmic.so.$(VERSION1) libgmic.so
 endif
 endif
 
@@ -535,9 +545,9 @@ libcgmic_files:
 	@echo "> Retrieve G'MIC libcgmic files..."
 	@if [ ! -f gmic_libc.cpp ]; then \
 	  if [ -d ../../gmic-community/libcgmic ]; then \
-	    ln -fs ../../gmic-community/libcgmic/gmic_libc.cpp .; \
-	    ln -fs ../../gmic-community/libcgmic/gmic_libc.h .; \
-	    ln -fs ../../gmic-community/libcgmic/use_libcgmic.c .; \
+	    ln -sf ../../gmic-community/libcgmic/gmic_libc.cpp .; \
+	    ln -sf ../../gmic-community/libcgmic/gmic_libc.h .; \
+	    ln -sf ../../gmic-community/libcgmic/use_libcgmic.c .; \
 	  else \
             $(WGET) gmic_libc.cpp https://raw.githubusercontent.com/GreycLab/gmic-community/master/libcgmic/gmic_libc.cpp; \
             $(WGET) gmic_libc.h https://raw.githubusercontent.com/GreycLab/gmic-community/master/libcgmic/gmic_libc.h; \
@@ -559,11 +569,11 @@ else
 endif
 endif
 ifeq ($(BUILD_OS),Darwin)
-	ln -fs libcgmic.$(SOVERSION).dylib libcgmic.dylib
+	ln -sf libcgmic.$(SOVERSION).dylib libcgmic.dylib
 else
 ifneq ($(BUILD_OS),Windows)
-	ln -fs libcgmic.so.$(VERSION) libcgmic.so.$(VERSION1)
-	ln -fs libcgmic.so.$(VERSION1) libcgmic.so
+	ln -sf libcgmic.so.$(VERSION) libcgmic.so.$(VERSION1)
+	ln -sf libcgmic.so.$(VERSION1) libcgmic.so
 endif
 endif
 
@@ -595,7 +605,7 @@ endif
 
 libc_static:
 ifeq ($(BUILD_OS),Windows)
-	rm libgmic.o
+	rm -f libgmic.o
 endif
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_LIBC_STATIC_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_LIBC_STATIC_LIBS) $(OPT_LIBS)" _lib _libc_static
 
@@ -613,11 +623,11 @@ else
 endif
 endif
 ifeq ($(BUILD_OS),Darwin)
-	ln -fs libcgmic_static.$(SOVERSION).dylib libcgmic_static.dylib
+	ln -sf libcgmic_static.$(SOVERSION).dylib libcgmic_static.dylib
 else
 ifneq ($(BUILD_OS),Windows)
-	ln -fs libcgmic_static.so.$(VERSION) libcgmic_static.so.$(VERSION1)
-	ln -fs libcgmic_static.so.$(VERSION1) libcgmic_static.so
+	ln -sf libcgmic_static.so.$(VERSION) libcgmic_static.so.$(VERSION1)
+	ln -sf libcgmic_static.so.$(VERSION1) libcgmic_static.so
 endif
 endif
 
@@ -687,7 +697,7 @@ gmic_qt_files:
 	     fi; \
 	   fi; \
 	   cd $$curr_pwd; \
-	   if [ -d ../../gmic-qt ]; then ln -fs ../gmic-qt ..; fi \
+	   if [ -d ../../gmic-qt ]; then ln -sf ../gmic-qt ..; fi \
 	 fi
 
 # G'MIC-Qt (shared)
@@ -738,7 +748,7 @@ zart_files:
 	     fi; \
 	   fi; \
 	   cd $$curr_pwd; \
-	   if [ -d ../../zart ]; then ln -fs ../zart ..; fi \
+	   if [ -d ../../zart ]; then ln -sf ../zart ..; fi \
 	 fi
 
 # Get header files
@@ -863,14 +873,14 @@ install:
 	@if [ -f libgmic.so ]; then \
 	  $(INSTALL) -m 644 gmic.h $(DESTDIR)$(PREFIX)/$(INCLUDE); \
 	  $(INSTALL) -m 755 libgmic.so $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so.$(VERSION); \
-	  ln -fs libgmic.so.$(VERSION) $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so.$(VERSION1); \
-	  ln -fs libgmic.so.$(VERSION1) $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so; \
+	  ln -sf libgmic.so.$(VERSION) $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so.$(VERSION1); \
+	  ln -sf libgmic.so.$(VERSION1) $(DESTDIR)$(PREFIX)/$(LIB)/libgmic.so; \
 	fi
 	@if [ -f libcgmic.so ]; then \
 	  $(INSTALL) -m 644 gmic_libc.h $(DESTDIR)$(PREFIX)/$(INCLUDE); \
 	  $(INSTALL) -m 755 libcgmic.so $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so.$(VERSION); \
-	  ln -fs libcgmic.so.$(VERSION) $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so.$(VERSION1); \
-	  ln -fs libcgmic.so.$(VERSION1) $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so; \
+	  ln -sf libcgmic.so.$(VERSION) $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so.$(VERSION1); \
+	  ln -sf libcgmic.so.$(VERSION1) $(DESTDIR)$(PREFIX)/$(LIB)/libcgmic.so; \
 	fi
 	@if [ -f ../man/gmic.1.gz ]; then \
 	  $(INSTALL) -d $(DESTDIR)$(SHARE)/man/man1 $(DESTDIR)$(SHARE)/man/fr/man1; \
