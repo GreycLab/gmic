@@ -885,8 +885,8 @@ install:
 	fi
 
 uninstall:
-	rm -rf $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
-	rm -rf $(DESTDIR)$(SHARE)/doc/gmic/
+	$(RM) -r $(DESTDIR)$(PLUGIN)/gmic_gimp_qt
+	$(RM) -r $(DESTDIR)$(SHARE)/doc/gmic/
 	$(RM) $(DESTDIR)$(PREFIX)/$(BIN)/gmic
 	$(RM) $(DESTDIR)$(PREFIX)/$(BIN)/zart
 	$(RM) $(DESTDIR)$(PREFIX)/$(BIN)/gmic_qt
