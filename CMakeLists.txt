@@ -349,7 +349,13 @@ if(BUILD_MAN)
   add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/man/gmic.1
     DEPENDS gmic
-    COMMAND LD_LIBRARY_PATH=${GMIC_BINARIES_PATH} ${GMIC_BINARIES_PATH}/gmic ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic it ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic reference man > ${CMAKE_BINARY_DIR}/man/gmic.1
+    COMMAND ${CMAKE_COMMAND} -E env
+      "LD_LIBRARY_PATH=${GMIC_BINARIES_PATH}"
+      "DYLD_LIBRARY_PATH=${GMIC_BINARIES_PATH}"
+      ${GMIC_BINARIES_PATH}/gmic
+        ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic
+        it ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic
+        reference man > ${CMAKE_BINARY_DIR}/man/gmic.1
   )
   add_custom_target(man ALL DEPENDS ${CMAKE_BINARY_DIR}/man/gmic.1)
   install(FILES ${CMAKE_BINARY_DIR}/man/gmic.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1/)
@@ -360,7 +366,14 @@ if(BUILD_BASH_COMPLETION)
   add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/resources/gmic_bashcompletion.sh
     DEPENDS gmic
-    COMMAND LD_LIBRARY_PATH=${GMIC_BINARIES_PATH} ${GMIC_BINARIES_PATH}/gmic ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic it ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic parse_cli bashcompletion > ${CMAKE_BINARY_DIR}/resources/gmic_bashcompletion.sh
+    COMMAND ${CMAKE_COMMAND} -E env
+      "LD_LIBRARY_PATH=${GMIC_BINARIES_PATH}"
+      "DYLD_LIBRARY_PATH=${GMIC_BINARIES_PATH}"
+      ${GMIC_BINARIES_PATH}/gmic
+        ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic
+        it ${CMAKE_SOURCE_DIR}/src/gmic_stdlib.gmic
+        parse_cli bashcompletion
+        > ${CMAKE_BINARY_DIR}/resources/gmic_bashcompletion.sh
   )
   add_custom_target(bashcompletion ALL DEPENDS ${CMAKE_BINARY_DIR}/resources/gmic_bashcompletion.sh)
   install(FILES ${CMAKE_BINARY_DIR}/resources/gmic_bashcompletion.sh
