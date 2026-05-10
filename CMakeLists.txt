@@ -71,7 +71,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-find_package(PkgConfig)
 include(FeatureSummary)
 include(GNUInstallDirs)
 
@@ -220,12 +219,14 @@ if(CURL_FOUND)
   message(STATUS "libcurl found — enabling network download support (-Dcimg_use_curl)")
   list(APPEND GMIC_OPTIONAL_COMPILE_FLAGS -Dcimg_use_curl)
   list(APPEND GMIC_OPTIONAL_LIBS ${CURL_LIBRARIES})
+  list(APPEND GMIC_OPTIONAL_INCLUDE_DIRS ${CURL_INCLUDE_DIRS})
 endif()
 
 if(X11_FOUND)
   message(STATUS "X11 found — enabling display support (-Dcimg_display=1)")
   list(APPEND GMIC_OPTIONAL_COMPILE_FLAGS -Dcimg_display=1)
   list(APPEND GMIC_OPTIONAL_LIBS ${X11_LIBRARIES})
+  list(APPEND GMIC_OPTIONAL_INCLUDE_DIRS ${X11_INCLUDE_DIRS})
 endif()
 
 # source files
@@ -245,6 +246,11 @@ function(gmic_apply_common_deps target_name)
   if(GMIC_OPTIONAL_COMPILE_FLAGS)
     target_compile_options(${target_name} PRIVATE ${GMIC_OPTIONAL_COMPILE_FLAGS})
   endif()
+
+  if(GMIC_OPTIONAL_INCLUDE_DIRS)
+    target_include_directories(${target_name} PRIVATE ${GMIC_OPTIONAL_INCLUDE_DIRS})
+  endif()
+
 endfunction()
 
 if(BUILD_LIB)
@@ -330,6 +336,12 @@ if(BUILD_CLI)
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   )
+endif()
+
+if(BUILD_MAN OR BUILD_BASH_COMPLETION)
+  if(NOT BUILD_CLI)
+    message(FATAL_ERROR "BUILD_MAN and BUILD_BASH_COMPLETION require BUILD_CLI=ON")
+  endif()
 endif()
 
 if(BUILD_MAN)
