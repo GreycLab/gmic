@@ -92,6 +92,7 @@ GIMPTOOL = $(shell \
   if command -v gimptool-3.2 >/dev/null 2>&1; then echo gimptool-3.2; \
   elif command -v gimptool-3.0 >/dev/null 2>&1; then echo gimptool-3.0; \
   else echo gimptool-2.0; fi)
+
 PLUGIN = $(shell $(GIMPTOOL) --gimpplugindir)/plug-ins
 SHARE = $(PREFIX)/share
 BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion 2>/dev/null || echo $(SHARE)/bash-completion/completions)
