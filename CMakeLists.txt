@@ -55,6 +55,8 @@
 
 cmake_minimum_required(VERSION 3.14.0)
 
+project(gmic CXX C)
+
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message("Build directory is equal to source directory. Binaries will be put in the src directory.")
   message("")
@@ -67,9 +69,6 @@ endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-project(gmic CXX C)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(PkgConfig)
@@ -79,6 +78,7 @@ include(GNUInstallDirs)
 find_package(CImg REQUIRED)
 find_package(GMicStdlib REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(PkgConfig REQUIRED)
 
 find_package(PNG)
 find_package(JPEG)
@@ -161,7 +161,7 @@ endif()
 
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LOWER)
 if (${CMAKE_BUILD_TYPE_LOWER} STREQUAL "debug")
-    list(PREPEND GMIC_CXX_COMPILE_FLAGS -g -ansi -Wall -Wextra -pedantic -Dcimg_verbosity=3)
+    list(PREPEND GMIC_CXX_COMPILE_FLAGS -g -Wall -Wextra -pedantic -Dcimg_verbosity=3)
 endif()
 if (${CMAKE_BUILD_TYPE_LOWER} STREQUAL "relwithdebinfo")
     list(PREPEND GMIC_CXX_COMPILE_FLAGS -g)
@@ -213,6 +213,7 @@ if(FFTW_FOUND)
   else()
     list(APPEND GMIC_OPTIONAL_LIBS ${FFTW_LIBRARIES})
   endif()
+  list(APPEND GMIC_OPTIONAL_INCLUDE_DIRS ${FFTW_INCLUDE_DIRS})
 endif()
 
 if(CURL_FOUND)
@@ -228,7 +229,7 @@ if(X11_FOUND)
 endif()
 
 # source files
-set(CLI_Sources src/gmic.cpp)
+set(GMIC_LIB_SOURCES src/gmic.cpp)
 
 function(gmic_apply_common_deps target_name)
   target_link_libraries(${target_name} PRIVATE ZLIB::ZLIB)
@@ -247,7 +248,7 @@ function(gmic_apply_common_deps target_name)
 endfunction()
 
 if(BUILD_LIB)
-  add_library(libgmic SHARED ${CLI_Sources})
+  add_library(libgmic SHARED ${GMIC_LIB_SOURCES})
   target_compile_options(libgmic PRIVATE ${GMIC_CXX_COMPILE_FLAGS} -Dgmic_core)
   set_target_properties(libgmic PROPERTIES SOVERSION "1" OUTPUT_NAME "gmic")
   target_link_libraries(libgmic
@@ -269,12 +270,11 @@ if(BUILD_LIB)
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   )
-  install(FILES src/gmic.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 endif()
 
 
 if(BUILD_LIB_STATIC)
-  add_library(libgmicstatic STATIC ${CLI_Sources})
+  add_library(libgmicstatic STATIC ${GMIC_LIB_SOURCES})
   target_compile_options(libgmicstatic PRIVATE ${GMIC_CXX_COMPILE_FLAGS} -Dgmic_core)
   set_target_properties(libgmicstatic PROPERTIES OUTPUT_NAME "gmic")
   target_link_libraries(libgmicstatic
@@ -291,10 +291,16 @@ if(BUILD_LIB_STATIC)
   gmic_apply_common_deps(libgmicstatic)
 
   install(TARGETS libgmicstatic EXPORT GmicTargets ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+endif()
+
+if(BUILD_LIB OR BUILD_LIB_STATIC)
   install(FILES src/gmic.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 endif()
 
 if(BUILD_CLI)
+  if(NOT ENABLE_DYNAMIC_LINKING AND NOT BUILD_LIB_STATIC)
+    message(FATAL_ERROR "BUILD_CLI requires either BUILD_LIB_STATIC=ON or ENABLE_DYNAMIC_LINKING=ON")
+  endif()
   add_executable(gmic src/gmic_cli.cpp)
   target_compile_options(gmic PRIVATE ${GMIC_CXX_COMPILE_FLAGS})
   if(ENABLE_DYNAMIC_LINKING)
