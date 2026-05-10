@@ -96,10 +96,11 @@ PLUGIN = $(shell $(GIMPTOOL) --gimpplugindir)/plug-ins
 SHARE = $(PREFIX)/share
 BASH_COMPLETIONSDIR = $(shell pkg-config --variable completionsdir bash-completion 2>/dev/null || echo $(SHARE)/bash-completion/completions)
 
-VERSION := $(shell awk '/gmic_version[[:space:]]/ {print $$3; exit}' gmic.h)
-VERSION1 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", int(v/100); exit}' gmic.h)
-VERSION2 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", int((v%100)/10); exit}' gmic.h)
-VERSION3 := $(shell awk '/gmic_version[[:space:]]/ {v=$$3; printf "%d", v%10; exit}' gmic.h)
+_VERSION_PARTS := $(shell awk '/gmic_version[[:space:]]/ { v=$$3; printf "%d %d %d %d", v, int(v/100), int((v%100)/10), v%10; exit}' gmic.h)
+VERSION := $(word 1,$(_VERSION_PARTS))
+VERSION1 := $(word 2,$(_VERSION_PARTS))
+VERSION2 := $(word 3,$(_VERSION_PARTS))
+VERSION3 := $(word 4,$(_VERSION_PARTS))
 SVERSION=$(VERSION1).$(VERSION2).$(VERSION3)
 SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
@@ -113,8 +114,10 @@ endif
 ORIGINAL_OS := $(BUILD_OS)
 ifneq (,$(filter Linux FreeBSD DragonFly NetBSD OpenBSD GNU/kFreeBSD GNU,$(BUILD_OS)))
 BUILD_OS = Unix
+ifeq ($(PREFIX),/usr)
 ifneq (,$(filter FreeBSD DragonFly OpenBSD,$(ORIGINAL_OS)))
-PREFIX ?= /usr/local
+  PREFIX = /usr/local
+endif
 endif
 endif
 
@@ -138,25 +141,25 @@ EXE = .exe
 PIC =
 endif
 
-ifneq (,$(findstring clang++,$(CXX)))
+COMPILER_ID := $(shell $(CXX) --version 2>&1 | head -1)
+ifneq (,$(findstring clang,$(COMPILER_ID)))
 IS_CLANG = 1
-else ifneq (,$(findstring icpc,$(CXX)))
+else ifneq (,$(findstring icpc,$(COMPILER_ID)))
 IS_ICPC = 1
-else ifneq (,$(findstring g++,$(CXX)))
-IS_GCC = 1
 else
 IS_GCC = 1
 endif
 
 ifdef NOSTRIP
-STRIP = echo skip strip
+STRIP = true
 else
 STRIP = strip
 endif
 
-ifndef QMAKE
-QMAKE = qmake
-endif
+QMAKE ?= $(shell \
+  if command -v qmake6 >/dev/null 2>&1; then echo qmake6; \
+  elif command -v qmake-qt5 >/dev/null 2>&1; then echo qmake-qt5; \
+  else echo qmake; fi)
 
 #--------------------------------------------------------
 # Define compilation flags to se for each enable feature
@@ -185,11 +188,7 @@ MANDATORY_LIBS += -L. -L$(PREFIX)/$(LIB)
 endif
 
 ifdef IS_GCC
-MANDATORY_CFLAGS += -Wall -Wextra -Wfatal-errors -Werror=unknown-pragmas -Werror=unused-label
-GCC_VER_GTEQ5 = $(shell $(CXX) -dumpversion | awk -F. '{ print ($$1 >= 5) }')
-ifeq ($(GCC_VER_GTEQ5),1)
-MANDATORY_CFLAGS += -Wshadow
-endif
+MANDATORY_CFLAGS += -Wall -Wextra -Wfatal-errors -Werror=unknown-pragmas -Werror=unused-label -Wshadow
 endif
 ifeq ($(BUILD_OS),Unix)
 MANDATORY_CFLAGS += -Dcimg_use_vt100
@@ -910,7 +909,7 @@ uninstall:
 distclean: clean
 
 clean:
-	rm -rf CImg.h gmic_stdlib_community.h gmic$(EXE) use_libgmic$(EXE) use_libcgmic$(EXE) use_libcgmic_static$(EXE) gmic*.o libgmic* libcgmic* *~
+	$(RM) CImg.h gmic_stdlib_community.h gmic$(EXE) use_libgmic$(EXE) use_libcgmic$(EXE) use_libcgmic_static$(EXE) gmic*.o libgmic* libcgmic* *~
 	@if [ -f ../zart/Makefile ]; then $(MAKE) -C ../zart clean; fi
 	@if [ -h ../zart ]; then $(RM) ../zart; fi
 	@if [ -f ../gmic-qt/Makefile ]; then $(MAKE) -C ../gmic-qt clean; fi
