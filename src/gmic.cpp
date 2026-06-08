@@ -6920,7 +6920,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                             &is_forward,gmic_use_argx,&lambda,&end)==8)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"displacement")).height()==1 &&
               precision>=0 && nb_scales>=0 && nb_iterations>=0 && is_forward<=1 &&
-              (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1)) {
+              (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1) &&
+              lambda>=0) {
             nb_scales = (double)(unsigned int)nb_scales;
             if (!cimg::type<double>::is_inf(nb_iterations)) nb_iterations = (double)(unsigned int)nb_iterations;
             if (nb_scales) cimg_snprintf(argx,_argx.width(),"%g ",nb_scales); else std::strcpy(argx,"auto-");
