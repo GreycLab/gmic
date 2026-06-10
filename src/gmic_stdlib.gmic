@@ -1966,15 +1966,16 @@ compress_gmic :
           for (p = 1, j[p] && j[p]<=_' ' && j[p]!=_'\n', ++p); copy(i(),-1,p,1,0))"
   discard. -1
 
-# compress_pdf : input_filename,_output_filename
+# compress_pdf : input_filename,_output_filename,_image_resolution>0
 # Compress specified pdf file, using ghostscript.
-# Default value: 'output_filename=out.pdf'.
-compress_pdf : skip "${2=out.pdf}"
-  e[^-1] "Compress pdf file '$1' into file '$2'."
+# Default values: 'output_filename=out.pdf' and 'image_resolution=256'.
+compress_pdf : check "isint(${3=256},1)" skip "${2=out.pdf}"
+  resolution=$3
+  e[^-1] "Compress pdf file '$1' into file '$2' with image resolution $3."
   x "gs -q -dNOPAUSE -dBATCH -dSAFER -sDEVICE=pdfwrite -dCompatibilityLevel=1.3 "\
     "-dPDFSETTINGS=/screen -dEmbedAllFonts=true -dSubsetFonts=true -dColorImageDownsampleType=/Bicubic "\
-    "-dColorImageResolution=144 -dGrayImageDownsampleType=/Bicubic -dGrayImageResolution=144 "\
-    "-dMonoImageDownsampleType=/Bicubic -dMonoImageResolution=144 "\
+    "-dColorImageResolution="$resolution" -dGrayImageDownsampleType=/Bicubic -dGrayImageResolution="$resolution" "\
+    "-dMonoImageDownsampleType=/Bicubic -dMonoImageResolution="$resolution" "\
     "-sOutputFile=\"$2\" \"$1\""
 
 #@cli createdir : force_overwrite={ 0:No | 1:Yes },directory_path_1,_directory_path_2,... : (+)
