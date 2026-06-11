@@ -6895,7 +6895,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_displacement) {
           gmic_substitute_args(true);
           double nb_scales = 0, nb_iterations = 1000;
-          float smoothness = 0.1f, precision = 7.f, lambda = 1000;
+          float smoothness = 0.1f, precision = 7.f;
           unsigned int is_forward = 0;
           sep = *argx = 0;
           ind0.assign();
@@ -6914,19 +6914,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                            &is_forward,&end)==6 ||
                (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]%c%c",
                             indices,&smoothness,&precision,&nb_scales,&nb_iterations,
-                            &is_forward,gmic_use_argx,&sep,&end)==8 && sep==']') ||
-               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]],%f%c",
-                            indices,&smoothness,&precision,&nb_scales,&nb_iterations,
-                            &is_forward,gmic_use_argx,&lambda,&end)==8)) &&
+                            &is_forward,gmic_use_argx,&sep,&end)==8 && sep==']')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"displacement")).height()==1 &&
               precision>=0 && nb_scales>=0 && nb_iterations>=0 && is_forward<=1 &&
-              (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1) &&
-              lambda>=0) {
+              (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1)) {
             nb_scales = (double)(unsigned int)nb_scales;
             if (!cimg::type<double>::is_inf(nb_iterations)) nb_iterations = (double)(unsigned int)nb_iterations;
             if (nb_scales) cimg_snprintf(argx,_argx.width(),"%g ",nb_scales); else std::strcpy(argx,"auto-");
             if (ind0) {
-              gmic_use_argy; cimg_snprintf(argy,_argy.width()," with guide [%u] and lambda %g",*ind0,lambda);
+              gmic_use_argy; cimg_snprintf(argy,_argy.width()," with guide [%u]",*ind0);
             } else *argy = 0;
 
             print(0,"Estimate displacement field from reference image [%u] to image%s, with "
@@ -6946,7 +6942,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               gmic_apply(displacement(reference,smoothness,precision,(unsigned int)nb_scales,
                                       cimg::type<double>::is_inf(nb_iterations)?~0U:(unsigned int)nb_iterations,
                                       (bool)is_forward,
-                                      constraints,lambda),false);
+                                      constraints),false);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
