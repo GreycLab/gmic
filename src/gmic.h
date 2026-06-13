@@ -52,7 +52,7 @@
 */
 
 #ifndef gmic_version
-#define gmic_version 377
+#define gmic_version 380
 
 #ifndef gmic_pixel_type
 #define gmic_pixel_type float

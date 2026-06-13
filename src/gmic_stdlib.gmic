@@ -11044,7 +11044,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.7.7').
+# $1 = version number (e.g. '3.8.0').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -11551,7 +11551,7 @@ update_gallery_html : check "isbool(${1=0})"
   commands_artistic=_gallery_artistic,boxfitting,cartoon,cubism,draw_whirl,fractalize,halftone,sketchbw,light_relief,\
                     mosaic,linify,polaroid,polygonize,poster_hope,rodilius,stencil,stained_glass
   commands_blackandwhite=_gallery_blackandwhite,pencilbw,old_photo,sepia
-  commands_colors=_gallery_colors,solarize,hsv2rgb,match_rgb
+  commands_colors=_gallery_colors,solarize,hsv2rgb,transfer_rgb
   commands_deformations=_gallery_deformations,deform,map_sphere,seamcarve,spherize,twirl,warp_perspective,water,wave
   commands_filtering=_gallery_filtering,blur_angular,blur_linear,blur_radial,glow,smooth,bilateral,dog,deriche,\
                      distance,gradient_norm,normalize_local,sharpen,solidify
@@ -12948,7 +12948,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=376,377,$_version
+  versions=380,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -16128,12 +16128,12 @@ map_clut :
     rm[0] mv. 0 a[^-1] c =>[0] $nm
   } } rm.
 
-#@cli match_histogram : [reference_image],_nb_levels>0,_color_channels
+#@cli transfer_histogram : [reference_image],_nb_levels>0,_color_channels
 #@cli : Transfer histogram of the specified reference image to selected images.
 #@cli : Argument 'color channels' is the same as with command 'apply_channels'.
 #@cli : Default value: 'nb_levels=256' and 'color_channels=all'.
-#@cli : $ image.jpg 100,100,1,3,"u([256,200,100])" +match_histogram[0] [1]
-match_histogram : check ${"is_image_arg $1"}" && ${2=1024}>0" skip "${3=0}"
+#@cli : $ image.jpg 100,100,1,3,"u([256,200,100])" +transfer_histogram[0] [1]
+transfer_histogram : check ${"is_image_arg $1"}" && ${2=1024}>0" skip "${3=0}"
   channels=${"_ac_list \"$3\""}
   e[^-1] "Transfer histogram from image ["${"pass$1 -1"}"] to image$?, "\
          "with $2 levels, for channels '"$channels"'."
@@ -16142,17 +16142,17 @@ match_histogram : check ${"is_image_arg $1"}" && ${2=1024}>0" skip "${3=0}"
   if ['$channels']!='all'
     pass$1 {$sref==3?2:0}
     to_color
-    ac. "+store _match_histogram_reference",$channels rm.
-    ac "_match_histogram $2",$channels,1
+    ac. "+store _transfer_histogram_reference",$channels rm.
+    ac "_transfer_histogram $2",$channels,1
   else
     pass$1
-    store. _match_histogram_reference
-    foreach { _match_histogram $2 }
+    store. _transfer_histogram_reference
+    foreach { _transfer_histogram $2 }
   fi
-  _match_histogram_reference=
+  _transfer_histogram_reference=
 
-_match_histogram :
-  $_match_histogram_reference
+_transfer_histogram :
+  $_transfer_histogram_reference
   repeat min(s#0,s#1) {
     sh $>
     +histogram[-2,-1] $1 cumulate[-2,-1] /.. {-2,i[-1,2]} /. {i[-1,2]}
@@ -16174,12 +16174,12 @@ _match_histogram :
   }
   rm.
 
-#@cli match_pca : [reference_image],_color_channels
+#@cli transfer_pca : [reference_image],_color_channels
 #@cli : Transfer mean and covariance matrix of specified vector-valued reference image to selected images.
 #@cli : Argument 'color channels' is the same as with command 'apply_channels'.
 #@cli : Default value: 'color_channels=all'.
-#@cli : $ sample lena,earth +match_pca[0] [1]
-match_pca : check ${"is_image_arg $1"} skip "${2=all}"
+#@cli : $ sample lena,earth +transfer_pca[0] [1]
+transfer_pca : check ${"is_image_arg $1"} skip "${2=all}"
   channels=${"_ac_list \"$2\""}
   e[^-1] "Transfer mean vector and covariance matrix from image ["${"pass$1 -1"}"] to image$?, "\
          "for channels '"$channels"'."
@@ -16192,17 +16192,17 @@ match_pca : check ${"is_image_arg $1"} skip "${2=all}"
   elif ['$channels']!='all'
     pass$1 {$sref==3?2:0}
     to_color
-    ac. "+store _match_pca_reference",$channels rm.
-    ac "_match_pca",$channels,1
+    ac. "+store _transfer_pca_reference",$channels rm.
+    ac "_transfer_pca",$channels,1
   else
     pass$1
-    store. _match_pca_reference
-    foreach { _match_pca }
+    store. _transfer_pca_reference
+    foreach { _transfer_pca }
   fi
-  _match_pca_reference=
+  _transfer_pca_reference=
 
-_match_pca :
-  $_match_pca_reference
+_transfer_pca :
+  $_transfer_pca_reference
   f.. "*begin(
          cov_ref = [ "${"covariance_vectors[1] _avg_ref"}" ];
          cov = [ "${"covariance_vectors[0] _avg"}" ];
@@ -16225,7 +16225,7 @@ _match_pca :
        avg_ref + M*(I - avg)"
   rm.
 
-#@cli match_rgb : [reference],_gamma>=0,_regularization>=0,_luminosity_constraints>=0,_rgb_resolution>=0,\
+#@cli transfer_rgb : [reference],_gamma>=0,_regularization>=0,_luminosity_constraints>=0,_rgb_resolution>=0,\
 # _is_constraints={ 0:No | 1:Yes }
 #@cli : Transfer colors from specified reference image (given as argument) to selected image.
 #@cli : 'gamma' determines the importance of color occurrences in the matching process (0:None to 1:Huge).
@@ -16234,8 +16234,8 @@ _match_pca :
 #@cli : 'is_constraints' tells if additional hard color constraints must be set (opens an interactive window).
 #@cli : Default values: 'gamma=0.3','regularization=8', 'luminosity_constraints=0.1', 'rgb_resolution=64' and \
 # 'is_constraints=0'.
-#@cli : $ sample pencils,wall +match_rgb[0] [1],0,0.01
-match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isbool(${6=0})"
+#@cli : $ sample pencils,wall +transfer_rgb[0] [1],0,0.01
+transfer_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isbool(${6=0})"
   e[^-1] "Transfer RGB colors of reference image $1 to image$?."
   gamma,sigma=$2,5
   pass$1 0
@@ -16244,7 +16244,7 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
     => img,reference
 
     # Generate 3D feature functions from 2D images.
-    +_match_rgb[img,reference] $gamma,$sigma,$5 => f_img,f_reference
+    +_transfer_rgb[img,reference] $gamma,$sigma,$5 => f_img,f_reference
     n[f_img,f_reference] 0,255
 
     # Manage color constraints.
@@ -16292,12 +16292,12 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
     # if videos
     #   N=$!
     #   [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    #   +_match_rgb[img] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
-    #   +_match_rgb[img] 0,$sigma,{w} a[-2,-1] c
+    #   +_transfer_rgb[img] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
+    #   +_transfer_rgb[img] 0,$sigma,{w} a[-2,-1] c
 
     #   [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    #   +_match_rgb[reference] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
-    #   +_match_rgb[reference] 0,$sigma,{w} a[-2,-1] c
+    #   +_transfer_rgb[reference] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
+    #   +_transfer_rgb[reference] 0,$sigma,{w} a[-2,-1] c
     #   warp. [displacement],1,1,1,48
 
     #   l[$N--1] {
@@ -16313,13 +16313,13 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
     # fi
 
     # Estimate confidence of the color mapping.
-    +_match_rgb[reference] 0,$sigma,{displacement,w}
+    +_transfer_rgb[reference] 0,$sigma,{displacement,w}
     warp. [displacement],1,1,1 c. 0,100% => f_confidence
     +map_clut[img] . => confidence
 
     # Generate transfer CLUT.
     [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    +_match_rgb[reference] 0,0,{w} *.. .
+    +_transfer_rgb[reference] 0,0,{w} *.. .
     warp[-2,-1] [displacement],1,0,1
     distance. 1 *. -1 watershed.. . rm. -. 1
     => clut
@@ -16355,9 +16355,9 @@ match_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isb
   }
   rm.
 
-# _match_rgb : _gamma>=0,_smoothness>=0,_resolution>0
+# _transfer_rgb : _gamma>=0,_smoothness>=0,_resolution>0
 # Convert selected images into 3D volumetric scalar function for color matching.
-_match_rgb :
+_transfer_rgb :
   l[] {
     check "${1=0}>=0 && ${2=1.5}>=0 && ${3=128}>0" gamma=$1 smoothness=$2 res=$3
     onfail noarg gamma=0 smoothness=1.5 res=128
@@ -35343,14 +35343,14 @@ stencilbw : skip ${1=15},${2=10}
 # 'init_max_gradient=0', 'patch_size_analysis=5', 'patch_size_synthesis=5', 'patch_size_synthesis_final=5', \
 # 'nb_matches_finest=2', 'nb_matchesc_coarsest=30', 'penalize_repetitions=2', 'matching_precision=2', \
 # 'scale_factor=1.85', 'skip_finest_scales=0' and \
-# 'image_matching_command'="s c,-3 match_pca[0] [2] b[0,2] xy,0.7 n[0,2] 0,255 n[1,2] 0,200 \
+# 'image_matching_command'="s c,-3 transfer_pca[0] [2] b[0,2] xy,0.7 n[0,2] 0,255 n[1,2] 0,200 \
 # a[0,1] c a[1,2] c"'.
 stylize :
   check ${"is_image_arg $1"}" && isnum(${2=0.5}) && isnum(${3=2}) && ${4=3}>=0 && ${5=0.5}>=0 && ${6=0.1}>=0 && "\
         "$6<=1 && isint(${7=0},0,3) && isint(${8=16},0) && ${9=0}>=0 && isint(${10=5},1) && "\
         "isint(${11=5},1) && isint(${12=$11},1) && isint(${13=2}) && isint(${14=30}) && "\
         "${15=2}>=0 && ${16=2}>=0 && ${17=1.85}>1 && isint(${18=0},0)"
-  skip "${19=s c,-3 match_pca[0] [2] b[0,2] xy,0.7 n[0,2] 0,255 n[1,2] 0,200 a[0,1] c a[1,2] c}"
+  skip "${19=s c,-3 transfer_pca[0] [2] b[0,2] xy,0.7 n[0,2] 0,255 n[1,2] 0,200 a[0,1] c a[1,2] c}"
   e[^-1] "Stylize image$? with style image $1."
   fidelity_finest,\ # $2
   fidelity_coarsest,\ # $3
@@ -45519,7 +45519,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 3.7.7</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 3.8.0</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45552,7 +45552,7 @@ fx_gmicky_preview :
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2026/05/13</b> : version <i>3.7.6</i> (Current stable).</span>\n
-#@gui : - <b>2026/05/18</b> : version <i>3.7.7</i> (Current pre-release).\n
+#@gui : - <b>2026/06/13</b> : version <i>3.8.0</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.8)","https://discuss.pixls.us/t/on-the-road-to-gmic-3-8"}
@@ -48498,28 +48498,28 @@ fx_stylize :
 
   # Define image matching function
   colorspace=${"arg0 $11,all,lrgb,ycbcr,ycbcr,ycbcr_y,ycbcr_cbcr,lab,lab,lab_l,lab_ab"}
-  match_colors="s c,-3 mv[1] 3 b[-2,-1] 1% negate[-2,-1] n[-2,-1] 0,1"
+  transfer_colors="s c,-3 mv[1] 3 b[-2,-1] 1% negate[-2,-1] n[-2,-1] 0,1"
   luma,chroma=
   if $11==3" || "$11==7 # Chroma/Luma conversion for YCbCr or Lab
     luma=_${"arg0 ($11==7),y,l"}
     chroma=_${"arg0 ($11==7),cbcr,ab"}
   fi
   if $10==1
-    match_colors=$match_colors" ac[0,1] \"balance_gamma ,\","$colorspace$luma
-    if narg($chroma) match_colors=$match_colors" ac[0,1] \"balance_gamma ,\","$colorspace$chroma fi
+    transfer_colors=$transfer_colors" ac[0,1] \"balance_gamma ,\","$colorspace$luma
+    if narg($chroma) transfer_colors=$transfer_colors" ac[0,1] \"balance_gamma ,\","$colorspace$chroma fi
   elif $10==2
-    match_colors=$match_colors" match_histogram[0] [1],256,"$colorspace$luma
-    if narg($chroma) match_colors=$match_colors" match_histogram[0] [1],256,"$colorspace$chroma fi
+    transfer_colors=$transfer_colors" transfer_histogram[0] [1],256,"$colorspace$luma
+    if narg($chroma) transfer_colors=$transfer_colors" transfer_histogram[0] [1],256,"$colorspace$chroma fi
   elif $10==3
-    match_colors=$match_colors" match_pca[0] [1],"$colorspace$luma" c[0] 0,255"
-    if narg($chroma) match_colors=$match_colors" match_pca[0] [1],"$colorspace$chroma" c[0] 0,255" fi
+    transfer_colors=$transfer_colors" transfer_pca[0] [1],"$colorspace$luma" c[0] 0,255"
+    if narg($chroma) transfer_colors=$transfer_colors" transfer_pca[0] [1],"$colorspace$chroma" c[0] 0,255" fi
   fi
-  if $12==1 match_colors=$match_colors" rgb2ycbcr[0,1] sh[0,1] 1,2 f[-2,-1] 128 rm[-2,-1] ycbcr2rgb[0,1]"
-  elif $12==2 match_colors=$match_colors" srgb2lab[0,1] sh[0,1] 1,2 f[-2,-1] 0 rm[-2,-1] lab2srgb[0,1]"
-  elif $12==3 match_colors=$match_colors" rgb2ycbcr[0,1] sh[0,1] 0 f[-2,-1] 128 rm[-2,-1] ycbcr2rgb[0,1]"
-  elif $12==4 match_colors=$match_colors" srgb2lab[0,1] sh[0,1] 0 f[-2,-1] 50 rm[-2,-1] lab2srgb[0,1]"
+  if $12==1 transfer_colors=$transfer_colors" rgb2ycbcr[0,1] sh[0,1] 1,2 f[-2,-1] 128 rm[-2,-1] ycbcr2rgb[0,1]"
+  elif $12==2 transfer_colors=$transfer_colors" srgb2lab[0,1] sh[0,1] 1,2 f[-2,-1] 0 rm[-2,-1] lab2srgb[0,1]"
+  elif $12==3 transfer_colors=$transfer_colors" rgb2ycbcr[0,1] sh[0,1] 0 f[-2,-1] 128 rm[-2,-1] ycbcr2rgb[0,1]"
+  elif $12==4 transfer_colors=$transfer_colors" srgb2lab[0,1] sh[0,1] 0 f[-2,-1] 50 rm[-2,-1] lab2srgb[0,1]"
   fi
-  match_colors=$match_colors\
+  transfer_colors=$transfer_colors\
               " b[0,1] xy,$13 foreach[0,1] { s c n 0,255 a c } *[-2,-1] {$14*255} a[0,-2] c a[1,-1] c"
 
   patch_penalization=$23
@@ -48542,7 +48542,7 @@ fx_stylize :
     elif $3==3 +l. { r {u=max(w,h);[u,u]},1,100%,0,3,0.5,0.5 repeat 7 { +rotate[0] {45*$>},1,3,50%,50% } a z }
     fi
     if $4 wsiz=${"fitscreen[] "{0,[w,h]}} w[0] $wsiz is_window={*} fi
-    stylize[0] .,${5-9},$15,$init_resolution,${17-22},$patch_penalization,${24-26},$match_colors
+    stylize[0] .,${5-9},$15,$init_resolution,${17-22},$patch_penalization,${24-26},$transfer_colors
     k[0,1] =>[0] $nm
     if $is_window" && "!{*} break fi
   } }
@@ -49736,7 +49736,7 @@ fx_boost_fade :
   foreach {
     100%,100%,1,3 rand. 0,1 b. {10-10*($1/10)^0.5} n. 0,255
     to_colormode 0 a z
-    ac "s z match_histogram.. . rm.",${"arg0 $2,ycbcr_cbcr,lab_ab"}
+    ac "s z transfer_histogram.. . rm.",${"arg0 $2,ycbcr_cbcr,lab_ab"}
   }
 
 #@gui Channel Processing : fx_channel_processing, fx_channel_processing(1)
@@ -52736,7 +52736,7 @@ _fx_cluts_colorslide :
 fx_transfer_histogram :
   to_rgb
   ref:=$2?0:-1
-  match_histogram[^$ref] [$ref],256,$1
+  transfer_histogram[^$ref] [$ref],256,$1
   c 0,255
 
 fx_transfer_histogram_preview :
@@ -52783,7 +52783,7 @@ fx_transfer_histogram_preview :
 fx_transfer_pca :
   to_rgb
   ref:=$2?0:-1
-  match_pca[^$ref] [$ref],$1
+  transfer_pca[^$ref] [$ref],$1
   c 0,255
 
 fx_transfer_pca_preview :
@@ -52826,7 +52826,7 @@ fx_transfer_pca_preview :
 fx_transfer_rgb :
   to_rgb
   ref:=$4?0:-1
-  match_rgb[^$ref] [$ref],0.25,$1,$2,{2^(4+$3)},$5,0
+  transfer_rgb[^$ref] [$ref],0.25,$1,$2,{2^(4+$3)},$5,0
   c 0,255
 
 fx_transfer_rgb_preview :
@@ -58787,7 +58787,7 @@ _fx_equalize_light :
   foreach {
     split_opacity l[0] {
       . +b. {max(0.1,100-$1)}% -[-2,-1]
-      if $2 match_pca. .. else n. ..,.. fi
+      if $2 transfer_pca. .. else n. ..,.. fi
       rm..
     }
     a c
