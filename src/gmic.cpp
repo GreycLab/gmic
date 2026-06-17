@@ -6926,10 +6926,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             } else *argy = 0;
 
             print(0,"Estimate displacement field from reference image [%u] to image%s, with "
-                  "%s smoothness %g, precision %g, %sscales, %g iteration%s, in %s direction%s.",
+                  "%s regularization, smoothness %g, precision %g, %sscales, %g iteration%s, in %s direction%s.",
                   *ind,
                   gmic_selection.data(),
-                  smoothness>=0?"isotropic":"anisotropic",cimg::abs(smoothness),
+                  smoothness>=0?"Tikhonov":"TV",cimg::abs(smoothness),
                   precision,
                   argx,
                   nb_iterations,nb_iterations!=1?"s":"",
