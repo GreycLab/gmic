@@ -16228,18 +16228,18 @@ _transfer_pca :
        avg_ref + M*(I - avg)"
   rm.
 
-#@cli transfer_rgb : [style],_alpha>0,_beta>0,_regul_iterations>=0,_brightness_constraint>=0,\
+#@cli transfer_rgb : [style],_rgb_smoothness>0,_beta>0,_regul_iterations>=0,_brightness_constraint>=0,\
 # _transfer_avg_std={ 0:No | 1:Avg-only | 2: Avg-Std },_colorspace={ 0:srgb | 1:lrgb | 2:ycbcr | 3:lab },\
 # _resolution3d>0,[color_constraints],_lambda>=0
 #@cli : Transfer RGB colors from specified style image to selected images, using 3D variational registration.
 #@cli : When '[color_constraints]' is provided, it must be a 6D image where each point has the meaning: \
 # [ Rimg,Gimg,Bimg, Rstyle,Gstyle,Bstyle ]
-#@cli : Default values: 'colorspace=0', 'resolution3d=32', 'alpha=0.01', 'beta=1', 'iter_regul=3', \
+#@cli : Default values: 'colorspace=0', 'resolution3d=32', 'rgb_smoothness=0.01', 'beta=1', 'iter_regul=3', \
 # 'brightness_constraint=0.35', 'transfer_avg_std=0', '[color_constraints]=(undefined)' and 'lambda=1000'.
 #@cli : $ sample colorful,eagle +transfer_rgb[0] [1]
 #@cli : $ sample pencils,walls +transfer_rgb[0] [1]
 transfer_rgb : check ${"is_image_arg $1"}" && # [style]
-                 isnum(${2=0.01}) &&          # alpha
+                 isnum(${2=0.01}) &&          # rgb_smoothness
                  ${3=1}>=0 &&                 # beta
                  isint(${4=3},0) &&           # regul_iterations
                  ${5=0.35}>=0 &&              # brightness_constraints
@@ -16248,12 +16248,12 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
                  isint(${8=32},1) &&          # resolution3d
                  ${10=1000}>=0                # lambda
                " skip "${9=}"
-  alpha,beta,regul_iterations,brightness_constraint,transfer_avg_std,colorspace,resolution3d,lambda=${2-8},$10
+  rgb_smoothness,beta,regul_iterations,brightness_constraint,transfer_avg_std,colorspace,resolution3d,lambda=${2-8},$10
   is_color_constraints:=${"is_image_arg $9"}
   s_colorspace=${"arg0 "$colorspace",srgb,lrgb,ycbcr,lab"}
 
   if $is_color_constraints
-    e[0--3] "Transfer colors from style image $1 to image$?, with alpha "$alpha", beta "$beta", "\
+    e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
             $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
             "3d resolution "$resolution3d", colorspace "$s_colorspace", 3d resolution "$resolution3d", "\
             "color constraints $9 and lambda "$lambda"."
@@ -16267,7 +16267,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
     } => guide_kub
     store. guide_kub
   else
-    e[0--3] "Transfer colors from style image $1 to image$?, with alpha "$alpha", beta "$beta", "\
+    e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
             $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
             "3d resolution "$resolution3d", colorspace "$s_colorspace" and 3d resolution "$resolution3d"."
   fi
@@ -16293,10 +16293,10 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
 
     if $is_color_constraints
       $guide_kub
-      +displacement[smooth_img_kub] [smooth_style_kub],$alpha,5,0,inf,0,[guide_kub] => displacement
+      +displacement[smooth_img_kub] [smooth_style_kub],$rgb_smoothness,5,0,inf,0,[guide_kub] => displacement
       rm[guide_kub]
     else
-      +displacement[smooth_img_kub] [smooth_style_kub],$alpha,7,0,inf,0 => displacement
+      +displacement[smooth_img_kub] [smooth_style_kub],$rgb_smoothness,7,0,inf,0 => displacement
     fi
 
     rm[img_kub,smooth_style_kub,smooth_img_kub]
@@ -52831,7 +52831,7 @@ fx_transfer_pca_preview :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Transfers colors using a variational method.
 #@gui : "}, sep = separator()
-#@gui : Regularization = int(8,0,32)
+#@gui : Color Smoothness = int(8,0,32)
 #@gui : Preserve Luminance = float(0.2,0,1)
 #@gui : Precision = _choice(1,"Low","Normal","High","Very High")
 #@gui : Reference Colors = choice("Bottom Layer","Top Layer")
