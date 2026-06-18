@@ -16228,151 +16228,172 @@ _transfer_pca :
        avg_ref + M*(I - avg)"
   rm.
 
-#@cli transfer_rgb : [style],_gamma>=0,_regularization>=0,_luminosity_constraints>=0,_rgb_resolution>=0,\
-# _is_constraints={ 0:No | 1:Yes }
-#@cli : Transfer RGB colors from specified style image to selected images.
-#@cli : 'gamma' determines the importance of color occurrences in the matching process (0:None to 1:Huge).
-#@cli : 'regularization' determines the number of guided filter iterations to remove quantization effects.
-#@cli : 'luminosity_constraints' tells if luminosity constraints must be applied on non-confident matched colors.
-#@cli : 'is_constraints' tells if additional hard color constraints must be set (opens an interactive window).
-#@cli : Default values: 'gamma=0.3','regularization=8', 'luminosity_constraints=0.1', 'rgb_resolution=64' and \
-# 'is_constraints=0'.
-#@cli : $ sample pencils,wall +transfer_rgb[0] [1],0,0.01
-transfer_rgb : check "${2=0.3}>=0 && ${3=8}>=0 && ${4=0.15}>=0 && ${5=64}>=0 && isbool(${6=0})"
-  e[^-1] "Transfer RGB colors of style image $1 to image$?."
-  gamma,sigma=$2,5
-  pass$1 0
-  foreach[^-1] {
-    pass. 1 nm_img={0,b} nm_style={1,b}
-    => img,style
+#@cli transfer_rgb : [style],_alpha>0,_beta>0,_regul_iterations>=0,_brightness_constraint>=0,\
+# _transfer_avg_std={ 0:No | 1:Avg-only | 2: Avg-Std },_colorspace={ 0:srgb | 1:lrgb | 2:ycbcr | 3:lab },\
+# _resolution3d>0,[color_constraints],_lambda>=0
+#@cli : Transfer RGB colors from specified style image to selected images, using 3D variational registration.
+#@cli : When '[color_constraints]' is provided, it must be a 6D image where each point has the meaning: \
+# [ Rimg,Gimg,Bimg, Rstyle,Gstyle,Bstyle ]
+#@cli : Default values: 'colorspace=0', 'resolution3d=32', 'alpha=0.01', 'beta=1', 'iter_regul=3', \
+# 'brightness_constraint=0.35', 'transfer_avg_std=0', '[color_constraints]=(undefined)' and 'lambda=1000'.
+transfer_rgb : check ${"is_image_arg $1"}" && # [style]
+                 isnum(${2=0.01}) &&          # alpha
+                 ${3=1}>=0 &&                 # beta
+                 isint(${4=3},0) &&           # regul_iterations
+                 ${5=0.35}>=0 &&              # brightness_constraints
+                 isint(${6=0},0,2) &&         # transfer_avg_std
+                 isint(${7=0},0,3) &&         # colorspace
+                 isint(${8=32},1) &&          # resolution3d
+                 ${10=1000}>=0                # lambda
+               " skip "${9=}"
+  alpha,beta,regul_iterations,brightness_constraint,transfer_avg_std,colorspace,resolution3d,lambda=${2-8},$10
+  is_color_constraints:=${"is_image_arg $9"}
+  s_colorspace=${"arg0 "$colorspace",srgb,lrgb,ycbcr,lab"}
 
-    # Generate 3D feature functions from 2D images.
-    +_transfer_rgb[img,style] $gamma,$sigma,$5 => f_img,f_style
-    n[f_img,f_style] 0,255
+  if $is_color_constraints
+    e[0--3] "Transfer colors from style image $1 to image$?, with alpha "$alpha", beta "$beta", "\
+            $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
+            "3d resolution "$resolution3d", colorspace "$s_colorspace", 3d resolution "$resolution3d", "\
+            "color constraints $9 and lambda "$lambda"."
+    pass$9 0 l. { # Generate 3D color guide using RBF interpolation
+      r. {whd},1,1,100%,-1
+      +rbf. $resolution3d,$resolution3d,$resolution3d,0,0,0,255,255,255 c. 0,255
+      f. "[ x,y,z ] - I*($resolution3d - 1)/255"
+      $resolution3d,$resolution3d,$resolution3d eval... "i(#-1,round([i0,i1,i2]*($resolution3d - 1)/255)) = 1; _0"
+      b. 30% n. 0,$lambda
+      a[-2,-1] c k.
+    } => guide_kub
+    store. guide_kub
+  else
+    e[0--3] "Transfer colors from style image $1 to image$?, with alpha "$alpha", beta "$beta", "\
+            $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
+            "3d resolution "$resolution3d", colorspace "$s_colorspace" and 3d resolution "$resolution3d"."
+  fi
 
-    # Manage color constraints.
-    if $6
-      h0:=2*{*,v}/3 ws0={img,max(1,w*$h0/h)} wt0={style,max(1,w*$h0/h)}
-      w1:=2*{*,u}/3 hs1={img,max(1,h*$w1/w)} ht1={style,max(1,h*$w1/w)}
-      if abs($ws0+$wt0-$w1)<abs($hs1+$ht1-$h0) # Append along X
-        +rs[img,style] ,$h0 +b[-2,-1] 0.5% a[-4,-3] x a[-2,-1] x
-      else # Append along Y
-        +rs[img,style] $w1 +b[-2,-1] 0.5% a[-4,-3] y a[-2,-1] y
-      fi
-      if w>$w1 rs[-2,-1] $w1 fi
-      if h>$h0 rs[-2,-1] ,$h0 fi
-      => visu,both
+  # Compute style features that will be used for all color-transferred images.
+  pass$1 0  => style
+  +l[style] { style_avg,style_std,c= s c foreach { style_avg.=$c{ia} style_std.=$c{id} c=, } rm }
+  +b[style] 0.5% _transfer_rgb. $resolution3d,$beta,$colorspace => style_kub
+  +b[style_kub] 8%,0 => smooth_style_kub
 
-      w[visu] -1,-1
-      N=0 do
-        w[] -1,-1,"[G'MIC] Add Color Guide (Constraint ""#"{1+$N}")"
-        +select[$visu] 1 => coords
-        if i==-1 rm. break fi
-        line[$visu] {i[0]},{i[1]},{i[3]},{i[4]},1,0xF0F0F0F0,0
-        line[$visu] {i[0]},{i[1]},{i[3]},{i[4]},1,0x0F0F0F0F,255
-        circle[$visu] {i[0]},{i[1]},5,1,0,0,0 circle[$visu] {i[0]},{i[1]},3,1,255,0,0
-        circle[$visu] {i[3]},{i[4]},5,1,0,0,0 circle[$visu] {i[3]},{i[4]},3,1,0,255,0
-        s. y,2 rows[-2,-1] 0,1 a[-2,-1] x permute. xczy
-        +warp[$both] .,0,0,1 rm..
-        *. {($5-1)/255} s. x,2
-        -. .. *. -1 a[-2,-1] c
-        N+=1
-      while {*}
-      if $N a[-$N--1] x permute. xczy => constraints fi
-      rm[$visu,$both] w 0
-    fi
-
-    # Estimate warping field.
-    if $constraints
-      +pointcloud. 0 r. ...,...,...,3,0 +compose_channels. + a[-2,-1] c
-      displacement[f_img] [f_style],0.001,8,0,5000,0,. rm[f_style,constraints,-1]
-    else
-      displacement[f_img] [f_style],0.005,8,0,5000,0 rm[f_style]
-    fi
-    =>[f_img] displacement
-
-    # Generate video of matching.
-    # if videos
-    #   N=$!
-    #   [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    #   +_transfer_rgb[img] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
-    #   +_transfer_rgb[img] 0,$sigma,{w} a[-2,-1] c
-
-    #   [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    #   +_transfer_rgb[style] 0,$sigma,{w} *.. . distance. 1 *. -1 watershed.. . rm.
-    #   +_transfer_rgb[style] 0,$sigma,{w} a[-2,-1] c
-    #   warp. [displacement],1,1,1,48
-
-    #   l[$N--1] {
-    #     f3d 1200
-    #     ap "s. c,-3 view_func. 6,.. rm.."
-    #     ap "makefig"
-    #     append[^0] [0],x rm[0]
-    #     rs 1024
-    #     [-1]x20
-    #     o videos/video_${nm_img}_to_${nm_style}.mp4,10
-    #     rm
-    #   }
-    # fi
-
-    # Estimate confidence of the color mapping.
-    +_transfer_rgb[style] 0,$sigma,{displacement,w}
-    warp. [displacement],1,1,1 c. 0,100% => f_confidence
-    +map_clut[img] . => confidence
-
-    # Generate transfer CLUT.
-    [displacement],[displacement],[displacement],1,x +f. y +f. z a[-3--1] c *. {255/(w-1)} +. 1
-    +_transfer_rgb[style] 0,0,{w} *.. .
-    warp[-2,-1] [displacement],1,0,1
-    distance. 1 *. -1 watershed.. . rm. -. 1
-    => clut
-    b[clut] $sigma%
-
-    # Enforce luminosity constraint for non-confident colors.
-    if $4>0
-      f[f_confidence] "(1 - i)^(1 - $4)"
-      {f_confidence,[w,h,d,3]},"[ x,y,z ]*255/(w - 1)"
-      rgb2hsv[clut,-1] channels. 100%
-      j[clut] .,0,0,0,2,1,[f_confidence] rm.
-      hsv2rgb[clut]
-    fi
-
-    # Map CLUT to get result.
-    +map_clut[img] [clut] => res_noregul
-
-    # Apply guided smoothing to remove quantization artifacts.
-    if !$3
-      =>[res_noregul] res
-    else
-      l[img,res_noregul] {
-        rgb2ycbcr # Perform regularization in YCbCr to avoid creation of false colors
-        +-[1] [0] repeat $3 { guided. [0],5,5 } +. [0] c. 0,255
-        ycbcr2rgb
-      }
-      => res
-      j[res] [res_noregul],0,0,0,0,1,[confidence]
-      rm[res_noregul]
-    fi
-
-    k[res]
-  }
+  +norm[style_kub] !=. 0 distance. 1 f. "1/(1+i)" +watershed[style_kub] . rm..
+  sh. 0,2 *. 255
+  if $colorspace==1 rgb2srgb. elif $colorspace==2 ycbcr2rgb. elif $colorspace==3 lab82srgb. 2 fi
   rm.
+  => filled_style_kub
 
-# _transfer_rgb : _gamma>=0,_smoothness>=0,_resolution>0
-# Convert selected images into 3D volumetric scalar function for color matching.
-_transfer_rgb :
-  l[] {
-    check "${1=0}>=0 && ${2=1.5}>=0 && ${3=128}>0" gamma=$1 smoothness=$2 res=$3
-    onfail noarg gamma=0 smoothness=1.5 res=128
+  # Process selected images.
+  foreach[^style,style_kub,smooth_style_kub,filled_style_kub] {
+    nm={n} => img
+    pass[style,style_kub,smooth_style_kub,filled_style_kub]
+    +b[img] 0.5% _transfer_rgb. $resolution3d,$beta,$colorspace => img_kub
+    +b[img_kub] 8%,0 => smooth_img_kub
+
+    if $is_color_constraints
+      $guide_kub
+      +displacement[smooth_img_kub] [smooth_style_kub],$alpha,5,0,inf,0,[guide_kub] => displacement
+      rm[guide_kub]
+    else
+      +displacement[smooth_img_kub] [smooth_style_kub],$alpha,7,0,inf,0 => displacement
+    fi
+
+    rm[img_kub,smooth_style_kub,smooth_img_kub]
+
+    # Compute confidence map for source image.
+    {style_kub,[w,h,d,1]} eval[style] "P = round(I*w#-1/255); ++i(#-1,P)"
+    b. 2%,0 warp. [displacement],1,1,1
+    +map_clut[img] . rm.. n. 0,1 pow. 0.5 => confidence
+
+    # Transfer colors.
+    +f[img] "
+      const w1 = w#$filled_style_kub - 1;
+      I = I;
+      P = round(I*w1/255);
+      Q = P - I(#$displacement,P,1,1);
+      nI = cut(I(#$filled_style_kub,Q,1,1),0,255);
+    " => res_no_regul
+
+    # Optionally make color average[/std] match between transferred and style images.
+    if $transfer_avg_std
+      +l[res_no_regul] { res_avg,res_std,c= s c foreach { res_avg.=$c{ia} res_std.=$c{id} c=, } rm }
+      f[res_no_regul] "begin(
+          Sa = [ "$style_avg" ];
+          Sd = [ "$style_std" ];
+          Ja = [ "$res_avg" ];
+          Jd = [ "$res_std" ];
+        );
+        $transfer_avg_std>1?(
+          nJ = Sa + Sd*(I - Ja)/Jd;
+        ):(
+          nJ = Sa + (I - Ja);
+        );
+        cut(nJ,0,255)"
+    fi
+
+    # Enforce brightness constraints for non-confident colors.
+    rgb2hsv[img,res_no_regul]
+    f[res_no_regul] "
+      I_res = I;
+      I_img = I(#$img);
+      confidence = i(#$confidence);
+      alpha = cut($brightness_constraint*lerp(2,0.1,confidence),0,1);
+      [ I_res[0],I_res[1],lerp(I_res[2],I_img[2],alpha) ]"
+    hsv2rgb[img,res_no_regul]
+
+    # Spatially regularize color-transferred image with guided filtering.
+    +l[img,res_no_regul] {
+      +luminance[0]
+      repeat $regul_iterations { guided[1] .,5,5 }
+      k[1] c 0,255
+    }
+    => res
+    j[res] [res_no_regul],0,0,0,0,1,[confidence]
+    k[res] => $nm
   }
-  e[^-1] "Convert image$? as 3D volumetric scalar functions for color matching, with gamma "$gamma",
-          smoothness "$smoothness" and resolution "$res"."
+  rm[style,style_kub,smooth_style_kub,filled_style_kub]
+
+# _transfer_rgb : _resolution>=8,_beta>0,_colorspace={ 0:srgb | 1:lrgb | 2:ycbcr | 3:lab }
+# Convert selected images into their 3D color profile representations ('kub') used for variational color transfer.
+# Default values: 'resolution=64', 'beta=1' and 'colorspace=0'.
+_transfer_rgb : check "isint(${1=64},4) && ${2=1}>=0 && isint(${3=0},0,3)"
+  s0,s1,s2=srgb,ycbcr,lab
+  e[^-1] "Convert image$? into 3D color cube representation ('kub'), with resolution $1, beta $2 and "\
+         ${s$3}" colorspace."
+  resolution,beta,colorspace=${1-3}
   to_rgb
-  foreach {
-    b 0.3%
-    r {w*h},3,1,1,-1 * {($res-1)/255}
-    pointcloud 1,$res,$res,$res f i?i^$gamma:0 b $smoothness% n 0,1
+  foreach { nm={n}
+    if $colorspace==1 +srgb2rgb
+    elif $colorspace==2 +rgb2ycbcr
+    elif $colorspace==3 +srgb2lab8 2
+    fi
+    $resolution,$resolution,$resolution,3 100%,100%,100% => color_features,color_counter
+
+    # Channels 0-2: Normalized RGB color.
+    eval[0] ">begin(ret = vectors(); const colorspace = $colorspace);
+      nRGB = [ R,G,B ]/255;
+      nVAL = colorspace?(I(#1)/255):nRGB;
+      P = round(lerp(0,[w#$color_features,h#$color_features,d#$color_features] - 1,nRGB));
+      I(#$color_features,P)+=nVAL;
+      ++i(#$color_counter,P);
+      ret;
+    "
+    f[color_features] "nb = i(#$color_counter); nb>0?I/nb:I" # Compute average color for each voxel
+
+    # Channels 3: Normalized counter.
+    /[color_counter] {color_counter,iM} ^. 0.25 *. $beta a[-2,-1] c /. {max(1,$beta)}
+    k. => $nm
   }
+
+# #@cli transfer_rgb : [style],_gamma>=0,_regularization>=0,_luminosity_constraints>=0,_rgb_resolution>=0,\
+# # _is_constraints={ 0:No | 1:Yes }
+# #@cli : Transfer RGB colors from specified style image to selected images.
+# #@cli : 'gamma' determines the importance of color occurrences in the matching process (0:None to 1:Huge).
+# #@cli : 'regularization' determines the number of guided filter iterations to remove quantization effects.
+# #@cli : 'luminosity_constraints' tells if luminosity constraints must be applied on non-confident matched colors.
+# #@cli : 'is_constraints' tells if additional hard color constraints must be set (opens an interactive window).
+# #@cli : Default values: 'gamma=0.3','regularization=8', 'luminosity_constraints=0.1', 'rgb_resolution=64' and \
+# # 'is_constraints=0'.
+# #@cli : $ sample pencils,wall +transfer_rgb[0] [1],0,0.01
 
 #@cli mix_rgb : a11,a12,a13,a21,a22,a23,a31,a32,a33
 #@cli : Apply 3x3 specified matrix to RGB colors of selected images.
