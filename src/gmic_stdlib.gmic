@@ -52725,6 +52725,73 @@ _fx_cluts_colorslide :
     lomography_x-pro_slide_200,\
     polaroid_669,polaroid_690,polaroid_polachrome
 
+#@gui Transfer Colors : fx_transfer_colors, fx_transfer_colors_preview(1) : *
+#@gui : Style image = choice("Top Layer","Bottom Layer")
+#@gui : Transfer Type = choice(2,"Histogram Matching","PCA Matching","Variational Registration")
+#@gui : Colorspace = choice("sRGB","lRGB","YCbCr","Lab")
+#@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
+#@gui : Number of Bins = int(256,4,1024)_0-
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Variational Registration:</b></span>")
+#@gui : Transfer Smoothness = float(0.01,0,0.1)_0-
+#@gui : Sensitivity to Color Occurrences = float(1,0,10)
+#@gui : Spatial Regularization Steps = int(3,0,10)_0
+#@gui : Preserve Brightness (%) = float(35,0,100)_0
+#@gui : 3D Discretization = choice(1,"Low","Medium","High")_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/06/18</i>.</small>")
+fx_transfer_colors :
+  if $!<2 error "Command '$0': At least two layers are required !" fi
+  _fx_transfer_colors $*
+
+fx_transfer_colors_preview :
+  if $!<2 gui_error_preview "At least two layers are required !" return fi
+  _fx_transfer_colors $*
+
+  pw,ph=${-gui_preview_wh}
+  ind_style:=$1?$!-1:0
+  l[$ind_style] {
+    rs {round([$pw,$ph]/3.5)}
+    to "Style",0.01~,0.01~,12%
+    frame xy,1,255 frame xy,1,0
+  }
+  N:=int(sqrt($!-1)) M:=ceil(($!-1)/$N)
+  rs[^$ind_style] {ceil([$pw/$M,$ph/$N])}
+  if $!>2 frame[^$ind_style] xy,1,0 +append_tiles[^$ind_style] , else [^$ind_style] fi
+  to_rgba[$ind_style,-1] rs. $pw,$ph,2,1
+  j. [$ind_style],10,10
+  k.
+
+  h:=$2==0?2:0
+  v:=$2==2?2:0
+  u "{$1}{$2}{$3}{$4}"\
+    "{$5}_"$h\
+    "{$6}_"$v"{$7}_"$v"{$8}_"$v"{$9}_"$v"{$10}_"$v
+
+_fx_transfer_colors :
+  to_rgb
+  ind_style:=$1?$!-1:0
+  if $4 +l[$ind_style] { s c foreach { ia$>,id$>:=ia,id } rm } fi # Get style channel-wise avg/std
+
+  if $3==0 colorspace=srgb
+  elif $3==1 colorspace=lrgb
+  elif $3==2 colorspace=ycbcr
+  else colorspace=lab
+  fi
+
+  if $2==0 transfer_histogram[^$ind_style] [$ind_style],$5,$colorspace
+  elif $2==1 transfer_pca[^$ind_style] [$ind_style],$colorspace
+  else transfer_rgb[^$ind_style] [$ind_style],$6,$7,$8,{$9/100},0,$3,{arg0($10,16,32,64)}
+  fi
+
+  # Force same channel-wise avg/std as style image.
+  if $4==1 foreach[^$ind_style] { s c foreach { f ${ia$>}+(i-ia) } a c }
+  elif $4==2 foreach[^$ind_style] { s c foreach { f ${ia$>}+(i-ia)*${id$>}/(1e-8+id) } a c }
+  fi
+  c[^$ind_style] 0,255
+
 #@gui Transfer Colors [Histogram] : fx_transfer_histogram, fx_transfer_histogram_preview(1)+ : *
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Matches the color histogram of the image to a reference.
