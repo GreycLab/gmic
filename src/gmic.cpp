@@ -4510,9 +4510,9 @@ CImg<char> gmic::substitute_item(const char *const source,
         }
 
         // Double-backquoted string.
-        if (!is_substituted && inbraces.width()>=3 && *inbraces=='`' && inbraces[1]=='`') {
-          strreplace_bw(inbraces.data() + 2);
-          CImg<char>(inbraces.data() + 2,inbraces.width() - 3,1,1,1,true).append_string_to(substituted_items,ptr_sub);
+        if (!is_substituted && inbraces.width()>=2 && *inbraces==':') {
+          strreplace_bw(inbraces.data() + 1);
+          CImg<char>(inbraces.data() + 1,inbraces.width() - 2,1,1,1,true).append_string_to(substituted_items,ptr_sub);
           *substr = 0; is_substituted = true;
         }
 

@@ -633,7 +633,7 @@ reference : skip "${2=}"
 "`custom command`, or by an empty string if no custom command with specified name exists. "\n\
 "* '${\"-pipeline\"}' is substituted by the __status value__ after the execution of the specified "\
 "G'MIC pipeline (see command ''status''). Expression '${}' thus stands for the current status value."\n\
-"* '{``string}' (starting with two backquotes) is substituted by a double-quoted version of the specified string."\n\
+"* '{:string}' is substituted by a double-quoted version of the specified string."\n\
 "* '{/string}' is substituted by the escaped version of the specified string."\n\
 "* '{\\'string\\'[:delimiter]}' (between single quotes) is substituted by the sequence of character codes "\
 "that composes the specified string, separated by specified delimiter. Possible delimiters are "\
@@ -2188,10 +2188,10 @@ _display : skip ${1=},${3=}
     if "s = u = lowercase(["{'${image_name$l_ind}'}"]);
         fill(u,k,c = u[k]; inrange(c,_'a',_'z') || inrange(c,_'0',_'9') || isin(c,_'/',_'\\',_'_',_'-',_'.'));
         s!=0 && min(u)"
-      basename {``${image_name$l_ind}}
-      if ['{/${}}']!=0 ({'{/${}}'}) else ('{``${image_name$l_ind}}') fi
+      basename {:${image_name$l_ind}}
+      if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
     else
-      ('{``${image_name$l_ind}}')
+      ('{:${image_name$l_ind}}')
     fi
     basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
     log_title.=$sep$basename
@@ -2843,10 +2843,10 @@ _display : skip ${1=},${3=}
       if "s = u = lowercase(["{'${image_name$selected}'}"]);
         fill(u,k,c = u[k]; inrange(c,_'a',_'z') || inrange(c,_'0',_'9') || isin(c,_'/',_'\\',_'_',_'-',_'.'));
         s!=0 && min(u)"
-        basename {``${image_name$selected}}
-        if ['{/${}}']!=0 ({'{/${}}'}) else ('{``${image_name$selected}}') fi
+        basename {:${image_name$selected}}
+        if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${image_name$selected}}') fi
       else
-        ('{``${image_name$selected}}')
+        ('{:${image_name$selected}}')
       fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       if $nb_images==1" && "!$is_fullscreen
@@ -2860,7 +2860,7 @@ _display : skip ${1=},${3=}
       else
         str=
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
-          basename {``${image_name$thumb_mouse_over}}
+          basename {:${image_name$thumb_mouse_over}}
           ('${}') codes_nm={^} rm.
           basename_mo={`"b = ["$codes_nm"]; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
           str.="#"{image_indices,i[$thumb_mouse_over]}": "
@@ -2869,7 +2869,7 @@ _display : skip ${1=},${3=}
                  {$thumb_mouse_over,f2ui(i[6])}" vertices, "{$thumb_mouse_over,f2ui(i[7])}" primitives)\n"
           else
             whds={$thumb_mouse_over,i[#$is_rotated,$thumb_mouse_over]%2?[h,w,d,s]:[w,h,d,s]}
-            str.=$basename_mo" ("{``$whds}")\n"
+            str.=$basename_mo" ("{:$whds}")\n"
           fi
         fi
         if $nb_images>1
@@ -2880,11 +2880,11 @@ _display : skip ${1=},${3=}
                {$selected,f2ui(i[6])}" vertices, "{$selected,f2ui(i[7])}" primitives)"
         else
           whds={$selected,i[#$is_rotated,$selected]%2?[h,w,d,s]:[w,h,d,s]}
-          str.=$basename" ("{``$whds}")"
+          str.=$basename" ("{:$whds}")"
         fi
 
         font_size:=cut(round($canvas_height/40),16,32)
-        t. {``$str},0,0,$font_size,1,255
+        t. {:$str},0,0,$font_size,1,255
       fi
       => canvas_label_info
       $0_rmn canvas_label
@@ -2956,7 +2956,7 @@ _display : skip ${1=},${3=}
         fi
       fi
       font_size:=cut(round($canvas_height/40),16,32)
-      t. {``$str},0,0,$font_size,1,255
+      t. {:$str},0,0,$font_size,1,255
       => canvas_label_coords
       $0_rmn canvas_label
     fi
@@ -2964,7 +2964,7 @@ _display : skip ${1=},${3=}
     # Generate label for notification.
     if !0$canvas_label_notification" && "['$notification']!=0
       font_size:=cut(round($window_height/40),16,32)
-      0 t. {``$notification},0,0,{round(1.25*$font_size)},1,255
+      0 t. {:$notification},0,0,{round(1.25*$font_size)},1,255
       r. {[w,h]+20},1,1,0,0,0.5,0.5 frame. xy,2,255 r. {[w,h]+6},1,1,0,0,0.5,0.5
       +n. 200,255 r.. 100%,100%,1,3
       a[-2,-1] c
@@ -7646,7 +7646,7 @@ gmd2html : skip "${1=}"
     nm$>={b} strvar ${nm$>} fnm=${}
     if "i=="$s_section" && find(#-1,"$e_section")>0"
       +rows 1,{"find(#-1,"$e_section")-1"}
-      replace_seq. $s_gmic,{``{'G\47MIC'}} f. "i<0?-1:i" discard. -1 title$>={t} rm.
+      replace_seq. $s_gmic,{:{'G\47MIC'}} f. "i<0?-1:i" discard. -1 title$>={t} rm.
     else title$>=
     fi
     . # [0] = Output, [1] = Input
@@ -9071,7 +9071,7 @@ parse_gui_update :
       else strcapitalize ${_f${f}_p${p}_name} name=${}
       fi
       ('"#@gui"$locale" :"{/$name}=$responsivity$randomizable\
-         ${_f${f}_p${p}_type}{``$sep1}{``{/$args}}{``$sep2}$visibility\n')
+         ${_f${f}_p${p}_type}{:$sep1}{:{/$args}}{:$sep2}$visibility\n')
     }
   }
   $_nongui y a y
@@ -9552,8 +9552,8 @@ _plot : skip ${8=},${10=}
     repeat narg($sel) {
       l_ind:=arg0($>,$sel)
       g_ind={image_indices,i[$l_ind]}
-      basename {``${image_name$l_ind}}
-      if ['${}']!=0 ({'{/${}}'}) else ('{``${image_name$l_ind}}') fi
+      basename {:${image_name$l_ind}}
+      if ['${}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       log_title.=$sep$basename
       if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
@@ -9604,7 +9604,7 @@ _plot : skip ${8=},${10=}
       # Generate label for notification.
       if !0$canvas_label_notification" && "['$notification']!=0
         font_size:=cut(round(h#$window_view/40),16,32)
-        0 t. {``$notification},0,0,{round(1.25*$font_size)},1,255
+        0 t. {:$notification},0,0,{round(1.25*$font_size)},1,255
         r. {[w,h]+20},1,1,0,0,0.5,0.5 frame. xy,2,255 r. {[w,h]+6},1,1,0,0,0.5,0.5
         +n. 200,255 r.. 100%,100%,1,3
         a[-2,-1] c
@@ -9668,7 +9668,7 @@ _plot : skip ${8=},${10=}
         fi
 
         fontsize:=cut(h/35,13,24)
-        0 t. {``$label},0.5~,0,$fontsize,1,1 to_rgb.
+        0 t. {:$label},0.5~,0,$fontsize,1,1 to_rgb.
         j.. .,0.5~,{($frame-h)/2},0,0,1,. rm.
 
         eval "
@@ -9963,8 +9963,8 @@ _print : skip ${1=},${3=}
     repeat narg($sel) {
       l_ind:=arg0($>,$sel)
       g_ind={image_indices,i[$l_ind]}
-      basename {``${image_name$l_ind}}
-      if ['${}']!=0 ({'{/${}}'}) else ('{``${image_name$l_ind}}') fi
+      basename {:${image_name$l_ind}}
+      if ['${}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       log_title.=$sep$basename
       if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
@@ -10348,8 +10348,8 @@ _select :
         fontsize:=cut(h/24,13,24)
         0
         if !$step # Point selection (or no selection started)
-          if $is_volumetric t. "Point ("$Xi\,$Yi\,$Zi") = [ "{``{img,_I($Xi,$Yi,$Zi)}}" ]",0,0,$fontsize,1,255
-          else t. "Point ("$Xi\,$Yi") = [ "{``{img,_I($Xi,$Yi)}}" ]",0,0,$fontsize,1,255
+          if $is_volumetric t. "Point ("$Xi\,$Yi\,$Zi") = [ "{:{img,_I($Xi,$Yi,$Zi)}}" ]",0,0,$fontsize,1,255
+          else t. "Point ("$Xi\,$Yi") = [ "{:{img,_I($Xi,$Yi)}}" ]",0,0,$fontsize,1,255
           fi
         elif $1==1 # Vector selection
           len,ang={_"
@@ -11045,7 +11045,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '3.8.0').
+# $1 = version number (e.g. '4.0.0').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -12949,7 +12949,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=380,$_version
+  versions=400,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -14923,7 +14923,7 @@ replace_seq : skip "${2=''}"
 #@cli : $ ('"Hello there, how are you ?"') +replace_str "Hello there","Hi David"
 replace_str : skip "${2=}"
   e[^-1] "Replace string '"{/"$1"}"' by string '"{/"${2--1}"}"' in image$?."
-  replace_seq {``{'"$1"'}},{'"${2--1}"'}
+  replace_seq {:{'"$1"'}},{'"${2--1}"'}
 
 #@cli round : rounding_value>=0,_rounding_type : (no arg) : (+)
 #@cli : Round values of selected images.
@@ -38050,7 +38050,7 @@ fitscreen : skip "${1=},${2=}" check "${3=128}>0 && ${4=85%}>0"
   if !$1 l[] { # List of characters
     repeat 256 {
       if $>==92 char=\\ else char={`max(1,(c=$>;c>=23&&c<=28?32:c))`} fi
-      0 t. {``$char},0,0,50,1,255
+      0 t. {:$char},0,0,50,1,255
     }
     a z,0.5
     s z
@@ -41204,9 +41204,9 @@ x_grab_color : skip ${1=xgc_variable} check_display $0
         drgba. frame. xy,1,0 frame. xy,1,255 j[visu] .,$xc,$yc rm.
         0
         if narg($$1)
-          t. "Position ("$X","$Y")\nColor    ("{``$color}")\nSelected ("{``$$1}")",1,0,15,1,255
+          t. "Position ("$X","$Y")\nColor    ("{:$color}")\nSelected ("{:$$1}")",1,0,15,1,255
         else
-          t. "Position ("$X","$Y")\nColor ("{``$color}")",1,0,15,1,255
+          t. "Position ("$X","$Y")\nColor ("{:$color}")",1,0,15,1,255
         fi
         +dilate. 5 r.. 100%,100%,1,3
         j[visu] ..,{30+$xc},$yc,0,0,0.85,.,255 rm[-2,-1]
@@ -42079,7 +42079,7 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
 
       # Refresh view.
       if $refresh
-        _x_mask_color[2] {$2*w#2/w#0},$3,{``$colors_add},{``$colors_sub} delay=${}
+        _x_mask_color[2] {$2*w#2/w#0},$3,{:$colors_add},{:$colors_sub} delay=${}
         if !$visumode +. 64 c. 0,255 +a[1,-1] c drgba. w. -1,-1,$nm" [half-masked]" rm.
         elif $visumode==1 +a[1,-1] c drgba. w. -1,-1,$nm" [masked]" rm.
         else w. -1,-1,$nm" [mask]"
@@ -42100,7 +42100,7 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
       j.. . colors_sub={-2,^} rm[-2,-1]
     fi
     rm[-2,-1] +_ac_forward channels. $_s
-    _x_mask_color. $2,$3,{``$colors_add},{``$colors_sub}
+    _x_mask_color. $2,$3,{:$colors_add},{:$colors_sub}
     rm.. a c
   }
   um _ac_forward
@@ -44554,7 +44554,7 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
     if {*,w}!={*,h} -. 128 r. {*,w,h},1,3,0,0,0.5,0.5 +. 128 fi
     if $is_formula
       if !narg($formula)
-        0 t. {``$expr},0,0,48,1,255 frame. xy,5,0 +dilate. 11 max. 128 to_rgb..
+        0 t. {:$expr},0,0,48,1,255 frame. xy,5,0 +dilate. 11 max. 128 to_rgb..
         if w>0.75*{*,w} rs[-2,-1] {0.75*{*,w}} fi
         mv[-2,-1] 0 =>[0,1] formula,mformula
       fi
@@ -45537,7 +45537,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plugin version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 3.8.0</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.0</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45570,7 +45570,7 @@ fx_gmicky_preview :
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2026/05/13</b> : version <i>3.7.6</i> (Current stable).</span>\n
-#@gui : - <b>2026/06/13</b> : version <i>3.8.0</i> (Current pre-release).\n
+#@gui : - <b>2026/06/19</b> : version <i>4.0.0</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (3.8)","https://discuss.pixls.us/t/on-the-road-to-gmic-3-8"}
@@ -45902,8 +45902,8 @@ fx_whatsnew_preview : skip "$*"
     rm
   }
   u "{0}"_{$is_changes?0:2}\
-    "{"{``$newfilters}"}"_{['$newfilters']!=0?2:0}\
-    "{"{``$delfilters}"}"_{['$delfilters']!=0?2:0}\
+    "{"{:$newfilters}"}"_{['$newfilters']!=0?2:0}\
+    "{"{:$delfilters}"}"_{['$delfilters']!=0?2:0}\
     "{0}_2"
 
 #@gui ____<b>Arrays & Tiles</b>
@@ -48407,7 +48407,7 @@ fx_stringify :
       +==[0] $> N:=$!-1
       edgels. ,
       foreach[$N--1] { if h<=$threshold rm fi }
-      if $!>$N =>[$N--1] {``$color} fi
+      if $!>$N =>[$N--1] {:$color} fi
       progress {lerp(25,75,($>+1)/($>+$<+1))}
     }
     sort_list[3--1] -,h
@@ -51608,7 +51608,7 @@ fx_decompose_channels :
       _fx_decompose_channels$1[0]
       s[0] c
       if !$3 a x => $nm
-      else nm=${-gui_layer_name} repeat $! { gui_set_layer_name[$>] {``$nm}" ["${_s$>}"]" }
+      else nm=${-gui_layer_name} repeat $! { gui_set_layer_name[$>] {:$nm}" ["${_s$>}"]" }
       fi
     }
   else # Recompose
@@ -52917,7 +52917,7 @@ fx_transfer_colors_preview :
   rs[^$ind_style] {ceil([$pw/$M,$ph/$N])}
 
   if $!>2
-    foreach[^$ind_style] { to {``${-gui_layer_name}},0.01~,0.99~,7% }
+    foreach[^$ind_style] { to {:${-gui_layer_name}},0.01~,0.99~,7% }
     frame[^$ind_style] xy,1,0 +append_tiles[^$ind_style] ,
   else
     [^$ind_style]
@@ -53482,8 +53482,8 @@ fx_extract_foreground : gui_check_x11_gdi32 0
       sh. 3 *. -1 +. 255 rm.
       gui_autocrop_layers[0]
       pos0=${gui_layer_pos[0]} pos1=${gui_layer_pos[1]}
-      =>[0] "name("$nm" [foreground]),pos("{``{[$pos0]+[$initial_pos]}}")"
-      =>[1] "name("$nm" [background]),pos("{``{[$pos1]+[$initial_pos]}}")"
+      =>[0] "name("$nm" [foreground]),pos("{:{[$pos0]+[$initial_pos]}}")"
+      =>[1] "name("$nm" [background]),pos("{:{[$pos1]+[$initial_pos]}}")"
     fi
   }
   if narg($status)>=4 u \{$1\}\{$2\}\{$3\}\{$4\}\{{w},{h}\}\{$status\} else u "" fi
@@ -58597,7 +58597,7 @@ fx_apply_multiscale_preview :
 fx_pack : skip "${8=}"
   if $4 to_rgba foreach {
     nm0={n} gui_layer_name nm=${}
-    0 t. {``$nm},3,0,$5,1,1 frame. xy,1,0
+    0 t. {:$nm},3,0,$5,1,1 frame. xy,1,0
     if $6 *. -1 fi
     n. 0,255 to_rgba. r. {[w+2,h+1,1,4]},0,0,0,1
     rv a y,{w#0>w?0.5:0} => $nm0
@@ -59146,7 +59146,7 @@ fx_illuminate_shape2d_preview_interactive :
           +fx_illuminate_shape2d[normal,rgb] 4,0,${3-6},1,1,""$9,0,${11-15},""${16-25},$lightx,$lighty,$lightz,$29,""0,0
           +j[background] .,0,0,0,0,1,[alpha],255 rm..
           +rs[light_alpha,light_rgb] {light_rgb,8+$lightz*(w-8)} j... .,{[$x,$y]-[w,h]/2},0,0,1,.. rm[-2,-1]
-          r. $wsiz,1,100% to. "Light: ("{``{_round([$lightx,$lighty,$lightz],0.1)}}")",2,2,16
+          r. $wsiz,1,100% to. "Light: ("{:{_round([$lightx,$lighty,$lightz],0.1)}}")",2,2,16
           w.  rm. wait 20
         else wait
         fi
@@ -59365,7 +59365,7 @@ fx_light_leaks :
     if $3>1" || "$4>1 f. "w2 = w/2; h2 = h/2; X = x - w2; Y = y - h2; i(w2 + X/$3,h2 + Y/$4,0,c,1,0)" fi
     c. 0,255
     if $5 rgb2hsv. sh. 0 +. $5 rm. hsv2rgb. fi
-    if $8 nm=${gui_layer_name..} => {``name($nm),opacity($6),mode($mode)} rv
+    if $8 nm=${gui_layer_name..} => {:name($nm),opacity($6),mode($mode)} rv
     else blend $mode,$6% fi
   }
   rm.
@@ -61974,7 +61974,7 @@ fx_ball :
     Z = sqrt(max(0,1 - XY^2));
     [ XY,Z ]"
   ball ${1-8},$light_xyz
-  if $!>1 mv. 0 =>[0] "name(Ball),pos("{``{0,0.5*([${-max_wh}]-[w,h])}}")" else =>[0] "name(Ball)" fi
+  if $!>1 mv. 0 =>[0] "name(Ball),pos("{:{0,0.5*([${-max_wh}]-[w,h])}}")" else =>[0] "name(Ball)" fi
 
 fx_ball_preview :
   fx_ball ${1-10}
@@ -64907,7 +64907,7 @@ fx_animate_elevation3d : skip "${4=}"
   if $3 filename="$4/gmic_elevation3d.png" else filename="" fi
   _fx_elevation3d ${5-6},0
   animate fx_render3d,"${7-8},${10-19},$9",\
-                      "${7-8},${20-29},$9",$1,$2,{``$filename}
+                      "${7-8},${20-29},$9",$1,$2,{:$filename}
 
 fx_animate_elevation3d_preview : skip "${4=}"
   w,h={w},{h}
@@ -64958,7 +64958,7 @@ fx_animate_extrude3d : skip "${4=}"
   if $3 filename="$4/gmic_extrude3d.png" else filename="" fi
   _fx_extrude3d ${5-7},0
   animate fx_render3d,"${8-9},${11-20},$10",\
-                      "${8-9},${21-30},$10",$1,$2,{``$filename}
+                      "${8-9},${21-30},$10",$1,$2,{:$filename}
 
 fx_animate_extrude3d_preview : skip "${4=}"
   w,h={w},{h}
@@ -65007,7 +65007,7 @@ fx_animate_imageobject3d : skip "${4=}"
   if $3 filename="$4/gmic_imageobject3d.png" else filename="" fi
   _fx_imageobject3d "_",$5
   animate fx_render3d,"${6-7},${9-18},$8",\
-                      "${6-7},${19-28},$8",$1,$2,{``$filename}
+                      "${6-7},${19-28},$8",$1,$2,{:$filename}
 
 fx_animate_imageobject3d_preview : skip "${4=}"
   w,h={w},{h}
@@ -65110,7 +65110,7 @@ fx_transition3d_preview :
 fx_animate_pencilbw : skip "${4=}"
   if $3 filename="$4/gmic_pencilbw.png" else filename="" fi
   animate pencilbw,"${5-6}",\
-                   "${7-8}",$1,$2,{``$filename}
+                   "${7-8}",$1,$2,{:$filename}
 
 fx_animate_pencilbw_preview : skip "${4=}"
   fx_animate_preview pencilbw,"${5-6}",\
@@ -65135,7 +65135,7 @@ fx_animate_pencilbw_preview : skip "${4=}"
 fx_animate_stencilbw : skip "${4=}"
   if $3 filename="$4/gmic_stencilbw.png" else filename="" fi
   animate stencilbw,"${5-6}",\
-                    "${7-8}",$1,$2,{``$filename}
+                    "${7-8}",$1,$2,{:$filename}
 
 fx_animate_stencilbw_preview : skip "${4=}"
   fx_animate_preview stencilbw,"${5-6}",\
@@ -65168,7 +65168,7 @@ fx_animate_stencilbw_preview : skip "${4=}"
 fx_animate_cartoon : skip "${4=}"
   if $3 filename="$4/gmic_cartoon.png" else filename="" fi
   animate cartoon,"${6-10},$5",\
-                  "${11-15},$5",$1,$2,{``$filename}
+                  "${11-15},$5",$1,$2,{:$filename}
 
 fx_animate_cartoon_preview : skip "${4=}"
   fx_animate_preview cartoon,"${6-10},$5",\
@@ -65195,7 +65195,7 @@ fx_animate_cartoon_preview : skip "${4=}"
 fx_animate_edges : skip "${4=}"
   if $3 filename="$4/gmic_edges.png" else filename="" fi
   animate fx_edges,"${6-7},$5",\
-                   "${8-9},$5",$1,$2,{``$filename}
+                   "${8-9},$5",$1,$2,{:$filename}
 
 fx_animate_edges_preview : skip "${4=}"
   fx_animate_preview fx_edges,"${6-7},$5",\
@@ -65305,7 +65305,7 @@ fx_lavalampbw_preview :
 fx_animate_lissajous : skip "${4=}"
   if $3 filename="$4/gmic_lissajous.png" else filename="" fi
   animate fx_lissajous,"${5-22}",\
-                       "${23-40}",$1,$2,{``$filename}
+                       "${23-40}",$1,$2,{:$filename}
 
 fx_animate_lissajous_preview : skip "${4=}"
   fx_animate_preview fx_lissajous,"${5-22}",\
@@ -65454,7 +65454,7 @@ fx_moire_preview :
 fx_animate_rodilius : skip "${4=}"
   if $3 filename="$4/gmic_rodilius.png" else filename="" fi
   animate rodilius,"${6-10},$5",\
-                   "${11-15},$5",$1,$2,{``$filename}
+                   "${11-15},$5",$1,$2,{:$filename}
 
 fx_animate_rodilius_preview : skip "${4=}"
   fx_animate_preview rodilius,"${6-10},$5",\
@@ -65477,7 +65477,7 @@ fx_animate_rodilius_preview : skip "${4=}"
 fx_animate_glow : skip "${4=}"
   if $3 filename="$4/gmic_glow.png" else filename="" fi
   animate glow,"$5",\
-               "$6",$1,$2,{``$filename}
+               "$6",$1,$2,{:$filename}
 
 fx_animate_glow_preview : skip "${4=}"
   fx_animate_preview glow,"$5",\
@@ -65861,7 +65861,7 @@ fx_custom_code_preview : skip "${1=-skip ,}"
   onfail
     error_msg=${}
     rs $w,$h,1,1
-    gui_print_preview "Syntax error:",,{``$error_msg},20,40
+    gui_print_preview "Syntax error:",,{:$error_msg},20,40
   }
   if $4 # Display debug infos on preview
     if !$3 % 256 fi
@@ -65874,7 +65874,7 @@ fx_custom_code_preview : skip "${1=-skip ,}"
          "Output images: "#$_nb_out"\n"\
          $_dim_out"\n\n"\
          "Output status: "$_status_out
-    0 t. {``$info},0,0,${siz$5},1,255 expand. xy,5 +dilate. 3 a[-2,-1] c
+    0 t. {:$info},0,0,${siz$5},1,255 expand. xy,5 +dilate. 3 a[-2,-1] c
     rs[^-1] ${-max_wh},2,1
     r. ..,..,1,100%,0 drgba[^-1]
     /[^-1] 2 blend[^-1] .,alpha rm.
