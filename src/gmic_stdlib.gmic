@@ -52826,7 +52826,8 @@ fx_transfer_pca_preview :
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
 #@gui : Preserve Brightness (%) = float(35,0,100)
 #@gui : Spatial Regularization Steps = int(3,0,10)
-#@gui : Preview Color Distribution = bool()
+#@gui : Preview Color Distribution = choice{"No","Style Image + Original Image(s)",\
+# "Style Image + Color-Transferred Image(s)"}
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
 #@gui : Number of Bins = int(256,4,1024)_0-
@@ -52869,7 +52870,25 @@ fx_transfer_colors :
 
 fx_transfer_colors_preview :
   if $!<2 gui_error_preview "At least two layers are required !" return fi
-  _fx_transfer_colors $*
+
+  if $7!=1 _fx_transfer_colors $* fi
+
+  if $7 # View color distribution
+    b 0.5% _transfer_rgb 128,1,0
+    foreach {
+      siz:=max(w,h,d)
+      +channels 100% pow. 2 *. 255
+      channels.. 0,2 *.. 255 a c
+      pointcloud3d
+      gaussians3d 20,0.15 *3d. {256/$siz}
+      colorcube3d p3d. 1 o3d. 0.75 +3d
+      pose3d -0.86604034900665283,0.078571930527687073,0.49376171827316284,0,\
+             -0.24344669282436371,-0.92886388301849365,-0.27918723225593567,0,\
+             0.43670186400413513,-0.36199197173118591,0.82356184720993042,0
+      snapshot3d 640,1.2,255,255,255
+    }
+    a z autocrop 255 s z
+  fi
 
   pw,ph=${-gui_preview_wh}
   ind_style:=$1?$!-1:0
