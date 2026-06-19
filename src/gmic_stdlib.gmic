@@ -52870,33 +52870,41 @@ fx_transfer_colors :
 
 fx_transfer_colors_preview :
   if $!<2 gui_error_preview "At least two layers are required !" return fi
+  ind_style:=$1?$!-1:0
+  N:=int(sqrt($!-1)) M:=ceil(($!-1)/$N)
+  pw,ph=${-gui_preview_wh}
+
   if $7!=1 _fx_transfer_colors $* fi
-  if $7 # View color distribution
+
+  if $7 # Display color distribution
     b 0.5% _transfer_rgb 64,1,0
-    foreach {
+    foreach { nm={n}
       siz:=max(w,h,d)
       sh 3 pow. 0.5 rm. *. 255
-      pointcloud3d
-      gaussians3d 20,0.15 *3d. {256/$siz}
+      pointcloud3d gaussians3d 20,0.15 *3d. {256/$siz}
       colorcube3d p3d. 1 o3d. 0.75 +3d
       pose3d -0.86604034900665283,0.078571930527687073,0.49376171827316284,0,\
              -0.24344669282436371,-0.92886388301849365,-0.27918723225593567,0,\
              0.43670186400413513,-0.36199197173118591,0.82356184720993042,0
-      snapshot3d 640,1.2,255,255,255
+      snapshot3d {2*ceil(min([$pw/$M,$ph/$N]))},1.2,255,255,255 rs. 50%
+      autocrop 255
+      => $nm
     }
-    a z autocrop 255 s z
   fi
 
-  pw,ph=${-gui_preview_wh}
-  ind_style:=$1?$!-1:0
   l[$ind_style] {
     rs {round([$pw,$ph]/3.5)}
     to "Style",0.01~,0.01~,12%
     frame xy,1,255 frame xy,1,0
   }
-  N:=int(sqrt($!-1)) M:=ceil(($!-1)/$N)
   rs[^$ind_style] {ceil([$pw/$M,$ph/$N])}
-  if $!>2 frame[^$ind_style] xy,1,0 +append_tiles[^$ind_style] , else [^$ind_style] fi
+
+  if $!>2
+    foreach[^$ind_style] { to {``${-gui_layer_name}},0.01~,0.99~,7% }
+    frame[^$ind_style] xy,1,0 +append_tiles[^$ind_style] ,
+  else
+    [^$ind_style]
+  fi
   to_rgba[$ind_style,-1] rs. $pw,$ph,2,1
   j. [$ind_style],10,10
   k.
@@ -52926,20 +52934,20 @@ _fx_transfer_colors :
   fi
 
   if $2==0 # Histogram method
-    foreach[^$ind_style] {
+    foreach[^$ind_style] { nm={n}
       pass[$ind_style]
       +transfer_histogram.. .,$8,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
-      k. c 0,255
+      k. c 0,255 => $nm
     }
   elif $2==1 # PCA method
-    foreach[^$ind_style] {
+    foreach[^$ind_style] { nm={n}
       pass[$ind_style]
       +transfer_pca.. .,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
-      k. c 0,255
+      k. c 0,255 => $nm
     }
   else # Variational method
     if $12>0
