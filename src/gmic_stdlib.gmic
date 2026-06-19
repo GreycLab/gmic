@@ -52825,10 +52825,11 @@ fx_transfer_pca_preview :
 #@gui : Colorspace = choice("sRGB","lRGB","YCbCr","Lab")
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
 #@gui : Preserve Brightness (%) = float(35,0,100)
-#@gui : Spatial Regularization Steps = int(3,0,10)
+#@gui : Spatial Regularization Steps = int(1,0,10)
 #@gui : sep = separator()
-#@gui : Preview Style = choice(2,"No","Tiny","Small","Medium","Large","Huge")
-#@gui : Preview Color Distribution = choice("No","Original Images","Color-Transferred Images")
+#@gui : Preview = choice(1,"Before","After","Diagonal Split 1","Diagonal Split 2")
+#@gui : Style Preview Size = choice(3,"No","Tiny","Small","Medium","Large","Huge")
+#@gui : Preview Color Distribution = bool()
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
 #@gui : Number of Bins = int(256,4,1024)_0-
@@ -52875,13 +52876,16 @@ fx_transfer_colors_preview :
   N:=int(sqrt($!-1)) M:=ceil(($!-1)/$N)
   pw,ph=${-gui_preview_wh}
 
-  if $8!=1 _fx_transfer_colors $* fi
+  if $7
+    if $7>1&&!$9 foreach[^$ind_style] { +store original$> } fi
+    _fx_transfer_colors $*
+  fi
 
-  if $8 # Display color distribution
-    b 0.5% _transfer_rgb 64,1,0
+  if $9 # Display color distribution
+    b 0.5% _transfer_rgb 128,1,0
     foreach { nm={n}
       siz:=max(w,h,d)
-      sh 3 pow. 0.5 rm. *. 255
+      sh 3 pow. 0.25 rm. *. 255
       pointcloud3d gaussians3d 20,0.15 *3d. {256/$siz}
       colorcube3d p3d. 1 o3d. 0.75 +3d
       pose3d -0.86604034900665283,0.078571930527687073,0.49376171827316284,0,\
@@ -52892,8 +52896,21 @@ fx_transfer_colors_preview :
     }
   fi
 
-  if $7 l[$ind_style] {
-    rs {round([$pw,$ph]/arg1($7,5,4,3,2,1.5))}
+  if $7>1&&!$9 foreach[^$ind_style] {
+    i[0] ${original$>}
+    if $7==2
+      100%,100% polygon. 3,0,0,100%,0,100%,100%,1,1 j... ..,0,0,0,0,1,. k...
+      line 0,0,100%,100%,1,0xF0F0F0F0,0
+      line 0,0,100%,100%,1,0x0F0F0F0F,255
+    else
+      100%,100% polygon. 3,0,100%,100%,0,100%,100%,1,1 j... ..,0,0,0,0,1,. k...
+      line 0,100%,100%,0,1,0xF0F0F0F0,0
+      line 0,100%,100%,0,1,0x0F0F0F0F,255
+    fi
+  } fi
+
+  if $8 l[$ind_style] {
+    rs {round([$pw,$ph]/arg1($8,5,4,3,2,1.5))}
     to "Style",0.01~,0.01~,12%
     frame xy,1,255 frame xy,1,0
   } fi
@@ -52905,22 +52922,23 @@ fx_transfer_colors_preview :
   else
     [^$ind_style]
   fi
-  to_rgba[$ind_style,-1] r. $pw,$ph,1,4,0,0,0,1
-  if $7 j. [$ind_style],0,0 fi
+  to_rgba[$ind_style,-1] r. $pw,$ph,1,4,0,0,0.5,0.5
+  if $8 j. [$ind_style],0,0 fi
   k.
 
-  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$13>$>?2:0 }
-  u "{$1}{$2}{$3}{$4}{$5}{$6}{$7}{$8}"\
-    "{$9}_"$h\
-    "{$10}_"$v"{$11}_"$v"{$12}_"$v"{$13}_"$v\
-    "{${14-16}}_"$c0"{${17-19}}_"$c0\
-    "{${20-22}}_"$c1"{${23-25}}_"$c1\
-    "{${26-28}}_"$c2"{${29-31}}_"$c2\
-    "{${32-34}}_"$c3"{${35-37}}_"$c3\
-    "{${38-40}}_"$c4"{${41-43}}_"$c4\
-    "{${44-46}}_"$c5"{${47-49}}_"$c5\
-    "{${50-52}}_"$c6"{${53-55}}_"$c6\
-    "{${54-56}}_"$c7"{${57-59}}_"$c7
+  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$14>$>?2:0 }
+  u "{$1}{$2}{$3}{$4}{$5}{$6}"\
+    "{$7}{$8}{$9}"\
+    "{$10}_"$h\
+    "{$11}_"$v"{$12}_"$v"{$13}_"$v"{$14}_"$v\
+    "{${15-17}}_"$c0"{${18-20}}_"$c0\
+    "{${21-23}}_"$c1"{${24-26}}_"$c1\
+    "{${27-29}}_"$c2"{${30-32}}_"$c2\
+    "{${33-35}}_"$c3"{${36-38}}_"$c3\
+    "{${39-41}}_"$c4"{${42-44}}_"$c4\
+    "{${45-47}}_"$c5"{${48-50}}_"$c5\
+    "{${51-53}}_"$c6"{${54-56}}_"$c6\
+    "{${57-59}}_"$c7"{${60-62}}_"$c7
 
 _fx_transfer_colors :
   to_rgb
@@ -52936,7 +52954,7 @@ _fx_transfer_colors :
   if $2==0 # Histogram method
     foreach[^$ind_style] { nm={n}
       pass[$ind_style]
-      +transfer_histogram.. .,$9,$colorspace
+      +transfer_histogram.. .,$10,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
       k. c 0,255 => $nm
@@ -52950,21 +52968,21 @@ _fx_transfer_colors :
       k. c 0,255 => $nm
     }
   else # Variational method
-    if $13>0
+    if $14>0
       l[] {
-        (${14-19}:c)
-        if $13>1 (${20-25}:c) fi
-        if $13>2 (${26-31}:c) fi
-        if $13>3 (${32-37}:c) fi
-        if $13>4 (${38-43}:c) fi
-        if $13>5 (${44-49}:c) fi
-        if $13>6 (${50-55}:c) fi
-        if $13>7 (${54-59}:c) fi
+        (${15-20}:c)
+        if $14>1 (${21-26}:c) fi
+        if $14>2 (${27-32}:c) fi
+        if $14>3 (${33-38}:c) fi
+        if $14>4 (${39-44}:c) fi
+        if $14>5 (${45-50}:c) fi
+        if $14>6 (${51-56}:c) fi
+        if $14>7 (${57-62}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$10,$11,$6,{$5%},0,$3,{arg0($12,16,32,64)},. rm.
+      transfer_rgb[^$ind_style,-1] [$ind_style],$11,$12,$6,{$5%},0,$3,{arg0($13,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$10,$11,$6,{$5%},0,$3,{arg0($12,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$11,$12,$6,{$5%},0,$3,{arg0($13,16,32,64)}
     fi
   fi
 
