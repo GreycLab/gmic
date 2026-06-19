@@ -52827,7 +52827,8 @@ fx_transfer_pca_preview :
 #@gui : Preserve Brightness (%) = float(35,0,100)
 #@gui : Spatial Regularization Steps = int(3,0,10)
 #@gui : sep = separator()
-#@gui : Preview Color Distribution = choice("No","Style + Original Images","Style + Color-Transferred Images")
+#@gui : Preview Style = bool()
+#@gui : Preview Color Distribution = choice("No","Original Images","Color-Transferred Images")
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
 #@gui : Number of Bins = int(256,4,1024)_0-
@@ -52863,7 +52864,7 @@ fx_transfer_pca_preview :
 #@gui : Source Color 8 = color(0,255,255)_0-
 #@gui : Target Color 8 = color(0,255,255)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/06/18</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/06/19</i>.</small>")
 fx_transfer_colors :
   if $!<2 error "Command '$0': At least two layers are required !" fi
   _fx_transfer_colors $*
@@ -52874,9 +52875,9 @@ fx_transfer_colors_preview :
   N:=int(sqrt($!-1)) M:=ceil(($!-1)/$N)
   pw,ph=${-gui_preview_wh}
 
-  if $7!=1 _fx_transfer_colors $* fi
+  if $8!=1 _fx_transfer_colors $* fi
 
-  if $7 # Display color distribution
+  if $8 # Display color distribution
     b 0.5% _transfer_rgb 64,1,0
     foreach { nm={n}
       siz:=max(w,h,d)
@@ -52887,16 +52888,15 @@ fx_transfer_colors_preview :
              -0.24344669282436371,-0.92886388301849365,-0.27918723225593567,0,\
              0.43670186400413513,-0.36199197173118591,0.82356184720993042,0
       snapshot3d {2*ceil(min([$pw/$M,$ph/$N]))},1.2,255,255,255 rs. 50%
-      autocrop 255
-      => $nm
+      autocrop 255 => $nm
     }
   fi
 
-  l[$ind_style] {
+  if $7 l[$ind_style] {
     rs {round([$pw,$ph]/3.5)}
     to "Style",0.01~,0.01~,12%
     frame xy,1,255 frame xy,1,0
-  }
+  } fi
   rs[^$ind_style] {ceil([$pw/$M,$ph/$N])}
 
   if $!>2
@@ -52906,21 +52906,21 @@ fx_transfer_colors_preview :
     [^$ind_style]
   fi
   to_rgba[$ind_style,-1] rs. $pw,$ph,2,1
-  j. [$ind_style],10,10
+  if $7 j. [$ind_style],10,10 fi
   k.
 
-  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$12>$>?2:0 }
-  u "{$1}{$2}{$3}{$4}{$5}{$6}{$7}"\
-    "{$8}_"$h\
-    "{$9}_"$v"{$10}_"$v"{$11}_"$v"{$12}_"$v\
-    "{${13-15}}_"$c0"{${16-18}}_"$c0\
-    "{${19-21}}_"$c1"{${22-24}}_"$c1\
-    "{${25-27}}_"$c2"{${28-30}}_"$c2\
-    "{${31-33}}_"$c3"{${34-36}}_"$c3\
-    "{${37-39}}_"$c4"{${40-42}}_"$c4\
-    "{${43-45}}_"$c5"{${46-48}}_"$c5\
-    "{${49-51}}_"$c6"{${52-54}}_"$c6\
-    "{${53-55}}_"$c7"{${56-58}}_"$c7
+  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$13>$>?2:0 }
+  u "{$1}{$2}{$3}{$4}{$5}{$6}{$7}{$8}"\
+    "{$9}_"$h\
+    "{$10}_"$v"{$11}_"$v"{$12}_"$v"{$13}_"$v\
+    "{${14-16}}_"$c0"{${17-19}}_"$c0\
+    "{${20-22}}_"$c1"{${23-25}}_"$c1\
+    "{${26-28}}_"$c2"{${29-31}}_"$c2\
+    "{${32-34}}_"$c3"{${35-37}}_"$c3\
+    "{${38-40}}_"$c4"{${41-43}}_"$c4\
+    "{${44-46}}_"$c5"{${47-49}}_"$c5\
+    "{${50-52}}_"$c6"{${53-55}}_"$c6\
+    "{${54-56}}_"$c7"{${57-59}}_"$c7
 
 _fx_transfer_colors :
   to_rgb
@@ -52936,7 +52936,7 @@ _fx_transfer_colors :
   if $2==0 # Histogram method
     foreach[^$ind_style] { nm={n}
       pass[$ind_style]
-      +transfer_histogram.. .,$8,$colorspace
+      +transfer_histogram.. .,$9,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
       k. c 0,255 => $nm
@@ -52950,21 +52950,21 @@ _fx_transfer_colors :
       k. c 0,255 => $nm
     }
   else # Variational method
-    if $12>0
+    if $13>0
       l[] {
-        (${13-18}:c)
-        if $12>1 (${19-24}:c) fi
-        if $12>2 (${25-30}:c) fi
-        if $12>3 (${31-36}:c) fi
-        if $12>4 (${37-42}:c) fi
-        if $12>5 (${43-48}:c) fi
-        if $12>6 (${49-54}:c) fi
-        if $12>7 (${53-58}:c) fi
+        (${14-19}:c)
+        if $13>1 (${20-25}:c) fi
+        if $13>2 (${26-31}:c) fi
+        if $13>3 (${32-37}:c) fi
+        if $13>4 (${38-43}:c) fi
+        if $13>5 (${44-49}:c) fi
+        if $13>6 (${50-55}:c) fi
+        if $13>7 (${54-59}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$9,$10,$6,{$5%},0,$3,{arg0($11,16,32,64)},. rm.
+      transfer_rgb[^$ind_style,-1] [$ind_style],$10,$11,$6,{$5%},0,$3,{arg0($12,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$9,$10,$6,{$5%},0,$3,{arg0($11,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$10,$11,$6,{$5%},0,$3,{arg0($12,16,32,64)}
     fi
   fi
 
