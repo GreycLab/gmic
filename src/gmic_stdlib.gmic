@@ -52824,6 +52824,7 @@ fx_transfer_pca_preview :
 #@gui : Transfer Type = choice(2,"Histogram Matching","PCA Matching","Variational Registration")
 #@gui : Colorspace = choice("sRGB","lRGB","YCbCr","Lab")
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
+#@gui : Preserve Brightness (%) = float(35,0,100)
 #@gui : Spatial Regularization Steps = int(3,0,10)
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
@@ -52832,7 +52833,6 @@ fx_transfer_pca_preview :
 #@gui : note = note("<span color="#EE5500"><b>Variational Registration:</b></span>")
 #@gui : Transfer Smoothness = float(0.01,0,0.1)_2-
 #@gui : Sensitivity to Color Occurrences = float(1,0,5)_2
-#@gui : Preserve Brightness (%) = float(35,0,100)_2
 #@gui : 3D Discretization = choice(1,"Low","Medium","High")_2
 #@gui : Number of Color Correspondences = int(0,0,8)_2
 #@gui : sep = separator()
@@ -52885,9 +52885,9 @@ fx_transfer_colors_preview :
   k.
 
   h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$11>$>?2:0 }
-  u "{$1}{$2}{$3}{$4}{$5}"\
-    "{$6}_"$h\
-    "{$7}_"$v"{$8}_"$v"{$9}_"$v"{$10}_"$v"{$11}_"$v\
+  u "{$1}{$2}{$3}{$4}{$5}{$6}"\
+    "{$7}_"$h\
+    "{$8}_"$v"{$9}_"$v"{$10}_"$v"{$11}_"$v\
     "{${12-14}}_"$c0"{${15-17}}_"$c0\
     "{${18-20}}_"$c1"{${21-23}}_"$c1\
     "{${24-26}}_"$c2"{${27-29}}_"$c2\
@@ -52908,9 +52908,19 @@ _fx_transfer_colors :
   else colorspace=lab
   fi
 
-  if $2==0 transfer_histogram[^$ind_style] [$ind_style],$6,$colorspace
-  elif $2==1 transfer_pca[^$ind_style] [$ind_style],$colorspace
-  else
+  if $2==0 # Histogram method
+    foreach[^$ind_style] {
+      pass[$ind_style]
+      +transfer_histogram.. .,$7,$colorspace
+      k.
+    }
+  elif $2==1 # PCA method
+    foreach[^$ind_style] {
+      pass[$ind_style]
+      +transfer_pca.. .,$colorspace
+      k.
+    }
+  else # Variational method
     if $11>0
       l[] {
         (${12-17}:c)
@@ -52923,11 +52933,10 @@ _fx_transfer_colors :
         if $11>7 (${52-57}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$7,$8,$5,{$9/100},0,$3,{arg0($10,16,32,64)},. rm.
+      transfer_rgb[^$ind_style] [$ind_style],$8,$9,$6,{$5/100},0,$3,{arg0($10,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$7,$8,$5,{$9/100},0,$3,{arg0($10,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$8,$9,$6,{$5/100},0,$3,{arg0($10,16,32,64)}
     fi
-
   fi
 
   # Force same channel-wise avg/std as style image.
