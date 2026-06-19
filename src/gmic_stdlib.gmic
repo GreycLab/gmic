@@ -52821,7 +52821,7 @@ fx_transfer_pca_preview :
 
 #@gui Transfer Colors [Variational] : fx_transfer_colors, fx_transfer_colors_preview(1) : *
 #@gui : Style image = choice("Top Layer","Bottom Layer")
-#@gui : Transfer Type = choice(2,"Histogram Matching","PCA Matching","Variational Registration")
+#@gui : Transfer Type = choice(2,"Channelwise Histogram Matching","PCA Matching","Variational Registration")
 #@gui : Colorspace = choice("sRGB","lRGB","YCbCr","Lab")
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
 #@gui : Preserve Brightness (%) = float(35,0,100)
@@ -52912,12 +52912,14 @@ _fx_transfer_colors :
     foreach[^$ind_style] {
       pass[$ind_style]
       +transfer_histogram.. .,$7,$colorspace
+      rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] # Brightness constraints
       k.
     }
   elif $2==1 # PCA method
     foreach[^$ind_style] {
       pass[$ind_style]
       +transfer_pca.. .,$colorspace
+      rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] # Brightness constraints
       k.
     }
   else # Variational method
@@ -52933,9 +52935,9 @@ _fx_transfer_colors :
         if $11>7 (${52-57}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$8,$9,$6,{$5/100},0,$3,{arg0($10,16,32,64)},. rm.
+      transfer_rgb[^$ind_style,-1] [$ind_style],$8,$9,$6,{$5%},0,$3,{arg0($10,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$8,$9,$6,{$5/100},0,$3,{arg0($10,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$8,$9,$6,{$5%},0,$3,{arg0($10,16,32,64)}
     fi
   fi
 
