@@ -52826,6 +52826,7 @@ fx_transfer_pca_preview :
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
 #@gui : Preserve Brightness (%) = float(35,0,100)
 #@gui : Spatial Regularization Steps = int(3,0,10)
+#@gui : Preview Color Distribution = bool()
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
 #@gui : Number of Bins = int(256,4,1024)_0-
@@ -52884,18 +52885,18 @@ fx_transfer_colors_preview :
   j. [$ind_style],10,10
   k.
 
-  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$11>$>?2:0 }
-  u "{$1}{$2}{$3}{$4}{$5}{$6}"\
-    "{$7}_"$h\
-    "{$8}_"$v"{$9}_"$v"{$10}_"$v"{$11}_"$v\
-    "{${12-14}}_"$c0"{${15-17}}_"$c0\
-    "{${18-20}}_"$c1"{${21-23}}_"$c1\
-    "{${24-26}}_"$c2"{${27-29}}_"$c2\
-    "{${30-32}}_"$c3"{${33-35}}_"$c3\
-    "{${36-38}}_"$c4"{${39-41}}_"$c4\
-    "{${42-44}}_"$c5"{${45-47}}_"$c5\
-    "{${48-50}}_"$c6"{${51-53}}_"$c6\
-    "{${52-54}}_"$c7"{${55-57}}_"$c7
+  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$12>$>?2:0 }
+  u "{$1}{$2}{$3}{$4}{$5}{$6}{$7}"\
+    "{$8}_"$h\
+    "{$9}_"$v"{$10}_"$v"{$11}_"$v"{$12}_"$v\
+    "{${13-15}}_"$c0"{${16-18}}_"$c0\
+    "{${19-21}}_"$c1"{${22-24}}_"$c1\
+    "{${25-27}}_"$c2"{${28-30}}_"$c2\
+    "{${31-33}}_"$c3"{${34-36}}_"$c3\
+    "{${37-39}}_"$c4"{${40-42}}_"$c4\
+    "{${43-45}}_"$c5"{${46-48}}_"$c5\
+    "{${49-51}}_"$c6"{${52-54}}_"$c6\
+    "{${53-55}}_"$c7"{${56-58}}_"$c7
 
 _fx_transfer_colors :
   to_rgb
@@ -52911,7 +52912,7 @@ _fx_transfer_colors :
   if $2==0 # Histogram method
     foreach[^$ind_style] {
       pass[$ind_style]
-      +transfer_histogram.. .,$7,$colorspace
+      +transfer_histogram.. .,$8,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
       k. c 0,255
@@ -52925,21 +52926,21 @@ _fx_transfer_colors :
       k. c 0,255
     }
   else # Variational method
-    if $11>0
+    if $12>0
       l[] {
-        (${12-17}:c)
-        if $11>1 (${18-23}:c) fi
-        if $11>2 (${24-29}:c) fi
-        if $11>3 (${30-35}:c) fi
-        if $11>4 (${36-41}:c) fi
-        if $11>5 (${42-47}:c) fi
-        if $11>6 (${48-53}:c) fi
-        if $11>7 (${52-57}:c) fi
+        (${13-18}:c)
+        if $12>1 (${19-24}:c) fi
+        if $12>2 (${25-30}:c) fi
+        if $12>3 (${31-36}:c) fi
+        if $12>4 (${37-42}:c) fi
+        if $12>5 (${43-48}:c) fi
+        if $12>6 (${49-54}:c) fi
+        if $12>7 (${53-58}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$8,$9,$6,{$5%},0,$3,{arg0($10,16,32,64)},. rm.
+      transfer_rgb[^$ind_style,-1] [$ind_style],$9,$10,$6,{$5%},0,$3,{arg0($11,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$8,$9,$6,{$5%},0,$3,{arg0($10,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$9,$10,$6,{$5%},0,$3,{arg0($11,16,32,64)}
     fi
   fi
 
