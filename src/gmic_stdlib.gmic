@@ -52735,8 +52735,9 @@ _fx_cluts_colorslide :
 #@gui : sep = separator()
 #@gui : Preview = choice(1,"Before","After","Side-By-Side","Horizontal Split","Vertical Split","Diagonal Split 1",\
 # "Diagonal Split 2")
-#@gui : Style Preview Size = choice(3,"No","Tiny","Small","Medium","Large","Huge")
 #@gui : Preview Color Distribution = bool()
+#@gui : Style Preview Position = point(0,0,0,0,255,255,255)_0
+#@gui : Style Preview Size = point(0,0,0,0,255,255,255)_0
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Histogram Matching:</b></span>")
 #@gui : Number of Bins = int(256,4,1024)_0-
@@ -52788,7 +52789,7 @@ fx_transfer_colors_preview :
     _fx_transfer_colors $*
   fi
 
-  if $9 # Display color distribution
+  if $8 # Display color distribution
     b 0.5% _transfer_rgb 128,1,0
     k=0
     foreach { nm={n}
@@ -52815,7 +52816,7 @@ fx_transfer_colors_preview :
     }
   fi
 
-  if $7>1&&!$9 foreach[^$ind_style] {
+  if $7>1&&!$8 foreach[^$ind_style] {
     i[0] ${original$>}
     if $7==2 # Side-by-side
       line.. 0,100%,100%,100%,1,0xF0F0F0F0,0
@@ -52840,11 +52841,11 @@ fx_transfer_colors_preview :
     fi
   } fi
 
-  if $8 l[$ind_style] {
-    rs {round([$pw,$ph]/arg1($8,5,4,3,2,1.5))}
+  l[$ind_style] {
+    rs {round([$pw,$ph]/4)}
     to "Style",0.01~,0.01~,12%
     frame xy,1,255 frame xy,1,0
-  } fi
+  }
   rs[^$ind_style] {ceil([$pw/$M,$ph/$N])}
 
   if $!>2
@@ -52854,22 +52855,22 @@ fx_transfer_colors_preview :
     [^$ind_style]
   fi
   to_rgba[$ind_style,-1] r. $pw,$ph,1,4,0,0,0.5,0.5
-  if $8 j. [$ind_style],0,0 fi
+  j. [$ind_style],$9%,$10%
   k.
 
-  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$14>$>?2:0 }
+  h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$17>$>?2:0 }
   u "{$1}{$2}{$3}{$4}{$5}{$6}"\
-    "{$7}{$8}{$9}"\
-    "{$10}_"$h\
-    "{$11}_"$v"{$12}_"$v"{$13}_"$v"{$14}_"$v\
-    "{${15-17}}_"$c0"{${18-20}}_"$c0\
-    "{${21-23}}_"$c1"{${24-26}}_"$c1\
-    "{${27-29}}_"$c2"{${30-32}}_"$c2\
-    "{${33-35}}_"$c3"{${36-38}}_"$c3\
-    "{${39-41}}_"$c4"{${42-44}}_"$c4\
-    "{${45-47}}_"$c5"{${48-50}}_"$c5\
-    "{${51-53}}_"$c6"{${54-56}}_"$c6\
-    "{${57-59}}_"$c7"{${60-62}}_"$c7
+    "{$7}{$8}{$9,$10}{$11,$12)"\
+    "{$13}_"$h\
+    "{$14}_"$v"{$15}_"$v"{$16}_"$v"{$17}_"$v\
+    "{${18-20}}_"$c0"{${21-23}}_"$c0\
+    "{${24-26}}_"$c1"{${27-29}}_"$c1\
+    "{${30-32}}_"$c2"{${33-35}}_"$c2\
+    "{${36-38}}_"$c3"{${39-41}}_"$c3\
+    "{${42-44}}_"$c4"{${45-47}}_"$c4\
+    "{${48-50}}_"$c5"{${51-53}}_"$c5\
+    "{${54-56}}_"$c6"{${57-59}}_"$c6\
+    "{${60-62}}_"$c7"{${63-65}}_"$c7
 
 _fx_transfer_colors :
   to_rgb
@@ -52885,7 +52886,7 @@ _fx_transfer_colors :
   if $2==0 # Histogram method
     foreach[^$ind_style] { nm={n}
       pass[$ind_style]
-      +transfer_histogram.. .,$10,$colorspace
+      +transfer_histogram.. .,$13,$colorspace
       if $5 rgb2hsv[0,-1] sh[0,-1] 100% j. ..,0,0,0,0,{$5%} rm[-2,-1] hsv2rgb[0,-1] fi # Brightness constraints
       if $6 +luminance[0] repeat $6 { guided.. .,5,5 } rm. fi # Spatial regularizationd.
       k. c 0,255 => $nm
@@ -52899,21 +52900,21 @@ _fx_transfer_colors :
       k. c 0,255 => $nm
     }
   else # Variational method
-    if $14>0
+    if $17>0
       l[] {
-        (${15-20}:c)
-        if $14>1 (${21-26}:c) fi
-        if $14>2 (${27-32}:c) fi
-        if $14>3 (${33-38}:c) fi
-        if $14>4 (${39-44}:c) fi
-        if $14>5 (${45-50}:c) fi
-        if $14>6 (${51-56}:c) fi
-        if $14>7 (${57-62}:c) fi
+        (${18-23}:c)
+        if $17>1 (${24-29}:c) fi
+        if $17>2 (${30-35}:c) fi
+        if $17>3 (${36-41}:c) fi
+        if $17>4 (${42-47}:c) fi
+        if $17>5 (${48-53}:c) fi
+        if $17>6 (${54-59}:c) fi
+        if $17>7 (${60-65}:c) fi
         a x
       }
-      transfer_rgb[^$ind_style,-1] [$ind_style],$11,$12,$6,{$5%},0,$3,{arg0($13,16,32,64)},. rm.
+      transfer_rgb[^$ind_style,-1] [$ind_style],$14,$15,$6,{$5%},0,$3,{arg0($16,16,32,64)},. rm.
     else
-      transfer_rgb[^$ind_style] [$ind_style],$11,$12,$6,{$5%},0,$3,{arg0($13,16,32,64)}
+      transfer_rgb[^$ind_style] [$ind_style],$14,$15,$6,{$5%},0,$3,{arg0($16,16,32,64)}
     fi
   fi
 
