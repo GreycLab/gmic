@@ -52842,7 +52842,13 @@ fx_transfer_colors_preview :
   } fi
 
   l[$ind_style] {
-    rs {round([$pw,$ph]/4)}
+    xs,ys,dx,dy:=min($9,$11),min($10,$12),abs($11-$9),abs($12-$10)
+    if $dx&&$dy
+      rs {ceil([$pw*$dx%,$ph*$dy%])}
+    else
+      rs {ceil([$pw,$ph]/4)}
+    fi
+    dx,dy:=[w/$pw,h/$ph]*100
     to "Style",0.01~,0.01~,12%
     frame xy,1,255 frame xy,1,0
   }
@@ -52855,12 +52861,12 @@ fx_transfer_colors_preview :
     [^$ind_style]
   fi
   to_rgba[$ind_style,-1] r. $pw,$ph,1,4,0,0,0.5,0.5
-  j. [$ind_style],$9%,$10%
+  j. [$ind_style],$xs%,$ys%
   k.
 
   h:=$2==0?2:0 v:=$2==2?2:0 repeat 8 { c$>:=$2==2&&$17>$>?2:0 }
   u "{$1}{$2}{$3}{$4}{$5}{$6}"\
-    "{$7}{$8}{$9,$10}{$11,$12)"\
+    "{$7}{$8}{"$xs","$ys"}{"{$xs+$dx}","{$ys+$dy}"}"\
     "{$13}_"$h\
     "{$14}_"$v"{$15}_"$v"{$16}_"$v"{$17}_"$v\
     "{${18-20}}_"$c0"{${21-23}}_"$c0\
