@@ -1,6 +1,7 @@
 #!/bin/bash
 # configure_autologin_root.sh
-# Configure automatic root login on TTY1 via systemd (Debian/Ubuntu)
+# Configure automatic root login on TTY1 via systemd (Debian/Ubuntu).
+# Used for Debian/Ubuntu VMs configuration, to build .deb packages of G'MIC.
 # Must be run as root.
 
 set -e
