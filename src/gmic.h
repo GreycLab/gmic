@@ -450,8 +450,8 @@ struct gmic {
   template<typename T>
   const gmic_image<T>& check_image(const gmic_list<T>& list, const gmic_image<T>& img);
 
-  // template<typename T>
-  // gmic& remove_image(gmic_list<T>& images, gmic_list<char>& image_names, const unsigned int pos);
+  template<typename T>
+  gmic& remove_image(gmic_list<T>& images, gmic_list<char>& image_names, const unsigned int pos);
 
   template<typename T>
   gmic& remove_images(gmic_list<T>& images, gmic_list<char>& image_names,
