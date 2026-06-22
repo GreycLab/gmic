@@ -4034,17 +4034,6 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 // Check if a shared image of the image list is safe or not.
 //----------------------------------------------------------
 template<typename T>
-inline bool gmic_is_valid_pointer(const T *const ptr) {
-#if cimg_OS==1
-  const int result = access((const char*)ptr,F_OK);
-  if (result==-1 && errno==EFAULT) return false;
-#elif cimg_OS==2 // #if cimg_OS==1
-  return !IsBadReadPtr((void*)ptr,1);
-#endif // #if cimg_OS==1
-  return true;
-}
-
-template<typename T>
 CImg<T>& gmic::check_image(const CImgList<T>& list, CImg<T>& img) {
   check_image(list,(const CImg<T>&)img);
   return img;
@@ -4052,14 +4041,7 @@ CImg<T>& gmic::check_image(const CImgList<T>& list, CImg<T>& img) {
 
 template<typename T>
 const CImg<T>& gmic::check_image(const CImgList<T>& list, const CImg<T>& img) {
-#ifdef gmic_check_image
-  if (!img.is_shared() || gmic_is_valid_pointer(img.data())) return img;
-  error(true,list,0,0,"Image list contains an invalid shared image (%p,%d,%d,%d,%d) "
-        "(references a deallocated buffer).",
-        img.data(),img.width(),img.height(),img.depth(),img.spectrum());
-#else // #ifdef gmic_check_image
-  cimg::unused(list);
-#endif // #ifdef gmic_check_image
+  cimg::unused(list,img);
   return img;
 }
 
