@@ -4034,18 +4034,43 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 // Check if a shared image of the image list is safe or not.
 //----------------------------------------------------------
 template<typename T>
-CImg<T>& gmic::check_image(const CImgList<T>& images, CImg<T>& img) {
-  check_image(images,(const CImg<T>&)img);
+CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images,
+                           CImg<T>& img) {
+#ifdef gmic_check_image
+  check_image(images,parent_images,(const CImg<T>&)img);
+#else
+  cimg::unused(images,parent_images);
+#endif
   return img;
 }
 
 template<typename T>
-const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImg<T>& img) {
-  cimg::unused(images,img);
+const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images,
+                                 const CImg<T>& img) {
+#ifdef gmic_check_image
+  if (!img.is_shared()) return img;
+  const T *const ptr = img.data();
+  cimglist_rof(images,l) {
+    const CImg<T>& elt = images[l];
+    if (!elt.is_shared()) {
+      const T *const ptrs = elt.data(), *const ptre = elt.end();
+      if (ptr>=ptrs && ptr<ptre) return img;
+    }
+  }
+  cimglist_rof(parent_images,l) {
+    const CImg<T>& elt = parent_images[l];
+    const T *const ptrs = elt.data(), *const ptre = elt.end();
+    if (ptr>=ptrs && ptr<ptre) return img;
+  }
+  error(true,"Encountered a shared image (%d,%d,%d,%d) with invalid data pointer.",
+        img.width(),img.height(),img.depth(),img.spectrum());
+#else
+  cimg::unused(images,parent_images);
+#endif
   return img;
 }
 
-#define gmic_check(img) check_image(images,img)
+#define gmic_check(img) check_image(images,parent_images,img)
 
 // Remove list of images in a selection.
 //---------------------------------------

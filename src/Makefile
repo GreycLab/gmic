@@ -174,6 +174,9 @@ PRERELEASE_CFLAGS = -Dgmic_prerelease="\\\"$(PRERELEASE)\\\""
 ZLIB_CFLAGS := $(shell pkg-config --cflags zlib 2>/dev/null || echo -I$(PREFIX)/$(INCLUDE))
 ZLIB_LIBS   := $(shell pkg-config --libs zlib 2>/dev/null || echo -lz)
 
+# Flags to add extra checking of shared images (slow down code, not activated by default).
+CHECKIMAGE_CFLAGS = -Dgmic_check_images
+
 # Minimal set of flags mandatory to compile G'MIC.
 MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
 MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
