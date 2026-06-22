@@ -4062,7 +4062,7 @@ const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& p
     const T *const ptrs = elt.data(), *const ptre = elt.end();
     if (ptr>=ptrs && ptr<ptre) return img;
   }
-  error(true,"Invalid shared image (%d,%d,%d,%d): referenced data buffer cannot be found among existing images.",
+  error(true,"Invalid shared image (%d,%d,%d,%d), referenced data buffer cannot be found among existing images.",
         img.width(),img.height(),img.depth(),img.spectrum());
 #else
   cimg::unused(images,parent_images);
@@ -4962,7 +4962,9 @@ gmic& gmic::_run(const CImgList<char>& command_line,
   is_start = true;
   *progress = -1;
   if (reference_time==(gmic_uint64)-1) reference_time = cimg::time();
-  return _run(command_line,position,images,image_names,images,image_names,variable_sizes,0,0,0,push_new_run);
+  CImgList<T> parent_images;
+  CImgList<char> parent_image_names;
+  return _run(command_line,position,images,image_names,parent_images,parent_image_names,variable_sizes,0,0,0,push_new_run);
 }
 
 #if defined(_MSC_VER) && !defined(_WIN64)
@@ -10167,7 +10169,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               const CImgList<char> ncommand_line = command_line_to_CImgList(formula);
               unsigned int nposition = 0;
               CImg<char>::string("").move_to(callstack); // Anonymous scope
-              _run(ncommand_line,nposition,images,image_names,images,image_names,variable_sizes,0,0,0,false);
+              _run(ncommand_line,nposition,images,image_names,parent_images,parent_image_names,variable_sizes,0,0,0,false);
               callstack.remove();
 
             } else { // Not found -> Try generic image saver
@@ -14975,7 +14977,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           CImg<char>::string("d").move_to(ncommand_line);
         } else
           CImg<char>::string("p").move_to(ncommand_line);
-        _run(ncommand_line,nposition,images,image_names,images,image_names,variable_sizes,0,0,0,false);
+        _run(ncommand_line,nposition,images,image_names,parent_images,parent_image_names,variable_sizes,0,0,0,false);
         callstack.remove();
       }
       is_change = false;
