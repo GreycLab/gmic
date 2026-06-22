@@ -4036,7 +4036,7 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 template<typename T>
 CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                            CImg<T>& img) {
-#ifdef gmic_check_image
+#ifdef gmic_check_images
   check_image(images,parent_images,(const CImg<T>&)img);
 #else
   cimg::unused(images,parent_images);
@@ -4047,7 +4047,7 @@ CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_
 template<typename T>
 const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                                  const CImg<T>& img) {
-#ifdef gmic_check_image
+#ifdef gmic_check_images
   if (!img.is_shared()) return img;
   const T *const ptr = img.data();
   cimglist_rof(images,l) {
