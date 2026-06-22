@@ -4034,14 +4034,14 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 // Check if a shared image of the image list is safe or not.
 //----------------------------------------------------------
 template<typename T>
-CImg<T>& gmic::check_image(const CImgList<T>& list, CImg<T>& img) {
-  check_image(list,(const CImg<T>&)img);
+CImg<T>& gmic::check_image(const CImgList<T>& images, CImg<T>& img) {
+  check_image(images,(const CImg<T>&)img);
   return img;
 }
 
 template<typename T>
-const CImg<T>& gmic::check_image(const CImgList<T>& list, const CImg<T>& img) {
-  cimg::unused(list,img);
+const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImg<T>& img) {
+  cimg::unused(images,img);
   return img;
 }
 
