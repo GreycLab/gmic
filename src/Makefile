@@ -170,10 +170,16 @@ QMAKE ?= $(shell \
 PRERELEASE = $(shell date +%y%m%d%H)
 PRERELEASE_CFLAGS = -Dgmic_prerelease="\\\"$(PRERELEASE)\\\""
 
-# Minimal set of flags mandatory to compile G'MIC.
+# Flags to be able to uncompress the G'MIC stdlib.
 ZLIB_CFLAGS := $(shell pkg-config --cflags zlib 2>/dev/null || echo -I$(PREFIX)/$(INCLUDE))
 ZLIB_LIBS   := $(shell pkg-config --libs zlib 2>/dev/null || echo -lz)
-MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
+
+# Enable extra checking of image buffer pointers.
+# (Useful for debug, also slows down the code)
+CHECKIMAGE_CFLAGS = # -Dgmic_check_image
+
+# Minimal set of flags mandatory to compile G'MIC.
+MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(CHECKIMAGE_CFLAGS) $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
 MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
 
 ifndef NO_STDLIB
@@ -240,12 +246,6 @@ ifeq ($(BUILD_OS),Windows)
 DEBUG_CFLAGS = -pedantic -Dcimg_verbosity=3 -Dcimg_strict_warnings -g
 else
 DEBUG_CFLAGS = -pedantic -Dcimg_verbosity=3 -Dcimg_strict_warnings -g -fsanitize=address # -fsanitize=thread # -fsanitize=undefined # Removed '-ansi' as it (silently) disables c++11.
-endif
-
-# Enable extra checking of image buffer pointers.
-# (Useful for debug, also slows down the code)
-ifneq ($(BUILD_OS),Darwin)
-CHECKIMAGE_CFLAGS = # -Dgmic_check_image
 endif
 
 # Enable cancellation points in CImg methods.
