@@ -178,7 +178,7 @@ ZLIB_LIBS   := $(shell pkg-config --libs zlib 2>/dev/null || echo -lz)
 CHECKIMAGE_CFLAGS = -Dgmic_check_images
 
 # Minimal set of flags mandatory to compile G'MIC.
-MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
+MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(CHECKIMAGE_CFLAGS) $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
 MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
 
 ifndef NO_STDLIB
