@@ -99,6 +99,7 @@ option(BUILD_BASH_COMPLETION "Build Bash completion" ON)
 option(CUSTOM_CFLAGS "Override default compiler optimization flags" OFF)
 option(ENABLE_DYNAMIC_LINKING "Dynamically link the binaries to the GMIC shared library" OFF)
 option(ENABLE_LTO "Enable -flto (Link Time Optimizer) on gcc and clang" OFF)
+option(ENABLE_CHECK_IMAGES "Enable extra checking of shared images (adds -Dgmic_check_images, slows down code)" ON)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -108,20 +109,30 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
 list(APPEND GMIC_CXX_COMPILE_FLAGS
-  -Dcimg_use_vt100
   -Dgmic_is_parallel
   -Dcimg_use_abort
   "-Dcimg_date=\"\""
   "-Dcimg_time=\"\""
   -Dcimg_use_zlib
+  -pedantic
 )
+
+# -Dcimg_use_vt100: enabled on Unix only (mirrors Makefile behaviour)
+if(NOT APPLE AND NOT WIN32)
+  list(APPEND GMIC_CXX_COMPILE_FLAGS -Dcimg_use_vt100)
+endif()
+
+# -Dgmic_check_images: extra shared-image checking, enabled by default (mirrors Makefile CHECKIMAGE_CFLAGS)
+if(ENABLE_CHECK_IMAGES)
+  list(APPEND GMIC_CXX_COMPILE_FLAGS -Dgmic_check_images)
+endif()
 
 if(APPLE)
     list(APPEND GMIC_CXX_COMPILE_FLAGS -mmacosx-version-min=10.8 -stdlib=libc++ -Wno-error=c++11-narrowing -Wc++11-extensions -fpermissive)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     list(APPEND GMIC_CXX_COMPILE_FLAGS -Wno-error=c++11-narrowing -fpermissive)
 else()
-    list(APPEND GMIC_CXX_COMPILE_FLAGS -Wno-error=narrowing -fno-ipa-sra -fpermissive)
+    list(APPEND GMIC_CXX_COMPILE_FLAGS -Wno-error=narrowing -fpermissive)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
