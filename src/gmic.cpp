@@ -4031,8 +4031,8 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 #define arg_error(command) gmic::error(true,0,command,"Command '%s': Invalid argument '%s'.",\
                                        command,gmic_argument_text())
 
-// Check if a shared image of the image list is safe or not.
-//----------------------------------------------------------
+// Check if a shared image of the image list links to an existing image.
+//----------------------------------------------------------------------
 template<typename T>
 CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                            CImg<T>& img) {
