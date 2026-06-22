@@ -454,8 +454,8 @@ struct gmic {
   gmic& remove_image(gmic_list<T>& images, gmic_list<char>& image_names, const unsigned int pos);
 
   template<typename T>
-  gmic& remove_images(gmic_list<T>& images, gmic_list<char>& image_names,
-                      const gmic_image<unsigned int>& selection, const unsigned int start);
+  gmic& remove_images(gmic_list<T>& images, gmic_list<char>& image_names, const gmic_image<unsigned int>& selection,
+                      const unsigned int start);
 
   template<typename T>
   gmic& _run(const gmic_list<char>& command_line, gmic_list<T> &images, gmic_list<char> &image_names,
