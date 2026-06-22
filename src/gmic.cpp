@@ -4031,8 +4031,8 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 #define arg_error(command) gmic::error(true,0,command,"Command '%s': Invalid argument '%s'.",\
                                        command,gmic_argument_text())
 
-// Check if a shared image of the image list is safe or not.
-//----------------------------------------------------------
+// Check if a shared image points to a valid shared buffer.
+//---------------------------------------------------------
 template<typename T>
 CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& parent_images, CImg<T>& img) {
   check_image(images,parent_images,(const CImg<T>&)img);
@@ -4059,7 +4059,7 @@ const CImg<T>& gmic::check_image(const CImgList<T>& images, const CImgList<T>& p
   error(true,"Image list contains an invalid shared image (%p,%d,%d,%d,%d) "
         "(references a deallocated buffer).",
         img.data(),img.width(),img.height(),img.depth(),img.spectrum());
-#elif
+#else
   cimg::unused(images,parent_images);
 #endif // #ifdef gmic_check_image
   return img;
