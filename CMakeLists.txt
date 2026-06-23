@@ -122,7 +122,7 @@ if(NOT APPLE AND NOT WIN32)
   list(APPEND GMIC_CXX_COMPILE_FLAGS -Dcimg_use_vt100)
 endif()
 
-# -Dgmic_check_shared_images: extra shared-image checking, enabled by default (mirrors Makefile CHECKIMAGE_CFLAGS)
+# -Dgmic_check_shared_images: extra shared-image checking, enabled by default (mirrors Makefile CHECK_SHARED_IMAGES_CFLAGS)
 if(ENABLE_CHECK_SHARED_IMAGES)
   list(APPEND GMIC_CXX_COMPILE_FLAGS -Dgmic_check_shared_images)
 endif()
