@@ -446,9 +446,11 @@ struct gmic {
   bool check_cond(const char *const expr, gmic_list<T>& images, const char *const command);
 
   template<typename T>
-  gmic_image<T>& check_image(const gmic_list<T>& list, gmic_image<T>& img);
+  gmic_image<T>& check_shared_image(const gmic_list<T>& images, const gmic_list<T>& parent_images,
+                                    gmic_image<T>& img);
   template<typename T>
-  const gmic_image<T>& check_image(const gmic_list<T>& list, const gmic_image<T>& img);
+  const gmic_image<T>& check_shared_image(const gmic_list<T>& images, const gmic_list<T>& parent_images,
+                                          const gmic_image<T>& img);
 
   template<typename T>
   gmic& remove_images(gmic_list<T>& images, gmic_list<char>& image_names, const gmic_image<unsigned int>& selection,
