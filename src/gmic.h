@@ -421,6 +421,10 @@ struct gmic {
 
   gmic_list<char> command_line_to_CImgList(const char *const command_line);
 
+  template<typename T>
+  gmic_image<T> _gmic_image_arg(gmic_list<T>& images, const gmic_list<T>& parent_images,
+                                const gmic_image<unsigned int>& selection, const unsigned int uind);
+
   void _gmic_substitute_args(const char *const argument, const char *const argument0, const char *const command,
                              const char *const item);
 
@@ -448,12 +452,6 @@ struct gmic {
   template<typename T>
   gmic_image<T>& check_shared_image(const gmic_list<T>& images, const gmic_list<T>& parent_images,
                                     gmic_image<T>& img);
-  template<typename T>
-  const gmic_image<T>& check_shared_image(const gmic_list<T>& images, const gmic_list<T>& parent_images,
-                                          const gmic_image<T>& img);
-  template<typename T>
-  void _check_shared_image(const gmic_list<T>& images, const gmic_list<T>& parent_images,
-                           gmic_image<T> *const img);
   template<typename T>
   gmic& remove_images(gmic_list<T>& images, gmic_list<char>& image_names, const gmic_image<unsigned int>& selection,
                       const unsigned int start, const unsigned int end);
