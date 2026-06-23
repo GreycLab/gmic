@@ -4058,7 +4058,7 @@ const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgLis
     const T *const ptrs = elt.data(), *const ptre = elt.end();
     if (ptr>=ptrs && ptr<ptre) return img;
   }
-  error(true,"Invalid shared image (%d,%d,%d,%d) references data buffer not found among existing images.",
+  error(true,"Invalid shared image (%d,%d,%d,%d), referenced data buffer not found among existing images.",
         img.width(),img.height(),img.depth(),img.spectrum());
 #else
   cimg::unused(images,parent_images);
