@@ -33,6 +33,9 @@ ExecStart=
 ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
 EOF
 
+echo "Locking configuration file against overwrites..."
+chattr +i "$OVERRIDE_FILE"
+
 # --- Ensure 'cd /root' is present in .bash_profile ---
 
 BASH_PROFILE="/root/.bash_profile"

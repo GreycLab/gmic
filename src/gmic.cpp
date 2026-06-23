@@ -1811,13 +1811,16 @@ inline bool is_xyzc(const char c) {
   return c=='x' || c=='y' || c=='z' || c=='c';
 }
 
-// Return image argument as a shared or non-shared copy of one existing image.
-inline bool _gmic_image_arg(const unsigned int ind, const CImg<unsigned int>& selection) {
-  cimg_forY(selection,l) if (selection[l]==ind) return true;
-  return false;
+// Return an image argument as a shared or non-shared copy of one existing image of the list.
+template<typename T>
+CImg<T> gmic::_gmic_image_arg(CImgList<T>& images, const CImgList<T>& parent_images,
+                              const CImg<unsigned int>& selection, const unsigned int uind) {
+  check_shared_image(images,parent_images,images[uind]);
+  cimg_forY(selection,l) if (selection[l]==uind) return images[uind]; // Non-shared copy
+  return images[uind].get_shared(); // Shared copy
 }
-#define gmic_image_arg(ind) gmic_check_shared_image(_gmic_image_arg(ind,selection)?images[ind]:\
-                                                    images[ind].get_shared())
+
+#define gmic_image_arg(uind) _gmic_image_arg(images,parent_images,selection,uind)
 
 // Macro to manage argument substitutions from a command.
 void gmic::_gmic_substitute_args(const char *const argument, const char *const argument0,
@@ -4036,13 +4039,6 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 template<typename T>
 CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                                   CImg<T>& img) {
-  check_shared_image(images,parent_images,(const CImg<T>&)img);
-  return img;
-}
-
-template<typename T>
-const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
-                                        const CImg<T>& img) {
 #ifdef gmic_check_shared_images
   if (!img.is_shared()) return img;
   const T *const ptr = img.data();
@@ -4058,8 +4054,10 @@ const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgLis
     const T *const ptrs = elt.data(), *const ptre = elt.end();
     if (ptr>=ptrs && ptr<ptre) return img;
   }
-  error(true,"Invalid shared image (%d,%d,%d,%d) references data buffer not found among existing images.",
-        img.width(),img.height(),img.depth(),img.spectrum());
+  const unsigned int w = img.width(), h = img.height(), d = img.depth(), s = img.spectrum();
+  img.assign(); // Prevent further memory access
+  error(true,"Invalid shared image (%d,%d,%d,%d): Referenced data buffer not found among existing images.",
+        w,h,d,s);
 #else
   cimg::unused(images,parent_images);
 #endif
@@ -6942,8 +6940,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   is_forward?"forward":"backward",
                   argy);
 
-            const CImg<T> reference = gmic_image_arg(*ind);
-            const CImg<T> constraints = ind0?gmic_image_arg(*ind0):CImg<T>::empty();
+            const CImg<T>
+              reference = gmic_image_arg(*ind),
+              constraints = ind0?gmic_image_arg(*ind0):CImg<T>::empty();
             cimg_forY(selection,l)
               gmic_apply(displacement(reference,smoothness,precision,(unsigned int)nb_scales,
                                       cimg::type<double>::is_inf(nb_iterations)?~0U:(unsigned int)nb_iterations,
