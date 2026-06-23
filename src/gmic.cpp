@@ -4036,11 +4036,7 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 template<typename T>
 CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                                   CImg<T>& img) {
-#ifdef gmic_check_shared_images
   check_shared_image(images,parent_images,(const CImg<T>&)img);
-#else
-  cimg::unused(images,parent_images);
-#endif
   return img;
 }
 
@@ -4050,19 +4046,19 @@ const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgLis
 #ifdef gmic_check_shared_images
   if (!img.is_shared()) return img;
   const T *const ptr = img.data();
-  cimglist_rof(images,l) {
+  cimglist_rof(images,l) { // Check that a corresponding non-shared image exist in current image list
     const CImg<T>& elt = images[l];
     if (!elt.is_shared()) {
       const T *const ptrs = elt.data(), *const ptre = elt.end();
       if (ptr>=ptrs && ptr<ptre) return img;
     }
   }
-  cimglist_rof(parent_images,l) {
+  cimglist_rof(parent_images,l) { // Check that corresponding shared or non-shared image exist in parent list ('pass')
     const CImg<T>& elt = parent_images[l];
     const T *const ptrs = elt.data(), *const ptre = elt.end();
     if (ptr>=ptrs && ptr<ptre) return img;
   }
-  error(true,"Invalid shared image (%d,%d,%d,%d), referenced data buffer cannot be found among existing images.",
+  error(true,"Invalid shared image (%d,%d,%d,%d) references data buffer not found among existing images.",
         img.width(),img.height(),img.depth(),img.spectrum());
 #else
   cimg::unused(images,parent_images);
