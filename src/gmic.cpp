@@ -4036,34 +4036,41 @@ bool gmic::check_cond(const char *const expr, CImgList<T>& images, const char *c
 template<typename T>
 CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                                   CImg<T>& img) {
-  check_shared_image(images,parent_images,(const CImg<T>&)img);
+  _check_shared_image(images,parent_images,&img);
   return img;
 }
 
 template<typename T>
-const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
+  const CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
                                         const CImg<T>& img) {
+  _check_shared_image(images,parent_images,(CImg<T>*)&img);
+  return img;
+}
+
+template<typename T>
+void gmic::_check_shared_image(const CImgList<T>& images, const CImgList<T>& parent_images,
+                               CImg<T> *const img) {
 #ifdef gmic_check_shared_images
-  if (!img.is_shared()) return img;
-  const T *const ptr = img.data();
+  if (!img->is_shared()) return;
+  const T *const ptr = img->data();
   cimglist_rof(images,l) { // Check that a corresponding non-shared image exist in current image list
     const CImg<T>& elt = images[l];
     if (!elt.is_shared()) {
       const T *const ptrs = elt.data(), *const ptre = elt.end();
-      if (ptr>=ptrs && ptr<ptre) return img;
+      if (ptr>=ptrs && ptr<ptre) return;
     }
   }
   cimglist_rof(parent_images,l) { // Check that corresponding shared or non-shared image exist in parent list ('pass')
     const CImg<T>& elt = parent_images[l];
     const T *const ptrs = elt.data(), *const ptre = elt.end();
-    if (ptr>=ptrs && ptr<ptre) return img;
+    if (ptr>=ptrs && ptr<ptre) return;
   }
+  img->assign();
   error(true,"Invalid shared image (%d,%d,%d,%d), referenced data buffer not found among existing images.",
-        img.width(),img.height(),img.depth(),img.spectrum());
+        img->width(),img->height(),img->depth(),img->spectrum());
 #else
-  cimg::unused(images,parent_images);
+  cimg::unused(images,parent_images,img);
 #endif
-  return img;
 }
 
 #define gmic_check_shared_image(img) check_shared_image(images,parent_images,img)
