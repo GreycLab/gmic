@@ -20686,9 +20686,7 @@ periodize_poisson :
     a c
   }
 
-#@cli rbf : dx,_x0,_x1,_phi(r),_phi_eval(r) : \
-# dx,dy,_x0,_y0,_x1,_y1,_phi(r),_phi_eval(r) : \
-# dx,dy,dz,x0,y0,z0,x1,y1,z1,phi(r),phi_eval(r)
+#@cli rbf : dx,_x0,_x1,_phi(r) : dx,dy,_x0,_y0,_x1,_y1,_phi(r) : dx,dy,dz,x0,y0,z0,x1,y1,z1,phi(r)
 #@cli : Reconstruct 1D/2D or 3D image from selected sets of keypoints, by RBF-interpolation.
 #@cli : A set of keypoints is represented by a vector-valued image, where each pixel represents a single keypoint.
 #@cli : Vector components of a keypoint have the following meaning:
@@ -20698,27 +20696,25 @@ periodize_poisson :
 #@cli : Values 'x_k','y_k' and 'z_k' are the spatial coordinates of keypoint 'k'.
 #@cli : Values 'f1(),..,fN()' are the 'N' components of the vector value of keypoint 'k'.
 #@cli : The command reconstructs an image with specified size 'dx'x'dy'x'dz', with 'N' channels.
-#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1', 'phi(r)=phi_eval(r)=r*log(1+r)'.
+#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1' and 'phi(r)=r*log(1+r)'.
 #@cli : $ sample colorful,400 100%,100% noise_poissondisk. 10 1,{is},1,5 \
 # eval[-2] "begin(p=0);i?(I[#-1,p++]=[x,y,I(#0)])" to_rgb[1] mul[0,1] dilate_circ[0] 5 +rbf[-1] {0,[w,h]} c[-1] 0,255
 #@cli : $ 32,1,1,5,u([400,400,255,255,255]) rbf 400,400 c 0,255
 rbf :
   $=a
   default_phi_r="r*log(1 + r)"
-  if isin($#,1,3,4,5) # 1D reconstruction
+  if isin($#,1,3,4) # 1D reconstruction
     dx,x0,x1=$a1,{$#>1?[$a2,$a3]:[0,$a1-1]}
     phi_r={`$#>3?['$a4']:'$default_phi_r'`}
-    phi_eval_r={`$#>4?['$a5']:'$phi_r'`}
     check $dx>0
     e[^-1] "Reconstruct 1D image from keypoint set$?, with size "$dx", "\
-      "from ("$x0") to ("$x1"), phi(r) = "$phi_r" and phi_eval(r) = "$phi_eval_r"."
+      "from ("$x0") to ("$x1") and phi(r) = "$phi_r"."
     foreach { nm={n} if !w $dx elif whd==1 channels. 1,100% r. $dx,1,1,100% else
       sh 1,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,1,1,{w-1},"*
         begin(
           phi(r) = ("$phi_r");
-          phi_eval(r) = ("$phi_eval_r");
           X = crop(#0,0,0,0,0,1,h#0,1,1);
           F = crop(#0,1,0,0,0,s,h#0,1,1,1);
           M = vector(#h#0^2);
@@ -20732,25 +20728,23 @@ rbf :
           const fx = ("$x1-$x0")/(w-1);
         );
         res = vectors(); x = (x - "$x0")*fx;
-        repeat (h#0,k, r = abs(x - X[k]); res+=W[s*k,s]*phi_eval(r));
+        repeat (h#0,k, r = abs(x - X[k]); res+=W[s*k,s]*phi(r));
         res"
       k. $avg ri. .. + => $nm
     fi }
 
-  elif isin($#,2,6,7,8) # 2D reconstruction
+  elif isin($#,2,6,7) # 2D reconstruction
     dx,dy,x0,y0,x1,y1=$a1,$a2,{$#>2?[$a3,$a4,$a5,$a6]:[0,0,[$a1,$a2]-1]}
     phi_r={`$#>6?['$a7']:'$default_phi_r'`}
-    phi_eval_r={`$#>7?['$a8']:'$phi_r'`}
     check $dx>0" && "$dy>0
     e[^-1] "Reconstruct 2D image from keypoint set$?, with size "$dx,$dy", "\
-      "from ("$x0,$y0") to ("$x1,$y1"), phi(r) = "$phi_r" and phi_eval(r) = "$phi_eval_r"."
+      "from ("$x0,$y0") to ("$x1,$y1") and phi(r) = "$phi_r"."
     foreach { nm={n} if !w $dx,$dy elif whd==1 channels 2,100% r. $dx,$dy,1,100% else
       sh 2,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,$dy,1,{w-2},"*
         begin(
           phi(r) = ("$phi_r");
-          phi_eval(r) = ("$phi_eval_r");
           X = crop(#0,0,0,0,0,1,h#0,1,1);
           Y = crop(#0,1,0,0,0,1,h#0,1,1);
           F = crop(#0,2,0,0,0,s,h#0,1,1,1);
@@ -20766,25 +20760,23 @@ rbf :
           const fy = ("$y1-$y0")/(h-1);
         );
         res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy;
-        repeat (h#0,k, r = norm(x - X[k], y - Y[k]); res+=W[s*k,s]*phi_eval(r));
+        repeat (h#0,k, r = norm(x - X[k], y - Y[k]); res+=W[s*k,s]*phi(r));
         res"
       k. $avg ri. .. + => $nm
     fi }
 
-  elif isin($#,3,9,10,11) # 3D reconstruction
+  elif isin($#,3,9,10) # 3D reconstruction
     dx,dy,dz,x0,y0,z0,x1,y1,z1=$a1,$a2,$a3,{$#>3?[$a4,$a5,$a6,$a7,$a8,$a9]:[0,0,0,[$a1,$a2,$a3]-1]}
     phi_r={`$#>9?['$arg10']:'$default_phi_r'`}
-    phi_eval_r={`$#>10?['$arg11']:'$phi_r'`}
     check $dx>0" && "$dy>0" && "$dz>0
     e[^-1] "Reconstruct 3D image from keypoint set$?, with size "$dx,$dy,$dz", "\
-      "from ("$x0,$y0,$z0") to ("$x1,$y1,$z1"), phi(r) = "$phi_r" and phi_eval(r) = "$phi_eval_r"."
+      "from ("$x0,$y0,$z0") to ("$x1,$y1,$z1") and phi(r) = "$phi_r"."
     foreach { nm={n} if !w $dx,$dy,$dz elif whd==1 channels 3,100% r. $dx,$dy,$dz,100% else
       sh 3,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
       r 1,{whd},1,100%,-1 permute. cyzx
       $dx,$dy,$dz,{w-3},"*
         begin(
           phi(r) = ("$phi_r");
-          phi_eval(r) = ("$phi_eval_r");
           X = crop(#0,0,0,0,0,1,h#0,1,1);
           Y = crop(#0,1,0,0,0,1,h#0,1,1);
           Z = crop(#0,2,0,0,0,1,h#0,1,1);
@@ -20802,7 +20794,7 @@ rbf :
           const fz = ("$z1-$z0")/(d - 1);
         );
         res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy; z = (z - "$z0")*fz;
-        repeat (h#0,k, r = norm(x - X[k], y - Y[k], z - Z[k]); res+=W[s*k,s]*phi_eval(r));
+        repeat (h#0,k, r = norm(x - X[k], y - Y[k], z - Z[k]); res+=W[s*k,s]*phi(r));
         res"
       k. $avg ri. .. + => $nm
     fi }
