@@ -62917,6 +62917,177 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
     "{$34}"_{$33?2:0}\
     "{"$px,$py"}{$37}{"$angle"}{0}{0}{0}{0}{$43}{$44}"
 
+#@gui Pixel Stretch : fx_pixel_stretch, fx_pixel_stretch_preview(1)
+#@gui : note = note("<span color="#EE5500"><b>Trail Parameters:</b></span>")
+#@gui : Trail Type = choice{1,"Sharp (Linear)","Smooth (Cubic)"}
+#@gui : Number of Control Points = int(3,2,6)
+#@gui : Starting Point (%) = point(80,20,0,1,255,0,0,-0)
+#@gui : oP = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : SL = point(80,10,0,1,255,0,0,-0)_0
+#@gui : SR = point(80,30,0,1,255,0,0,-0)_0
+#@gui : Mid Point #1 (%) = point(60,30,0,1,255,179,0,-0)
+#@gui : oM1 = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : M1L = point(50,30,0,1,255,179,0,-0)_0
+#@gui : M1R = point(70,30,0,1,255,179,0,-0)_0
+#@gui : Mid Point #2 (%) = point(60,50,0,1,151,255,0,-0)_0
+#@gui : oM2 = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : M2L = point(50,50,0,1,151,255,0,-0)_0
+#@gui : M2R = point(70,50,0,1,151,255,0,-0)_0
+#@gui : Mid Point #3 (%) = point(40,70,0,1,0,255,28,-0)_0
+#@gui : oM3 = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : M3L = point(30,70,0,1,0,255,28,-0)_0
+#@gui : M3R = point(50,70,0,1,0,255,28,-0)_0
+#@gui : Mid Point #4 (%) = point(60,80,0,1,0,255,207,-0)_0
+#@gui : oM4 = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : M4L = point(50,80,0,1,0,255,207,-0)_0
+#@gui : M4R = point(70,80,0,1,0,255,207,-0)_0
+#@gui : Ending Point (%) = point(30,99,0,1,0,128,255,-0)
+#@gui : oE = point(-1,-1,0,0,0,0,0,-0)_0
+#@gui : EL = point(20,99,0,1,0,128,255,-0)_0
+#@gui : ER = point(40,99,0,1,0,128,255,-0)_0
+#@gui : Align Side Points With Normals = bool(1)
+#@gui : Anti-Aliasing = _bool(1)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Slice Parameters:</b></span>")
+#@gui : Mode = choice("Custom Slice","Slice of Curve")
+#@gui : Slice Start = point(25,75,0,1,128,128,128,-0)
+#@gui : Slice End = point(75,75,0,1,255,255,255,-0)
+#@gui : Slice Position in Curve (%) = float(25,0,100)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/06/26</i>.</small>")
+fx_pixel_stretch_preview :
+  if !$! return else k[0] to_rgba fi
+  __fx_pixel_stretch $*
+  pw,ph=${-gui_preview_wh} pwh:=max($pw,$ph)
+
+  # Offset side control points if central point has been moved, and reorder coords columns to (xl,xc,xr).
+  l[coords] { f "x>1 && max(I(1,y))>=0?I + I(0,y) - I(1,y):I" s x rm[1] rv[0,1] a x } => coords
+
+  # Align left & right control points with normals if necessary.
+  if $align_with_normals
+    +r[coords] 100%,$pwh,1,100%,5 z. 1,1 g. y,0,1 b. y,1%
+    1,$nb_points,1,2,"U = unitnorm(I(#-1,0,round(y*(h#-1 - 1)/(h - 1)),0,1,1)); [ -U[1],U[0] ]" rm.. => normals
+    f[coords] "x!=1?(
+      C = I(1,y); N = I(#$normals,0,y);
+      U = I - C; sgn = sign(dot(U,N));
+      C + sgn*norm(U)*N):I"
+    rm[normals]
+  fi
+
+  # Extract pixel slice.
+  if $slice_mode # Slice of curve
+    slice_t={coords,$slice_pos*(h-1)%}
+    (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm.. r. 256,1,1,100%,5 +warp[0] .,0,1,1 rm..
+  else # Custom slice
+    xs0,ys0,xs1,ys1:={fact=[w#0,h#0]%;[[$slice_sx,$slice_sy]*fact,[$slice_ex,$slice_ey]*fact]}
+    {max(abs($xs1-$xs0),abs($ys1-$ys0))},1,1,4,"P = lerp([ $xs0,$ys0 ],[ $xs1,$ys1 ],x/(w - 1));I(#0,P,1,1)"
+  fi
+  => slice
+
+  # Draw trail preview.
+  sh[0] 0,2 *. 0.75 rm.
+  +r[coords] $pwh,$pwh,1,100%,{$trail_type?5:3}
+  {0,[w,h,1,4]} eval.. "P = round(I); I(#-1,P) = I(#$slice,x*(w#$slice - 1)/(w - 1),0,0,1,1)" rm.. ja[0] . rm.
+
+  # Draw shape controls.
+  eval[coords] "I = I; x!=1?(C = I(1,y); polygon(#0,-2,C,I,1,0x0F0F0F0F,0); polygon(#0,-2,C,I,1,0xF0F0F0F0,255))"
+  eval[coords] "begin(colors = [ 255,0,0,255,179,0,151,255,0,0,255,28,0,255,207,0,128,255 ]);
+    RGB = colors[3*(y==$nb_points - 1?size(colors)/3 - 1:y),3];
+    I = I; r1 = x!=1?6:9; r2 = r1 - 2;
+    ellipse(#0,I,r1,r1,0,1,0,0,0,255);
+    ellipse(#0,I,r2,r2,0,1,RGB,255)"
+
+  # Draw pixel slice on curve.
+  if $slice_mode # Slice of curve
+    tt:=$trail_type?2:1
+    repeat 2 { thickline[0] {coords,[I($>,$slice_t,0,$tt,1),I($>+1,$slice_t,0,$tt,1)]},3,1,196,196,196,255 }
+    repeat 3 {
+      c:=lerp(128,255,$%)
+      rectangle[0] {coords,P=I($>,$slice_t,0,$tt,1);[P-6,P+6]},1,0,0,0,255
+      rectangle[0] {coords,P=I($>,$slice_t,0,$tt,1);[P-4,P+4]},1,$c,$c,$c,255
+    }
+  else
+    thickline[0] $xs0,$ys0,$xs1,$ys1,3,1,196,196,196,255
+    repeat 2 {
+      c:=$>?255:128
+      rectangle[0] {P=[${xs$>},${ys$>}];[P-6,P+6]},1,0,0,0,255
+      rectangle[0] {P=[${xs$>},${ys$>}];[P-4,P+4]},1,$c,$c,$c,255
+    }
+  fi
+
+  # Update filter parameters if necessary.
+  1,$nb_points,1,1,"begin(fact = [ w#0,h#0 ]%); # Transfer back modified 'coords' to 'arg_coords'
+    ty = y==h - 1?h#$arg_coords - 1:y;
+    I(#$arg_coords,0,ty) = I(#$coords,1,y)/fact;
+    I(#$arg_coords,2,ty) = I(#$coords,0,y)/fact;
+    I(#$arg_coords,3,ty) = I(#$coords,2,y)/fact"
+  rm.
+
+  repeat 4 { v{1+$>}:=$nb_points>2+$>?2:0 }
+
+  u "{"$trail_type"}{"$nb_points"}"\
+    "{"{arg_coords,I(0,0)}"}{"{arg_coords,I(0,0)}"}{"{arg_coords,I(2,0)}"}{"{arg_coords,I(3,0)}"}"\
+    "{"{arg_coords,I(0,1)}"}"_$v1"{"{arg_coords,I(0,1)}"}{"{arg_coords,I(2,1)}"}{"{arg_coords,I(3,1)}"}"\
+    "{"{arg_coords,I(0,2)}"}"_$v2"{"{arg_coords,I(0,2)}"}{"{arg_coords,I(2,2)}"}{"{arg_coords,I(3,2)}"}"\
+    "{"{arg_coords,I(0,3)}"}"_$v3"{"{arg_coords,I(0,3)}"}{"{arg_coords,I(2,3)}"}{"{arg_coords,I(3,3)}"}"\
+    "{"{arg_coords,I(0,4)}"}"_$v4"{"{arg_coords,I(0,4)}"}{"{arg_coords,I(2,4)}"}{"{arg_coords,I(3,4)}"}"\
+    "{"{arg_coords,I(0,5)}"}{"{arg_coords,I(0,5)}"}{"{arg_coords,I(2,5)}"}{"{arg_coords,I(3,5)}"}"\
+    "{"$align_with_normals"}{"$antialiasing"}"\
+    "{"$slice_mode"}"\
+    "{"$slice_sx,$slice_sy"}"_{!$slice_mode?2:0}\
+    "{"$slice_ex,$slice_ey"}"_{!$slice_mode?2:0}\
+    "{"$slice_pos"}"_{$slice_mode?2:0}
+  k[0]
+
+# Extract filter arguments as named variable + coordinates image.
+__fx_pixel_stretch :
+  trail_type,nb_points,align_with_normals,antialiasing,\
+    slice_mode,slice_sx,slice_sy,slice_ex,slice_ey,slice_pos=${1,2},${51-58}
+  (${3-50}) r. 2,4,6,1,-1 permute. yzcx => arg_coords
+  +l. { s y k[0-{$nb_points-2},-1] a y } sh. 0 *. {0,w%} rm. sh. 1 *. {0,h%} rm. => coords
+
+fx_pixel_stretch :
+  __$0 $* rm[arg_coords]
+  l[coords] { s x rm[1] rv[0,1] a x } => coords
+
+  foreach[^coords] {
+    nm=${-gui_layer_name}
+    wh:=w,h
+    pass[coords]
+
+    # Extract pixel slice.
+    to_rgba[0]
+    if $slice_mode # Slice of curve
+      slice_t={coords,$slice_pos*(h-1)%}
+      (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm.. r. 256,1,1,100%,5 +warp[0] .,0,1,1 rm..
+    else # Custom slice
+      xs0,ys0,xs1,ys1:={fact=[w#0,h#0]%;[[$slice_sx,$slice_sy]*fact,[$slice_ex,$slice_ey]*fact]}
+      {max(abs($xs1-$xs0),abs($ys1-$ys0))},1,1,4,"P = lerp([ $xs0,$ys0 ],[ $xs1,$ys1 ],x/(w - 1));I(#0,P,1,1)"
+    fi
+    => slice
+
+    # Draw trail on a new transparent layer.
+    if $antialiasing *[coords] 2 fi
+    {0,($antialiasing?2:1)*[w,h]},1,1,-1 100%,100%,1,1
+    eval. ":
+      const tt = $trail_type?2:1;
+      u = lerp(0,w#$coords - 1,x/(w - 1));
+      v = lerp(0,h#$coords - 1,y/(h - 1));
+      nu = lerp(0,w#$coords - 1,(x + 1)/(w - 1));
+      nv = lerp(0,h#$coords - 1,(y + 1)/(h - 1));
+      cc = round(I(#$coords,u,v,0,tt,1));
+      nc = round(I(#$coords,nu,v,0,tt,1));
+      nn = round(I(#$coords,nu,nv,0,tt,1));
+      cn = round(I(#$coords,u,nv,0,tt,1));
+      polygon(#-1,4,cc,nc,nn,cn,1,1);
+      i(#-2,cc) = x*(w#$slice - 1)/(w - 1)"
+    f. "i(#-2)!=-1?0:i"
+    inpaint_morpho.. . rm.
+    warp[slice] .,0,1,0
+    k[0,-2] r. $wh,1,100%,2 => $nm rv
+  }
+  rm[coords]
+
 #@gui Plasma : fx_plasma, fx_plasma(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generates a colorful plasma cloud effect.
