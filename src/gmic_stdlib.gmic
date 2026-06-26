@@ -62958,14 +62958,14 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
 fx_pixel_stretch_preview :
   if !$! return else k[0] to_rgba fi
   __fx_pixel_stretch $*
-  pw,ph=${-gui_preview_wh} pwh:=max($pw,$ph)
+  pw,ph=${-gui_preview_wh} Mwh:=max($pw,$ph)
 
   # Offset side control points if central point has been moved, and reorder coords columns to (xl,xc,xr).
   l[coords] { f "x>1 && max(I(1,y))>=0?I + I(0,y) - I(1,y):I" s x rm[1] rv[0,1] a x } => coords
 
   # Align left & right control points with normals if necessary.
   if $align_with_normals
-    +r[coords] 100%,$pwh,1,100%,5 z. 1,1 g. y,0,1 b. y,1%
+    +r[coords] 100%,$Mwh,1,100%,5 z. 1,1 g. y,0,1 b. y,1%
     1,$nb_points,1,2,"U = unitnorm(I(#-1,0,round(y*(h#-1 - 1)/(h - 1)),0,1,1)); [ -U[1],U[0] ]" rm.. => normals
     f[coords] "x!=1?(
       C = I(1,y); N = I(#$normals,0,y);
@@ -62977,16 +62977,18 @@ fx_pixel_stretch_preview :
   # Extract pixel slice.
   if $slice_mode # Slice of curve
     slice_t={coords,$slice_pos*(h-1)%}
-    (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm.. r. 256,1,1,100%,5 +warp[0] .,0,1,1 rm..
+    (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm..
+    xs0,ys0,xs1,ys1:=[I[0],I[2]]
+    r. {round(max(abs($xs1-$xs0),abs($ys1-$ys0)))},1,1,100%,3 +warp[0] .,0,1,1 rm..
   else # Custom slice
     xs0,ys0,xs1,ys1:={fact=[w#0,h#0]%;[[$slice_sx,$slice_sy]*fact,[$slice_ex,$slice_ey]*fact]}
-    {max(abs($xs1-$xs0),abs($ys1-$ys0))},1,1,4,"P = lerp([ $xs0,$ys0 ],[ $xs1,$ys1 ],x/(w - 1));I(#0,P,1,1)"
+    {round(max(abs($xs1-$xs0),abs($ys1-$ys0)))},1,1,4,"P = lerp([ $xs0,$ys0 ],[ $xs1,$ys1 ],x/(w - 1));I(#0,P,1,1)"
   fi
   => slice
 
   # Draw trail preview.
   sh[0] 0,2 *. 0.75 rm.
-  +r[coords] $pwh,$pwh,1,100%,{$trail_type?5:3}
+  +r[coords] 100%,$Mwh,1,100%,{$trail_type?5:3} r. $Mwh,100%,1,100%,3
   {0,[w,h,1,4]} eval.. "P = round(I); I(#-1,P) = I(#$slice,x*(w#$slice - 1)/(w - 1),0,0,1,1)" rm.. ja[0] . rm.
 
   # Draw shape controls.
@@ -63052,14 +63054,16 @@ fx_pixel_stretch :
 
   foreach[^coords] {
     nm=${-gui_layer_name}
-    wh:=w,h
-    pass[coords]
+    w,h:=w,h Mwh:=max($w,$h)
+    pass[coords] 0
 
     # Extract pixel slice.
     to_rgba[0]
     if $slice_mode # Slice of curve
       slice_t={coords,$slice_pos*(h-1)%}
-      (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm.. r. 256,1,1,100%,5 +warp[0] .,0,1,1 rm..
+      (0^$slice_t,1^$slice_t,2^$slice_t) +warp[coords] .,0,2,1 rm..
+      xs0,ys0,xs1,ys1:=[I[0],I[2]]
+      r. {round(max(abs($xs1-$xs0),abs($ys1-$ys0)))},1,1,100%,3 +warp[0] .,0,1,1 rm..
     else # Custom slice
       xs0,ys0,xs1,ys1:={fact=[w#0,h#0]%;[[$slice_sx,$slice_sy]*fact,[$slice_ex,$slice_ey]*fact]}
       {max(abs($xs1-$xs0),abs($ys1-$ys0))},1,1,4,"P = lerp([ $xs0,$ys0 ],[ $xs1,$ys1 ],x/(w - 1));I(#0,P,1,1)"
@@ -63068,23 +63072,19 @@ fx_pixel_stretch :
 
     # Draw trail on a new transparent layer.
     if $antialiasing *[coords] 2 fi
+    r[coords] 100%,$Mwh,1,100%,{$trail_type?5:3}
+    r[coords] $Mwh,100%,1,100%,3
     {0,($antialiasing?2:1)*[w,h]},1,1,-1 100%,100%,1,1
-    eval. ":
-      const tt = $trail_type?2:1;
-      u = lerp(0,w#$coords - 1,x/(w - 1));
-      v = lerp(0,h#$coords - 1,y/(h - 1));
-      nu = lerp(0,w#$coords - 1,(x + 1)/(w - 1));
-      nv = lerp(0,h#$coords - 1,(y + 1)/(h - 1));
-      cc = round(I(#$coords,u,v,0,tt,1));
-      nc = round(I(#$coords,nu,v,0,tt,1));
-      nn = round(I(#$coords,nu,nv,0,tt,1));
-      cn = round(I(#$coords,u,nv,0,tt,1));
+
+    eval[coords] "const boundary = 1;
+      cc = I; nc = J(1,0); nn = J(1,1); cn = J(0,1);
       polygon(#-1,4,cc,nc,nn,cn,1,1);
-      i(#-2,cc) = x*(w#$slice - 1)/(w - 1)"
+      i(#-2,cc) = x*(w#$slice - 1)/(w - 1);
+      _0"
     f. "i(#-2)!=-1?0:i"
-    inpaint_morpho.. . rm.
+    inpaint.. .,0,3 rm.
     warp[slice] .,0,1,0
-    k[0,-2] r. $wh,1,100%,2 => $nm rv
+    k[0,-2] r. $w,$h,1,100%,2 => $nm rv
   }
   rm[coords]
 
