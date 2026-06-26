@@ -63076,15 +63076,17 @@ fx_pixel_stretch :
     r[coords] $Mwh,100%,1,100%,3
     {0,($antialiasing?2:1)*[w,h]},1,1,-1 100%,100%,1,1
 
-    eval[coords] "const boundary = 1;
+    eval[coords] ":const boundary = 1;
       cc = I; nc = J(1,0); nn = J(1,1); cn = J(0,1);
       polygon(#-1,4,cc,nc,nn,cn,1,1);
       i(#-2,cc) = x*(w#$slice - 1)/(w - 1);
       _0"
-    f. "i(#-2)!=-1?0:i"
-    inpaint.. .,0,3 rm.
-    warp[slice] .,0,1,0
-    k[0,-2] r. $w,$h,1,100%,2 => $nm rv
+    rm[coords]
+    repeat 2 { f.. "*const boundary = 1; V = crop(x - 1,y - 1,3,3); M = max(V); i<0 && M>=0?M:i" }
+    +f. "*i(#-2)!=-1?0:i" if iM inpaint... .,0,1 fi rm.
+    warp[slice] ..,0,1,0 rm..
+    sh.. 100% *. .. rm[-2,-1]
+    r. $w,$h,1,100%,2 => $nm rv
   }
   rm[coords]
 
