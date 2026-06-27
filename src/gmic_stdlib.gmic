@@ -20690,7 +20690,9 @@ periodize_poisson :
     a c
   }
 
-#@cli rbf : dx,_x0,_x1,_phi(r) : dx,dy,_x0,_y0,_x1,_y1,_phi(r) : dx,dy,dz,x0,y0,z0,x1,y1,z1,phi(r)
+#@cli rbf : dx,_x0,_x1,_phi(r),_is_affine_term={ 0:No | 1:Yes } : \
+# dx,dy,_x0,_y0,_x1,_y1,_phi(r),_is_affine_term : \
+# dx,dy,dz,x0,y0,z0,x1,y1,z1,phi(r)_is_affine_term
 #@cli : Reconstruct 1D/2D or 3D image from selected sets of keypoints, by RBF-interpolation.
 #@cli : A set of keypoints is represented by a vector-valued image, where each pixel represents a single keypoint.
 #@cli : Vector components of a keypoint have the following meaning:
@@ -20700,14 +20702,15 @@ periodize_poisson :
 #@cli : Values 'x_k','y_k' and 'z_k' are the spatial coordinates of keypoint 'k'.
 #@cli : Values 'f1(),..,fN()' are the 'N' components of the vector value of keypoint 'k'.
 #@cli : The command reconstructs an image with specified size 'dx'x'dy'x'dz', with 'N' channels.
-#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1' and 'phi(r)=r*log(1+r)'.
+#@cli : If 'affine_term==1', the reconstruction function includes an affine term.
+#@cli : Default values: 'x0=y0=z0=0', 'x1=dx-1', 'y1=dy-1', 'z1=dz-1', 'phi(r)=r*log(1+r)' and 'affine_term=0'.
 #@cli : $ sample colorful,400 100%,100% noise_poissondisk. 10 1,{is},1,5 \
 # eval[-2] "begin(p=0);i?(I[#-1,p++]=[x,y,I(#0)])" to_rgb[1] mul[0,1] dilate_circ[0] 5 +rbf[-1] {0,[w,h]} c[-1] 0,255
 #@cli : $ 32,1,1,5,u([400,400,255,255,255]) rbf 400,400 c 0,255
 rbf :
   $=a
   default_phi_r="r*log(1 + r)"
-  if isin($#,1,3,4) # 1D reconstruction
+  if isin($#,1,3,4,5) # 1D reconstruction
     dx,x0,x1=$a1,{$#>1?[$a2,$a3]:[0,$a1-1]}
     phi_r={`$#>3?['$a4']:'$default_phi_r'`}
     check $dx>0
@@ -20737,7 +20740,7 @@ rbf :
       k. $avg ri. .. + => $nm
     fi }
 
-  elif isin($#,2,6,7) # 2D reconstruction
+  elif isin($#,2,6,7,8) # 2D reconstruction
     dx,dy,x0,y0,x1,y1=$a1,$a2,{$#>2?[$a3,$a4,$a5,$a6]:[0,0,[$a1,$a2]-1]}
     phi_r={`$#>6?['$a7']:'$default_phi_r'`}
     check $dx>0" && "$dy>0
@@ -20769,7 +20772,7 @@ rbf :
       k. $avg ri. .. + => $nm
     fi }
 
-  elif isin($#,3,9,10) # 3D reconstruction
+  elif isin($#,3,9,10,11) # 3D reconstruction
     dx,dy,dz,x0,y0,z0,x1,y1,z1=$a1,$a2,$a3,{$#>3?[$a4,$a5,$a6,$a7,$a8,$a9]:[0,0,0,[$a1,$a2,$a3]-1]}
     phi_r={`$#>9?['$arg10']:'$default_phi_r'`}
     check $dx>0" && "$dy>0" && "$dz>0
