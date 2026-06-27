@@ -20725,7 +20725,8 @@ rbf :
           const n = w#-1;
           const m = n;
           Xk = crop(#-1,0,0,0,0,n,1,1,1);
-          avg = resize(crop(#-1,0,0,0,1,n,1,1,s),n,1,1,s,1,1,1,s,2);
+          D = crop(#-1,0,0,0,1,n,1,1,s);
+          avg = resize(D,n,1,1,s,1,1,1,s,2);
           M = vector(#m*n);
           repeat (n,k,
             for (l = 0, l<=k, ++l,
@@ -20733,7 +20734,7 @@ rbf :
               M[k*m + l] = M[l*m + k] = phi(r);
             );
           );
-          F = permute(crop(#-1,0,0,0,1,n,1,1,s),n,1,1,s,'cyzx');
+          F = permute(D,n,1,1,s,'cyzx');
           F-=resize(avg,size(F),1);
           W = solve(M,F,s);
         );
@@ -20751,30 +20752,34 @@ rbf :
     check $dx>0" && "$dy>0" && "isbool($is_affine_term)
     e[^-1] "Reconstruct 2D image from keypoint set$?, with size "$dx,$dy", "\
       "from ("$x0,$y0") to ("$x1,$y1") and phi(r) = "$phi_r"."
-    foreach { nm={n} if !w $dx,$dy elif whd==1 channels 2,100% r. $dx,$dy,1,100% else
-      sh 2,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
-      r 1,{whd},1,100%,-1 permute. cyzx
-      $dx,$dy,1,{w-2},"*
+    foreach { nm={n} if !w $dx,$dy elif whd==1 channels 2,100% r $dx,$dy,1,100% else
+      r {whd},1,1,100%,-1
+      $dx,$dy,1,{s-2},"*
         begin(
           phi(r) = ("$phi_r");
-          X = crop(#0,0,0,0,0,1,h#0,1,1);
-          Y = crop(#0,1,0,0,0,1,h#0,1,1);
-          F = crop(#0,2,0,0,0,s,h#0,1,1,1);
-          M = vector(#h#0^2);
-          repeat (h#0,k,
+          const n = w#-1;
+          const m = n;
+          Xk = crop(#-1,0,0,0,0,n,1,1,1);
+          Yk = crop(#-1,0,0,0,1,n,1,1,1);
+          D = crop(#-1,0,0,0,2,n,1,1,s);
+          avg = resize(D,n,1,1,s,1,1,1,s,2);
+          M = vector(#m*n);
+          repeat (n,k,
             for (l = 0, l<=k, ++l,
-              r = norm(X[k] - X[l],Y[k] - Y[l]);
-              M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
-            )
+              r = norm(Xk[k] - Xk[l],Yk[k] - Yk[l]);
+              M[k*m + l] = M[l*m + k] = phi(r);
+            );
           );
+          F = permute(D,n,1,1,s,'cyzx');
+          F-=resize(avg,size(F),1);
           W = solve(M,F,s);
-          const fx = ("$x1-$x0")/(w-1);
-          const fy = ("$y1-$y0")/(h-1);
         );
-        res = vectors(); x = (x - "$x0")*fx; y = (y - "$y0")*fy;
-        repeat (h#0,k, r = norm(x - X[k], y - Y[k]); res+=W[s*k,s]*phi(r));
-        res"
-      k. $avg ri. .. + => $nm
+        res = vectors();
+        X = lerp($x0,$x1,x/(w - 1));
+        Y = lerp($y0,$y1,y/(h - 1));
+        repeat (n,k, r = norm(X - Xk[k],Y - Yk[k]); res+=W[s*k,s]*phi(r));
+        res+=avg"
+      k. => $nm
     fi }
 
   elif isin($#,3,9,10,11) # 3D reconstruction
