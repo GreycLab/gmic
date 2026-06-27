@@ -20723,7 +20723,7 @@ rbf :
         begin(
           phi(r) = ("$phi_r");
           const n = w#-1;
-          const m = n;
+          const m = n + ($is_affine_term?2:0);
           Xk = crop(#-1,0,0,0,0,n,1,1,1);
           D = crop(#-1,0,0,0,1,n,1,1,s);
           avg = resize(D,n,1,1,s,1,1,1,s,2);
@@ -20734,6 +20734,10 @@ rbf :
               M[k*m + l] = M[l*m + k] = phi(r);
             );
           );
+          $is_affine_term?(
+            copy(M[n],1,n,m);
+            copy(M[n + 1],Xk,n,m,1);
+          );
           F = permute(D,n,1,1,s,'cyzx');
           F-=resize(avg,size(F),1);
           W = solve(M,F,s);
@@ -20741,6 +20745,9 @@ rbf :
         res = vectors();
         X = lerp($x0,$x1,x/(w - 1));
         repeat (n,k, r = abs(X - Xk[k]); res+=W[s*k,s]*phi(r));
+        $is_affine_term?(
+          res+=W[n] + W[n + 1]*X;
+        );
         res+=avg"
       k. => $nm
     fi }
