@@ -20717,28 +20717,31 @@ rbf :
     check $dx>0" && "isbool($is_affine_term)
     e[^-1] "Reconstruct 1D image from keypoint set$?, with size "$dx", "\
       "from ("$x0") to ("$x1") and phi(r) = "$phi_r"."
-    foreach { nm={n} if !w $dx elif whd==1 channels. 1,100% r. $dx,1,1,100% else
-      sh 1,100% +r. 1,1,1,100%,2 +store. avg ri. .. -[-2,-1] rm.
-      r 1,{whd},1,100%,-1 permute. cyzx
-      $dx,1,1,{w-1},"*
+    foreach { nm={n} if !w $dx elif whd==1 channels 1,100% r $dx,1,1,100% else
+      r {whd},1,1,100%,-1
+      $dx,1,1,{s-1},"
         begin(
           phi(r) = ("$phi_r");
-          X = crop(#0,0,0,0,0,1,h#0,1,1);
-          F = crop(#0,1,0,0,0,s,h#0,1,1,1);
-          M = vector(#h#0^2);
-          repeat (h#0,k,
+          const n = w#-1;
+          const m = n;
+          X = crop(#-1,0,0,0,0,n,1,1,1);
+          avg = resize(crop(#-1,0,0,0,1,n,1,1,s),n,1,1,s,1,1,1,s,2);
+          M = vector(#m*n);
+          repeat (n,k,
             for (l = 0, l<=k, ++l,
               r = abs(X[k] - X[l]);
-              M[k*h#0 + l] = M[l*h#0 + k] = phi(r);
-            )
+              M[k*m + l] = M[l*m + k] = phi(r);
+            );
           );
+          F = permute(crop(#-1,0,0,0,1,n,1,1,s),n,1,1,s,'cyzx');
+          F-=resize(avg,size(F),1);
           W = solve(M,F,s);
-          const fx = ("$x1-$x0")/(w-1);
         );
-        res = vectors(); x = (x - "$x0")*fx;
-        repeat (h#0,k, r = abs(x - X[k]); res+=W[s*k,s]*phi(r));
-        res"
-      k. $avg ri. .. + => $nm
+        res = vectors();
+        x = lerp($x0,$x1,x/(w - 1));
+        repeat (n,k, r = abs(x - X[k]); res+=W[s*k,s]*phi(r));
+        res+=avg"
+      k. => $nm
     fi }
 
   elif isin($#,2,6,7,8) # 2D reconstruction
