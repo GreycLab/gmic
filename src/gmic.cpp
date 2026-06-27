@@ -10618,29 +10618,45 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'qr'.
         if (id_builtin_command==id_qr) {
           gmic_substitute_args(true);
-          if ((*argument=='0' || *argument=='1') && !argument[1]) { is_cond = (*argument=='1'); ++position; }
-          else is_cond = true;
-          print(0,"Compute QR decomposition%s of matri%s%s%s.",
+          unsigned int is_reduced_form = 1, is_pivoting = 0;
+          if ((cimg_sscanf(argument,"%u%c",&is_reduced_form,&end)==1 ||
+               cimg_sscanf(argument,"%u,%u%c",&is_reduced_form,&is_pivoting,&end)==2) &&
+              is_reduced_form<=1 && is_pivoting<=1)
+            ++position;
+          else { is_reduced_form = 1; is_pivoting = 0; }
+
+          print(0,"Compute QR decomposition%s of matri%s%s%s with%s pivoting.",
                 selection.height()>1?"s":"",selection.height()>1?"ce":"x",gmic_selection.data(),
-                is_cond?", in reduced form":"");
+                is_reduced_form?", in reduced form":"",
+                is_pivoting?"":"out");
+
           CImg<float> Q, R;
+          CImg<unsigned int> perm;
           unsigned int off = 0;
           cimg_forY(selection,l) {
             uind = selection[l] + off;
             const CImg<T>& img = gmic_check_shared_image(images[uind]);
-            img.QR(Q,R,is_cond);
+            img.QR(Q,R,is_cond,is_pivoting,&perm);
             if (is_get) {
               Q.move_to(images);
               R.move_to(images);
               image_names[uind].get_copymark().move_to(image_names);
               image_names.back().get_copymark().move_to(image_names);
+              if (is_pivoting) {
+                perm.move_to(images);
+                image_names.back().get_copymark().move_to(image_names);
+              }
             } else {
-              images.insert(1,uind + 1);
+              images.insert(is_pivoting?2:1,uind + 1);
+              image_names.insert(is_pivoting?2:1,uind + 1);
               Q.move_to(images[uind].assign());
               R.move_to(images[uind + 1]);
-              image_names.insert(1,uind + 1);
               image_names[uind].get_copymark().move_to(image_names[uind + 1]);
-              ++off;
+              if (is_pivoting) {
+                perm.move_to(images[uind + 2]);
+                image_names[uind + 1].get_copymark().move_to(image_names[uind + 2]);
+              }
+              off+=is_pivoting?2:1;
             }
           }
           is_change = true;
