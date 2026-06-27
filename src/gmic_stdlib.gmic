@@ -20724,6 +20724,7 @@ rbf :
           phi(r) = ("$phi_r");
           const n = w#-1;
           const m = n + ($is_affine_term?2:0);
+          const ns = n*s;
           Xk = crop(#-1,0,0,0,0,n,1,1,1);
           M = vector(#m*n);
           repeat (n,k,
@@ -20732,17 +20733,17 @@ rbf :
               M[k*m + l] = M[l*m + k] = phi(r);
             );
           );
-          $is_affine_term?(copy(M[n],1,n,m); copy(M[n + 1],Xk,n,m,1));
+          $is_affine_term?(copy(M[n],1,n,m); copy(M[n + 1],Xk,n,m));
           F = crop(#-1,0,0,0,1,n,1,1,s);
           avg = resize(F,n,1,1,s,1,1,1,s,2);
-          F-=resize(avg,n*s,1);
+          F-=resize(avg,ns,1);
           F = permute(F,n,1,1,s,'cyzx');
           W = solve(M,F,s);
         );
         res = vectors();
         X = lerp($x0,$x1,x/(w - 1));
         repeat (n,k, r = abs(X - Xk[k]); res+=W[s*k,s]*phi(r));
-        $is_affine_term?(res+=W[s*n,s] + W[s*n + 1,s]*X);
+        $is_affine_term?(res+=W[ns,s] + W[ns + 1,s]*X);
         res+=avg"
       k. => $nm
     fi }
@@ -20760,7 +20761,8 @@ rbf :
         begin(
           phi(r) = ("$phi_r");
           const n = w#-1;
-          const m = n;
+          const m = n + ($is_affine_term?3:0);
+          const ns = n*s;
           Xk = crop(#-1,0,0,0,0,n,1,1,1);
           Yk = crop(#-1,0,0,0,1,n,1,1,1);
           M = vector(#m*n);
@@ -20770,9 +20772,10 @@ rbf :
               M[k*m + l] = M[l*m + k] = phi(r);
             );
           );
+          $is_affine_term?(copy(M[n],1,n,m); copy(M[n + 1],Xk,n,m); copy(M[n + 2],Yk,n,m));
           F = crop(#-1,0,0,0,2,n,1,1,s);
           avg = resize(F,n,1,1,s,1,1,1,s,2);
-          F-=resize(avg,n*s,1);
+          F-=resize(avg,ns,1);
           F = permute(F,n,1,1,s,'cyzx');
           W = solve(M,F,s);
         );
@@ -20780,6 +20783,7 @@ rbf :
         X = lerp($x0,$x1,x/(w - 1));
         Y = lerp($y0,$y1,y/(h - 1));
         repeat (n,k, r = norm(X - Xk[k],Y - Yk[k]); res+=W[s*k,s]*phi(r));
+        $is_affine_term?(res+=W[ns,s] + W[ns + 1,s]*X + W[ns + 2,s]*Y);
         res+=avg"
       k. => $nm
     fi }
@@ -20797,7 +20801,8 @@ rbf :
         begin(
           phi(r) = ("$phi_r");
           const n = w#-1;
-          const m = n;
+          const m = n + ($is_affine_term?4:0);
+          const ns = n*s;
           Xk = crop(#-1,0,0,0,0,n,1,1,1);
           Yk = crop(#-1,0,0,0,1,n,1,1,1);
           Zk = crop(#-1,0,0,0,2,n,1,1,1);
@@ -20808,9 +20813,10 @@ rbf :
               M[k*m + l] = M[l*m + k] = phi(r);
             );
           );
+          $is_affine_term?(copy(M[n],1,n,m); copy(M[n + 1],Xk,n,m); copy(M[n + 2],Yk,n,m); copy(M[n + 3],Zk,n,m));
           F = crop(#-1,0,0,0,3,n,1,1,s);
           avg = resize(F,n,1,1,s,1,1,1,s,2);
-          F-=resize(avg,n*s,1);
+          F-=resize(avg,ns,1);
           F = permute(F,n,1,1,s,'cyzx');
           W = solve(M,F,s);
         );
@@ -20819,6 +20825,7 @@ rbf :
         Y = lerp($y0,$y1,y/(h - 1));
         Z = lerp($z0,$z1,z/(d - 1));
         repeat (n,k, r = norm(X - Xk[k],Y - Yk[k],Z - Zk[k]); res+=W[s*k,s]*phi(r));
+        $is_affine_term?(res+=W[ns,s] + W[ns + 1,s]*X + W[ns + 2,s]*Y + W[ns + 3,s]*Z);
         res+=avg"
       k. => $nm
     fi }
