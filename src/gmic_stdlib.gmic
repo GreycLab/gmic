@@ -2064,7 +2064,7 @@ d :
 # 'Z': Switch zoom factor - '0'-'9': Set zoom factor.
 #@cli : \n- **3D mesh view:**
 #@cli : 'LMB': Mesh rotation - 'CTRL+LMB' or 'MMB': Mesh pan - 'RMB': Mesh zoom -  \
-# 'A': Toggle axes - 'D': Switch face side mode - 'F': Change focale - 'J': Start/stop animation - \
+# 'A': Toggle axes - 'D': Switch face side mode - 'F': Change focale length - 'J': Start/stop animation - \
 # 'K': Switch background - 'O': Switch outline mode - 'P': Print 3D pose matrix on 'stdout' - \
 # 'R': Switch rendering mode - 'T': Switch motion rendering mode - 'X': Show/hide bounding-box - \
 # 'U': Switch animation mode - 'Z': Toggle z-buffer.
@@ -10097,11 +10097,11 @@ _print : skip ${1=},${3=}
   }
   a[-3--1] c
 
-  # Convert result from random colorspace to RGB.
+  # Convert result from random color space to RGB.
   ${"arg0 "{v(5)}",ycbcr2rgb,hsi82rgb,hsl82rgb,hsv82rgb,lab82rgb,rgb2rgb"}.
   c. 0,255
 
-  # Local normalization in random colorspace.
+  # Local normalization in random color space.
   ac. "normalize_local {[u(2,15),u(2,max(w,h)/2)]}",${"arg0 "{v(3)}",lab_l,ycbcr_y,hsl_l,rgb"}
 
   # Random color balance.
@@ -15042,9 +15042,9 @@ ac :
 #@cli apply_channels : "command",color_channels,_value_action={ 0:None | 1:Cut | 2:Normalize }
 #@cli : Apply specified command on the chosen color channel(s) of each selected images.
 #@cli : (eq. to 'ac').\n
-#@cli : Argument 'color_channels' refers to a colorspace, and can be basically one of
+#@cli : Argument 'color_channels' refers to a color space, and can be basically one of
 #@cli : { all | rgba | [s]rgb | ryb | lrgb | ycbcr | lab | lch | hsv | hsi | hsl | cmy | cmyk | yiq }.
-#@cli : You can also make the processing focus on a few particular channels of this colorspace,
+#@cli : You can also make the processing focus on a few particular channels of this color space,
 #@cli : by setting 'color_channels' as 'colorspace_channel' (e.g. 'hsv_h' for the hue).
 #@cli : All channel values are considered to be provided in the [0,255] range.
 #@cli : Default value: 'value_action=0'.
@@ -16248,7 +16248,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
                  isint(${4=3},0) &&           # regul_iterations
                  ${5=0.35}>=0 &&              # brightness_constraints
                  isint(${6=0},0,2) &&         # transfer_avg_std
-                 isint(${7=0},0,3) &&         # colorspace
+                 isint(${7=0},0,3) &&         # color space
                  isint(${8=32},1) &&          # resolution3d
                  ${10=1000}>=0                # lambda
                " skip "${9=}"
@@ -16259,7 +16259,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
   if $is_color_constraints
     e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
             $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
-            "3d resolution "$resolution3d", colorspace "$s_colorspace", 3d resolution "$resolution3d", "\
+            "3d resolution "$resolution3d", color space "$s_colorspace", 3d resolution "$resolution3d", "\
             "color constraints $9 and lambda "$lambda"."
     pass$9 0 l. { # Generate 3D color guide using RBF interpolation
       r. {whd},1,1,100%,-1
@@ -16273,7 +16273,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
   else
     e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
             $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
-            "3d resolution "$resolution3d", colorspace "$s_colorspace" and 3d resolution "$resolution3d"."
+            "3d resolution "$resolution3d", color space "$s_colorspace" and 3d resolution "$resolution3d"."
   fi
 
   # Compute style features that will be used for all color-transferred images.
@@ -16363,7 +16363,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
 _transfer_rgb : check "isint(${1=64},4) && ${2=1}>=0 && isint(${3=0},0,3)"
   s0,s1,s2=srgb,ycbcr,lab
   e[^-1] "Convert image$? into 3D color cube representation ('kub'), with resolution $1, beta $2 and "\
-         ${s$3}" colorspace."
+         ${s$3}" color space."
   resolution,beta,colorspace=${1-3}
   to_rgb
   foreach { nm={n}
@@ -16401,7 +16401,7 @@ mix_rgb : skip ${1=1},${2=0},${3=0},${4=0},${5=1},${6=0},${7=0},${8=0},${9=1}
 
 #@cli oklab2rgb
 #@cli : Convert color representation of selected images from OKlab to RGB.
-#@cli : (see colorspace definition at: <https://bottosson.github.io/posts/oklab/> ).
+#@cli : (see color space definition at: <https://bottosson.github.io/posts/oklab/> ).
 #@cli : See also: ''rgb2oklab''.
 oklab2rgb :
   e[^-1] "Convert color representation of image$? from Oklab to RGB."
@@ -16938,7 +16938,7 @@ replace_color : check "${1=0}>=0 && ${2=0}>=0"
 # and 'sigma_high=250'.
 retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5=15}>0 && ${6=80}>0 && ${7=250}>0"
   skip "${2=hsv}"
-  e[^-1] "Apply Retinex color consistency algorithm on image$?, with value offset $1, colorspace '$2', cuts ($3,$4)
+  e[^-1] "Apply Retinex color consistency algorithm on image$?, with value offset $1, color space '$2', cuts ($3,$4)
           and sigmas (${5-7})."
   if ['$2']=='hsi' mode=hsi8_i
   elif ['$2']=='hsv' mode=hsv8_v
@@ -16946,7 +16946,7 @@ retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5
   elif ['$2']=='rgb' mode=rgb
   elif ['$2']=='lrgb' mode=lrgb
   elif ['$2']=='ycbcr' mode=ycbcr8_y
-  else error[0--2] "Command '$0': Invalid colorspace argument '$2'."
+  else error[0--2] "Command '$0': Invalid color space argument '$2'."
   fi
   ac "_retinex $1,${3--1}",$mode
 
@@ -17164,7 +17164,7 @@ rgb2luv :
 
 #@cli rgb2oklab
 #@cli : Convert color representation of selected images from RGB to Oklab.
-#@cli : (see colorspace definition at: <https://bottosson.github.io/posts/oklab/> ).
+#@cli : (see color space definition at: <https://bottosson.github.io/posts/oklab/> ).
 #@cli : See also: ''oklab2rgb''.
 rgb2oklab :
   e[^-1] "Convert color representation of image$? from RGB to Oklab."
@@ -23119,7 +23119,7 @@ _axes :
   e[^-1] "Input $1x$1 ball with color (${2-4}), ambient weight $5, diffuse weight $6, specular weight $7 and "\
          "shininess $8."
   ($2^$3^$4) srgb2rgb. color={^} rm.
-  {s=2*$1+1;[s,s]},1,4," # Phong model computed in linear RGB colorspace
+  {s=2*$1+1;[s,s]},1,4," # Phong model computed in linear RGB color space
     begin(
       color = [ "$color" ];
       L = unitnorm([ ${9-11} ]);
@@ -28720,7 +28720,7 @@ nn_lib :
     nn_activation_relu(z) = vmax(z,0);
     nn_activation_d_relu(z) = (z>=0);
 
-    # sigmoid : Sigmoid (a.k.a Logistic).
+    # sigmoid : Sigmoid (i.e. Logistic).
     #------------------------------------
     nn_activation_sigmoid(z) = sigmoid(z);
     nn_activation_d_sigmoid(z) = (ref(sigmoid(z),_nn_sigmoid); _nn_sigmoid*(1 - _nn_sigmoid));
@@ -33859,12 +33859,12 @@ _frame_cube :
   elif $1==3 r3d. 0,0,1,180
   fi
 
-#@cli frame_fuzzy : size_x[%]>=0,_size_y[%]>=0,_fuzzyness>=0,_smoothness[%]>=0,_R,_G,_B,_A
+#@cli frame_fuzzy : size_x[%]>=0,_size_y[%]>=0,_fuzziness>=0,_smoothness[%]>=0,_R,_G,_B,_A
 #@cli : Draw RGBA-colored fuzzy frame in selected images.
-#@cli : Default values: 'size_y=size_x', 'fuzzyness=5', 'smoothness=1' and 'R=G=B=A=255'.
+#@cli : Default values: 'size_y=size_x', 'fuzziness=5', 'smoothness=1' and 'R=G=B=A=255'.
 #@cli : $ image.jpg frame_fuzzy 20
 frame_fuzzy : skip ${2=$1},${3=5},${4=1},${5=255},${6=$5},${7=$6},${8=255}
-  e[^-1] "Draw $1x$2 fuzzy frame on image$?, with fuzzyness $3, smoothness $4 and RGBA color ($5,$6,$7,$8)."
+  e[^-1] "Draw $1x$2 fuzzy frame on image$?, with fuzziness $3, smoothness $4 and RGBA color ($5,$6,$7,$8)."
   to_rgba
   foreach {
     100%,100%,1,1,1
@@ -35472,7 +35472,7 @@ stylize :
 
         if {*} w. fi
 
-        # Inject gradients from target (in Lab colorspace).
+        # Inject gradients from target (in Lab color space).
         fidelity:=lerp($fidelity_finest,$fidelity_coarsest,$factor)
         fidelity_smoothness:=lerp($fidelity_smoothness_finest,$fidelity_smoothness_coarsest,$factor)
         if $fidelity>0.1
@@ -40193,7 +40193,7 @@ x_bouncing : check_display $0
 x_color_curves : skip ${1=rgb}
   if ['"$1"']!='last'&&!{*,u} error[0--3] "Command '$0': No display available." return fi
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
-  e[^-1] "Apply color curves of image$?, in the '$1' colorspace."
+  e[^-1] "Apply color curves of image$?, in the '$1' color space."
   if ['"$1"']=='last'
     if !narg($_xcc_colorbase) return fi
     __x_color_curves[] $_xcc_colorbase
@@ -40311,7 +40311,7 @@ _x_color_curves :
   # Transfer curves to output variable and request curve widgets to close.
   repeat 5 { if narg(${__C$>}) __xcc_C$>=${__C$>} __C$>=-1 fi }
 
-# Define colorspace conversion functions.
+# Define color space conversion functions.
 __x_color_curves :
   if ['"$1"']=='rgb'
     _color0="255,180,180" _color1="180,255,180" _color2="180,180,255" _color3="220,220,220"
@@ -42040,7 +42040,7 @@ _x_mandelbrot_palette :
 #@cli : Interactively select a color, and add an alpha channel containing the corresponding color mask.
 #@cli : Argument 'colorspace' refers to the color metric used to compute color similarities, and can be basically
 #@cli : one of { rgb | lrgb | ycbcr | lab | lch | hsv | hsi | hsl | cmy | cmyk | yiq }.
-#@cli : You can also select one one particular channel of this colorspace, by setting 'colorspace' as
+#@cli : You can also select one one particular channel of this color space, by setting 'colorspace' as
 #@cli : 'colorspace_channel' (e.g. 'hsv_h' for the hue).
 #@cli : Default values: 'colorspace=all', 'spatial_tolerance=5' and 'color_tolerance=5'.
 x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
@@ -42060,7 +42060,7 @@ x_mask_color : check "${2=5}>=0 && ${3=5}>=0" skip ${1=all} check_display $0
 ---- Keys '"${c}"ESC"$n"', '"${c}"Q"$n"' or '"${c}"RETURN"$n"' exit the interactive window.\n
 ----\n
 ----------------------------------------------------------------------------------------------------"
-  l[] { _ac_$1 onfail error[0--3] "Command '$0' : Invalid colorspace '$*'." }
+  l[] { _ac_$1 onfail error[0--3] "Command '$0' : Invalid color space '$*'." }
   m _ac_forward:$_f
   foreach {
     slices 0 basename {0,n} nm=${}
@@ -44409,7 +44409,7 @@ x_tictactoe : check_display $0
 
     # Draw symbol on selected position and update board state.
     _x_tictactoe{$player%2} # Generate the symbol sprite and his mask
-    j... ..,{"130*"$tmp3" + 15+u(-5,5)"},\ # Draw symbol (with some fuzzyness)
+    j... ..,{"130*"$tmp3" + 15+u(-5,5)"},\ # Draw symbol (with some fuzziness)
                {"130*"$tmp2" + 15+u(-5,5)"},0,0,1,.
     rm[-2--1] # Delete sprite and mask
     w. # Update display window
@@ -45467,7 +45467,7 @@ fx_logo : skip "${1= }"
 #@gui : internet connection anymore in order to use some of the G'MIC filters."}
 #@gui : note = note()
 #@gui : note = note{"<b><span color="#EE5500">Warning:</span></b> A <b>lot of data</b> will be downloaded.
-#@gui : This can take a long time !"}
+#@gui : This can take a long time!"}
 #@gui : sep = separator()
 #@gui : Force re-Download from Scratch = _bool()
 #@gui : sep = separator()
@@ -45538,7 +45538,7 @@ _gui_download_all_data :
 #@gui : note = note{"<b><i>Gmicky</i></b> is the name of the <b>G'MIC</b> mascot.
 #@gui : He is a small and cute tiger who knows how to do magic.
 #@gui : <b><i>Gmicky</i></b> is a tiger, i.e. fast, agile and elegant, just as the <b>G'MIC</b> code is :).
-#@gui : As many magicians, <b><i>Gmicky</i></b> knows lot of <b>gimmicks</b>,
+#@gui : Like many magicians, <b><i>Gmicky</i></b> knows a lot of <b>gimmicks</b>,
 #@gui : and he is a direct and friendly companion of
 #@gui : the ImageMagick's wizard, or the GraphicMagick's frog."}
 #@gui : note = note{"<b><i>Roddy</i></b> is another mascot designed specifically for the
@@ -45561,14 +45561,14 @@ fx_gmicky_preview :
   fx_gmicky $* rs $_preview_area_width,$_preview_area_height,2
 
 #@gui Privacy Notice : _none_, _none_
-#@gui : note = note{"This plugin may download up-to-date filter definitions from the
+#@gui : note = note{"This plug-in may download up-to-date filter definitions from the
 #@gui : <a href="https://gmic.eu">gmic.eu</a> server.\n\n
 #@gui : It is the case when first launched after a fresh installation, and periodically
 #@gui : with a frequency which can be set in the settings dialog.
 #@gui : The user should be aware that the following information may be retrieved
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
-#@gui : field, which describes the full plugin version as shown in the window title
+#@gui : field, which describes the full plug-in version as shown in the window title
 #@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.0</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
@@ -46571,7 +46571,7 @@ fx_loose_photos_preview :
 #@gui : Tiled Preview = choice(3,"None","2x1","1x2","2x2","3x3","4x4")
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter helps in converting your input pattern as a <b>seamless</b>
-#@gui : (a.k.a periodic) texture.</small>"}
+#@gui : (i.e. periodic) texture.</small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/02/24</i>.</small>")
 fx_make_seamless :
@@ -46604,7 +46604,7 @@ fx_make_seamless_preview :
 #@gui : Tiled Preview = choice(3,"None","2x1","1x2","2x2","3x3","4x4")
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter helps in converting your input pattern as a <b>seamless</b>
-#@gui : (a.k.a periodic) texture.</small>"}
+#@gui : (i.e. periodic) texture.</small>"}
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/12/15</i>.</small>")
 fx_frame_seamless :
@@ -47029,7 +47029,7 @@ fx_rotate_tiles :
 # Simulates the aesthetic blur quality of an out-of-focus lens.
 #@gui : "}, sep = separator()
 #@gui : Number of Scales = int(3,1,10)
-#@gui : Shape = choice(8,"Triangle","Square","Diamond","Pentagon","Hexagon","Octogon","Decagon","Star","Circular")
+#@gui : Shape = choice(8,"Triangle","Square","Diamond","Pentagon","Hexagon","Octagon","Decagon","Star","Circular")
 #@gui : Random Seed = int(0,0,65535)
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Starting parameters:</b></small>"}
@@ -47112,7 +47112,7 @@ _fx_bokeh :
 #@gui : Maximal Size = int(64,1,128)
 #@gui : Minimal Size (%)= float(25,0,100)
 #@gui : Number of Orientations = int(12,1,24)
-#@gui : Fuzzyness = float(0,0,10)
+#@gui : Fuzziness = float(0,0,10)
 #@gui : Smoothness = float(2,0,10)
 #@gui : Light Type = choice(4,"None","Flat","Darken","Lighten","Full")
 #@gui : Light Strength = float(0.2,0,1)
@@ -47550,9 +47550,9 @@ fx_kuwahara :
 #@gui : Preview Progression While Running = _bool(1)
 #@gui : sep = separator()
 #@gui : note = note{"<b>Note:</b>\n\n
-#@gui : - This filter is our own implementation of the nice algorithm proposed on the webpage
+#@gui : - This filter is our own implementation of the algorithm proposed on the webpage
 #@gui : <a href="http://linify.me">http://linify.me</a>.\n
-#@gui : - This is a quite resource-demanding filter, so please be patient when running it.\n
+#@gui : - This filter is quite resource-intensive, so please be patient when running it.\n
 #@gui : - It actually renders better when applied on small images (&lt;1024).
 #@gui : "}
 #@gui : sep = separator()
@@ -47568,7 +47568,7 @@ fx_linify_preview :
 
 #@gui Lylejk's Painting : fx_lylejk_painting, fx_lylejk_painting(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# A specific painterly effect script by user Lylejk.
+# A painterly effect script by user Lylejk.
 #@gui : "}, sep = separator()
 #@gui : Iterations = ~int(10,1,20)
 #@gui : Abstraction = ~int(2,1,20)
@@ -47592,7 +47592,7 @@ fx_lylejk_painting :
 
 #@gui Marker Drawing : fx_marker_drawing, fx_marker_drawing_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# Generate marker drawing effect.
+# Generates a marker drawing effect.
 #@gui : "}, sep = separator()
 #@gui : Length (px) = int(70,0,256)
 #@gui : Radius (px) = float(4,1,32)
@@ -47689,7 +47689,7 @@ fx_marker_drawing_preview :
 
 #@gui Paint With Brush : fx_paint_with_brush, fx_paint_with_brush_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# Repaint image using a virtual brush.
+# Repaints the image using a virtual brush.
 #@gui : "}, sep = separator()
 #@gui : Predefined style = choice("Default","Felt Spots","Colored Edges","Circles","Dreamy","Fuzzy",
 #@gui : "Whirls","Smooth")
@@ -47708,7 +47708,7 @@ fx_marker_drawing_preview :
 #@gui : Twist Angle (°) = int(45,-1,360)
 #@gui : note = note{"<small>(<b>-1</b> means '<i>Random Angle</i>').</small>"}
 #@gui : Twist strength (%) = int(0,-1,100)
-#@gui : note = note{"<small>(<b>-1</b> means '<i>Angle Shift</i>').</small>"}
+#@gui : note = note{"<small>(<b>-1</b>: use automatic angle shift).</small>"}
 #@gui : Init Canvas = choice(6,"Black","Gray","White","Self","Blur","Kuwahara","Vector Painting")
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><small><b>Brush for Details:</b></small></span>")
@@ -48217,7 +48217,7 @@ fx_quadtree :
 
 #@gui Rodilius : fx_rodilius, fx_rodilius(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# Creates a high-frequency, glowing line effect similar to the "Fractalius" plugin.
+# Creates a high-frequency, glowing line effect similar to the "Fractalius" plug-in.
 #@gui : "}, sep = separator()
 #@gui : Amplitude = ~float(10,0,30)
 #@gui : Thickness = ~float(10,0,100)
@@ -48786,7 +48786,7 @@ fx_charcoal :
 #@gui : Image to Grab Color from (.png) = _filein()
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Description:</b>\n
-#@gui : This filter allows to quickly colorize a B&W image or lineart.
+#@gui : This filter lets you quickly colorize a B&W image or lineart.
 #@gui : Click on the <i>Apply</i> or <i>OK</i> buttons below to open the G'MIC interactive window and
 #@gui : start adding color control points. When you're done, exit the interactive window: your colored
 #@gui : result will be transferred back to the host software.\n\n
@@ -48799,7 +48799,7 @@ fx_charcoal :
 #@gui : Control Points = value(-1)
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Interactions:</b>\n
-#@gui : Use the following actions in the interactive window to manage your colorization :\n\n
+#@gui : Use the following actions in the interactive window to manage your colorization:\n\n
 #@gui : - <b>Left mouse button</b> creates a new color control point (or move an existing one).\n
 #@gui : - <b>Right mouse button</b> or key <b>X</b> over a control point deletes it.\n
 #@gui : - <b>Right mouse button</b> or key <b>P</b> anywhere else picks a color from the image.\n
@@ -49036,7 +49036,7 @@ fx_autofill_lineart_preview :
 #@gui : <i>Lineart</i> = your layer with line-art (B&W or transparent).\n
 #@gui : <i>Extrapolated Colors</i> = the G'MIC generated layer with flat colors.\n\n
 #@gui : <b>Warnings:</b>
-#@gui : \n  - Do not rely too much on the preview, it is probably not accurate !
+#@gui : \n  - Do not rely too much on the preview, it is probably not accurate!
 #@gui : \n  - Activate option <i>Extrapolate color as one layer per single color/region</i> only if you have
 #@gui : <i>a lot</i> of available memory !
 #@gui : </small>"}
@@ -49108,7 +49108,7 @@ fx_colorize_lineart_preview :
 #@gui : Contour Detection (%) = float(95,0,100)
 #@gui : Discard Contour Guides = bool()
 #@gui : note = note{"<small>Add strokes with a saturated color having value 255 (e.g. pure red) on your lineart
-#@gui : allows to guide the colorization algorithm with virtual contours.</small>"}
+#@gui : can be used to guide the colorization algorithm with virtual contours.</small>"}
 #@gui : Output Region Delimiters = _bool()
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>For <i>Random colors</i> mode only:</b></small>"}
@@ -49844,7 +49844,7 @@ fx_channel_processing :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Splits the image color channels into separate layers.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice("RGB","CMY","HSV")
+#@gui : Color Space = choice("RGB","CMY","HSV")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/07/15</i>.</small>")
 fx_channels2layers :
@@ -51119,7 +51119,7 @@ _fx_cluts_youssefhossam :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Create random colorful blobs to be used as a palette.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice(1,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = choice(1,"sRGB","Linear RGB","Lab")
 #@gui : Background Color = color(200,200,200,0)
 #@gui : Display Blob Controls = bool(1)
 #@gui : sep = separator()
@@ -51345,9 +51345,9 @@ fx_colormap_preview :
 #@gui : note = note{"<small><b>Note:</b> This filter is CPU consuming, so use it at least with 4+ cores
 #@gui : (or reduce the size of the interactive window to speed up computation).</small>"}
 #@gui : note = note{"<small><b>Interactions:</b>\n
-#@gui : Use the following actions in the interactive window to build your color mask :\n\n
-#@gui : - <b>Left mouse button</b> make the color pointed by the mouse wanted for the mask.\n
-#@gui : - <b>Right mouse button</b> make the color pointed by the mouse unwanted for the mask.\n
+#@gui : Use the following actions in the interactive window to build your color mask:\n\n
+#@gui : - <b>Left mouse button</b> marks the color pointed by the mouse wanted for the mask.\n
+#@gui : - <b>Right mouse button</b> marks the color pointed by the mouse unwanted for the mask.\n
 #@gui : - <b>Middle mouse button</b> or key <b>R</b> resets color mask.\n
 #@gui : - Key <b>SPACE</b> or <b>TAB</b> toggles view modes (half/full-masked RGB or color mask).\n
 #@gui : - Keys <b>CTRL+D</b> increase window size.\n
@@ -51372,14 +51372,14 @@ fx_mask_color : gui_check_x11_gdi32 0
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Adjusts tonal response using interactive curves.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice{"RGB","CMY","CMYK","HSI","HSL","HSV","Lab","Lch","YCbCr"}
+#@gui : Color Space = choice{"RGB","CMY","CMYK","HSI","HSL","HSV","Lab","Lch","YCbCr"}
 #@gui : Output Preset as a HaldCLUT Layer = _choice("Disable","Lowres CLUT","Highres CLUT")
 #@gui : Apply Transformation From = _choice("New Curves [Interactive]","Curves Previously Defined")
-#@gui : Colorspace = value(0)
+#@gui : Color Space = value(0)
 #@gui : Keypoints = value(0,0,100,100,-1,0,0,100,100,-1,0,0,100,100,-1,0,0,100,100,-1,0,0,100,100)
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Description:</b>\n
-#@gui : This filter allows to apply color curves on your images, in many different colorspaces.
+#@gui : This filter lets you apply color curves on your images, in many different color spaces.
 #@gui : Click on the <i>Apply</i> or <i>OK</i> buttons below to open the G'MIC interactive windows and
 #@gui : start building your color curves.
 #@gui : When you're done, exit the main image window: your modified result will be transferred back to the
@@ -51389,7 +51389,7 @@ fx_mask_color : gui_check_x11_gdi32 0
 #@gui : </small>"}
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Interactions:</b>\n
-#@gui : Use the following actions in the interactive windows to manage your colorization :\n\n
+#@gui : Use the following actions in the interactive windows to manage your colorization:\n\n
 #@gui : - <b>Left mouse button</b> on a curve creates a new color control point (or move an existing one).\n
 #@gui : - <b>Right mouse button</b> on a control point deletes it.\n
 #@gui : - <b>Left mouse button</b> on the main image window shows the initial image until button is released.\n
@@ -51813,7 +51813,7 @@ fx_hsv_equalizer_preview :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Equalizes histogram in HSI, HSL, or HSV color spaces.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice(1,"HSI","HSL","HSV")
+#@gui : Color Space = choice(1,"HSI","HSL","HSV")
 #@gui : Opacity (%) = float(100,0,100)
 #@gui : Value Blending = float(0,0,64)
 #@gui : Color Blending = float(0,0,64)
@@ -51956,7 +51956,7 @@ fx_mix_cmyk :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # A generic matrix mixer for color channels.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice(7,"CMY","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKlab","RGB","RYB",\
+#@gui : Color Space = choice(7,"CMY","CMYK","HCY","HSI","HSL","HSV","Jzazbz","Lab","Lch","OKlab","RGB","RYB",\
 # "XYZ","YCbCr","YIQ","YUV")
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Channel #0:</b></span>")
@@ -51998,7 +51998,7 @@ fx_mixer_generic :
   m "rgb2rgb:"
   cs=${"arg0 "$colorspace",cmy,cmyk,hcy,hsi,hsl,hsv,jzazbz,lab,lch,oklab,rgb,ryb,xyz,ycbcr,yiq,yuv"}
 
-  # Auto-detect colorspace value range.
+  # Auto-detect color space value range.
   2,2,2,3,[x,y,z] *. 255 r. 64,64,64,3,3 rgb2${cs}. s. c
   m0,M0,m1,M1,m2,M2,m3,M3:=im#-3,iM#-3,im#-2,iM#-2,im,iM,0,255 rm[-3--1]
 
@@ -52334,7 +52334,7 @@ fx_random_color_transformation_preview :
 #@gui : "}, sep = separator()
 #@gui : Strength (%) = float(75,0,100)
 #@gui : Value Offset = float(16,1,256)
-#@gui : Colorspace = choice(1,"HSI","HSV","Lab","Linear RGB","RGB","YCbCr")
+#@gui : Color Space = choice(1,"HSI","HSV","Lab","Linear RGB","RGB","YCbCr")
 #@gui : Min Cut (%) = float(1,0,100)
 #@gui : Max Cut (%) = float(1,0,100)
 #@gui : Regularization = float(5,0,32)
@@ -52760,7 +52760,7 @@ _fx_cluts_colorslide :
 #@gui Transfer Colors [Multi] : fx_transfer_colors, fx_transfer_colors_preview(1) : *
 #@gui : Style image = choice("Top Layer","Bottom Layer")
 #@gui : Transfer Type = choice(2,"Channelwise Histogram Matching","PCA Matching","Variational Registration")
-#@gui : Colorspace = choice("sRGB","lRGB","YCbCr","Lab")
+#@gui : Color Space = choice("sRGB","lRGB","YCbCr","Lab")
 #@gui : Constrain Statistics = choice("None","Same Average As Style","Same Average + Std As Style")
 #@gui : Preserve Brightness (%) = float(35,0,100)
 #@gui : Spatial Regularization Steps = int(1,0,10)
@@ -53404,7 +53404,7 @@ fx_edge_offsets :
 #@gui : View Resolution = _choice{1,"Small (Faster)","Medium","High (Slower)","Very High (Even Slower)"}
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Description:</b>\n
-#@gui : This filter allows to quickly extract foreground objects from background in opaque RGB images.
+#@gui : This filter lets you quickly extract foreground objects from background in opaque RGB images.
 #@gui : Click on the <i>Apply</i> or <i>OK</i> buttons below to open the interactive window and start adding
 #@gui : foreground and background control points. When you're done, exit the interactive window: your extracted
 #@gui : foreground will be transferred back to the host software.\n\n
@@ -53415,7 +53415,7 @@ fx_edge_offsets :
 #@gui : Control Points = value(-1)
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Interactions:</b>\n
-#@gui : Use the following actions in the interactive window to build your extraction mask :\n\n
+#@gui : Use the following actions in the interactive window to build your extraction mask:\n\n
 #@gui : - <b>Left mouse button</b> or key <b>F</b> create a new <b>foreground</b> control point
 #@gui : (or move an existing one).\n
 #@gui : - <b>Right mouse button</b> or key <b>B</b> create a new <b>background</b> control point
@@ -53778,7 +53778,7 @@ fx_breaks :
 #@gui : c = float(10,-100,100)
 #@gui : d = float(10,-100,100)
 #@gui : sep = separator()
-#@gui : note = note("<small>This filter allows to define custom mapping functions.</small>")
+#@gui : note = note("<small>This filter lets you define custom mapping functions.</small>")
 #@gui : url = link("Check this page for more information","https://screamingbrainstudios.com/cartesian-transform/")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2023/10/26</i>.</small>")
@@ -57829,7 +57829,7 @@ fx_frame_cube :
 #@gui : "}, sep = separator()
 #@gui : Horizontal Size (%) = float(5,0,100)
 #@gui : Vertical Size (%) = float(5,0,100)
-#@gui : Fuzzyness = float(10,0,40)
+#@gui : Fuzziness = float(10,0,40)
 #@gui : Smoothness = float(1,0,5)
 #@gui : Color = color(255,255,255,255)
 #@gui : sep = separator()
@@ -58201,7 +58201,7 @@ _fx_revert_layers :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Averages all visible layers.
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b>
 #@gui : This filter takes multiple layers as input and average them. Set the <i>Input layers</i> option
@@ -58256,7 +58256,7 @@ fx_blend_edges :
 #@gui : Sharpness = float(5,1,20)
 #@gui : Sharpest = bool()
 #@gui : Revert Layers = bool()
-#@gui : Colorspace = choice("sRGB","Linear RGB","Lab")
+#@gui : Color Space = choice("sRGB","Linear RGB","Lab")
 #@gui : note = note{\n<small>
 #@gui : The parameters below are used in most presets.
 #@gui : </small>}
@@ -58300,7 +58300,7 @@ _fx_blend_fade4 : [0],[0],1,1,"((x-w*($1+0.5))*(y-h*($2+0.5)))%(0.2*w*h*(1.001+$
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Computes the median pixel value across layers (removes ghosts).
 #@gui : "}, sep = separator()
-#@gui : Colorspace = choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b>
 #@gui : This filter needs at least two layers to work properly. Set the <i>Input layers</i> option to handle
@@ -58321,7 +58321,7 @@ fx_blend_median :
 #@gui : Mixed Mode = bool()
 #@gui : Inner Fading = float(0,0,100)
 #@gui : Outer Fading = float(25,0,100)
-#@gui : Colorspace = choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : Output as Separate Layers = _bool()
 #@gui : sep = separator()
@@ -62106,7 +62106,7 @@ fx_generate_random_portrait_preview :
 #@gui : Color 4 (Bottom/Right Corner) = ~color(0,0,255,255)
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
-#@gui : Colorspace = ~choice(1,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = ~choice(1,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/20</i>.</small>")
 fx_corner_gradient :
@@ -62326,7 +62326,7 @@ _fx_gradient_from_curve :
 #@gui : Fade End (%) = ~float(100,0,100)
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
-#@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/10/20</i>.</small>")
 fx_linear_gradient : skip ${13=0}
@@ -62347,7 +62347,7 @@ fx_linear_gradient : skip ${13=0}
 # Generates a color gradient between control points.
 #@gui : "}, sep = separator()
 #@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
-#@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
 #@gui : Point #0 = ~point(25,25,1,1,200,200,200,0)
@@ -62421,7 +62421,7 @@ fx_gradient_poles_preview :
 #@gui : Quantization = ~int(0,0,64)
 #@gui : Center (%) = ~point(50,50,0,1,255)
 #@gui : sep = separator()
-#@gui : Colorspace = ~choice(0,"sRGB","Linear RGB","Lab")
+#@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/06/29</i>.</small>")
 fx_radial_gradient : skip ${14=0}
@@ -62774,7 +62774,7 @@ fx_neon_lightning :
 #
 # Color by value
 #
-#@gui : Colorspace = choice(2,"HSI","HSL","HSV")_0
+#@gui : Color Space = choice(2,"HSI","HSL","HSV")_0
 #@gui : Hue min (%) = float(100,0,500)_0
 #@gui : Hue max (%) = float(150,0,500)_0
 #@gui : Lightness min (%) = float(20,0,500)_0
@@ -62782,7 +62782,7 @@ fx_neon_lightning :
 #
 # Custom coloring
 #
-#@gui : Colorspace = choice(3,"RGB,"HSI","HSL","HSV","Lab")_0
+#@gui : Color Space = choice(3,"RGB,"HSI","HSL","HSV","Lab")_0
 #@gui : Pre-Process = choice(2,"None","Equalize","Normalize","Equalize and Normalize")_0+
 #@gui : note = note{"<small><span color="#EE5500"><b>Tips for Custom expressions:</b></span>\n
 #@gui : - Variables <b>i0,i1</b> stand for the real and imaginary parts of the iterated complex number.\n
@@ -64848,7 +64848,7 @@ fx_smooth_haar :
 #@gui : Regularization = choice(1,"Isotropic","Delaunay-Guided","Edge-Oriented")
 #@gui : Regularization Iterations = int(20,0,100)
 #@gui : Dilation / Erosion = int(0,-20,20)
-#@gui : Colorspace = choice(1,"sRGB","Linear RGB")
+#@gui : Color Space = choice(1,"sRGB","Linear RGB")
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b>
 #@gui : This filter reconstructs transparent regions of an image using a transport-diffusion algorithm.
