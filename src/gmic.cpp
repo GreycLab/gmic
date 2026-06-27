@@ -3593,8 +3593,9 @@ const char *gmic::set_variable(const char *const name, const char operation,
     }
   }
 
-  // Manage particular case of variable '_cpus': Set max number of threads for multi-threaded operators.
-  if (!std::strcmp(name,"_cpus")) {
+  if (!std::strcmp(name,"_cpus")) { // Manage case of setting variable '_cpus'
+
+    // Set max number of threads for multi-threaded operators.
     int nb_cpus = 0;
     if (cimg_sscanf(vars[ind],"%d%c",&nb_cpus,&end)!=1 || nb_cpus<=0) {
       s_value.assign(8);
@@ -3605,7 +3606,8 @@ const char *gmic::set_variable(const char *const name, const char operation,
 #if cimg_use_openmp!=0
     if (!gmic_getenv("OMP_NUM_THREADS")) omp_set_num_threads(nb_cpus);
 #endif
-  }
+  } else if (!std::strcmp(name,"_user_agent")) // Manage case of setting variable '_user_agent'
+    cimg::user_agent(vars[ind]);
 
   // Modify slot position of modified/created variable to make it more accessible next time.
   if (ind!=vars._width - 1) {
@@ -4174,6 +4176,7 @@ gmic& gmic::_gmic(const char *const command_line,
   set_variable("_path_user",0,gmic::path_user());
   set_variable("_version",0,cimg_str2(gmic_version));
   set_variable("_pixeltype",0,cimg::type<gmic_pixel_type>::string());
+  set_variable("_user_agent",0,"gmic");
 
   cimg_snprintf(str,str.width(),"%u",cimg::nb_cpus());
   set_variable("_cpus",0,str.data());
@@ -6138,7 +6141,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   arg_command_text,
                   add_debug_info?", with debug info":"");
             try {
-              file = cimg::std_fopen(cimg::load_network(arg_command,gmic_use_argx,network_timeout,true,0,"gmic"),"r");
+              file = cimg::std_fopen(cimg::load_network(arg_command,gmic_use_argx,network_timeout,true,0,0),"r");
             } catch (...) {
               file = 0;
             }
@@ -9245,7 +9248,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (err==-1) print(0,"Disable load-from-network.");
             else if (!err) print(0,"Enable load-from-network, with no timeout.");
             else print(0,"Enable load-from-network, with %ds timeout.",err);
-            cimg::network_mode(err!=-1,true);
+            cimg::network_mode(err!=-1);
             if (err!=-1) network_timeout = err;
           } else arg_error(builtin_command);
           ++position;
@@ -14238,7 +14241,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (!cimg::strncasecmp(_filename,"http://",7) ||
             !cimg::strncasecmp(_filename,"https://",8)) {
           try {
-            cimg::load_network(_filename,filename_tmp,network_timeout,true,0,"gmic");
+            cimg::load_network(_filename,filename_tmp,network_timeout,true,0,0);
           } catch (CImgIOException&) {
             print(0,"Input file '%s' at position%s",
                   filename0,
