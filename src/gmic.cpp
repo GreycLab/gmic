@@ -26,7 +26,7 @@
  #  the CeCILL or CeCILL-C licenses as circulated by CEA, CNRS and INRIA
  #  at the following URL: "http://cecill.info".
  #
- #  As a counterpart to the access to the source code and  rights to copy,
+ #  As a counterpart to the access to the source code and rights to copy,
  #  modify and redistribute granted by the license, users are provided only
  #  with a limited warranty  and the software's author,  the holder of the
  #  economic rights,  and the successive licensors  have only  limited
@@ -95,7 +95,7 @@ static const char *storage_type(const CImgList<T>& images, const bool allow_bool
 static CImg<T> append_CImg3d(const CImgList<T>& images) {
   if (!images) return CImg<T>();
   if (images.size()==1) return +images[0];
-  CImg<charT> error_message(1024);
+  CImg<charT> error_message(256);
   unsigned int g_nbv = 0, g_nbp = 0;
   ulongT siz = 0;
   cimglist_for(images,l) {
@@ -994,38 +994,39 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
                        const bool is_blend_outer=false) {
   if (depth()>1)
     throw CImgInstanceException(_cimg_instance
-                                "inpaint_patch(): Instance image is volumetric (should be 2D).",
-                                cimg_instance);
+                                "inpaint_patch(): Instance image is 3D (depth = %d), "
+                                "but only 2D images are supported.",
+                                cimg_instance,depth());
   if (!is_sameXYZ(mask))
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Sizes of instance image and specified mask "
+                                "inpaint_patch(): Sizes of instance image and specified mask "
                                 "(%u,%u,%u,%u) do not match.",
                                 cimg_instance,
                                 mask._width,mask._height,mask._depth,mask._spectrum);
   if (!patch_size)
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Specified patch size is 0, must be strictly "
+                                "inpaint_patch(): Specified patch size is 0, must be strictly "
                                 "positive.",
                                 cimg_instance);
   if (!lookup_size)
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Specified lookup size is 0, must be strictly "
+                                "inpaint_patch(): Specified lookup size is 0, must be strictly "
                                 "positive.",
                                 cimg_instance);
   if (lookup_factor<0)
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Specified lookup factor %g is negative, must be "
+                                "inpaint_patch(): Specified lookup factor %g is negative, must be "
                                 "non-negative.",
                                 cimg_instance,
                                 lookup_factor);
   if (!lookup_increment)
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Specified lookup increment is 0, must be "
+                                "inpaint_patch(): Specified lookup increment is 0, must be "
                                 "strictly positive.",
                                 cimg_instance);
   if (blend_decay<0)
     throw CImgArgumentException(_cimg_instance
-                                "inpaint_patch() : Specified blend decay %g is negative, must be "
+                                "inpaint_patch(): Specified blend decay %g is negative, must be "
                                 "non-negative.",
                                 cimg_instance,
                                 blend_decay);
@@ -1684,7 +1685,7 @@ CImg<T>& ror(const char *const expression, CImgList<T> &images) {
 
 template<typename t>
 CImg<T>& rotate_CImg3d(const CImg<t>& rot) {
-  CImg<charT> error_message(1024);
+  CImg<charT> error_message(256);
   if (!is_CImg3d(false,error_message))
     throw CImgInstanceException(_cimg_instance
                                 "rotate_CImg3d(): image instance is not a CImg3d (%s).",
@@ -1716,7 +1717,7 @@ CImg<T> get_rotate_CImg3d(const CImg<t>& rot) const {
 }
 
 CImg<T>& scale_CImg3d(const float sx, const float sy, const float sz) {
-  CImg<charT> error_message(1024);
+  CImg<charT> error_message(256);
   if (!is_CImg3d(false,error_message))
     throw CImgInstanceException(_cimg_instance
                                 "scale_CImg3d(): image instance is not a CImg3d (%s).",
@@ -1732,7 +1733,7 @@ CImg<T> get_scale_CImg3d(const float sx, const float sy, const float sz) const {
 }
 
 CImg<T>& shift_CImg3d(const float tx, const float ty, const float tz) {
-  CImg<charT> error_message(1024);
+  CImg<charT> error_message(256);
   if (!is_CImg3d(false,error_message))
     throw CImgInstanceException(_cimg_instance
                                 "shift_CImg3d(): image instance is not a CImg3d (%s).",
@@ -2020,6 +2021,7 @@ unsigned int gmic::strescape(const char *const str, char *const res) {
 
 // Parse debug info string (equivalent to 'cimg_sscanf(s,"%x,%x",&line_number,&file_number)'.
 bool gmic::get_debug_info(const char *s, unsigned int &line_number, unsigned int &file_number) {
+  if (!s || !*s) return false;
   char c = *(++s);
   bool is_digit = (c>='0' && c<='9') || (c>='a' && c<='f');
   if (is_digit) {
@@ -2354,7 +2356,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
 
 template<typename T>
 double gmic::mp_store(const double *const ptrs, const unsigned int siz,
-                      const unsigned int w, const unsigned int h, const unsigned d, const unsigned int s,
+                      const unsigned int w, const unsigned int h, const unsigned int d, const unsigned int s,
                       const bool is_compressed, const char *const str,
                       void *const p_list, const T& pixel_type) {
   cimg::unused(pixel_type);
@@ -2439,7 +2441,7 @@ static void *gmic_parallel(void *arg) {
 }
 
 // Define identification numbers for all built-in commands.
-// Those integers are chosen so that for a command id 'id', we get 'builtin_command_names[id - 1] = "command_name"'.
+// Each integer id maps to 'builtin_command_names[id - 1]'.
 typedef enum {
 
   // Commands of length>3.
@@ -2877,7 +2879,7 @@ static const char* gmic_getenv(const char *const varname) {
       }
     }
   }
-#endif // cimgOS==2
+#endif // #if cimg_OS==2
   return getenv(varname);
 }
 
@@ -2900,7 +2902,7 @@ const char* gmic::path_user(const char *const custom_path) {
   if (!_path_user) _path_user = gmic_getenv("TEMP");
   if (!_path_user) _path_user = gmic_getenv("TMPDIR");
   if (!_path_user) _path_user = "";
-  path_user.assign(1024);
+  path_user.assign(std::strlen(_path_user) + 64);
 #if cimg_OS!=2
   cimg_snprintf(path_user,path_user.width(),"%s%c.gmic",
                 _path_user,cimg_file_separator);
@@ -2942,7 +2944,7 @@ const char* gmic::path_rc(const char *const custom_path) {
   if (!_path_rc) _path_rc = gmic_getenv("TEMP");
   if (!_path_rc) _path_rc = gmic_getenv("TMPDIR");
   if (!_path_rc) _path_rc = "";
-  path_rc.assign(1024);
+  path_rc.assign(std::strlen(_path_rc) + 64);
 
   if (add_gmic_subfolder)
     cimg_snprintf(path_rc,path_rc.width(),"%s%cgmic%c",_path_rc,cimg_file_separator,cimg_file_separator);
