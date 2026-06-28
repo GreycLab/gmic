@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
       command_updates.unroll('y');
       command_updates.resize(1,command_updates.height() + 1,1,1,0);
       gmic_instance.add_commands(command_updates);
-    } catch (...) { is_invalid_updatefile = true; }
+    } catch (...) { command_updates.assign(); is_invalid_updatefile = true; }
   is_invalid_updatefile|=command_updates && (cimg_sscanf(command_updates," #@gmi%c",&sep)!=1 || sep!='c');
   command_updates.assign();
 
@@ -144,9 +144,9 @@ int main(int argc, char **argv) {
     } catch (...) { is_invalid_userfile = true; }
   command_user.assign();
 
-  // Convert 'argv' into G'MIC command line.
+  // Convert 'argv' into a G'MIC command line.
   CImgList<char> items;
-  if (argc==1) // When no args have been specified
+  if (argc==1) // When no arguments have been specified
     CImg<char>::string("l[] { cli_noarg onfail }").move_to(items);
   else {
     for (int l = 1; l<argc; ++l) { // Split argv as items
