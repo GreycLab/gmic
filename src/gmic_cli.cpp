@@ -3,7 +3,7 @@
  #  File        : gmic_cli.cpp
  #                ( C++ source file )
  #
- #  Description : G'MIC CLI interface - A command-line tool to allow the use
+ #  Description : G'MIC CLI - A command-line tool to allow the use
  #                of G'MIC commands from the shell.
  #
  #  Copyright   : David Tschumperlé
@@ -60,17 +60,13 @@ using namespace gmic_library;
 
 // Fallback function for segfault signals.
 #if cimg_OS==1
+#include <unistd.h>
 void gmic_segfault_sigaction(int signal, siginfo_t *si, void *arg) {
   cimg::unused(signal,si,arg);
-  cimg::mutex(29);
-  std::fprintf(cimg::output(),
-               "\n\n%s[gmic] G'MIC encountered a %sfatal error%s%s. "
-               "Please submit a bug report, at: %shttps://github.com/GreycLab/gmic/issues%s\n\n",
-               cimg::t_red,cimg::t_bold,cimg::t_normal,cimg::t_red,
-               cimg::t_bold,cimg::t_normal);
-  std::fflush(cimg::output());
-  cimg::mutex(29,0);
-  std::exit(EXIT_FAILURE);
+  const char *msg = "\n\n[gmic] G'MIC encountered a fatal error. "
+    "Please submit a bug report, at: https://github.com/GreycLab/gmic/issues\n\n";
+  write(STDERR_FILENO, msg, std::strlen(msg));
+  _exit(EXIT_FAILURE);
 }
 #endif
 
@@ -102,7 +98,7 @@ int main(int argc, char **argv) {
   // Init resources folder.
   if (!gmic::init_rc()) {
     std::fprintf(cimg::output(),
-                 "\n[gmic] Unable to create resources folder.\n");
+                 "\n[gmic] Unable to create the resources directory.\n");
     std::fflush(cimg::output());
   }
 
@@ -211,13 +207,13 @@ int main(int argc, char **argv) {
   items.insert(CImg<char>::string("cli_start , ",false),is_first_item_verbose?2:0);
 
   if (is_invalid_userfile) { // Display warning message in case of invalid user command file
-    CImg<char> tmpstr(1024);
+    CImg<char> tmpstr(std::strlen(filename_user) + 256);
     cimg_snprintf(tmpstr,tmpstr.width(),"warn \"File '\"{/\"%s\"}\"' is not a valid G'MIC command file.\" ",
                   filename_user);
     items.insert(CImg<char>::string(tmpstr.data(),false),is_first_item_verbose?2:0);
   }
   if (is_invalid_updatefile) { // Display warning message in case of invalid user command file
-    CImg<char> tmpstr(1024);
+    CImg<char> tmpstr(std::strlen(filename_update) + 256);
     cimg_snprintf(tmpstr,tmpstr.width(),"warn \"File '\"{/\"%s\"}\"' is not a valid G'MIC update file.\" ",
                   filename_update.data());
     items.insert(CImg<char>::string(tmpstr.data(),false),is_first_item_verbose?2:0);
@@ -242,6 +238,7 @@ int main(int argc, char **argv) {
     const char
       *const it1 = gmic_instance.status?std::strstr(gmic_instance.status,"***"):"",
       *const it2 = it1?std::strstr(it1 + 3,"***"):0;
+
     if (it2 && std::sscanf(it2,"*** %d%c",&error_code,&sep)!=1) error_code = -1;
     else is_error_code = true;
 
