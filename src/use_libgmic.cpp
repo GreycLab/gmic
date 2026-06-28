@@ -3,7 +3,7 @@
  #  File        : use_libgmic.cpp
  #                ( C++ source file )
  #
- #  Description : Show how to call the C++ version of the G'MIC library from a C++ source code.
+ #  Description : Shows how to call the C++ version of the G'MIC library from C++ source code.
  #                (for a C API, see 'use_libcgmic.c' instead)
  #
  #  Copyright   : David Tschumperlé
@@ -22,7 +22,7 @@
  #
  #  This software is governed either by the CeCILL or the CeCILL-C license
  #  under French law and abiding by the rules of distribution of free software.
- #  You can  use, modify and or redistribute the software under the terms of
+ #  You can use, modify and/or redistribute the software under the terms of
  #  the CeCILL or CeCILL-C licenses as circulated by CEA, CNRS and INRIA
  #  at the following URL: "http://cecill.info".
  #
@@ -71,8 +71,8 @@ int main() {
   //-------------------------------------------
   std::fprintf(stderr,"\n- 1st step: Create input list of images.\n");
 
-  gmic_list<float> images;                            // List of images, will contain all images pixel data
-  gmic_list<char> images_names;                       // List of images names. Can be left empty if no names
+  gmic_list<float> images;                            // List of images; will contain all images pixel data
+  gmic_list<char> image_names;                        // List of image names. Can be left empty if there are no names
   images.assign(5);                                   // Assign list to contain 5 images
   for (unsigned int i = 0; i<images._width; ++i) {
     gmic_image<float>& img = images[i];
@@ -85,12 +85,12 @@ int main() {
                  img._spectrum,
                  (void*)img._data);
 
-    // Fill each image buffer with sinus values (with different frequencies).
+    // Fill each image buffer with sine values (at different frequencies).
     float *ptr = img;
     for (unsigned int c = 0; c<img._spectrum; ++c)
       for (unsigned int y = 0; y<img._height; ++y)
         for (unsigned int x = 0; x<img._width; ++x)
-          *(ptr++) = std::cos(x/(1. + i))*std::sin(y/(1. + i + c));
+          *(ptr++) = (float)(std::cos(x/(1. + i))*std::sin(y/(1. + i + c)));
   }
 
   // Second step: Call G'MIC API to process input images.
@@ -101,7 +101,7 @@ int main() {
 
     // Here you can call any G'MIC command you want !
     // (here, create a deformed average of the input images, and save it as a BMP file).
-    gmic("v + add normalize 0,255 flower 8 sharpen 100 output foo1.bmp",images,images_names);
+    gmic("v + add normalize 0,255 flower 8 sharpen 100 output foo1.bmp",images,image_names);
 
   } catch (gmic_exception &e) { // Catch exception, if an error occurred in the interpreter
     std::fprintf(stderr,"\n- Error encountered when calling G'MIC: '%s'\n",e.what());
@@ -118,10 +118,10 @@ int main() {
 
     // Here, we use the already constructed 'gmic' instance. The same instance can be used
     // several times.
-    gmic_instance.run("v + blur 5 sharpen 1000 normalize 0,255 output foo2.bmp",images,images_names);
+    gmic_instance.run("v + blur 5 sharpen 1000 normalize 0,255 output foo2.bmp",images,image_names);
     std::fputc('\n',stderr);
     gmic_instance.run("v + +resize 50%,50% to_rgba[-1] rotate[-1] 30 drop_shadow[-1] 0,13 "
-                      "blur_radial[0] 10% blend alpha output foo3.bmp",images,images_names);
+                      "blur_radial[0] 10% blend alpha output foo3.bmp",images,image_names);
 
   } catch (gmic_exception &e) { // Catch exception, if an error occurred in the interpreter
     std::fprintf(stderr,"\n- Error encountered when calling G'MIC: '%s'\n",e.what());
@@ -140,7 +140,7 @@ int main() {
                  (void*)images[i]._data);
   }
 
-  // Fourth step: Free image resources.
+  // Fifth step: Free image resources.
   //-----------------------------------
   images.assign(0U);
 
