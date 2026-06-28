@@ -232,23 +232,22 @@ cli_start :
 
 #@cli debug : (+)
 #@cli : Enable debug mode.
-#@cli : When enabled, the G'MIC interpreter becomes very verbose and outputs additional log
-#@cli : messages about its internal state on the standard output (stdout).
-#@cli : This option is useful for developers and when reporting possible interpreter bugs.
-
+#@cli : When enabled, the G'MIC interpreter becomes much more verbose and prints additional messages about its \
+# internal state to the standard output (stdout).
+#@cli : This option is mainly intended for developers and for reporting potential interpreter bugs.
 #@cli h : eq. to 'help'.
 h :
   help $"*"
 
 #@cli help : command : (no arg)
-#@cli : Display help, optionally restricted to a specified command, then exit.
+#@cli : Display help for all commands, or for a specified command, then exit.
 #@cli : (eq. to 'h').
 help : skip ${1=""}
   use_vt100
   foreach { if "w!=1 || d!=1 || s!=1" rm fi }
   if ['$1']==0
 
-    # Display global help.
+    # Display general help.
     _no_examples,_no_default_values,_no_tutorial_link=1
     reference ascii
 
@@ -273,20 +272,20 @@ help : skip ${1=""}
     if !$! return fi
     a y
 
-    # Check that requested command exist.
+    # Check whether the requested command exists.
     command={`"
       s = ['$1']; len = size(s); z = 0;
       (p = find(s,_'['))>0?(s[p] = 0; len = p);
       isin(s[0],_'-',_'+') && len>1 && !(s[z + 1]==_'3' && s[z + 2]==_'d')?(copy(s,s[z + 1],len - 1); s[len - 1] = 0);
       s"`}
 
-    # Extract chunk of documentation.
+    # Extract the relevant documentation section.
     p,q=${"_help_chunk "$command}
 
     # Display help.
     if $p<0
       l[] {
-        m "foo : "$command # Detect command misspelling
+        m "foo : "$command # Detect a misspelled command
         repeat 16 { um $command } # Be sure the specified command does not exist anymore !
         foo um foo
         onfail ('${}') s -,{'"; did you mean "'} if $!>1 s[1] -,39 k[1] misspelling={t} fi rm
