@@ -10635,7 +10635,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             ++position;
           else { is_reduced_form = 1; is_pivoting = 0; }
 
-          print(0,"Compute QR decomposition of matri%s%s%s with%s pivoting.",
+          print(0,"Compute QR decomposition of matri%s%s%s, with%s pivoting.",
                 selection.height()>1?"ces":"x",gmic_selection.data(),
                 is_reduced_form?", in reduced form":"",
                 is_pivoting?"":"out");
