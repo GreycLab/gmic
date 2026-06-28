@@ -150,6 +150,8 @@ int main(int argc, char **argv) {
     CImg<char>::string("l[] { cli_noarg onfail }").move_to(items);
   else {
     for (int l = 1; l<argc; ++l) { // Split argv as items
+      // Wrap arguments containing spaces in double quotes,
+      // ensuring proper space separation during final list flattening.
       if (std::strchr(argv[l],' ')) {
         CImg<char>::vector('\"').move_to(items);
         CImg<char>(argv[l],(unsigned int)std::strlen(argv[l])).move_to(items);
