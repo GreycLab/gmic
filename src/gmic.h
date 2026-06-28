@@ -354,7 +354,7 @@ struct gmic {
   // These functions return (or init) G'MIC-specific paths.
   static const char* path_user(const char *const custom_path=0);
   static const char* path_rc(const char *const custom_path=0);
-  static bool init_rc(const char *const custom_path=0);
+  static void init_rc(const char *const custom_path=0);
 
   // Functions below should be considered as *private*, and should not be used in user's code.
   template<typename T>

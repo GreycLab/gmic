@@ -97,11 +97,7 @@ int main(int argc, char **argv) {
 #endif
 
   // Init resources folder.
-  if (!gmic::init_rc()) {
-    std::fprintf(cimg::output(),
-                 "\n[gmic] Unable to create the resources directory.\n");
-    std::fflush(cimg::output());
-  }
+  gmic::init_rc();
 
   // Set special path for curl on Windows
   // (in case the use of libcurl is not enabled).
