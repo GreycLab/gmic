@@ -53,7 +53,7 @@
 #if defined(cimg_plugin)
 
 template<typename t>
-static CImg<T> copy_rounded(const CImg<t>& img) {
+static CImg<T> rounded_view(const CImg<t>& img) {
   if (!cimg::type<t>::is_float() || cimg::type<T>::is_float()) return img;
   CImg<T> res(img._width,img._height,img._depth,img._spectrum);
   const t *ptrs = img._data;
@@ -61,18 +61,19 @@ static CImg<T> copy_rounded(const CImg<t>& img) {
   return res;
 }
 
-static CImg<T> copy_rounded(const CImg<T>& img) {
+static CImg<T> rounded_view(const CImg<T>& img) {
   return CImg<T>(img,true);
 }
 
 static const char *storage_type(const CImgList<T>& images, const bool allow_bool) {
+  // 'allow_bool' determines whether a binary 0/1 image can be classified as a 'bool' storage type.
   T im = cimg::type<T>::max(), iM = cimg::type<T>::min();
   const bool T_is_float = cimg::type<T>::is_float();
   bool is_int = true;
   for (unsigned int l = 0; l<images.size() && is_int; ++l) {
     cimg_for(images[l],p,T) {
       const T val = *p;
-      if (T_is_float && !(val==(T)(int)val)) { is_int = false; break; }
+      if (T_is_float && std::floor(val)!=val) { is_int = false; break; }
       if (val<im) im = val;
       if (val>iM) iM = val;
     }
@@ -223,8 +224,8 @@ static CImg<T>& append_string_to(const char c, CImg<T>& str, T* &ptrd) {
   return str;
 }
 
-// Return a copymarked version of an image name.
-// This method has no 'in-place' version, as it is always better to call the new instance version.
+// Returns a copy-marked version of an image name.
+// This method does not have an 'in-place' version, as it is always preferable to call the new instance version.
 // This method is only called for type 'T = char'.
 CImg<T> get_copymark() const {
   if (is_empty() || !*_data) return CImg<T>::string("_c1");
@@ -1765,14 +1766,14 @@ static const CImgList<T>& save_gmz(const char *filename, const CImgList<T>& imag
 #elif defined(cimglist_plugin)
 
 template<typename t>
-static CImgList<T> copy_rounded(const CImgList<t>& list) {
+static CImgList<T> rounded_view(const CImgList<t>& list) {
   if (!cimg::type<t>::is_float() || cimg::type<T>::is_float()) return list;
   CImgList<T> res(list.size());
-  cimglist_for(res,l) CImg<T>::copy_rounded(list[l]).move_to(res[l]);
+  cimglist_for(res,l) CImg<T>::rounded_view(list[l]).move_to(res[l]);
   return res;
 }
 
-static CImgList<T> copy_rounded(const CImgList<T>& list) {
+static CImgList<T> rounded_view(const CImgList<T>& list) {
   return CImgList<T>(list,true);
 }
 
@@ -9687,11 +9688,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 #define gmic_save_multitype(svalue_type,value_type) \
               if (!std::strcmp(stype,svalue_type)) { \
                 if (g_list.size()==1) \
-                  CImg<value_type>::copy_rounded(g_list[0]).save(filename); \
+                  CImg<value_type>::rounded_view(g_list[0]).save(filename); \
                 else { \
                   cimglist_for(g_list,l) { \
                     cimg::number_filename(filename,l,6,gmic_use_formula); \
-                    CImg<value_type>::copy_rounded(g_list[l]).save(formula); \
+                    CImg<value_type>::rounded_view(g_list[l]).save(formula); \
                   } \
                 } \
               }
@@ -9821,12 +9822,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 #define gmic_save_tiff(svalue_type,value_type) \
               if (!std::strcmp(stype,svalue_type)) { \
                 if (g_list.size()==1 || is_multipage) \
-                  CImgList<value_type>::copy_rounded(g_list). \
+                  CImgList<value_type>::rounded_view(g_list). \
                     save_tiff(filename,compression_type,0,0,use_bigtiff); \
                 else { \
                   cimglist_for(g_list,l) { \
                     cimg::number_filename(filename,l,6,gmic_use_formula); \
-                    CImg<value_type>::copy_rounded(g_list[l]). \
+                    CImg<value_type>::rounded_view(g_list[l]). \
                       save_tiff(formula,compression_type,0,0,use_bigtiff); \
                   } \
                 } \
@@ -10000,11 +10001,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 #define gmic_save_raw(svalue_type,value_type) \
               if (!std::strcmp(stype,svalue_type)) { \
                 if (g_list.size()==1) \
-                  CImg<value_type>::copy_rounded(g_list[0]).save_raw(filename); \
+                  CImg<value_type>::rounded_view(g_list[0]).save_raw(filename); \
                 else { \
                   cimglist_for(g_list,l) { \
                     cimg::number_filename(filename,l,6,gmic_use_formula); \
-                    CImg<value_type>::copy_rounded(g_list[l]).save_raw(formula); \
+                    CImg<value_type>::rounded_view(g_list[l]).save_raw(formula); \
                   } \
                 } \
               }
@@ -10057,7 +10058,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
 #define gmic_save_cimg(svalue_type,value_type) \
               if (!std::strcmp(stype,svalue_type)) \
-                CImgList<value_type>::copy_rounded(g_list).save(filename);
+                CImgList<value_type>::rounded_view(g_list).save(filename);
 
             if (!std::strcmp(stype,"auto")) stype = CImg<T>::storage_type(g_list,false);
             gmic_save_cimg("uint8",cimg_uint8)
@@ -10091,7 +10092,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
 #define gmic_save_gmz(svalue_type,value_type) \
               if (!std::strcmp(stype,svalue_type)) \
-                CImg<value_type>::save_gmz(filename,CImgList<value_type>::copy_rounded(g_list),g_list_c);
+                CImg<value_type>::save_gmz(filename,CImgList<value_type>::rounded_view(g_list),g_list_c);
             if (!std::strcmp(stype,"auto")) stype = CImg<T>::storage_type(g_list,false);
             gmic_save_gmz("uint8",cimg_uint8)
             else gmic_save_gmz("int8",cimg_int8)
