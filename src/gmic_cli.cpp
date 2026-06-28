@@ -65,7 +65,8 @@ void gmic_segfault_sigaction(int signal, siginfo_t *si, void *arg) {
   cimg::unused(signal,si,arg);
   const char *msg = "\n\n[gmic] G'MIC encountered a fatal error. "
     "Please submit a bug report, at: https://github.com/GreycLab/gmic/issues\n\n";
-  write(STDERR_FILENO, msg, std::strlen(msg));
+  const ssize_t ret = write(STDERR_FILENO,msg,std::strlen(msg));
+  cimg::unused(ret);
   _exit(EXIT_FAILURE);
 }
 #endif
