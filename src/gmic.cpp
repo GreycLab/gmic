@@ -275,7 +275,7 @@ CImg<T>& gmic_draw_image(const float x, const float y, const float z, const floa
   const float
     fx = sepx=='~'?x*(width() - sprite.width()):sepx=='%'?x*(width() - 1)/100:x,
     fy = sepy=='~'?y*(height() - sprite.height()):sepy=='%'?y*(height() - 1)/100:y,
-    fz = sepz=='~'?y*(depth() - sprite.depth()):sepz=='%'?z*(depth() - 1)/100:z,
+    fz = sepz=='~'?z*(depth() - sprite.depth()):sepz=='%'?z*(depth() - 1)/100:z,
     fc = sepc=='~'?c*(spectrum() - sprite.spectrum()):sepc=='%'?c*(spectrum() - 1)/100:c;
   return draw_image((int)cimg::round(fx),(int)cimg::round(fy),
                     (int)cimg::round(fz),(int)cimg::round(fc),
@@ -295,7 +295,7 @@ CImg<T>& gmic_draw_image(const float x, const float y, const float z, const floa
   const float
     fx = sepx=='~'?x*(width() - sprite.width()):sepx=='%'?x*(width() - 1)/100:x,
     fy = sepy=='~'?y*(height() - sprite.height()):sepy=='%'?y*(height() - 1)/100:y,
-    fz = sepz=='~'?y*(depth() - sprite.depth()):sepz=='%'?z*(depth() - 1)/100:z,
+    fz = sepz=='~'?z*(depth() - sprite.depth()):sepz=='%'?z*(depth() - 1)/100:z,
     fc = sepc=='~'?c*(spectrum() - sprite.spectrum()):sepc=='%'?c*(spectrum() - 1)/100:c;
   return draw_image((int)cimg::round(fx),(int)cimg::round(fy),
                     (int)cimg::round(fz),(int)cimg::round(fc),
