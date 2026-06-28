@@ -22,11 +22,11 @@
  #
  #  This software is governed either by the CeCILL or the CeCILL-C license
  #  under French law and abiding by the rules of distribution of free software.
- #  You can  use, modify and or redistribute the software under the terms of
+ #  You can use, modify and/or redistribute the software under the terms of
  #  the CeCILL or CeCILL-C licenses as circulated by CEA, CNRS and INRIA
  #  at the following URL: "http://cecill.info".
  #
- #  As a counterpart to the access to the source code and  rights to copy,
+ #  As a counterpart to the access to the source code and rights to copy,
  #  modify and redistribute granted by the license, users are provided only
  #  with a limited warranty  and the software's author,  the holder of the
  #  economic rights,  and the successive licensors  have only  limited
@@ -64,7 +64,7 @@ using namespace gmic_library;
 void gmic_segfault_sigaction(int signal, siginfo_t *si, void *arg) {
   cimg::unused(signal,si,arg);
   const char *msg = "\n\n[gmic] G'MIC encountered a fatal error. "
-    "Please submit a bug report, at: https://github.com/GreycLab/gmic/issues\n\n";
+    "Please submit a bug report at: https://github.com/GreycLab/gmic/issues\n\n";
   const ssize_t ret = write(STDERR_FILENO,msg,std::strlen(msg));
   cimg::unused(ret);
   _exit(EXIT_FAILURE);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
 #endif
 
   // Declare main G'MIC instance.
-  static bool is_abort;
+  static bool is_abort = false;
   gmic gmic_instance((char*)0,(char*)0,true,(float*)0,&is_abort,(gmic_pixel_type)0);
   gmic_instance.is_debug = is_debug;
   gmic_instance.set_variable("_host",0,"cli");
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
   CImg<char> filename_update, command_updates;
   bool is_invalid_updatefile = false;
   char sep = 0;
-  filename_update.assign(1024);
+  filename_update.assign(std::strlen(gmic::path_rc()) + 64);
   cimg_snprintf(filename_update,filename_update.width(),"%supdate%u.gmic",
                 gmic::path_rc(),gmic_version);
   try { command_updates.load_cimg(filename_update); }
@@ -179,9 +179,10 @@ int main(int argc, char **argv) {
           if (is_command_file) {
             bool is_main_ = false;
             gmic gi(0,0,false,0,0,(gmic_pixel_type)0);
-            gi.add_commands(gmic_file,argv[1],is_debug,0,0,&is_main_);
+            try { gi.add_commands(gmic_file,argv[1],is_debug,0,0,&is_main_); }
+            catch (...) { std::fclose(gmic_file); throw; }
             if (is_main_ && argc==3) { // Check if command '_main_' has arguments
-              const unsigned int hash = (int)gmic::hashcode("_main_",false);
+              const unsigned int hash = gmic::hashcode("_main_",false);
               unsigned int ind = 0;
               if (gmic::search_sorted("_main_",gi.command_names[hash],
                                       gi.command_names[hash].size(),ind)) // Command found
@@ -197,8 +198,11 @@ int main(int argc, char **argv) {
     // Determine initial verbosity.
     const char *const s_verbosity = std::getenv("GMIC_VERBOSITY");
     if (!s_verbosity || std::sscanf(s_verbosity,"%d%c",&gmic_instance.verbosity,&sep)!=1)
-      gmic_instance.verbosity = gmic_instance.allow_main_?0:is_help?0:
-        argc==2 && (!std::strcmp(argv[1],"version") || !std::strcmp(argv[1],"-version"))?0:1;
+      gmic_instance.verbosity =
+        gmic_instance.allow_main_?0:
+        is_help?0:
+        argc==2 && (!std::strcmp(argv[1],"version") || !std::strcmp(argv[1],"-version"))?0:
+        1;
   }
 
   // Insert startup command.
@@ -213,7 +217,7 @@ int main(int argc, char **argv) {
                   filename_user);
     items.insert(CImg<char>::string(tmpstr.data(),false),is_first_item_verbose?2:0);
   }
-  if (is_invalid_updatefile) { // Display warning message in case of invalid user command file
+  if (is_invalid_updatefile) { // Display warning message in case of invalid update file
     CImg<char> tmpstr(std::strlen(filename_update) + 256);
     cimg_snprintf(tmpstr,tmpstr.width(),"warn \"File '\"{/\"%s\"}\"' is not a valid G'MIC update file.\" ",
                   filename_update.data());
@@ -240,8 +244,10 @@ int main(int argc, char **argv) {
       *const it1 = gmic_instance.status?std::strstr(gmic_instance.status,"***"):"",
       *const it2 = it1?std::strstr(it1 + 3,"***"):0;
 
-    if (it2 && std::sscanf(it2,"*** %d%c",&error_code,&sep)!=1) error_code = -1;
-    else is_error_code = true;
+    if (it2) {
+      if (std::sscanf(it2,"*** %d%c",&error_code,&sep)!=1) error_code = -1;
+      else is_error_code = true;
+    }
 
     if (!is_error_code) {
 
@@ -253,14 +259,16 @@ int main(int argc, char **argv) {
         std::fflush(cimg::output());
       }
       if (*e.command() && std::strcmp(e.command(),"check")) {
-        std::fprintf(cimg::output(),"\n[gmic] Command '%s%s%s' has the following description: \n",
+        std::fprintf(cimg::output(),"\n[gmic] Command '%s%s%s' has the following description:\n",
                      cimg::t_red,e.command(),cimg::t_normal);
         std::fflush(cimg::output());
         CImgList<gmic_pixel_type> images;
         CImgList<char> image_names;
         images.insert(gmic::stdlib);
         CImg<char>::string("stdlib").move_to(image_names);
-        CImg<char> tmp_line(1024);
+        CImg<char> tmp_line(2*std::strlen(filename_update.data()) +
+                            2*std::strlen(filename_user) +
+                            std::strlen(e.command()) + 256);
         cimg_snprintf(tmp_line,tmp_line.width(),
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
