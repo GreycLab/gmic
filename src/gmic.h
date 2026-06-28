@@ -6,8 +6,8 @@
  #  Description : GREYC's Magic for Image Computing - G'MIC API file
  #                ( https://gmic.eu )
  #
- #  Note        : Include this file in your C++ source code, if you
- #                want to use the G'MIC interpreter in your own program.
+ #  Note        : Include this file in your C++ source code to use the
+ #                G'MIC interpreter in your own program.
  #
  #  Copyright   : David Tschumperlé
  #                ( https://tschumperle.users.greyc.fr/ )
@@ -25,7 +25,7 @@
  #
  #  This software is governed either by the CeCILL or the CeCILL-C license
  #  under French law and abiding by the rules of distribution of free software.
- #  You can  use, modify and or redistribute the software under the terms of
+ #  You can use, modify and/or redistribute the software under the terms of
  #  the CeCILL or CeCILL-C licenses as circulated by CEA, CNRS and INRIA
  #  at the following URL: "http://cecill.info".
  #
@@ -123,12 +123,14 @@ namespace gmic_library {
       return _data;
     }
 
-    T& operator()(const unsigned int x, const unsigned int y=0, const unsigned z=0, const unsigned c=0) {
-      return _data[x + y*_width + z*_width*_height + c*_width*_height*_depth ];
+    T& operator()(const unsigned int x, const unsigned int y=0,
+                  const unsigned int z=0, const unsigned int c=0) {
+      return _data[(unsigned long long)x + y*_width + z*_width*_height + c*_width*_height*_depth];
     }
 
-    const T& operator()(const unsigned int x, const unsigned int y=0, const unsigned z=0, const unsigned c=0) const {
-      return _data[x + y*_width + z*_width*_height + c*_width*_height*_depth ];
+    const T& operator()(const unsigned int x, const unsigned int y=0,
+                        const unsigned int z=0, const unsigned int c=0) const {
+      return _data[(unsigned long long)x + y*_width + z*_width*_height + c*_width*_height*_depth];
     }
   };
 
@@ -136,7 +138,7 @@ namespace gmic_library {
   //----------------------
   template<typename T> struct gmic_list {
     unsigned int _width; // Number of images in the list
-    unsigned int _allocated_width; // Allocated items in the list (must be 2^N and >size)
+    unsigned int _allocated_width; // Allocated items in the list (must be a power of 2 and >=_width)
     gmic_image<T> *_data; // Pointer to the first image of the list
 
     // Destructor.
