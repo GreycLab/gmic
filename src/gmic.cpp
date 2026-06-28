@@ -67,11 +67,12 @@ static CImg<T> copy_rounded(const CImg<T>& img) {
 
 static const char *storage_type(const CImgList<T>& images, const bool allow_bool) {
   T im = cimg::type<T>::max(), iM = cimg::type<T>::min();
+  const bool T_is_float = cimg::type<T>::is_float();
   bool is_int = true;
   for (unsigned int l = 0; l<images.size() && is_int; ++l) {
     cimg_for(images[l],p,T) {
       const T val = *p;
-      if (!(val==(T)(int)val)) { is_int = false; break; }
+      if (T_is_float && !(val==(T)(int)val)) { is_int = false; break; }
       if (val<im) im = val;
       if (val>iM) iM = val;
     }
@@ -224,6 +225,7 @@ static CImg<T>& append_string_to(const char c, CImg<T>& str, T* &ptrd) {
 
 // Return a copymarked version of an image name.
 // This method has no 'in-place' version, as it is always better to call the new instance version.
+// This method is only called for type 'T = char'.
 CImg<T> get_copymark() const {
   if (is_empty() || !*_data) return CImg<T>::string("_c1");
 
@@ -1013,7 +1015,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
   if (lookup_factor<0)
     throw CImgArgumentException(_cimg_instance
                                 "inpaint_patch() : Specified lookup factor %g is negative, must be "
-                                "positive.",
+                                "non-negative.",
                                 cimg_instance,
                                 lookup_factor);
   if (!lookup_increment)
@@ -1024,7 +1026,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
   if (blend_decay<0)
     throw CImgArgumentException(_cimg_instance
                                 "inpaint_patch() : Specified blend decay %g is negative, must be "
-                                "positive.",
+                                "non-negative.",
                                 cimg_instance,
                                 blend_decay);
 
@@ -1769,7 +1771,7 @@ static CImgList<T> copy_rounded(const CImgList<t>& list) {
   return res;
 }
 
-static CImg<T> copy_rounded(const CImg<T>& list) {
+static CImgList<T> copy_rounded(const CImgList<T>& list) {
   return CImgList<T>(list,true);
 }
 
@@ -2309,9 +2311,11 @@ template<typename T>
 double gmic::mp_run(char *const str, const bool is_parallel_run,
                     void *const p_list, const T& pixel_type) {
   cimg::unused(pixel_type);
-  const CImg<void*> gr = current_run("Function 'run()'",p_list);
+  CImg<void*> gr;
+  cimg::mutex(24);
+  try { gr = current_run("Function 'run()'",p_list); } catch (...) { cimg::mutex(24,0); throw; }
+  cimg::mutex(24,0);
   double res = cimg::type<double>::nan();
-
   gmic &gmic_instance = *(gmic*)gr[0];
   CImgList<T> &images = *(CImgList<T>*)gr[1];
   CImgList<char> &image_names = *(CImgList<char>*)gr[2];
@@ -7076,7 +7080,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const CImg<char> &s = callstack.back();
           if (s[0]!='*' || (s[1]!='f' && s[1]!='l' && s[1]!='r'))
             error(true,0,0,
-                  "Command 'done': Not associated to a 'for', 'foreach', 'local' or 'repeat' command "
+                  "Command 'done': Not associated with a 'for', 'foreach', 'local' or 'repeat' command "
                   "within the same scope.");
 
           if (s[1]=='f') {
@@ -7243,7 +7247,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const CImg<char> &s = callstack.back();
           if (s[0]!='*' || s[1]!='i')
             error(true,0,0,
-                  "Command '%s': Not associated to a 'if' command within the same scope.",
+                  "Command '%s': Not associated with an 'if' command within the same scope.",
                   builtin_command);
           check_elif = false;
           if (is_very_verbose) print(0,"Enter 'else' block.");
@@ -7518,7 +7522,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const CImg<char> &s = callstack.back();
           if (s[0]!='*' || s[1]!='i')
             error(true,0,0,
-                  "Command 'fi': Not associated to a 'if' command within the same scope.");
+                  "Command 'fi': Not associated with an 'if' command within the same scope.");
           if (is_very_verbose) print(0,"End 'if...endif' block.");
           check_elif = false;
           callstack.remove();
@@ -9531,7 +9535,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const char *const csb = callstack.back();
           if (csb[0]!='*' || csb[1]!='l')
             error(true,0,0,
-                  "Command 'onfail': Not associated to a 'local' command within the same scope.");
+                  "Command 'onfail': Not associated with a 'local' command within the same scope.");
           for (int nb_levels = 1; nb_levels && position<command_line.size(); ++position) {
             it = command_line[position];
             if (*it==1)
@@ -10153,7 +10157,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                    "OpenCV library (not enabled at compilation time).");
 #endif
             g_list.save_video(filename,(unsigned int)fps,name,(bool)keep_open);
-            if (!cimg::fsize(filename)) throw CImgException("Output file '%s' is empty. Something went wrong!",
+            if (!cimg::fsize(filename)) throw CImgException("Output file '%s' is empty. An error may have occurred.",
                                                             _filename.data());
           } else { // Any other extension
 
@@ -12792,7 +12796,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const CImg<char>& s = callstack.back();
           if (s[0]!='*' || s[1]!='d')
             error(true,0,0,
-                  "Command 'while': Not associated to a 'do' command within the same scope.");
+                  "Command 'while': Not associated with a 'do' command within the same scope.");
           is_cond = check_cond(argument,images,"while");
           if (is_very_verbose)
             print(0,"Reached 'while' command -> condition '%s' %s.",
@@ -13090,7 +13094,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             } else {
               print(0,"%s",Com);
               error(true,0,0,
-                    "Command '%s': There are no loops or local environment to %s.",com,com);
+                    "Command '%s': There is no loop or local environment to %s.",com,com);
               continue;
             }
 
@@ -14582,7 +14586,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                               else gmic_load_raw("double64",cimg_float64)
                                 else error(true,0,0,
                                            "Command 'input': Raw file '%s', "
-                                           "invalid specified pixel type '%s'.\n",
+                                           "invalid pixel type '%s' specified.\n",
                                            filename0,stype);
             _filename0.move_to(g_list_c);
           } else
@@ -14943,7 +14947,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
     cimglist_for(gmic_threads,k) wait_threads(&gmic_threads[k],false,(T)0);
     cimglist_for(gmic_threads,k) cimg_forY(gmic_threads[k],l) {
       const gmic_exception &e = gmic_threads(k,l).exception;
-      if (e._message) error(false,0,0,e._message);
+      if (e._message) error(false,0,0,"%s",e._message.data());
     }
 
     // Post-check global environment consistency.
