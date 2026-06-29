@@ -82,7 +82,7 @@ and
 ~~~
 $ gmic input_text https://gmic.eu/gmic_stdlib.\$_version parse_gui images
 ~~~
-Please make sure you run these commands in a empty folder, as it generates a lot of new image files.
+Please make sure you run these commands in an empty folder, as it generates a lot of new image files.
 
 -----------------------
 
