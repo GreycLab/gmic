@@ -75,18 +75,18 @@ void gmic_segfault_sigaction(int signal, siginfo_t *si, void *arg) {
 int _CRT_glob = 0; // Disable globbing for msys
 #endif
 
-// Main entry
-//------------
+// Main entry point.
+//------------------
 int main(int argc, char **argv) {
 
-  // Set default output messages stream.
+  // Set default output message stream.
   const bool
     is_debug = cimg_option("-debug",false,0) || cimg_option("debug",false,0),
     is_help = (argc==2 || argc==3) && (!std::strcmp(argv[1],"help") || !std::strcmp(argv[1],"-help") ||
                                        !std::strcmp(argv[1],"h") || !std::strcmp(argv[1],"-h"));
   cimg::output(is_debug?stdout:stderr);
 
-  // Set fallback for segfault signals.
+  // Set up fallback handler for segmentation faults.
 #if cimg_OS==1
   struct sigaction sa;
   std::memset(&sa,0,sizeof(sa));
@@ -128,11 +128,11 @@ int main(int argc, char **argv) {
       command_updates.unroll('y');
       command_updates.resize(1,command_updates.height() + 1,1,1,0);
       gmic_instance.add_commands(command_updates);
-    } catch (...) { is_invalid_updatefile = true; }
+    } catch (...) { command_updates.assign(); is_invalid_updatefile = true; }
   is_invalid_updatefile|=command_updates && (cimg_sscanf(command_updates," #@gmi%c",&sep)!=1 || sep!='c');
   command_updates.assign();
 
-  // Import user file (in parent of resources directory).
+  // Import user file (from the parent of the resources directory).
   CImg<char> command_user;
   bool is_invalid_userfile = false;
   const char *const filename_user = gmic::path_user();
@@ -144,12 +144,14 @@ int main(int argc, char **argv) {
     } catch (...) { is_invalid_userfile = true; }
   command_user.assign();
 
-  // Convert 'argv' into G'MIC command line.
+  // Convert 'argv' into a G'MIC command line.
   CImgList<char> items;
-  if (argc==1) // When no args have been specified
+  if (argc==1) // When no arguments have been specified
     CImg<char>::string("l[] { cli_noarg onfail }").move_to(items);
   else {
     for (int l = 1; l<argc; ++l) { // Split argv as items
+      // Wrap arguments containing spaces in double quotes,
+      // ensuring proper space separation during final list flattening.
       if (std::strchr(argv[l],' ')) {
         CImg<char>::vector('\"').move_to(items);
         CImg<char>(argv[l],(unsigned int)std::strlen(argv[l])).move_to(items);
@@ -158,36 +160,35 @@ int main(int argc, char **argv) {
       items.back().back()=' ';
     }
 
-    // Determine special mode for running .gmic files as scripts : 'gmic commands.gmic [arguments]'.
+    // Determine if we are running a .gmic file as a script: 'gmic commands.gmic [arguments]'.
     if (argc==2 || argc==3) {
       const char *const ext = cimg::split_filename(argv[1]);
       if (!*ext || !std::strcmp(ext,"gmic")) {
         std::FILE *gmic_file = std::fopen(argv[1],"rb");
-        if (gmic_file) {
-          bool is_command_file = (bool)*ext;
-          if (!*ext) { // In case file has no extension, check it starts with a shebang
-            char head[2];
-            if (std::fread(head,1,2,gmic_file)==2) {
-              std::fseek(gmic_file,0,SEEK_SET);
-              if (*head=='#' && head[1]=='!') is_command_file = true;
+        if (gmic_file) try {
+            bool is_command_file = (bool)*ext;
+            if (!*ext) { // In case file has no extension, check it starts with a shebang
+              char head[2];
+              if (std::fread(head,1,2,gmic_file)==2) {
+                std::fseek(gmic_file,0,SEEK_SET);
+                if (*head=='#' && head[1]=='!') is_command_file = true;
+              }
             }
-          }
-          if (is_command_file) {
-            bool is_main_ = false;
-            gmic gi(0,0,false,0,0,(gmic_pixel_type)0);
-            try { gi.add_commands(gmic_file,argv[1],is_debug,0,0,&is_main_); }
-            catch (...) { std::fclose(gmic_file); throw; }
-            if (is_main_ && argc==3) { // Check if command '_main_' has arguments
-              const unsigned int hash = gmic::hashcode("_main_",false);
-              unsigned int ind = 0;
-              if (gmic::search_sorted("_main_",gi.command_names[hash],
-                                      gi.command_names[hash].size(),ind)) // Command found
-                is_main_ = (bool)gi.command_has_arguments[hash](ind,0);
+            if (is_command_file) {
+              bool is_main_ = false;
+              gmic gi(0,0,false,0,0,(gmic_pixel_type)0);
+              gi.add_commands(gmic_file,argv[1],is_debug,0,0,&is_main_);
+              if (is_main_ && argc==3) { // Check if command '_main_' has arguments
+                const unsigned int hash = gmic::hashcode("_main_",false);
+                unsigned int ind = 0;
+                if (gmic::search_sorted("_main_",gi.command_names[hash],
+                                        gi.command_names[hash].size(),ind)) // Command found
+                  is_main_ = (bool)gi.command_has_arguments[hash](ind,0);
+              }
+              gmic_instance.allow_main_ = is_main_;
             }
-            gmic_instance.allow_main_ = is_main_;
-          }
-          std::fclose(gmic_file);
-        }
+            std::fclose(gmic_file);
+          } catch (...) { std::fclose(gmic_file); throw; }
       }
     }
 
@@ -276,7 +277,7 @@ int main(int argc, char **argv) {
                       e.command());
         try {
           gmic(tmp_line,images,image_names);
-        } catch (...) { // Fallback in case overloaded version of 'help' crashed
+        } catch (...) { // Fallback in case the overloaded version of 'help' crashed
           cimg_snprintf(tmp_line,tmp_line.width(),"help \"%s\"",e.command());
           images.assign().insert(gmic::stdlib);
           image_names.assign();

@@ -7149,7 +7149,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'eigen'.
         if (id_builtin_command==id_eigen) {
           print(0,"Compute eigen-values/vectors of symmetric matri%s or matrix field%s.",
-                selection.height()>1?"ce":"x",gmic_selection.data());
+                selection.height()>1?"ces":"x",gmic_selection.data());
           unsigned int off = 0;
           cimg_forY(selection,l) {
             uind = selection[l] + off;
@@ -8964,11 +8964,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const CImg<double> A = gmic_image_arg(*ind);
             if (method==0)
               print(0,"Project matri%s%s to dictionary [%d] with orthogonal projection.",
-                    selection.size()>1?"ce":"x",gmic_selection.data(),*ind);
+                    selection.size()>1?"ces":"x",gmic_selection.data(),*ind);
             else if (method<4)
               print(0,"Project matri%s%s to dictionary [%d] with %s, "
                     "max iterations %d and max residual %g.",
-                    selection.size()>1?"ce":"x",gmic_selection.data(),*ind,
+                    selection.size()>1?"ces":"x",gmic_selection.data(),*ind,
                     method==1?"matching pursuit":
                     method==2?"matching pursuit + orthogonal projection":
                     "orthogonal matching pursuit (ortho-projection every iteration)",
@@ -8976,7 +8976,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             else
               print(0,"Project matri%s%s to dictionary [%d] with orthogonal matching pursuit "
                     "(ortho-projection every %d iterations), max iterations %d and max residual %g.",
-                    selection.size()>1?"ce":"x",gmic_selection.data(),*ind,
+                    selection.size()>1?"ces":"x",gmic_selection.data(),*ind,
                     method - 2,max_iter?max_iter:A.width(),value);
             cimg_forY(selection,l) gmic_apply_double(project_matrix(A,method,max_iter,value));
           } else arg_error(builtin_command);
@@ -10635,7 +10635,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             ++position;
           else { is_reduced_form = 1; is_pivoting = 0; }
 
-          print(0,"Compute QR decomposition of matri%s%s with%s pivoting.",
+          print(0,"Compute QR decomposition of matri%s%s%s, with%s pivoting.",
                 selection.height()>1?"ces":"x",gmic_selection.data(),
                 is_reduced_form?", in reduced form":"",
                 is_pivoting?"":"out");
@@ -12202,7 +12202,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'svd'.
         if (id_builtin_command==id_svd) {
           print(0,"Compute SVD decomposition of matri%s%s.",
-                selection.height()>1?"ce":"x",gmic_selection.data());
+                selection.height()>1?"ces":"x",gmic_selection.data());
           CImg<float> U, S, V;
           unsigned int off = 0;
           cimg_forY(selection,l) {
