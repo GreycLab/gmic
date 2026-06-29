@@ -71,7 +71,7 @@
 #endif // #if cimg_OS==2
 #endif // #ifndef gmic_uint64
 
-// Define some special character codes used for replacement in double quoted strings.
+// Define some special character codes used for replacement in double-quoted strings.
 const char gmic_dollar = 23, gmic_lbrace = 24, gmic_rbrace = 25, gmic_comma = 26, gmic_dquote = 28,
   gmic_store = 29; // <- this one is only used in variable names
 
@@ -192,7 +192,7 @@ namespace gmic_library {
 
 #include <locale>
 #ifdef cimg_version
-#error "[gmic] *** Error *** File 'CImg.h' has been already included (should have been done first in file 'gmic.h')."
+#error "[gmic] *** Error *** File 'CImg.h' has already been included (should have been done first in file 'gmic.h')."
 #endif
 
 #ifndef cimg_plugin
@@ -518,7 +518,7 @@ struct gmic_exception {
   }
 
   // Return error message.
-  const char *what() const { // Give the error message returned by the G'MIC interpreter
+  const char *what() const { // Returns the error message from the G'MIC interpreter
     return _message._data?_message._data:"";
   }
 
