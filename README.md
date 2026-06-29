@@ -12,36 +12,44 @@
 **G'MIC** is a full-featured open-source framework for **[digital image processing](https://en.wikipedia.org/wiki/Image_processing)**, distributed under the
 **[CeCILL](http://cecill.info/index.en.html)** free software licenses (LGPL-like and/or GPL-compatible).
 It provides several different **[user interfaces](https://en.wikipedia.org/wiki/User_interface)** to convert/manipulate/filter/visualize **generic image datasets**,
-ranging from _1d scalar signals_ to _3d+t sequences of multi-spectral volumetric images_, hence including _2d color images_.
+ranging from _1D scalar signals_ to _3D+t sequences of multi-spectral volumetric images_, hence including _2D color images_.
 These user interfaces are:
 
-- **1** - **[gmic](https://gmic.eu/reference/)**, a command-line interface , to use the **G'MIC** image processing features from a shell.
+- **1** - **[gmic](https://gmic.eu/reference/)**, a command-line interface, to use the **G'MIC** image processing features from a shell.
 In this setting, **G'MIC** may be seen as a friendly companion to the [ImageMagick](http://www.imagemagick.org) or [GraphicsMagick](http://www.graphicsmagick.org)
 software suites.
 
-<a href="https://gmic.eu/img/gmic_cli.jpg">![cli_interface](https://gmic.eu/img/gmic_cli_thumb.jpg)<a>
+<a href="https://gmic.eu/img/gmic_cli.jpg">![cli_interface](https://gmic.eu/img/gmic_cli_thumb.jpg)</a>
 
 - **2** - **[libgmic](https://gmic.eu/libgmic.html)**, a small, portable, thread-safe and multi-threaded _C++_ image processing library to be linked to third-party applications.
-[Its simple API](https://gmic.eu/libgmic.html) allows programmers to add all **G'MIC** features in their own software without much efforts (a _C_ API is available as well).
+[Its simple API](https://gmic.eu/libgmic.html) allows programmers to add all **G'MIC** features in their own software without much effort (a _C_ API is available as well).
 
-<a href="https://gmic.eu/img/gmic_libgmic.jpg">![interface_libgmic](https://gmic.eu/img/gmic_libgmic_thumb.jpg)</a>
+<a href="https://gmic.eu/img/gmic_libgmic.jpg">![libgmic_interface](https://gmic.eu/img/gmic_libgmic_thumb.jpg)</a>
 
-- **3** - **[G'MIC-Qt](https://github.com/GreycLab/gmic-qt)**, a plug-in to bring **G'MIC** capabilities to the image retouching software [GIMP](http://www.gimp.org), [Krita](https://www.krita.org), [Photoshop](https://en.wikipedia.org/wiki/Adobe_Photoshop) and [Paint.NET](https://www.getpaint.net/). More than **600 filters** are already available, sorted by category (_Artistic, Black &amp; white, Colors, Contours, Deformations, Degradations, Details, Film emulation, Frames, Layers,
-Light &amp; shadows, Patterns, Rendering, Repair, Sequences_, etc.).
+- **3** - **[G'MIC-Qt](https://github.com/GreycLab/gmic-qt)**, a plug-in to bring **G'MIC** capabilities to the image retouching software
+  [GIMP](http://www.gimp.org),
+  [Krita](https://www.krita.org),
+  [Photoshop](https://en.wikipedia.org/wiki/Adobe_Photoshop),
+  [Affinity Photo](https://en.wikipedia.org/wiki/Affinity_Photo),
+  [PaintShop Pro](https://en.wikipedia.org/wiki/PaintShop_Pro),
+  [PhotoLine](https://en.wikipedia.org/wiki/PhotoLine) and
+  [Paint.NET](https://www.getpaint.net/).
+  More than **600 filters** are already available, sorted by category (_Artistic, Black & white, Colors, Contours, Deformations, Degradations, Details, Film emulation, Frames, Layers,
+Light & shadows, Patterns, Rendering, Repair, Sequences_, etc.).
 
 <a href="https://gmic.eu/img/gmic_gimp.jpg">![gimp_interface](https://gmic.eu/img/gmic_gimp_thumb.jpg)</a>
 
-- **4** - **[G'MIC Online](https://gmicol.greyc.fr)**, a web service to allow users applying image processing algorithms on their images, directly from a web browser.
+- **4** - **[G'MIC Online](https://gmicol.greyc.fr)**, a web service that lets users apply image processing algorithms to their images, directly from a web browser.
 
 <a href="https://gmic.eu/img/gmic_gmicol.jpg">![gmicol_interface](https://gmic.eu/img/gmic_gmicol_thumb.jpg)</a>
 
 - **5** - **[ZArt](https://www.youtube.com/watch?v=k1l3RdvwHeM)**, a Qt-based interface for real-time processing of video streaming coming from webcams or video files.
 
-<a href="https://gmic.eu/img/gmic_zart.jpg">![interface_zart](https://gmic.eu/img/gmic_zart_thumb.jpg)</a>
+<a href="https://gmic.eu/img/gmic_zart.jpg">![zart_interface](https://gmic.eu/img/gmic_zart_thumb.jpg)</a>
 
 -----------------------
 
-Other open-source projects are known to use some of the <b><font color="#000066">G'MIC</font></b> features:
+Other open-source projects are known to use some of the **G'MIC** features:
 
 - **[EKD](http://ekd.tuxfamily.org)**, a free software dedicated to post-production processing for videos and images.
 - **[Flowblade](https://github.com/jliljebl/flowblade)**, a multitrack non-linear video editor for Linux released under GPL 3 license.
@@ -65,8 +73,8 @@ Other open-source projects are known to use some of the <b><font color="#000066"
 
 ## Testing the software
 
-The correct functioning of the **G'MIC** software can be tested using these two commands, which execute all the commands
-and filters available in the framework:
+You can verify that G'MIC is working correctly by running these two commands,
+which execute all the commands and filters available in the framework:
 ~~~
 $ gmic input_text https://gmic.eu/gmic_stdlib.\$_version parse_cli images
 ~~~
@@ -74,7 +82,7 @@ and
 ~~~
 $ gmic input_text https://gmic.eu/gmic_stdlib.\$_version parse_gui images
 ~~~
-Please make sure you run these commands in a new empty folder, as it generates a lot of new image files.
+Please make sure you run these commands in a empty folder, as it generates a lot of new image files.
 
 -----------------------
 
