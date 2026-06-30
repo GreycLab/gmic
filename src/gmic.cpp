@@ -2807,7 +2807,6 @@ const CImg<char>& gmic::decompress_stdlib() {
 //-------------------------------------------
 static CImg<char> gmic_getenv(const char *const varname) {
 #if cimg_OS==2
-  cimg::mutex(22);
   CImg<char> utf8Buffer;
   // Get the value of the environment variable using the wide-character
   // (UTF-16) version of the Windows API and convert it to UTF-8.
@@ -2826,7 +2825,6 @@ static CImg<char> gmic_getenv(const char *const varname) {
           if (utf8Length) {
             utf8Buffer.assign(utf8Length + 1);
             if (WideCharToMultiByte(CP_UTF8,0,wideValue,wideValueLength,utf8Buffer,utf8Length,0,0)) {
-              cimg::mutex(22,0);
               return utf8Buffer;
             }
           }
@@ -2834,7 +2832,6 @@ static CImg<char> gmic_getenv(const char *const varname) {
       }
     }
   }
-  cimg::mutex(22,0);
 #endif // #if cimg_OS==2
   return CImg<char>::string(getenv(varname));
 }
