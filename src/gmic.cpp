@@ -2805,9 +2805,10 @@ const CImg<char>& gmic::decompress_stdlib() {
 
 // Get the value of an environment variable.
 //-------------------------------------------
-static const char* gmic_getenv(const char *const varname) {
+static CImg<char> gmic_getenv(const char *const varname) {
 #if cimg_OS==2
-  static CImg<char> utf8Buffer;
+  cimg::mutex(22);
+  CImg<char> utf8Buffer;
   // Get the value of the environment variable using the wide-character
   // (UTF-16) version of the Windows API and convert it to UTF-8.
 
@@ -2823,16 +2824,19 @@ static const char* gmic_getenv(const char *const varname) {
           // Convert the returned value from UTF-16 to UTF-8.
           const int utf8Length = WideCharToMultiByte(CP_UTF8,0,wideValue,wideValueLength,0,0,0,0);
           if (utf8Length) {
-            if (utf8Length>=utf8Buffer.width()) utf8Buffer.assign(utf8Length + 1);
-            if (WideCharToMultiByte(CP_UTF8,0,wideValue,wideValueLength,utf8Buffer,utf8Length,0,0))
+            utf8Buffer.assign(utf8Length + 1);
+            if (WideCharToMultiByte(CP_UTF8,0,wideValue,wideValueLength,utf8Buffer,utf8Length,0,0)) {
+              cimg::mutex(22,0);
               return utf8Buffer;
+            }
           }
         }
       }
     }
   }
+  cimg::mutex(22,0);
 #endif // #if cimg_OS==2
-  return getenv(varname);
+  return CImg<char>::string(getenv(varname));
 }
 
 // Get path to .gmic user file.
@@ -2842,27 +2846,27 @@ const char* gmic::path_user(const char *const custom_path) {
   if (path_user) return path_user;
   cimg::mutex(28);
   if (path_user) { cimg::mutex(28,0); return path_user; }
-  const char *_path_user = 0;
-  if (custom_path && cimg::is_directory(custom_path)) _path_user = custom_path;
-  if (!_path_user) _path_user = gmic_getenv("GMIC_PATH");
+  CImg<char> env;
+  if (custom_path && cimg::is_directory(custom_path))
+    CImg<char>::string(custom_path).move_to(env);
+  if (!env) gmic_getenv("GMIC_PATH").move_to(env);
 #if cimg_OS!=2
-  if (!_path_user) _path_user = gmic_getenv("HOME");
+  if (!env) gmic_getenv("HOME").move_to(env);
 #else
-  if (!_path_user) _path_user = gmic_getenv("USERPROFILE");
+  if (!env) gmic_getenv("USERPROFILE").move_to(env);
 #endif
-  if (!_path_user) _path_user = gmic_getenv("TMP");
-  if (!_path_user) _path_user = gmic_getenv("TEMP");
-  if (!_path_user) _path_user = gmic_getenv("TMPDIR");
-  if (!_path_user) _path_user = "";
-  path_user.assign(std::strlen(_path_user) + 64);
+  if (!env) gmic_getenv("TMP").move_to(env);
+  if (!env) gmic_getenv("TEMP").move_to(env);
+  if (!env) gmic_getenv("TMPDIR").move_to(env);
+  if (!env) CImg<char>::string("").move_to(env);
+  path_user.assign(env.width() + 16);
 #if cimg_OS!=2
   cimg_snprintf(path_user,path_user.width(),"%s%c.gmic",
-                _path_user,cimg_directory_separator);
+                env.data(),cimg_directory_separator);
 #else
   cimg_snprintf(path_user,path_user.width(),"%s%cuser.gmic",
-                _path_user,cimg_directory_separator);
+                env.data(),cimg_directory_separator);
 #endif
-  CImg<char>::string(path_user).move_to(path_user); // Optimize length
   cimg::mutex(28,0);
   return path_user;
 }
@@ -2875,35 +2879,37 @@ const char* gmic::path_rc(const char *const custom_path) {
   if (path_rc) return path_rc;
   cimg::mutex(28);
   if (path_rc) { cimg::mutex(28,0); return path_rc; }
-  const char *_path_rc = 0;
   bool add_gmic_subfolder = true;
-  if (custom_path && cimg::is_directory(custom_path)) { _path_rc = custom_path; add_gmic_subfolder = false; }
-  if (!_path_rc) { _path_rc = gmic_getenv("GMIC_PATH"); add_gmic_subfolder = _path_rc==0; }
-  if (!_path_rc) _path_rc = gmic_getenv("XDG_CONFIG_HOME");
+  CImg<char> env;
+  if (custom_path && cimg::is_directory(custom_path)) {
+    CImg<char>::string(custom_path).move_to(env);
+    add_gmic_subfolder = false;
+  }
+  if (!env) { gmic_getenv("GMIC_PATH").move_to(env); if (env) add_gmic_subfolder = false; }
+  if (!env) gmic_getenv("XDG_CONFIG_HOME").move_to(env);
 #if cimg_OS!=2
-  if (!_path_rc) {
-    _path_rc = gmic_getenv("HOME");
-    if (_path_rc) {
-      path_tmp.assign(std::strlen(_path_rc) + 10);
-      cimg_snprintf(path_tmp,path_tmp._width,"%s/.config",_path_rc);
-      if (cimg::is_directory(path_tmp)) _path_rc = path_tmp;
+  if (!env) {
+    gmic_getenv("HOME").move_to(env);
+    if (env) {
+      path_tmp.assign(env.width() + 16);
+      cimg_snprintf(path_tmp,path_tmp._width,"%s/.config",env.data());
+      if (cimg::is_directory(path_tmp)) path_tmp.move_to(env);
     }
   }
 #else
-  if (!_path_rc) _path_rc = gmic_getenv("APPDATA");
+  if (!env) gmic_getenv("APPDATA").move_to(env);
 #endif
-  if (!_path_rc) _path_rc = gmic_getenv("TMP");
-  if (!_path_rc) _path_rc = gmic_getenv("TEMP");
-  if (!_path_rc) _path_rc = gmic_getenv("TMPDIR");
-  if (!_path_rc) _path_rc = "";
-  path_rc.assign(std::strlen(_path_rc) + 64);
+  if (!env) gmic_getenv("TMP").move_to(env);
+  if (!env) gmic_getenv("TEMP").move_to(env);
+  if (!env) gmic_getenv("TMPDIR").move_to(env);
+  if (!env) CImg<char>::string("").move_to(env);
+  path_rc.assign(env.width() + 16);
 
   if (add_gmic_subfolder)
-    cimg_snprintf(path_rc,path_rc.width(),"%s%cgmic%c",_path_rc,cimg_directory_separator,cimg_directory_separator);
+    cimg_snprintf(path_rc,path_rc.width(),"%s%cgmic%c",env.data(),cimg_directory_separator,cimg_directory_separator);
   else
-    cimg_snprintf(path_rc,path_rc.width(),"%s%c",_path_rc,cimg_directory_separator);
+    cimg_snprintf(path_rc,path_rc.width(),"%s%c",env.data(),cimg_directory_separator);
 
-  CImg<char>::string(path_rc).move_to(path_rc); // Optimize length
   cimg::mutex(28,0);
   return path_rc;
 }
@@ -3393,9 +3399,9 @@ CImg<char> gmic::get_variable(const char *const name,
       cimg_snprintf(res,res.width(),"%u",ind);
       if (varlength) *varlength = res._width - 1;
     } else { // Variable name may stand for an environment variable
-      const char *const env = std::getenv(name);
+      CImg<char> env = gmic_getenv(name);
       if (env) {
-        res.assign(CImg<char>::string(env,true,true),true);
+        env.move_to(res);
         if (varlength) *varlength = res._width - 1;
       } else if (varlength) *varlength = 0;
 
