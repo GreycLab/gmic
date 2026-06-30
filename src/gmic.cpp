@@ -1181,7 +1181,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
 
     if (best_x<0) { // If no best patch found
       priorities(target_x - ox,target_y - oy,0)/=10; // Reduce its priority (lower data_term)
-      if (++nb_fails>=4) { // If too much consecutive fails :
+      if (++nb_fails>=4) { // If too many consecutive failures:
         nb_fails = 0;
         _lookup_size+=_lookup_size/2; // Try to expand the lookup size
         if (++nb_lookups>=3) {
@@ -1344,7 +1344,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
   return *this;
 }
 
-// Special crop function that supports more boundary conditions :
+// Special crop function that supports more boundary conditions:
 // 0=dirichlet (with value 0), 1=dirichlet (with value 1) and 2=neumann.
 CImg<T> _inpaint_patch_crop(const int x0, const int y0, const int x1, const int y1,
                             const unsigned int boundary=0) const {
@@ -1745,10 +1745,10 @@ using namespace gmic_library;
 // Define number of hash slots to store variables and commands (both must be 2^n).
 #ifndef gmic_varslots
 #define gmic_varslots 2048
-// gmic_varslots are divided in three parts:
-// [ 0 -> int(gmic_varslots/2) ] : Slots for regular variables.
-// [ int(gmic_varslots/2) -> int(6*gmic_varslots/7)-1 ] : Slots for global variables.
-// [ int(6*gmic_varslots/7) -> gmic_varslots-1 ] : Slots for inter-thread global variables.
+// gmic_varslots is divided into three parts:
+// [ 0 -> int(gmic_varslots/2) ]: Slots for regular variables.
+// [ int(gmic_varslots/2) -> int(6*gmic_varslots/7)-1 ]: Slots for global variables.
+// [ int(6*gmic_varslots/7) -> gmic_varslots-1 ]: Slots for inter-thread global variables.
 #endif
 #ifndef gmic_comslots
 #define gmic_comslots 1024
@@ -1764,7 +1764,7 @@ inline bool is_xyzc(const char c) {
   return c=='x' || c=='y' || c=='z' || c=='c';
 }
 
-// Return an image argument as a shared or non-shared copy of one existing image of the list.
+// Return an image argument as a shared or non-shared copy of an existing image in the list.
 template<typename T>
 CImg<T> gmic::_gmic_image_arg(CImgList<T>& images, const CImgList<T>& parent_images,
                               const CImg<unsigned int>& selection, const unsigned int uind) {
@@ -1805,7 +1805,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
 #define gmic_argument_text() _gmic_argument_text(argument,gmic_use_argument_text,true)
 
 // Macro for having 'get' or 'non-get' versions of G'MIC commands.
-// Set 'optim_inplace' to true, only for function implementations that act 'in-place'.
+// Set 'optim_inplace' to true only for function implementations that act in-place.
 #if gmic_pixel_type==half
 #define _gmic_apply(function,optim_inplace) \
   images[uind].get_##function.move_to(images)
@@ -1836,7 +1836,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
     } else CImg<double>(images[uind],false).function.move_to(images[uind]); \
   }
 
-// Macro for simple commands that has no arguments and act on images.
+// Macro for simple commands that have no arguments and act on images.
 #define gmic_simple_command(command_name,description) \
   if (id_builtin_command==id_##command_name) { \
     print(0,description,gmic_selection.data()); \
@@ -1969,7 +1969,7 @@ unsigned int gmic::strescape(const char *const str, char *const res) {
   return (unsigned int)(ptrd - res);
 }
 
-// Parse debug info string (equivalent to 'cimg_sscanf(s,"%x,%x",&line_number,&file_number)'.
+// Parse debug info string (equivalent to 'cimg_sscanf(s,"%x,%x",&line_number,&file_number)').
 bool gmic::get_debug_info(const char *s, unsigned int &line_number, unsigned int &file_number) {
   if (!s || !*s) return false;
   char c = *(++s);
@@ -1998,7 +1998,7 @@ bool gmic::get_debug_info(const char *s, unsigned int &line_number, unsigned int
   return false;
 }
 
-// Round a double value as with %g.
+// Round a double value like %g.
 double gmic_round(const double x) {
   char tmp[32];
   double y;
@@ -2433,7 +2433,7 @@ typedef enum {
   id_or=201,id_qr
 } builtin_command_id;
 
-// Array of G'MIC built-in commands (must be sorted in length & lexicographic order!).
+// Array of G'MIC built-in commands (must be sorted in length and in lexicographic order!).
 const char *gmic::builtin_command_names[] = {
 
   // Commands of length>3.
@@ -2609,7 +2609,7 @@ void gmic::wait_threads(void *const p_gmic_threads, const bool try_abort, const 
 #endif // #ifdef gmic_is_parallel
 }
 
-// Return a hashcode from a string.
+// Return a hash code from a string.
 unsigned int gmic::hashcode(const char *const str, const bool is_variable) {
   if (!str) return 0U;
   unsigned int hash = 5381U;
@@ -2957,7 +2957,7 @@ CImg<char> gmic::callstack2string(const CImg<unsigned int>& callstack_selection,
 
 // Pop call stack until it reaches a certain size.
 //------------------------------------------------
-// Ensure that call stack stays coherent when errors occur in '_run()'.
+// Ensure that the call stack remains consistent when errors occur in '_run()'.
 void gmic::pop_callstack(const unsigned int min_callstack_size) {
   unsigned int cs = callstack.size();
   nb_remaining_fr = 0;
@@ -3653,7 +3653,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
           if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
         } while (_line++);
 
-      // Remove useless trailing spaces.
+      // Remove redudant trailing spaces.
       char *linee = s_line.data() + std::strlen(s_line) - 1;
       while (linee>=s_line && is_blank(*linee)) --linee;
       *(linee + 1) = 0;
@@ -4008,7 +4008,7 @@ CImg<T>& gmic::check_shared_image(const CImgList<T>& images, const CImgList<T>& 
       if (ptr>=ptrs && ptr<ptre) return img;
     }
   }
-  cimglist_rof(parent_images,l) { // Check that corresponding shared or non-shared image exist in parent list ('pass')
+  cimglist_rof(parent_images,l) { // Check that corresponding shared or non-shared image exists in parent list ('pass')
     const CImg<T>& elt = parent_images[l];
     const T *const ptrs = elt.data(), *const ptre = elt.end();
     if (ptr>=ptrs && ptr<ptre) return img;
@@ -9542,7 +9542,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           strreplace_fw(options);
           const bool is_stdout = *_filename=='-' && (!_filename[1] || _filename[1]=='.');
 
-          if (*cext) { // Force output to be written as a '.ext' file : generate random filename
+          if (*cext) { // Force output to be written as a '.ext' file: generate random filename
             if (is_stdout) {
               // Simplify filename 'ext:-.foo' as '-.ext'.
               cimg_snprintf(_filename,_filename.width(),"-.%s",cext);
@@ -10159,7 +10159,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             }
           }
 
-          if (*cext) { // When output forced to 'ext' : copy final file to specified location
+          if (*cext) { // When output forced to 'ext': copy final file to specified location
             try {
               CImg<unsigned char>::get_load_raw(filename_tmp).save_raw(_filename);
               std::remove(filename_tmp);
@@ -14212,7 +14212,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           *filename_tmp = 0;
         }
 
-        if (*cext) { // Force input to be read as a '.ext' file : generate random filename
+        if (*cext) { // Force input to be read as a '.ext' file: generate random filename
           if (*_filename=='-' && (!_filename[1] || _filename[1]=='.')) {
             // Simplify filename 'ext:-.foo' as '-.ext'.
             cimg_snprintf(_filename,_filename.width(),"-.%s",cext);
