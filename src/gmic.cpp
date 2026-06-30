@@ -2855,10 +2855,10 @@ const char* gmic::path_user(const char *const custom_path) {
   path_user.assign(std::strlen(_path_user) + 64);
 #if cimg_OS!=2
   cimg_snprintf(path_user,path_user.width(),"%s%c.gmic",
-                _path_user,cimg_file_separator);
+                _path_user,cimg_directory_separator);
 #else
   cimg_snprintf(path_user,path_user.width(),"%s%cuser.gmic",
-                _path_user,cimg_file_separator);
+                _path_user,cimg_directory_separator);
 #endif
   CImg<char>::string(path_user).move_to(path_user); // Optimize length
   cimg::mutex(28,0);
@@ -2897,9 +2897,9 @@ const char* gmic::path_rc(const char *const custom_path) {
   path_rc.assign(std::strlen(_path_rc) + 64);
 
   if (add_gmic_subfolder)
-    cimg_snprintf(path_rc,path_rc.width(),"%s%cgmic%c",_path_rc,cimg_file_separator,cimg_file_separator);
+    cimg_snprintf(path_rc,path_rc.width(),"%s%cgmic%c",_path_rc,cimg_directory_separator,cimg_directory_separator);
   else
-    cimg_snprintf(path_rc,path_rc.width(),"%s%c",_path_rc,cimg_file_separator);
+    cimg_snprintf(path_rc,path_rc.width(),"%s%c",_path_rc,cimg_directory_separator);
 
   CImg<char>::string(path_rc).move_to(path_rc); // Optimize length
   cimg::mutex(28,0);
@@ -9551,7 +9551,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               std::FILE *file = 0;
               do {
                 cimg_snprintf(filename_tmp,filename_tmp.width(),"%s%c%s.%s",
-                              cimg::temporary_path(),cimg_file_separator,
+                              cimg::temporary_path(),cimg_directory_separator,
                               cimg::filenamerand(),cext);
                 if ((file=cimg::std_fopen(filename_tmp,"rb"))!=0) cimg::fclose(file);
               } while (file);
@@ -14221,7 +14221,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             std::FILE *file = 0;
             do {
               cimg_snprintf(filename_tmp,filename_tmp.width(),"%s%c%s.%s",
-                            cimg::temporary_path(),cimg_file_separator,
+                            cimg::temporary_path(),cimg_directory_separator,
                             cimg::filenamerand(),cext);
               if ((file=cimg::std_fopen(filename_tmp,"rb"))!=0) cimg::fclose(file);
             } while (file);
