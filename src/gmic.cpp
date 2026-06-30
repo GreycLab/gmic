@@ -113,76 +113,78 @@ static CImg<T> append_CImg3d(const CImgList<T>& images) {
 
   CImg<T> res(1,siz + 8);
   const T **const ptrs = new const T*[images.size()];
-  T *ptrd = res._data;
-  *(ptrd++) = (T)('C' + 0.5f); *(ptrd++) = (T)('I' + 0.5f); // Create object header
-  *(ptrd++) = (T)('m' + 0.5f); *(ptrd++) = (T)('g' + 0.5f);
-  *(ptrd++) = (T)('3' + 0.5f); *(ptrd++) = (T)('d' + 0.5f);
-  *(ptrd++) = cimg::uint2float(g_nbv,(T)0);
-  *(ptrd++) = cimg::uint2float(g_nbp,(T)0);
-  cimglist_for(images,l) { // Merge object points
-    const CImg<T>& img = images[l];
-    const unsigned int nbv = cimg::float2uint(img[6]);
-    std::memcpy(ptrd,img._data + 8,3*nbv*sizeof(T));
-    ptrd+=3*nbv;
-    ptrs[l] = img._data + 8 + 3*nbv;
-  }
-  ulongT poff = 0;
-  cimglist_for(images,l) { // Merge object primitives
-    const unsigned int
-      nbv = cimg::float2uint(images[l][6]),
-      nbp = cimg::float2uint(images[l][7]);
-    for (unsigned int p = 0; p<nbp; ++p) {
-      const unsigned int
-        nbi = cimg::float2uint(*(ptrs[l]++)),
-        _nbi = nbi<5?nbi:nbi==5?2:nbi/3;
-      *(ptrd++) = cimg::uint2float(nbi,(T)0);
-      for (unsigned int i = 0; i<_nbi; ++i)
-        *(ptrd++) = cimg::uint2float(cimg::float2uint(*(ptrs[l]++)) + poff,(T)0);
-      for (unsigned int i = nbi - _nbi; i; --i)
-        *(ptrd++) = *(ptrs[l]++);
+  try {
+    T *ptrd = res._data;
+    *(ptrd++) = (T)('C' + 0.5f); *(ptrd++) = (T)('I' + 0.5f); // Create object header
+    *(ptrd++) = (T)('m' + 0.5f); *(ptrd++) = (T)('g' + 0.5f);
+    *(ptrd++) = (T)('3' + 0.5f); *(ptrd++) = (T)('d' + 0.5f);
+    *(ptrd++) = cimg::uint2float(g_nbv,(T)0);
+    *(ptrd++) = cimg::uint2float(g_nbp,(T)0);
+    cimglist_for(images,l) { // Merge object points
+      const CImg<T>& img = images[l];
+      const unsigned int nbv = cimg::float2uint(img[6]);
+      std::memcpy(ptrd,img._data + 8,3*nbv*sizeof(T));
+      ptrd+=3*nbv;
+      ptrs[l] = img._data + 8 + 3*nbv;
     }
-    poff+=nbv;
-  }
-  ulongT voff = 0;
-  cimglist_for(images,l) { // Merge object colors
-    const unsigned int nbc = cimg::float2uint(images[l][7]);
-    for (unsigned int c = 0; c<nbc; ++c)
-      if (*(ptrs[l])==(T)-128) {
-        *(ptrd++) = *(ptrs[l]++);
+    ulongT poff = 0;
+    cimglist_for(images,l) { // Merge object primitives
+      const unsigned int
+        nbv = cimg::float2uint(images[l][6]),
+        nbp = cimg::float2uint(images[l][7]);
+      for (unsigned int p = 0; p<nbp; ++p) {
         const unsigned int
-          w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
-          h = (unsigned int)*(ptrs[l]++),
-          s = (unsigned int)*(ptrs[l]++);
-        if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
-        else {
-          *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
-          const ulongT whs = (ulongT)w*h*s;
-          std::memcpy(ptrd,ptrs[l],whs*sizeof(T));
-          ptrs[l]+=whs; ptrd+=whs;
-        }
-      } else { *(ptrd++) = *(ptrs[l]++); *(ptrd++) = *(ptrs[l]++); *(ptrd++) = *(ptrs[l]++); }
-    voff+=nbc;
-  }
-  voff = 0;
-  cimglist_for(images,l) { // Merge object opacities
-    const unsigned int nbo = cimg::float2uint(images[l][7]);
-    for (unsigned int o = 0; o<nbo; ++o)
-      if (*(ptrs[l])==(T)-128) {
-        *(ptrd++) = *(ptrs[l]++);
-        const unsigned int
-          w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
-          h = (unsigned int)*(ptrs[l]++),
-          s = (unsigned int)*(ptrs[l]++);
-        if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
-        else {
-          *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
-          const ulongT whs = (ulongT)w*h*s;
-          std::memcpy(ptrd,ptrs[l],whs*sizeof(T));
-          ptrs[l]+=whs; ptrd+=whs;
-        }
-      } else *(ptrd++) = *(ptrs[l]++);
-    voff+=nbo;
-  }
+          nbi = cimg::float2uint(*(ptrs[l]++)),
+          _nbi = nbi<5?nbi:nbi==5?2:nbi/3;
+        *(ptrd++) = cimg::uint2float(nbi,(T)0);
+        for (unsigned int i = 0; i<_nbi; ++i)
+          *(ptrd++) = cimg::uint2float(cimg::float2uint(*(ptrs[l]++)) + poff,(T)0);
+        for (unsigned int i = nbi - _nbi; i; --i)
+          *(ptrd++) = *(ptrs[l]++);
+      }
+      poff+=nbv;
+    }
+    ulongT voff = 0;
+    cimglist_for(images,l) { // Merge object colors
+      const unsigned int nbc = cimg::float2uint(images[l][7]);
+      for (unsigned int c = 0; c<nbc; ++c)
+        if (*(ptrs[l])==(T)-128) {
+          *(ptrd++) = *(ptrs[l]++);
+          const unsigned int
+            w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
+            h = (unsigned int)*(ptrs[l]++),
+            s = (unsigned int)*(ptrs[l]++);
+          if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
+          else {
+            *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
+            const ulongT whs = (ulongT)w*h*s;
+            std::memcpy(ptrd,ptrs[l],whs*sizeof(T));
+            ptrs[l]+=whs; ptrd+=whs;
+          }
+        } else { *(ptrd++) = *(ptrs[l]++); *(ptrd++) = *(ptrs[l]++); *(ptrd++) = *(ptrs[l]++); }
+      voff+=nbc;
+    }
+    voff = 0;
+    cimglist_for(images,l) { // Merge object opacities
+      const unsigned int nbo = cimg::float2uint(images[l][7]);
+      for (unsigned int o = 0; o<nbo; ++o)
+        if (*(ptrs[l])==(T)-128) {
+          *(ptrd++) = *(ptrs[l]++);
+          const unsigned int
+            w = (unsigned int)cimg::float2uint(*(ptrs[l]++)),
+            h = (unsigned int)*(ptrs[l]++),
+            s = (unsigned int)*(ptrs[l]++);
+          if (!h && !s) { *(ptrd++) = cimg::uint2float((unsigned int)(w + voff),(T)0); *(ptrd++) = 0; *(ptrd++) = 0; }
+          else {
+            *(ptrd++) = (T)w; *(ptrd++) = (T)h; *(ptrd++) = (T)s;
+            const ulongT whs = (ulongT)w*h*s;
+            std::memcpy(ptrd,ptrs[l],whs*sizeof(T));
+            ptrs[l]+=whs; ptrd+=whs;
+          }
+        } else *(ptrd++) = *(ptrs[l]++);
+      voff+=nbo;
+    }
+  } catch (...) { delete[] ptrs; throw; }
   delete[] ptrs;
   return res;
 }
