@@ -544,57 +544,6 @@ CImg<T> get_gmic_matchpatch(const CImg<T>& patch_image,
   return res;
 }
 
-const CImg<T>& gmic_print(const char *const title, const bool is_debug,
-                          const bool is_valid) const {
-  cimg::mutex(29);
-  CImg<doubleT> st;
-  if (is_valid && !is_empty()) get_stats().move_to(st);
-  const ulongT siz = size(), msiz = siz*sizeof(T), siz1 = siz - 1,
-    mdisp = msiz<8*1024?0U:msiz<8*1024*1024?1U:2U,
-    wh = _width*_height, whd = _width*_height*_depth,
-    w1 = _width - 1, wh1 = _width*_height - 1, whd1 = _width*_height*_depth - 1;
-
-  std::fprintf(cimg::output(),"%s%s%s%s:\n  %ssize%s = (%u,%u,%u,%u) [%lu %s of %s%s].\n  %sdata%s = %s",
-               cimg::t_magenta,cimg::t_bold,title,cimg::t_normal,
-               cimg::t_bold,cimg::t_normal,_width,_height,_depth,_spectrum,
-               (unsigned long)(mdisp==0?msiz:(mdisp==1?(msiz>>10):(msiz>>20))),
-               mdisp==0?"b":(mdisp==1?"Kio":"Mio"),
-               _is_shared?"shared ":"",
-               pixel_type(),
-               cimg::t_bold,cimg::t_normal,
-               is_debug?"":"(");
-  if (is_debug) std::fprintf(cimg::output(),"%p = (",(void*)_data);
-  if (is_valid) {
-    if (is_empty()) std::fprintf(cimg::output(),") [%s].\n",
-                                 pixel_type());
-    else {
-      cimg_foroff(*this,off) {
-        std::fprintf(cimg::output(),cimg::type<T>::format_s(),cimg::type<T>::format(_data[off]));
-        if (off!=siz1) std::fprintf(cimg::output(),"%s",
-                                    off%whd==whd1?" ^ ":
-                                    off%wh==wh1?"\\":
-                                    off%_width==w1?";":",");
-        if (off==11 && siz>24) { off = siz1 - 12; std::fprintf(cimg::output(),"(...),"); }
-      }
-      std::fprintf(cimg::output(),")%s.\n  %smin%s = %g, %smax%s = %g, %smean%s = %g, "
-                   "%sstd%s = %g, %scoords_min%s = (%u,%u,%u,%u), "
-                   "%scoords_max%s = (%u,%u,%u,%u).\n",
-                   _is_shared?" [shared]":"",
-                   cimg::t_bold,cimg::t_normal,st[0],
-                   cimg::t_bold,cimg::t_normal,st[1],
-                   cimg::t_bold,cimg::t_normal,st[2],
-                   cimg::t_bold,cimg::t_normal,std::sqrt(st[3]),
-                   cimg::t_bold,cimg::t_normal,(int)st[4],(int)st[5],(int)st[6],(int)st[7],
-                   cimg::t_bold,cimg::t_normal,(int)st[8],(int)st[9],(int)st[10],(int)st[11]);
-    }
-  } else std::fprintf(cimg::output(),"%s%sinvalid pointer%s) [shared %s].\n",
-                      cimg::t_red,cimg::t_bold,cimg::t_normal,
-                      pixel_type());
-  std::fflush(cimg::output());
-  cimg::mutex(29,0);
-  return *this;
-}
-
 CImg<T>& gmic_set(const double value,
                   const int x, const int y, const int z, const int v) {
   (*this).atXYZC(x,y,z,v,(T)0) = (T)value;
@@ -2843,7 +2792,7 @@ const CImg<char>& gmic::decompress_stdlib() {
       cimg::mutex(29);
       std::fprintf(cimg::output(),
                    "[gmic] %s*** Warning *** Could not decompress G'MIC standard library, ignoring it.%s\n",
-                   cimg::t_red,cimg::t_normal);
+                   cimg::t_red(),cimg::t_normal());
       std::fflush(cimg::output());
       cimg::mutex(29,0);
       stdlib.assign(1,1,1,1,0);
@@ -3185,7 +3134,7 @@ void gmic::warn(const char *const format, ...) {
   if (is_cr) std::fputc('\r',cimg::output()); else std::fputc('\n',cimg::output());
   std::fprintf(cimg::output(),
                "[gmic] %s%s*** Warning *** %s%s",
-               cimg::t_magenta,cimg::t_bold,message.data() + (is_cr?1:0),cimg::t_normal);
+               cimg::t_magenta(),cimg::t_bold(),message.data() + (is_cr?1:0),cimg::t_normal());
   std::fflush(cimg::output());
   cimg::mutex(29,0);
 }
@@ -3214,17 +3163,17 @@ gmic& gmic::warn(const CImg<unsigned int> *const callstack_selection,
     if (debug_filename<command_files.size() && debug_line!=~0U)
       std::fprintf(cimg::output(),
                    "[gmic]%s %s%s*** Warning (file '%s', %sline #%u) *** %s%s",
-                   s_callstack.data(),cimg::t_magenta,cimg::t_bold,
+                   s_callstack.data(),cimg::t_magenta(),cimg::t_bold(),
                    command_files[debug_filename].data(),
                    is_debug_info?"":"call from ",debug_line,message.data() + (is_cr?1:0),
-                   cimg::t_normal);
+                   cimg::t_normal());
     else
       std::fprintf(cimg::output(),
                    "[gmic]%s %s%s*** Warning *** %s%s",
-                   s_callstack.data(),cimg::t_magenta,cimg::t_bold,
-                   message.data() + (is_cr?1:0),cimg::t_normal);
+                   s_callstack.data(),cimg::t_magenta(),cimg::t_bold(),
+                   message.data() + (is_cr?1:0),cimg::t_normal());
   } else std::fprintf(cimg::output(),"%s%s*** Warning *** %s%s",
-                      cimg::t_magenta,cimg::t_bold,message.data() + (is_cr?1:0),cimg::t_normal);
+                      cimg::t_magenta(),cimg::t_bold(),message.data() + (is_cr?1:0),cimg::t_normal());
   std::fflush(cimg::output());
   cimg::mutex(29,0);
   return *this;
@@ -3252,11 +3201,11 @@ gmic& gmic::debug(const char *format, ...) {
   if (is_debug_info && debug_filename<command_files.size() && debug_line!=~0U)
     std::fprintf(cimg::output(),
                  "%s<gmic>%s#%u ",
-                 cimg::t_green,callstack2string(true).data(),debug_line);
+                 cimg::t_green(),callstack2string(true).data(),debug_line);
   else
     std::fprintf(cimg::output(),
                  "%s<gmic>%s ",
-                 cimg::t_green,callstack2string(true).data());
+                 cimg::t_green(),callstack2string(true).data());
 
   for (char *s = message.data() + (is_cr?1:0); *s; ++s) {
     char c = *s;
@@ -3271,7 +3220,7 @@ gmic& gmic::debug(const char *format, ...) {
   }
   std::fprintf(cimg::output(),
                "%s",
-               cimg::t_normal);
+               cimg::t_normal());
   std::fflush(cimg::output());
   cimg::mutex(29,0);
   return *this;
@@ -3300,18 +3249,18 @@ gmic& gmic::error(const bool output_header, const char *const format, ...) {
     if (output_header) {
       if (is_debug_info && debug_filename<command_files.size() && debug_line!=~0U)
         std::fprintf(cimg::output(),"[gmic]%s %s%s*** Error (file '%s', %sline #%u) *** %s%s",
-                     s_callstack.data(),cimg::t_red,cimg::t_bold,
+                     s_callstack.data(),cimg::t_red(),cimg::t_bold(),
                      command_files[debug_filename].data(),
                      is_debug_info?"":"call from ",debug_line,message.data() + (is_cr?1:0),
-                     cimg::t_normal);
+                     cimg::t_normal());
       else
         std::fprintf(cimg::output(),"[gmic]%s %s%s*** Error *** %s%s",
-                     s_callstack.data(),cimg::t_red,cimg::t_bold,
-                     message.data() + (is_cr?1:0),cimg::t_normal);
+                     s_callstack.data(),cimg::t_red(),cimg::t_bold(),
+                     message.data() + (is_cr?1:0),cimg::t_normal());
     } else
       std::fprintf(cimg::output(),"[gmic]%s %s%s%s%s",
-                   s_callstack.data(),cimg::t_red,cimg::t_bold,
-                   message.data() + (is_cr?1:0),cimg::t_normal);
+                   s_callstack.data(),cimg::t_red(),cimg::t_bold(),
+                   message.data() + (is_cr?1:0),cimg::t_normal());
     std::fflush(cimg::output());
     cimg::mutex(29,0);
   }
@@ -3357,24 +3306,24 @@ gmic& gmic::error(const bool output_header, const CImg<unsigned int> *const call
         if (debug_filename<command_files.size() && debug_line!=~0U)
           std::fprintf(cimg::output(),
                        "[gmic]%s %s%s*** Error (file '%s', %sline #%u) *** %s%s",
-                       s_callstack.data(),cimg::t_red,cimg::t_bold,
+                       s_callstack.data(),cimg::t_red(),cimg::t_bold(),
                        command_files[debug_filename].data(),
                        is_debug_info?"":"call from ",debug_line,message.data() + (is_cr?1:0),
-                       cimg::t_normal);
+                       cimg::t_normal());
         else
           std::fprintf(cimg::output(),
                        "[gmic]%s %s%s*** Error *** %s%s",
-                       s_callstack.data(),cimg::t_red,cimg::t_bold,
-                       message.data() + (is_cr?1:0),cimg::t_normal);
+                       s_callstack.data(),cimg::t_red(),cimg::t_bold(),
+                       message.data() + (is_cr?1:0),cimg::t_normal());
       } else
         std::fprintf(cimg::output(),
                      "[gmic]%s %s%s%s%s",
-                     s_callstack.data(),cimg::t_red,cimg::t_bold,
-                     message.data() + (is_cr?1:0),cimg::t_normal);
+                     s_callstack.data(),cimg::t_red(),cimg::t_bold(),
+                     message.data() + (is_cr?1:0),cimg::t_normal());
     } else std::fprintf(cimg::output(),
                         "%s%s*** Error *** %s%s",
-                        cimg::t_red,cimg::t_bold,
-                        message.data() + (is_cr?1:0),cimg::t_normal);
+                        cimg::t_red(),cimg::t_bold(),
+                        message.data() + (is_cr?1:0),cimg::t_normal());
     std::fflush(cimg::output());
     cimg::mutex(29,0);
   }
@@ -5101,7 +5050,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         command_line_to_CImgList(starting_command_line); // Do it twice, when debug enabled
       }
       nb_carriages_default = 2;
-      debug("%sEnter scope '%s/'.%s",cimg::t_bold,callstack.back().data(),cimg::t_normal);
+      debug("%sEnter scope '%s/'.%s",cimg::t_bold(),callstack.back().data(),cimg::t_normal());
       is_start = false;
     }
 
@@ -14973,13 +14922,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         unsigned int reference_line = ~0U;
         if (cimg_sscanf(s,"*%*[a-z]#%u",&reference_line)==1)
           error(true,0,0,
-                "A '%s' command is missing (for '%s', line #%u), before return point.",
+                "A '%s' command is missing (for '%s', line #%u), before the return point.",
                 s[1]=='d'?"while":s[1]=='i'?"fi":"done",
                 s[1]=='d'?"do":s[1]=='i'?"if":s[1]=='r'?"repeat":
                 s[1]=='f'?(s[4]!='e'?"for":"foreach"):"local",
                 reference_line);
         else error(true,0,0,
-                   "A '%s' command is missing, before return point.",
+                   "A '%s' command is missing, before the return point.",
                    s[1]=='d'?"while":s[1]=='i'?"fi":"done");
       }
     }
@@ -15006,7 +14955,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       is_change = false;
     }
 
-    if (is_debug) debug("%sExit scope '%s/'.%s\n",cimg::t_bold,callstack.back().data(),cimg::t_normal);
+    if (is_debug) debug("%sExit scope '%s/'.%s\n",cimg::t_bold(),callstack.back().data(),cimg::t_normal());
 
     if (callstack.size()==1) {
       if (is_quit) {

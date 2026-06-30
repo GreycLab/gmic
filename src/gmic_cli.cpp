@@ -251,13 +251,13 @@ int main(int argc, char **argv) {
       // Something went wrong during the pipeline execution.
       if (gmic_instance.verbosity<=0) {
         std::fprintf(cimg::output(),"\n[gmic] %s%s%s%s",
-                     cimg::t_red,cimg::t_bold,
-                     e.what(),cimg::t_normal);
+                     cimg::t_red(),cimg::t_bold(),
+                     e.what(),cimg::t_normal());
         std::fflush(cimg::output());
       }
       if (*e.command() && std::strcmp(e.command(),"check")) {
         std::fprintf(cimg::output(),"\n[gmic] Command '%s%s%s' has the following description:\n",
-                     cimg::t_red,e.command(),cimg::t_normal);
+                     cimg::t_red(),e.command(),cimg::t_normal());
         std::fflush(cimg::output());
         CImgList<gmic_pixel_type> images;
         CImgList<char> image_names;
