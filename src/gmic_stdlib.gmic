@@ -2063,7 +2063,7 @@ d :
 # 'Z': Switch zoom factor - '0'-'9': Set zoom factor.
 #@cli : \n- **3D mesh view:**
 #@cli : 'LMB': Mesh rotation - 'CTRL+LMB' or 'MMB': Mesh pan - 'RMB': Mesh zoom -  \
-# 'A': Toggle axes - 'D': Switch face side mode - 'F': Change focale length - 'J': Start/stop animation - \
+# 'A': Toggle axes - 'D': Switch face side mode - 'F': Change focal length - 'J': Start/stop animation - \
 # 'K': Switch background - 'O': Switch outline mode - 'P': Print 3D pose matrix on 'stdout' - \
 # 'R': Switch rendering mode - 'T': Switch motion rendering mode - 'X': Show/hide bounding-box - \
 # 'U': Switch animation mode - 'Z': Toggle z-buffer.
@@ -2100,7 +2100,7 @@ d :
 #@cli :   - '_display_3d_side_mode' can be { 0:Single-sided | 1:Double-sided | 2:Single-sided (flipped) } \
 # (default value: '0').
 #@cli :   - '_display_3d_is_zbuffer' can be { 0:Off | 1:On } (default value: '1').
-#@cli :   - '_display_3d_focale' can be { <0:Perspective projection w/o sprite zooming, 0:Parallel projection | \
+#@cli :   - '_display_3d_focal' can be { <0:Perspective projection w/o sprite zooming, 0:Parallel projection | \
 # >0:Perspective projection } (default value: 1.5).
 #@cli :   - '_display_3d_is_axes' can be { 0:Off | 1:On } (default value: '1').
 #@cli :   - '_display_3d_is_bounding_box' can be { 0:Off | 1:On } (default value: '0').
@@ -2150,7 +2150,7 @@ _display : skip ${1=},${3=}
   setting_3d_side_mode:=narg($_display_3d_side_mode)?cut(int(0$_display_3d_side_mode),0,2):\
                         narg($_double3d)?$_double3d:1
   setting_3d_is_zbuffer:=narg($_display_3d_is_zbuffer)?cut(int(0$_display_3d_is_zbuffer),0,1):1
-  setting_3d_focale:=narg($_display_3d_focale)?0$_display_3d_focale:1.5
+  setting_3d_focal:=narg($_display_3d_focal)?0$_display_3d_focal:1.5
   setting_3d_is_axes:=narg($_display_3d_is_axes)?cut(int(0$_display_3d_is_axes),0,1):1
   setting_3d_is_bounding_box:=narg($_display_3d_is_bounding_box)?cut(int(0$_display_3d_is_bounding_box),0,1):0
   setting_3d_background:=narg($_display_3d_background)?cut(int(0$_display_3d_background),0,12):11
@@ -2779,13 +2779,13 @@ _display : skip ${1=},${3=}
                                                                       $setting_3d_rendering_mode,\
                                                $setting_3d_side_mode==1,\
                                                $setting_3d_is_zbuffer,\
-                                               $setting_3d_focale*$fact]},\
+                                               $setting_3d_focal*$fact]},\
             $setting_3d_light,$_specl3d,$_specs3d,{$is_mesh3d" && "$area_3d_is_motion}
           if $setting_3d_outline_mode" && "!$is_volumetric" && "$setting_3d_rendering_mode>1 # Draw primitive outlines
             +z. 0,8,0,{7+3*$nbv} j[area_3d_mesh_notexture] .,0,8 rm.
             [area_3d_view],[area_3d_view],1,1,-1
             j3d. [area_3d_mesh_notexture],50%,50%,0,1,2,{$setting_3d_side_mode==1},1,\
-                 {$setting_3d_focale*$fact},$setting_3d_light,$_specl3d,$_specs3d,$area_3d_is_motion
+                 {$setting_3d_focal*$fact},$setting_3d_light,$_specl3d,$_specs3d,$area_3d_is_motion
             g. xy,1 !=[-2,-1] 0 or[-2,-1]
             100%,100%,1,3
             fc. ${arg1\ $setting_3d_outline_mode,\
@@ -3847,13 +3847,13 @@ _display : skip ${1=},${3=}
                                          "Single-sided,Double-sided,\"Single-sided (flipped)\""}
           $0_rmn area_3d_view,canvas_label_notification
           skip {*,-D}
-        elif !$is_CTRL" && "{*,F} # F: Change 3D focale
-          setting_3d_focale:="_const f = $setting_3d_focale;
+        elif !$is_CTRL" && "{*,F} # F: Change 3D focal length
+          setting_3d_focal:="_const f = $setting_3d_focal;
             lof = [ 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1,1.5,2,3,4,6,8,10 ];
             for (k = 0, k<size(lof) && lof[k]<=f, ++k);
             lof[k%size(lof)]"
-          if $setting_3d_focale
-            notification="Focale: x"$setting_3d_focale
+          if $setting_3d_focal
+            notification="Focal: x"$setting_3d_focal
           else
             notification="Parallel projection"
           fi
@@ -25776,7 +25776,7 @@ _delaunay3d :
       i!=A && i!=B && A!=B?kth(1+c,i,A,B):0"
   discard. 0 r. {h/3},3,1,1,-1
 
-#@cli depthmap3d : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focale
+#@cli depthmap3d : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focal
 #@cli : Draw depth map of specified 3D object on selected images.
 #@cli : Default values: 'x=y=50%', 'z=0' and 'is_zbuffer=1'. \
 # All other arguments take their default values from the 3D environment variables.
@@ -25786,7 +25786,7 @@ depthmap3d : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || is
   pass$1 2
   if !i[6]" || "!i[7] rm. return fi
   is_double_sided:=narg($5)?$5:narg($_double3d)?$_double3d:1
-  focale:=narg($7)?$7:narg($_focale3d)?$_focale3d:700
+  focal:=narg($7)?$7:narg($_focal3d)?$_focal3d:700
 
   foreach[^-1] {
     pass. 0
@@ -25852,7 +25852,7 @@ depthmap3d : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || is
       end(da_freeze(#3); da_freeze(#4); set('ind',ind))" rm.
     1,$nbp,1,1,1
 
-    a[-4--1] y j3d[0] .,${2-4},1,2,$is_double_sided,$6,$focale k[0]
+    a[-4--1] y j3d[0] .,${2-4},1,2,$is_double_sided,$6,$focal k[0]
   }
   rm.
 
@@ -26014,33 +26014,33 @@ extrude3d : check "${1=16}>0 && ${2=1024}>0 && ${3=0.5%}>=0"
     isosurface3d 50% *3d 1,1,$fact rv3d => $nm
   }
 
-#@cli f3d : eq. to 'focale3d'.
+#@cli f3d : eq. to 'focal3d'.
 f3d :
-  l[] { check "isnum(${1=700})" focale=$1 onfail noarg focale=700 }
-  v + _focale3d $focale
+  l[] { check "isnum(${1=700})" focal=$1 onfail noarg focal=700 }
+  v + _focal3d $focal
 
-#@cli focale3d : focale
-#@cli : Set 3D focale.
+#@cli focal3d : focal
+#@cli : Set 3D focal.
 #@cli : (eq. to 'f3d').\n
-#@cli : Set 'focale' to 0 to enable parallel projection (instead of perspective).
-#@cli : Set negative 'focale' will disable 3D sprite zooming.
-#@cli : Default value: 'focale=700'.
-#@cli : $ repeat 5 { torus3d 100,30 rotate3d[-1] 1,1,0,60 focale3d {$<*90} snapshot3d[-1] 400 } remove[0]
-focale3d :
-  l[] { check "isnum(${1=700})" focale=$1 onfail noarg focale=700 }
-  v + _$0 $focale
+#@cli : Set 'focal' to 0 to enable parallel projection (instead of perspective).
+#@cli : Set negative 'focal' will disable 3D sprite zooming.
+#@cli : Default value: 'focal=700'.
+#@cli : $ repeat 5 { torus3d 100,30 rotate3d[-1] 1,1,0,60 focal3d {$<*90} snapshot3d[-1] 400 } remove[0]
+focal3d :
+  l[] { check "isnum(${1=700})" focal=$1 onfail noarg focal=700 }
+  v + _$0 $focal
 
-_focale3d :
-  e[0--3] "Set 3D focale to $1."
-  _focale3d=$1
+_focal3d :
+  e[0--3] "Set 3D focal to $1."
+  _focal3d=$1
 
 #@cli fov3d : fov_angle>=0,_image_resolution>0
-#@cli : Set 3D focale to match specified field of vision angle (in degree) for rendering a 3D object in an image \
+#@cli : Set 3D focal to match specified field of vision angle (in degree) for rendering a 3D object in an image \
 # with specified resolution.
-#@cli : Return corresponding value of the focale in status.
+#@cli : Return corresponding value of the focal in status.
 #@cli : Default value: 'fov_angle=45' and 'image_size=max(w,h)' (max size of the latest image).
 fov3d : check "${1=45}>=0 && isint(${2=max(w,h)},1)"
-  e[^-1] "Set 3D focale to have FOV angle of $1 for image size $2."
+  e[^-1] "Set 3D focal to have FOV angle of $1 for image size $2."
   if !$1 f3d=0 else f3d:=($2)/2/tan(($1)°/2) fi
   f3d $f3d u $f3d
 
@@ -26536,7 +26536,7 @@ _normalize3d :
     fi
   }
 
-#@cli normalmap3d : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focale
+#@cli normalmap3d : [object3d],_x[%],_y[%],_z_,is_double_sided={ 0:No | 1:Yes },_is_zbuffer={ 0:No | 1:Yes },_focal
 #@cli : Draw normal map of specified 3D object on selected images.
 #@cli : Default values: 'x=y=50%', 'z=0' and 'is_zbuffer=1'. \
 # All other arguments take their default values from the 3D environment variables.
@@ -26546,11 +26546,11 @@ normalmap3d : check ${"is_image_arg $1"}" && isnum(${4=0}) && (!narg(${5=}) || i
   pass$1 0 p3d. 2
   if !i[6]" || "!i[7] rm. return fi
   is_double_sided:=narg($5)?$5:narg($_double3d)?$_double3d:1
-  focale:=narg($7)?$7:narg($_focale3d)?$_focale3d:700
+  focal:=narg($7)?$7:narg($_focal3d)?$_focal3d:700
   +normals3d. 1 channels. 3,5 permute. cyzx y.
   s3d.. rv[-3,-1] rm.
   a[-6--1] y
-  j3d[^-1] .,${2-4},1,2,$is_double_sided,$6,$focale rm.
+  j3d[^-1] .,${2-4},1,2,$is_double_sided,$6,$focal rm.
 
 #@cli normals3d : output_mode={ 0:vertices | 1:primitives | 2:vertices+primitives }.
 #@cli : Estimate normals of selected 3D meshes, for vertices, primitives, or both.
@@ -26639,7 +26639,7 @@ o3d :
 #@cli j3d : eq. to 'object3d'. : (+)
 
 #@cli object3d : [object3d],_x[%],_y[%],_z,_opacity,_rendering_mode,_is_double_sided={ 0:No | 1:Yes },\
-# _is_zbuffer={ 0:No | 1:Yes },_focale,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess,\
+# _is_zbuffer={ 0:No | 1:Yes },_focal,_light_x,_light_y,_light_z,_specular_lightness,_specular_shininess,\
 # _is_multithreaded_rendering={ 0:No | 1:Yes } : (+)
 #@cli : Draw specified 3D object on selected images.
 #@cli : (eq. to 'j3d').\n
@@ -27276,7 +27276,7 @@ snapshot3d : check "("${"is_image_arg $1"}" || isint(${1=1024},1)) && ${2=1}>=0 
     16,16,1,1,48 +f. 64 a[-2,-1] x +mirror. x a[-2,-1] y r. {-2,[w,h]},1,3,0,2 +[-2,-1] /. 2 round.
   fi
 
-  ofocale3d=$_focale3d
+  ofocal3d=$_focal3d
   fov3d $fov
   foreach[^-1] {
     pass. 0
@@ -27290,7 +27290,7 @@ snapshot3d : check "("${"is_image_arg $1"}" || isint(${1=1024},1)) && ${2=1}>=0 
     fi
     =>[1] {0,n} k.
   } rm.
-  _focale3d=$ofocale3d
+  _focal3d=$ofocal3d
 
 #@cli sl3d : eq. to 'specl3d'.
 sl3d :
@@ -54163,7 +54163,7 @@ fx_flower_preview :
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><small><b>3D Parameters:</b></small></span>")
 #@gui : Align Camera Center = bool(1)
-#@gui : Focale = float(1.5,0.5,10)
+#@gui : Focal Length = float(1.5,0.5,10)
 #@gui : Light On/Off = point(80,20,-1,1,255,255,0,128,2%)
 #@gui : Ambient Light (%) = float(50,0,100)_1
 #@gui : Diffuse Shadows (%) = float(20,0,100)_1
@@ -54179,7 +54179,7 @@ fx_flower_preview :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/02/03</i>.</small>")
 fx_heightfield_warp : skip "${2=}"
-  heightfield_type,heightfield_formula,heightfield_factor,heightfield_smoothness,align_camera_center,focale,\
+  heightfield_type,heightfield_formula,heightfield_factor,heightfield_smoothness,align_camera_center,focal,\
     light_x,light_y,ambient_light,diffuse_shadows,diffuse_highlights,specular_light,specular_material,\
     preview_grid_overlay,preview_resolution,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-20}
   is_preview,is_light:=0$_is_preview,!isnan($light_x);
@@ -54219,7 +54219,7 @@ fx_heightfield_warp : skip "${2=}"
       const mwh = min(w,h);
       const xc = $align_camera_center?w*$center_x%:w/2;
       const yc = $align_camera_center?h*$center_y%:h/2;
-      const f = $focale*mwh;
+      const f = $focal*mwh;
       Z = (mwh*$heightfield_factor%)*i(#$heightfield);
       Zpf = Z + f;
       X = xc + f*(x - xc)/Zpf;
@@ -54321,7 +54321,7 @@ fx_heightfield_warp : skip "${2=}"
     "{"$heightfield_factor"}"\
     "{"$heightfield_smoothness"}"\
     "{"$align_camera_center"}"\
-    "{"$focale"}"\
+    "{"$focal"}"\
     "{"$light_x,$light_y"}"\
     "{"$ambient_light"}_"$visibility_light\
     "{"$diffuse_shadows"}_"$visibility_light\
@@ -54604,7 +54604,7 @@ fx_quadrangle_preview :
 #@gui : Waves Smoothness = float(1.5,0,4)
 #@gui : X-Angle = float(0,-10,10)
 #@gui : Y-Angle = float(-3.30,-10,10)
-#@gui : Focale = float(7,0,10)
+#@gui : Focal Length = float(7,0,10)
 #@gui : Zoom = float(1.5,1,5)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
@@ -61644,7 +61644,7 @@ fx_lathing3d_preview :
 #@gui : Face Orientation = choice("Normal","Reverted","Double-Sided")
 #@gui : Materials = choice(2,"Discard Colors","Discard Textures","Keep Textures")
 #@gui : Recovery Color = color(200,200,200)
-#@gui : Focale (%) = float(100,0,500)
+#@gui : Focal (%) = float(100,0,500)
 #@gui : Anti-aliasing = _choice(1,"None","x1.5","x2","x3","x4")
 #@gui : Custom Light = point(50,50,-1,1,255,255,0,-100,3%)
 #@gui : Reset 3D Position = button()
@@ -61658,7 +61658,7 @@ fx_mesh3d : skip "${1=},${2=}"
   old_filename="$2"
   xx,xy,yx,yy,sx,sy,cx,cy,ocx,ocy,\
   rotx,roty,rotz,rendering_mode,face_orientation,materials,\
-  recR,recG,recB,focale,antialias,lx,ly,reset_pos=${3-26}
+  recR,recG,recB,focal,antialias,lx,ly,reset_pos=${3-26}
 
   R=30 # Radii (in %) of the virtual ellipse
   show_bb:=!$rendering_mode
@@ -61717,7 +61717,7 @@ fx_mesh3d : skip "${1=},${2=}"
   pose3d. $Ux,$Vx,$Wx,0,$Uy,$Vy,$Wy,0,$Uz,$Vz,$Wz,0
   is_double:=$face_orientation==2
   if $face_orientation==1 rv3d. fi
-  foc:=$fact*$focale%
+  foc:=$fact*$focal%
   if $materials<2 p3d. 2 if !$materials col3d. $recR,$recG,$recB fi fi
   nlx,nly,nlz:=isnan($lx)?[$W*$cx%,$H*$cy%,-5e8]:[$W*($cx+4*($lx-$cx))%,$H*($cy+4*($ly-$cy))%,-10*$foc]
   if 0$_is_preview
@@ -61745,7 +61745,7 @@ fx_mesh3d : skip "${1=},${2=}"
   u "{"$filename"}{"$filename"}"\
     "{"{[$cx+$ux,$cy+$uy]}"}{"{[$cx+$vx,$cy+$vy]}"}{"{[$cx+$sx,$cy+$sy]}"}{"$cx,$cy"}{"$cx"}{"$cy"}"\
     "{"$rotx"}{"$roty"}{"$rotz"}{"$rendering_mode"}{"$face_orientation"}{"$materials"}"\
-    "{"$recR,$recG,$recB"}{"$focale"}{"$antialias"}{"$lx,$ly"}{"$reset_pos"}"
+    "{"$recR,$recG,$recB"}{"$focal"}{"$antialias"}{"$lx,$ly"}{"$reset_pos"}"
 
 fx_mesh3d_preview : skip "${1=},${2=}"
   if !$! $_preview_area_width,$_preview_area_height,1,4
@@ -63375,7 +63375,7 @@ fx_shadebobs :
 #@gui : Y-Angle (deg.) = float(0,-180,180)_0
 #@gui : Z-Angle (deg.) = float(0,-180,180)_0
 #@gui : Zoom = float(1,0,10)_0
-#@gui : Focale = int(8,1,20)_0
+#@gui : Focal Length = int(8,1,20)_0
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><b>Rendering parameters:</b></span>")
 #@gui : Center = point(50,50,0,1,0,238,85,-170,10)_0
@@ -63404,7 +63404,7 @@ fx_sine_curve :
   oxa,oya,oza,oxb,oyb,ozb,\
   pxa,pya,pza,pxb,pyb,pzb,\
   sxa,sya,sza,sxb,syb,szb,\
-  rotx,roty,rotz,zoom,focale,\
+  rotx,roty,rotz,zoom,focal,\
   xc,yc,prev_xc,prev_yc,xr,yr,xa,ya,prev_xa,prev_ya,\
   radius1,radius2,opacity,\
   colR,colG,colB,\
@@ -63438,7 +63438,7 @@ fx_sine_curve :
     oxa,oxb,oya,oyb,oza,ozb=90,90,0,0,0,0
     pxa,pxb,pya,pyb,pza,pzb=1
     sxa,sxb,sya,syb,sza,szb=0
-    rotx,roty,rotz,zoom,focale=0,0,0,2,8
+    rotx,roty,rotz,zoom,focal=0,0,0,2,8
 
     # Set specific values for each preset.
 
@@ -63459,7 +63459,7 @@ fx_sine_curve :
       mxa,mxb,mya,myb=80,1,80,1 pxa,pxb,pya,pyb=1,3,1,3
     # Flower
     elif $preset==5
-      ratz=0.8 mza,mzb=7,1024 pza,pzb=1.6,2 rotz=45 zoom=1 focale=4
+      ratz=0.8 mza,mzb=7,1024 pza,pzb=1.6,2 rotz=45 zoom=1 focal=4
     # Flower Cushion
     elif $preset==6
       mxa,mxb,mya,myb=80,1,1,80 pxa,pxb,pya,pyb=1,3,1,3
@@ -63505,7 +63505,7 @@ fx_sine_curve :
   # Change unit for some variables.
   W,H:=w#0?[w#0,h#0]:0$_is_preview" && "0$_preview_area_width?[0$_preview_area_width,0$_preview_area_height]:[1024,1024]
   nresolution:=max(1,round($periods*1000000*($resolution%)^2))
-  nfocale:=arg1($focale,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
+  nfocal:=arg1($focal,0.05,0.1,0.2,0.3,0.4,0.5,0.75,1,1.25,1.5,1.75,2,3,4,8,16,32,128,1024,16384)
   noxa,noxb,noya,noyb,noza,nozb:=[$oxa,$oxb,$oya,$oyb,$oza,$ozb]*pi/180
   nantialiasing:=arg0($antialiasing,1,1.25,1.5,2,3)
   rW,rH:=[$W,$H]*$nantialiasing # Size of the non-antialiased rendering
@@ -63559,9 +63559,9 @@ fx_sine_curve :
       is_rot?(P = R*[ X,Y,Z ]; X = P[0]; Y = P[1]; Z = P[2]);
 
       # 2D projection.
-      X*="$nfocale";
-      Y*="$nfocale";
-      Z = max(1e-5,Z + 1 + "$nfocale");
+      X*="$nfocal";
+      Y*="$nfocal";
+      Z = max(1e-5,Z + 1 + "$nfocal");
       pX = X/Z;
       pY = -Y/Z;
 
@@ -63619,7 +63619,7 @@ fx_sine_curve :
     "{"$oxa"}_"$o"{"$oya"}_"$o"{"$oza"}_"$o"{"$oxb"}_"$o"{"$oyb"}_"$o"{"$ozb"}_"$o\
     "{"$pxa"}_"$p"{"$pya"}_"$p"{"$pza"}_"$p"{"$pxb"}_"$p"{"$pyb"}_"$p"{"$pzb"}_"$p\
     "{"$sxa"}_"$s"{"$sya"}_"$s"{"$sza"}_"$s"{"$sxb"}_"$s"{"$syb"}_"$s"{"$szb"}_"$s\
-    "{"$rotx"}_"$a"{"$roty"}_"$a"{"$rotz"}_"$a"{"$zoom"}_"$a"{"$focale"}_"$a\
+    "{"$rotx"}_"$a"{"$roty"}_"$a"{"$rotz"}_"$a"{"$zoom"}_"$a"{"$focal"}_"$a\
     "{"$xc,$yc"}{"$xc"}{"$yc"}{"$xr,$yr"}{"$xa,$ya"}{"$xa"}{"$ya"}{"$radius1"}{"$radius2"}{"$opacity"}"\
     "{"$colR,$colG,$colB"}{"$antialiasing"}"\
     "{"$preview_background"}"
@@ -64138,11 +64138,11 @@ fx_turbulence :
 # ?do=findComment&comment=614424"><i>Frio </i></a>.
 #@gui :       Latest Update: <i>2023/10/24</i>.</small>")
 fx_twisted_rays :
-  xcenter,ycenter,branches,angle,twist,focale,R,G,B,A,is_antialias=${1-11}
+  xcenter,ycenter,branches,angle,twist,focal,R,G,B,A,is_antialias=${1-11}
   foreach {
     Mwh,offx,offy:="const Mwh = max(w,h); [ Mwh,(Mwh - w)/2,(Mwh - h)/2 ]"
     xc,yc:=[$xcenter,$ycenter]%*[w,h]+[$offx,$offy]
-    +shape_rays $Mwh,$xc,$yc,$branches,$angle%,{$twist%},{$focale%},$is_antialias r. ..,..,1,100%,0,0,0.5,0.5
+    +shape_rays $Mwh,$xc,$yc,$branches,$angle%,{$twist%},{$focal%},$is_antialias r. ..,..,1,100%,0,0,0.5,0.5
     100%,100%,1,4 fc. $R,$G,$B,$A sh. 100% *. ... rm[-3,-1]
     blend alpha
   }
@@ -65222,7 +65222,7 @@ fx_text_pointcloud3d_preview :
 #@gui : X-Rotation = text("1")
 #@gui : Y-Rotation = text("1")
 #@gui : Z-Rotation = text("0")
-#@gui : Focale = float(800,100,2000)
+#@gui : Focal Length = float(800,100,2000)
 #@gui : Enable Antialiasing = bool(1)
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b>
