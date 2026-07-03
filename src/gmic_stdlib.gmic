@@ -17725,7 +17725,7 @@ yuv82rgb :
 #@cli : 'centering_x' and 'centering_y' tells about the centering of tiles when they have different sizes.
 #@cli : Default values: 'M=0', 'N=0', 'centering_x=centering_y=0.5'.
 #@cli : $ image.jpg split xy,4 append_tiles ,
-append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0},0,1) && inrange(${4=$3},0,1)"
+append_tiles2 : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0.5},0,1) && inrange(${4=$3},0,1)"
   if !$!
     e[0--3] "Append image$? as a 0x0-tiled image."
     return
@@ -17742,11 +17742,16 @@ append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0},0,1) 
     e[0--3] "Append image$?, as $1x$2-tiled images."
     M=$1 N=$2
   fi
-  W,H=${-max_wh} rs $W,$H,2,1
-  MN:=$M*$N if $!%$MN 0x{$MN-($!%$MN)} fi
-  repeat $!/$MN { l[$>-{$>+$MN-1}] {
-    repeat $!/$M { a[$>-{$>+$M-1}] x,$3 }
-    a y,$4
+  MN:=$M*$N
+  repeat ceil($!/$MN) { l[$>-{min($!,$>+$MN)-1}] {
+    d,s:=${-max_ds} $M,$N,1,2,"k = x + y*w;[ w#k,h#k ]"
+    +l. { channels 1 s x max } l.. { channels 0 s y max } +cumulate[-2,-1] => sizx,sizy,csizx,csizy
+    {-2,i[-1,2]},{i[-1,2]},$d,$s
+    repeat $!-5 {
+      j. [$>],{$>,p=$>%$M;q=int($>/$M);sw=i[#$sizx,p];sh=i[#$sizy,q];sx=i[#$csizx,p]-sw;sy=i[#$csizy,q]-sh;\
+        round([lerp(sx,sx+sw-w,cut($3,0,1)),lerp(sy,sy+sh-h,cut($4,0,1))])}
+    }
+    k.
   } }
 
 #@cli apply_scales : "command",number_of_scales>0,_min_scale[%]>=0,_max_scale[%]>=0,_scale_gamma>0,_interpolation
@@ -25238,7 +25243,7 @@ animate3d : check "isint($1,1) && isnum(${2=0}) && isnum(${3=5}) && isnum(${4=0}
   else 3,2,1,1,"32,32,64,64,116,96" permute. cyzx r. 800,800,1,3,3 round.
   fi
   => anim3d_bg
-  repeat {$!-1} { l[$>,-1] {
+  repeat $!-1 { l[$>,-1] {
     check ${-is_mesh3d..} nm={0,n} bn={0,b}
     e "  * Object '"$bn"': 0/$1"
     c3d[0] n3d[0] *3d[0] {1,$5*min(w,h)/2}
@@ -38856,6 +38861,11 @@ max_s :
 max_wh :
   _minmax_whds max,0,2
 
+#@cli max_ds
+#@cli : Return the maximal dxs size of selected images.
+max_ds :
+  _minmax_whds max,2,2
+
 #@cli max_whd
 #@cli : Return the maximal wxhxd size of selected images.
 max_whd :
@@ -38895,6 +38905,11 @@ min_s :
 #@cli : Return the minimal wxh size of selected images.
 min_wh :
   _minmax_whds min,0,2
+
+#@cli min_ds
+#@cli : Return the minimal dxs size of selected images.
+min_ds :
+  _minmax_whds min,2,2
 
 #@cli min_whd
 #@cli : Return the minimal wxhxd size of selected images.
