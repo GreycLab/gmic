@@ -11049,7 +11049,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '4.0.1').
+# $1 = version number (e.g. '4.0.2').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -12953,7 +12953,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=400,401,$_version
+  versions=400,401,402,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -17725,7 +17725,7 @@ yuv82rgb :
 #@cli : 'centering_x' and 'centering_y' tells about the centering of tiles when they have different sizes.
 #@cli : Default values: 'M=0', 'N=0', 'centering_x=centering_y=0.5'.
 #@cli : $ image.jpg split xy,4 append_tiles ,
-append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0},0,1) && inrange(${4=$3},0,1)"
+append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0.5},0,1) && inrange(${4=$3},0,1)"
   if !$!
     e[0--3] "Append image$? as a 0x0-tiled image."
     return
@@ -17742,11 +17742,20 @@ append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0},0,1) 
     e[0--3] "Append image$?, as $1x$2-tiled images."
     M=$1 N=$2
   fi
-  W,H=${-max_wh} rs $W,$H,2,1
-  MN:=$M*$N if $!%$MN 0x{$MN-($!%$MN)} fi
-  repeat $!/$MN { l[$>-{$>+$MN-1}] {
-    repeat $!/$M { a[$>-{$>+$M-1}] x,$3 }
-    a y,$4
+  MN:=$M*$N
+  repeat ceil($!/$MN) { l[$>-{min($!,$>+$MN)-1}] {
+    d,s:=${-max_ds} $M,$N,1,2,"k = x + y*w; k<l?[ w#k,h#k ]:[ 0,0 ]"
+    +l. { channels 1 s x max } l.. { channels 0 s y max } +cumulate[-2,-1] => sizx,sizy,csizx,csizy
+    {-2,i[-1,2]},{i[-1,2]},$d,$s
+    $M,$N,1,1,">
+      ind = c2o(x,y);
+      ind<l - 5?(
+        sw = i[#-5,x]; sh = i[#-4,y]; sx = i[#-3,x] - sw; sy = i[#-2,y] - sh;
+        ix = round(lerp(sx,sx + sw - w#ind,cut($3,0,1)));
+        iy = round(lerp(sy,sy + sh - h#ind,cut($4,0,1)));
+        run('j. [',ind,'],',ix,',',iy);
+      )"
+    k..
   } }
 
 #@cli apply_scales : "command",number_of_scales>0,_min_scale[%]>=0,_max_scale[%]>=0,_scale_gamma>0,_interpolation
@@ -25238,7 +25247,7 @@ animate3d : check "isint($1,1) && isnum(${2=0}) && isnum(${3=5}) && isnum(${4=0}
   else 3,2,1,1,"32,32,64,64,116,96" permute. cyzx r. 800,800,1,3,3 round.
   fi
   => anim3d_bg
-  repeat {$!-1} { l[$>,-1] {
+  repeat $!-1 { l[$>,-1] {
     check ${-is_mesh3d..} nm={0,n} bn={0,b}
     e "  * Object '"$bn"': 0/$1"
     c3d[0] n3d[0] *3d[0] {1,$5*min(w,h)/2}
@@ -38856,6 +38865,11 @@ max_s :
 max_wh :
   _minmax_whds max,0,2
 
+#@cli max_ds
+#@cli : Return the maximal dxs size of selected images.
+max_ds :
+  _minmax_whds max,2,2
+
 #@cli max_whd
 #@cli : Return the maximal wxhxd size of selected images.
 max_whd :
@@ -38895,6 +38909,11 @@ min_s :
 #@cli : Return the minimal wxh size of selected images.
 min_wh :
   _minmax_whds min,0,2
+
+#@cli min_ds
+#@cli : Return the minimal dxs size of selected images.
+min_ds :
+  _minmax_whds min,2,2
 
 #@cli min_whd
 #@cli : Return the minimal wxhxd size of selected images.
@@ -45569,7 +45588,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plug-in version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.1</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.2</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45602,8 +45621,8 @@ fx_gmicky_preview :
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <b>2026/07/01</b> : version <i>4.0.0</i>.\n
-#@gui : - <span foreground="#EE5500"><b>2026/07/02</b> : version <i>4.0.1</i> (Current stable).</span>\n
-##@gui : - <b>2026/XX/XX</b> : version <i>4.0.2</i> (Current pre-release).\n
+#@gui : - <span foreground="#EE5500"><b>2026/07/05</b> : version <i>4.0.2</i> (Current stable).</span>\n
+##@gui : - <b>2026/XX/XX</b> : version <i>4.0.3</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 ##@gui : url = link{"View changelog for next major version (4.1)","https://discuss.pixls.us/t/on-the-road-to-gmic-4-1"}
