@@ -235,6 +235,7 @@ cli_start :
 #@cli : When enabled, the G'MIC interpreter becomes much more verbose and prints additional messages about its \
 # internal state to the standard output (stdout).
 #@cli : This option is mainly intended for developers and for reporting potential interpreter bugs.
+
 #@cli h : eq. to 'help'.
 h :
   help $"*"
@@ -5737,6 +5738,21 @@ _input_text :
   i raw:"$*",uint8
   if i[0]==239" && "i[1]==187" && "i[2]==191 rows. 3,100% fi # Remove BOM
   discard. {'\r'} # Remove CR
+
+# Isolate '#@cli' comments in a .gmic file.
+isolate_cli_comments :
+  merge_multiline_comments
+  foreach {
+    nm={n}
+    0
+    f.. ">begin(is_comment = crop(0,0,1,5)=='#@cli');
+      !is_comment && crop(0,y,1,6)=='\n#@cli'?(is_comment = 1):
+      is_comment && i=='\n' && crop(0,y,1,6)!='\n#@cli'?(is_comment = 0; da_push(_'\n'));
+      is_comment?(da_push(i); 0):i;
+      end(da_freeze())"
+    discard.. 0
+    => $nm,$nm" [comments]"
+  }
 
 #@cli lorem : _width>0,_height>0
 #@cli : Input random image of specified size, retrieved from Internet.
@@ -13011,6 +13027,8 @@ upload_filters :
     ('"\n#@gui _________________\n"':y) a y
   } }
   a y
+
+  isolate_cli_comments rm.
 
   # Create update files.
   +l. {
