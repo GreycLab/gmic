@@ -504,10 +504,10 @@ displayless:
 #--------------
 cli_shared: lib
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli_shared
-	$(STRIP) gmic$(EXE)
 
 _cli_shared:
 	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS) -lgmic
+	$(STRIP) gmic$(EXE)
 
 # CLI (static)
 #--------------
