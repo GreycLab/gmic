@@ -2,7 +2,7 @@
 #  File        : Makefile
 #                ( Makefile for GNU 'make' utility )
 #
-#  Description : This Makefile exposes the following entries:
+#  Description : This Makefile defines the following targets:
 #
 #                 . 'all':
 #                   Equivalent to 'lib','cli','gimp','gmic_qt','libc' (see below).
@@ -87,7 +87,10 @@ INCLUDE ?= include
 INSTALL ?= install
 PIC = -fPIC
 EXE =
-WGET ?= wget --no-check-certificate --quiet -O
+WGET ?= $(shell \
+  if command -v wget >/dev/null 2>&1; then echo "wget --no-check-certificate --quiet -O"; \
+  elif command -v curl >/dev/null 2>&1; then echo "curl -k -L --silent -o"; \
+  else echo "echo 'Error: neither wget nor curl found' && false"; fi)
 GIMPTOOL = $(shell \
   if command -v gimptool-3.2 >/dev/null 2>&1; then echo gimptool-3.2; \
   elif command -v gimptool-3.0 >/dev/null 2>&1; then echo gimptool-3.0; \
@@ -162,9 +165,9 @@ QMAKE ?= $(shell \
   elif command -v qmake-qt5 >/dev/null 2>&1; then echo qmake-qt5; \
   else echo qmake; fi)
 
-#--------------------------------------------------------
-# Define compilation flags to se for each enable feature
-#--------------------------------------------------------
+#---------------------------------------------------------
+# Define compilation flags to use for each enabled feature
+#---------------------------------------------------------
 
 # Flags set to describe a 'prerelease' version.
 PRERELEASE = $(shell date +%y%m%d%H)
@@ -374,9 +377,9 @@ GMIC_STD_CFLAGS += $(OPENMP_CFLAGS)
 GMIC_STD_LIBS += $(OPENMP_LIBS)
 endif
 
-#-------------------------------
-# Define main Makefile entries
-#-------------------------------
+#-----------------------------
+# Define main Makefile targets
+#-----------------------------
 .PHONY: all lib libc libc_static cli cli_shared cli_static \
 	_lib _libc _cli _libc_static \
         gimp gimp_shared gimp_debug gimp_sdl3 \
@@ -500,8 +503,11 @@ displayless:
 # CLI (shared)
 #--------------
 cli_shared: lib
-	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli_shared
 	$(STRIP) gmic$(EXE)
+
+_cli_shared:
+	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS) -lgmic
 
 # CLI (static)
 #--------------
@@ -657,18 +663,18 @@ gmic_qt_files:
 	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../gmic-qt ]; then \
 	     echo "**"; \
-	     echo "** Warning: folder 'gmic-qt' was not found !"; \
+	     echo "** Warning: folder 'gmic-qt' was not found!"; \
 	     echo "** It is mandatory to compile the G'MIC plug-in for GIMP ('gmic_gimp_qt'),"; \
 	     echo "** as well as the standalone Qt-based interface 'gmic_qt'."; \
              echo "** Trying to retrieve it, with: $$ cd ../../ && git clone https://github.com/GreycLab/gmic-qt.git"; \
 	     echo "**"; \
 	     if cd ../../ && git clone https://github.com/GreycLab/gmic-qt.git; then \
 	       echo "**"; \
-               echo "** Success !"; \
+               echo "** Success!"; \
 	       echo "**"; \
 	     else \
 	       echo "**"; \
-               echo "** Fatal error: Failed to retrieve folder 'gmic-qt', compilation will probably ends shortly !"; \
+               echo "** Fatal error: Failed to retrieve folder 'gmic-qt', compilation will likely fail shortly!"; \
 	       echo "**"; \
 	     fi; \
 	   fi; \
@@ -709,17 +715,17 @@ zart_files:
 	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../zart ]; then \
 	     echo "**"; \
-	     echo "** Warning: folder 'zart' was not found !"; \
+	     echo "** Warning: folder 'zart' was not found!"; \
 	     echo "** It is mandatory to compile 'zart'."; \
              echo "** Trying to retrieve it, with: $$ cd ../../ && git clone https://github.com/GreycLab/zart.git"; \
 	     echo "**"; \
 	     if cd ../../ && git clone https://github.com/GreycLab/zart.git; then \
 	       echo "**"; \
-               echo "** Success !"; \
+               echo "** Success!"; \
 	       echo "**"; \
 	     else \
                echo "**"; \
-               echo "** Fatal error: Failed to retrieve folder 'zart', compilation will probably ends shortly !"; \
+               echo "** Fatal error: Failed to retrieve folder 'zart', compilation will likely fail shortly!"; \
                echo "**"; \
 	     fi; \
 	   fi; \
@@ -745,7 +751,7 @@ check_cimg_version: # Check that versions of files 'CImg.h' and 'gmic.h' match.
 	  $(RM) CImg.h; \
 	fi
 
-gmic_stdlib_community.h: gmic_stdlib.gmic
+gmic_stdlib_community.h:
 	@echo "> Retrieve G'MIC Standard Library + Community Contributions..."
 	@if [ ! -f ./gmic_stdlib_community.h ]; then \
 	  $(WGET) gmic_stdlib_community.h https://gmic.eu/gmic_stdlib_community$(VERSION).h; \
@@ -754,14 +760,14 @@ gmic_stdlib_community.h: gmic_stdlib.gmic
 	@echo " done!"
 
 do_gmic_stdlib_community.h:
-	@echo "/*\n\
+	@printf "/*\n\
  #\n\
  #  File        : gmic_stdlib_community.h (v.$(SVERSION))\n\
  #                ( C++ header file )\n\
  #\n\
  #  Description : Raw data arrays encoding the G'MIC standard library\n\
  #                plus the community contributions, into a compressed form.\n\
- #                This file has been automatically generated by the Makefile entry\n\
+ #                This file has been automatically generated by the Makefile target\n\
  #                'do_gmic_stdlib_community.h:', from the G'MIC source file 'updateXXX.gmic'.\n\
  #                ( https://gmic.eu )\n\
  #\n\
@@ -807,7 +813,7 @@ do_gmic_stdlib_community.h:
  #\n\
 */\n" > gmic_stdlib_community.h
 	@\gmic gmic_stdlib.gmic update it '$${_path_rc}'update'$${_version}'.gmic "(0)" a y serialize uint8,1,0 o -.h | sed 's/uint8/const unsigned char/' | sed 's/unnamed/gmic/' >> gmic_stdlib_community.h
-	@echo "\nconst unsigned long size_data_gmic = (unsigned long)sizeof(data_gmic);" >> gmic_stdlib_community.h
+	@printf "\nconst unsigned long size_data_gmic = (unsigned long)sizeof(data_gmic);" >> gmic_stdlib_community.h
 	@cp -f gmic_stdlib_community.h /tmp/gmic_stdlib_community$(VERSION).h
 	@\gmic v - _upload gmic_stdlib_community.h _upload /tmp/gmic_stdlib_community$(VERSION).h
 
