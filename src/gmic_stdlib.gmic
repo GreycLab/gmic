@@ -2010,7 +2010,7 @@ csv2ts : skip "${1=fr}"
               "    </message>"\n\n':y)
           else # Filter specialization
             i=2
-            for {0,i($i,$>)} {
+            for i(#0,$i,$>) {
               path={0,`I($i,$>)`} ({'$path'}) autocrop. {'" "'} _gmd_ascii2html. path={t} rm.
               ('"    <message>"\n\
                 "      <source>"$str"</source>"\n\
@@ -6155,8 +6155,8 @@ outputp :
   _gmic_s="$?" v + _$0 $*
 
 _outputp : skip ${1="_"}
-  if $!>1 e[0--4] "Output image"$_gmic_s" as their initial locations, prefixed by '$1'."
-  else e[0--4] "Output image"$_gmic_s" as its initial location, prefixed by '$1'."
+  if $!>1 e[0--4] "Output image"$_gmic_s" to their initial locations, prefixed by '$1'."
+  else e[0--4] "Output image"$_gmic_s" to its initial location, prefixed by '$1'."
   fi
   foreach {
     if ['{x}']!=0 ext=.{x} else ext= fi
@@ -6174,8 +6174,8 @@ outputw :
   _gmic_s="$?" v + _$0 $*
 
 _outputw :
-  if $!>1 e[0--4] "Output image"$_gmic_s" as their initial location."
-  else e[0--4] "Output image"$_gmic_s" as its initial location."
+  if $!>1 e[0--4] "Output image"$_gmic_s" to their initial location."
+  else e[0--4] "Output image"$_gmic_s" to its initial location."
   fi
   repeat $! { o[$>] {$>,n} }
 
@@ -6195,7 +6195,7 @@ _outputx :
   is_last_arg=0 is_same_location=0
   if isnum($-1) is_last_arg:=isbool($-1) is_same_location=$-1 fi
   N:=$#-$is_last_arg s0= s1=s
-  if !$N e[0--3] "Output image"$_gmic_s" at same location, with same base filename but extension ''
+  if !$N e[0--3] "Output image"$_gmic_s" to same location, with same base filename but empty extension
                       (skipped, no extension provided)." return
   fi
   if $is_same_location
@@ -6223,11 +6223,10 @@ _outputx :
 parse_cli : skip "${1=print},${2=*}"
   e[^-1] "Parse '#@cli' command(s) '$2' and output in '$1' mode."
 
-  # Check that specified output mode is actually implemented.
-  l[] {
-    ({'$$parse_cli_$1'}) rm
-    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
-  }
+  # Check that the specified output mode is actually implemented.
+  if ['$$parse_cli_$1']==0
+    error[0--2] "Command '$0': Invalid output mode '$1'."
+  fi
 
   if !$! l[] { it ${_path_rc}update$_version.gmic onfail } fi
   if !$! return fi
@@ -6250,7 +6249,7 @@ parse_cli : skip "${1=print},${2=*}"
       ):i[r]!=_':'?do ( # Command
         r = find(#0,_'\n',r)%h;
         crop(0,r,1,6)=='\n#@cli'?(
-          for (s = r + 6, s<h && (c=i[s])<=_' ' && c!='_\n', ++s);
+          for (s = r + 6, s<h && (c=i[s])<=_' ' && c!=_'\n', ++s);
           s<h && i[s]==_':' && i[s + 1]!=':'?(r = s):break();
         ):break(),1
 
@@ -6309,7 +6308,7 @@ parse_cli_bashcompletion :
      "# This file has been generated automatically."\n\
      "# Do not edit!"\n\
      "#"\n\
-     "# This file should be copied/renamed in '/usr/share/bash-completion/completions/gmic'."\n\
+     "# This file should be copied or renamed to '/usr/share/bash-completion/completions/gmic'."\n\
      "#"\n\n\
      "_gmic()"\n\
      "{"\n\
@@ -6342,7 +6341,7 @@ parse_cli_bashcompletion :
         pass[$eqto] 0 k. => $name
         onfail
           warn "Warning: Ignoring shortcut '"$_vt100_c$name$_vt100_m$_vt100_b"', "\
-               "links to unknown command '"$_vt100_c$eqto$_vt100_m$_vt100_b"'."
+               "linking to unknown command '"$_vt100_c$eqto$_vt100_m$_vt100_b"'."
           => __to_discard__
       }
     fi
@@ -8376,7 +8375,7 @@ _gmd_vt100 :
      vt100_s = '"$_vt100_s"';
      vt100_u = '"$_vt100_u"';"
 
-# Define variables and functions to write strings and characters in a streamed way for the math parser.
+# Define variables and functions to write strings and characters in a streaming fashion for the math parser.
 _gmd_write :
   u "write(str) = write(str,0);
      write(str,len) = (
@@ -8425,7 +8424,7 @@ _gmd_write :
 #@cli : * '$_fF_preview_accuracy' : Preview accuracy \
 # (can be { 0:Does not support zoom in/out | 1:Support zoom in/out | 2:Pixel-perfect }).
 #@cli : * '$_fF_input_mode' : Default preferred input mode (empty, if not specified).
-#@cli : * '$_fF_hide' : Path of filter hid by current filter (for localized filters, empty if not specified).
+#@cli : * '$_fF_hide' : Path of filter hidden by current filter (for localized filters, empty if not specified).
 #@cli : * '$_fF_nb_params' : Number of parameters.\n
 #@cli : For each parameter `\#P` of the filter \#F ('P' in range `[0,$_fF_nb_params-1]`):
 #@cli : * '$_fF_pP_name' : Parameter name.
@@ -8442,10 +8441,9 @@ parse_gui : skip "${1=print},${2=*}"
   e[^-1] "Parse '#@gui' filters '$2' and output in '$1' mode."
 
   # Check that specified output mode is actually implemented.
-  l[] {
-    ({'$$parse_gui_$1'}) rm
-    onfail error[0--2] "Command '$0': Invalid output mode '$1'."
-  }
+  if ['$$parse_gui_$1']==0
+    error[0--2] "Command '$0': Invalid output mode '$1'."
+  fi
 
   # Input .gmic data.
   use_vt100
@@ -11094,7 +11092,7 @@ update_download_html : check "
     "
   ot $filename
 
-# Generate images used in the G'MIC installer for Windows (InnoSetup).
+# Generate images used in the G'MIC installer for Windows (Inno Setup).
 update_instimg :
   sp gmicky,600
 
@@ -11383,8 +11381,8 @@ update_color_presets_html : check "isbool(${1=0})"
 "of some sample images."\n\
 "        You can also download each color preset separately as its corresponding "\
 "<a href=\"http://www.quelsolaar.com/technology/clut.html\">HaldCLUT</a> file (in <b>.png</b> format), to use it in "\
-" other software that support this feature.</p>"\n\n\
-"      <p><b>Image credits:</b> Sample images below have been borrowed from "\
+" other software that supports this feature.</p>"\n\n\
+"      <p><b>Image credits:</b> Sample images below are courtesy of "\
 "<a href=\"https://www.flickr.com/photos/patdavid/\">Patrick David</a>, "\
 "<a href=\"https://www.flickr.com/photos/davelau/\">Chi King</a>, "\
 "<a href=\"https://pixabay.com/en/tulips-tulip-field-tulpenbluete-3359902/\">Capri23auto</a> "\
@@ -11640,12 +11638,12 @@ update_gallery_html : check "isbool(${1=0})"
         "        <div class=\"content\">"\n\n\
         "          <p>This gallery gives a quick overview of the kind of features and generic filters available in "\
         "the <span class=\"gmd_gmic\">G&apos;MIC</span> open-source image processing framework.</p>"\n\
-        "          <p>All the images below have been processed by the CLI interface "\
+        "          <p>All the images below have been processed by the command-line interface "\
         "<samp><a href=\"reference/\">gmic</a></samp>"\
         "  of G&apos;MIC, from a set of initial 2D color images."\n\
         "            Click on an image to enlarge it and display the G&apos;MIC command-line "\
         "used for the processing (<i>note: to reproduce this, you may have to escape some characters, "\
-        "according to the type of shell you use!</i>).</p>"\n\
+        "depending on the shell you use!</i>).</p>"\n\
         "          <p>Remember, G&apos;MIC lets you define your own image pipelines through "\
         "custom <a href=\"https://gmic.eu/gmic_stdlib.gmic\">command files</a>."\n\
         "            Your custom filters can be easily added afterwards in the plug-in for "\
