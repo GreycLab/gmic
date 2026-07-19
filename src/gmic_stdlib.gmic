@@ -13900,7 +13900,7 @@ softmin : skip "${1=1}"
 #@cli : Default values: 'smoothness=1', 'x0=0', 'y0=100'.
 #@cli : $ image.jpg +apply_curve 1,0,0,128,255,255,0
 apply_curve : check "${1=1}>=0 && $1<=1" skip ${2=0},${3=100}
-  e[^-1] "Apply intensity curve with smoothness $1 and keypoints (${2--1}) on image$?."
+  e[^-1] "Apply intensity curve with smoothness $1 and keypoints (${2--1}) to image$?."
 
   # Determine value mapping.
   (${^0,1}) r. 2,{w/2},1,1,-1 +z. 0,0 vm,vM:=[im,iM] n. 0,8191 j.. . function1d[] $1,{-2,^} rm[-3,-2]
@@ -13921,7 +13921,7 @@ apply_gamma : check $1>=0
 #@cli : Default value: 'max_opacity_mask=1'.
 #@cli : $ image.jpg 100%,100% noise. 10 blur. 2%,0 ge. 50% blur. 0.5% normalize. 0,1 +apply_mask.. "sepia whirls",[-1]
 apply_mask : check ${"is_image_arg $2"}" && isnum(${3=1})"
-  e[^-1] "Apply command '$1' on image$?, using opacity mask $2 and max opacity mask value $3."
+  e[^-1] "Apply command '$1' to image$?, using opacity mask $2 and max opacity mask value $3."
   m "__apply_mask : $1"
   pass$2 if !w rm. return fi
   foreach[^-1] {
@@ -13942,7 +13942,7 @@ apply_mask : check ${"is_image_arg $2"}" && isnum(${3=1})"
 #@cli : Default value: 'ref_color1=128'.
 #@cli : $ image.jpg +balance_gamma 128,64,64
 balance_gamma : check "isnum(${1=128})"
-  e[^-1] "Apply gamma-corrected color balance of image$?, with reference color ("${^0}")."
+  e[^-1] "Apply gamma-corrected color balance to image$?, with reference color ("${^0}")."
   foreach {
     (${^0}) r. {-2,s},1,1,1,0,1 s.. c /. 255
     repeat $!-1 { /[$>] 255 ^[$>] {log({@$>})/log({$>,ia})} *[$>] 255 }
@@ -13950,11 +13950,11 @@ balance_gamma : check "isnum(${1=128})"
   }
 
 #@cli cast : datatype_source,datatype_target
-#@cli : Cast datatype of image buffer from specified source type to specified target type.
+#@cli : Cast the datatype of the image buffer from specified source type to specified target type.
 #@cli : 'datatype_source' and 'datatype_target' can be \
 # { uint8 | int8 | uint16 | int16 | uint32 | int32 | uint64 | int64 | float32 | float64 }.
 cast :
-  e[^-1] "Cast datatype of image buffer$? from '$1' to '$2'."
+  e[^-1] "Cast the datatype of the image buffer$? from '$1' to '$2'."
   ssize:=s=['"$1"'];s=='uint8'||s=='int8'?1:s=='uint16'||s=='int16'?2:s=='uint32'||s=='int32'||s=='float32'?4:8
   dsize:=s=['"$2"'];s=='uint8'||s=='int8'?1:s=='uint16'||s=='int16'?2:s=='uint32'||s=='int32'||s=='float32'?4:8
   foreach {
@@ -13970,7 +13970,7 @@ cast :
 #@cli : Compute complex to polar transforms of selected images.
 #@cli : $ image.jpg +fft complex2polar[-2,-1] log[-2] shift[-2] 50%,50%,0,0,2 remove[-1]
 complex2polar :
-  e[^-1] "Compute complex to polar transforms of image$?."
+  e[^-1] "Compute complex to polar transform of image$?."
   repeat int($!/2) {
     l[{2*$>},{2*$>+1}] {
       ri[1] [0],3 +atan2[1] [0] => {1,n} sqr[-3,-2] +[-3,-2] sqrt..
@@ -14142,7 +14142,7 @@ compress_rle : check "isbool(${1=0}) && isint(${2=0},0)"
 #@cli : Decompress selected colored keypoints into 3D CLUTs, using a mixed RBF/PDE approach.
 #@cli : Default values: 'width=height=depth=33' and 'reconstruction_colorspace=0'.
 decompress_clut : check "isint(${1=33},1) && isint(${2=$1},1) && isint(${3=$1},1)"
-  e[^-1] "Decompress colored keypoint$? into $1x$2x$3 CLUTs."
+  e[^-1] "Decompress colored keypoint$? into $1x$2x$3 CLUT(s)."
   foreach {
     +norm r. 1,2,1,1,2 is_rbf:=i[0]<i[1] rm.
     i[0] (256;0^256;255^256;$is_rbf) a y decompress_from_keypoints ${1-3}
@@ -14480,7 +14480,7 @@ map : check "isint(${2=0},0,3)"
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror boundary=${s$2}
   names=${-_palette_names} N:=narg($names)
   l[] { if isint("$1") name=${"arg0 ($1%"$N"),"$names} else name="$1" fi onfail name="$1" }
-  e[^-1] "Map color LUT '"$name"' on image$?, with "$boundary" boundary conditions."
+  e[^-1] "Map color LUT '"$name"' to image$?, with "$boundary" boundary conditions."
   palette $1 map[^-1] .,$2 rm.
 
 #@cli mix_channels : (a00,...,aMN) : [matrix]
@@ -14757,12 +14757,12 @@ orientation :
   foreach { +norm replace. 0,1 / }
 
 #@cli otsu : _nb_levels>0
-#@cli : Hard-threshold selected images using Otsu's method.
+#@cli : Hard-threshold the selected images using Otsu's method.
 #@cli : The computed thresholds are returned as a list of values in the status.
 #@cli : Default value: 'nb_levels=256'.
 #@cli : $ image.jpg luminance +otsu ,
 otsu : check "isint(${1=256},1)"
-  e[^-1] "Hard-threshold image$? using Otsu\47s method, with $1 histogram levels."
+  e[^-1] "Hard-threshold the image$? using Otsu\47s method, with $1 histogram levels."
   foreach {
     imM:=[im,iM] +histogram $1,$imM
     otsu:="
@@ -15081,7 +15081,7 @@ apply_channels :
 
 _apply_channels : check "isint(${3=0},0) && $3<=2"
   channels=${"_ac_list \"$2\""}
-  e[^-1] "Apply command '$1' on channels '"$channels"' of image"$_gmic_s"."
+  e[^-1] "Apply command '$1' to channels '"$channels"' of image"$_gmic_s"."
   ('$/') id:="h=0;for(k=0,k<w,((h*=31)+=i[k++])%=1048576)" rm.
   _ac_$channels m _ac_precond$id:$_p m _ac_forward$id:$_f m _ac_backward$id:$_b
   foreach {
@@ -16148,7 +16148,7 @@ _lut_contrast :
 #@cli : Map specified RGB color LUT to selected images.
 #@cli : $ image.jpg uniform_distribution {2^6},3 mirror[-1] x +map_clut[0] [1]
 map_clut :
-  e[^-1] "Map color LUT $1 on image$?."
+  e[^-1] "Map color LUT $1 to image$?."
   if !$! return fi
   to_color
   if ${"is_image_arg $1"} pass$1 0 else clut "$1" fi
@@ -16163,13 +16163,13 @@ map_clut :
   } } rm.
 
 #@cli transfer_histogram : [style],_nb_levels>0,_color_channels
-#@cli : Transfer channel-wise histograms of the specified style image to selected images.
+#@cli : Transfer the channel-wise histograms of the specified style image to selected images.
 #@cli : Argument 'color channels' is the same as with command 'apply_channels'.
 #@cli : Default value: 'nb_levels=256' and 'color_channels=all'.
 #@cli : $ image.jpg 100,100,1,3,"u([256,200,100])" +transfer_histogram[0] [1]
 transfer_histogram : check ${"is_image_arg $1"}" && ${2=1024}>0" skip "${3=0}"
   channels=${"_ac_list \"$3\""}
-  e[^-1] "Transfer histogram from style image ["${"pass$1 -1"}"] to image$?, "\
+  e[^-1] "Transfer the histogram from style image ["${"pass$1 -1"}"] to image$?, "\
          "with $2 levels, for channels '"$channels"'."
   pass$1 1 sref:=s rm.
   to_colormode $sref
@@ -16209,13 +16209,13 @@ _transfer_histogram :
   rm.
 
 #@cli transfer_pca : [style],_color_channels
-#@cli : Transfer mean and covariance matrix of specified vector-valued style image to selected images.
+#@cli : Transfer the mean and the covariance matrix of specified vector-valued style image to selected images.
 #@cli : Argument 'color channels' is the same as with command 'apply_channels'.
 #@cli : Default value: 'color_channels=all'.
 #@cli : $ sample lena,earth +transfer_pca[0] [1]
 transfer_pca : check ${"is_image_arg $1"} skip "${2=all}"
   channels=${"_ac_list \"$2\""}
-  e[^-1] "Transfer mean vector and covariance matrix from style image ["${"pass$1 -1"}"] to image$?, "\
+  e[^-1] "Transfer the mean vector and the covariance matrix from style image ["${"pass$1 -1"}"] to image$?, "\
          "for channels '"$channels"'."
   pass$1 1 sref:=s rm.
   if $sref<=4 to_colormode[^-1] $sref fi
@@ -16284,10 +16284,10 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
   s_colorspace=${"arg0 "$colorspace",srgb,lrgb,ycbcr,lab"}
 
   if $is_color_constraints
-    e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
-            $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
-            "3d resolution "$resolution3d", color space "$s_colorspace", 3d resolution "$resolution3d", "\
-            "color constraints $9 and lambda "$lambda"."
+    e[0--3] "Transfer the colors from the style image $1 to the image$?, with RGB smoothness "$rgb_smoothness", "\
+            "beta "$beta", "$regul_iterations" regularization iterations, "\
+            "brightness constraint "$brightness_constraint", 3d resolution "$resolution3d", "\
+            "color space "$s_colorspace", 3d resolution "$resolution3d", color constraints $9 and lambda "$lambda"."
     pass$9 0 l. { # Generate 3D color guide using RBF interpolation
       r. {whd},1,1,100%,-1
       +rbf. $resolution3d,$resolution3d,$resolution3d,0,0,0,255,255,255 c. 0,255
@@ -16298,9 +16298,10 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
     } => guide_kub
     store. guide_kub
   else
-    e[0--3] "Transfer colors from style image $1 to image$?, with RGB smoothness "$rgb_smoothness", beta "$beta", "\
-            $regul_iterations" regularization iterations, brightness constraint "$brightness_constraint", "\
-            "3d resolution "$resolution3d", color space "$s_colorspace" and 3d resolution "$resolution3d"."
+    e[0--3] "Transfer the colors from the style image $1 to the image$?, with RGB smoothness "$rgb_smoothness", "\
+            "beta "$beta", "$regul_iterations" regularization iterations, "\
+            "brightness constraint "$brightness_constraint", 3d resolution "$resolution3d", "\
+            "color space "$s_colorspace" and 3d resolution "$resolution3d"."
   fi
 
   # Compute style features that will be used for all color-transferred images.
@@ -16336,7 +16337,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
     b. 2%,0 warp. [displacement],1,1,1
     +map_clut[img] . rm.. n. 0,1 pow. 0.5 => confidence
 
-    # Transfer colors.
+    # Transfer the colors.
     +f[img] "
       const w1 = w#$filled_style_kub - 1;
       I = I;
@@ -16388,7 +16389,7 @@ transfer_rgb : check ${"is_image_arg $1"}" && # [style]
 # Convert selected images into their 3D color profile representations ('kub') used for variational color transfer.
 # Default values: 'resolution=64', 'beta=1' and 'colorspace=0'.
 _transfer_rgb : check "isint(${1=64},4) && ${2=1}>=0 && isint(${3=0},0,3)"
-  s0,s1,s2=srgb,ycbcr,lab
+  s0,s1,s2,s3=srgb,lrgb,ycbcr,lab
   e[^-1] "Convert image$? into 3D color cube representation ('kub'), with resolution $1, beta $2 and "\
          ${s$3}" color space."
   resolution,beta,colorspace=${1-3}
@@ -16965,7 +16966,7 @@ replace_color : check "${1=0}>=0 && ${2=0}>=0"
 # and 'sigma_high=250'.
 retinex : check "${1=5}>0 && ${3=1}>=0 && $3<=100 && ${4=1}>=0 && $4<=100 && ${5=15}>0 && ${6=80}>0 && ${7=250}>0"
   skip "${2=hsv}"
-  e[^-1] "Apply Retinex color consistency algorithm on image$?, with value offset $1, color space '$2', cuts ($3,$4)
+  e[^-1] "Apply Retinex color consistency algorithm to image$?, with value offset $1, color space '$2', cuts ($3,$4)
           and sigmas (${5-7})."
   if ['$2']=='hsi' mode=hsi8_i
   elif ['$2']=='hsv' mode=hsv8_v
@@ -17387,7 +17388,7 @@ select_color : skip ${1=0}
 #@cli : Apply sepia tones effect on selected images.
 #@cli : $ image.jpg sepia
 sepia :
-  e[^-1] "Apply sepia tones effect on image$?."
+  e[^-1] "Apply sepia tones effect to image$?."
   (0,44,115,143,196,244^0,20,84,119,184,235^0,5,44,73,144,200) r. 256,1,1,3,3
   foreach[^-1] { pass. split_opacity[0] luminance[0] map[0] . rm. a c }
   rm.
@@ -17792,7 +17793,7 @@ append_tiles : check "isint(${1=0},0) && isint(${2=0},0) && inrange(${3=0.5},0,1
 #@cli : $ image.jpg apply_scales "blur 5 sharpen 1000",4
 apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && isint(${6=3},0)" skip "${1=}"
   s0="no" s1="nearest-neighbor" s2="average" s3="linear" s4="grid" s5="bicubic" s6="lanczos"
-  e[^-1] "Apply command '$1' on image$? for $2 scales ($3 -> $4) and "${s{min(6,$6)}}" interpolation."
+  e[^-1] "Apply command '$1' to image$? for $2 scales ($3 -> $4) and "${s{min(6,$6)}}" interpolation."
   foreach {
     nm={n}
     scale0:=ispercentage($3)?$3*max(w,h,d):$3
@@ -18951,7 +18952,7 @@ bandpass : skip ${1=0},${2=20%}
 #@cli : $ image.jpg blur_angular 2%
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_angular
 blur_angular : skip ${2=50%},${3=50%}
-  e[^-1] "Apply angular blur on image$?, with amplitude $1 and center point ($2,$3)."
+  e[^-1] "Apply angular blur to image$?, with amplitude $1 and center point ($2,$3)."
   euclidean2polar $2,$3,1.3,1
   foreach { 1,100% =. 1,50%,50% b. y,$1 convolve_fft.. . rm. }
   polar2euclidean $2,$3,1.3,1
@@ -18968,7 +18969,7 @@ blur_angular : skip ${2=50%},${3=50%}
 # and 'axes=(all)'
 #@cli : $ image.jpg blur_bloom ,
 blur_bloom : check "${1=1}>=0 && ${2=2}>=0 && isint(${3=5},0) && isint(${5=1},0,4) && isnum(${6=0})" skip "${4=+},${7=}"
-  e[^-1] "Apply bloom effect on image$?, with amplitude $1, ratio $2, $3 iterations, blend operator '$4' and "\
+  e[^-1] "Apply bloom effect to image$?, with amplitude $1, ratio $2, $3 iterations, blend operator '$4' and "\
          ${"arg0 !$6,\"\",\"no \""}"scale normalization."
   if narg("$7") axes=$7, fi
   m "_bloom0 : b "$axes"$""1"
@@ -18993,7 +18994,7 @@ blur_bloom : check "${1=1}>=0 && ${2=2}>=0 && isint(${3=5},0) && isint(${5=1},0,
 #@cli : $ image.jpg blur_linear 10,0,45
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_linear
 blur_linear : skip ${2=0},${3=0},${4=1}
-  e[^-1] "Apply linear blur on image$?, with angle $3 deg. and amplitudes ($1,$2)."
+  e[^-1] "Apply linear blur to image$?, with angle $3 deg. and amplitudes ($1,$2)."
   std1:=ispercentage($1)?$1*max(w,h):$1
   std2:=ispercentage($2)?$2*max(w,h):$2
   stdM:=round(1.25*max($std1,$std2))
@@ -19010,7 +19011,7 @@ blur_linear : skip ${2=0},${3=0},${4=1}
 #@cli : $ image.jpg blur_radial 2%
 #@cli : $$ https://gmic.eu/oldtutorial/_blur_radial
 blur_radial : skip ${2=50%},${3=50%}
-  e[^-1] "Apply radial blur on image$?, with amplitude $1 and center point ($2,$3)."
+  e[^-1] "Apply radial blur to image$?, with amplitude $1 and center point ($2,$3)."
   euclidean2polar $2,$3,5,1 b x,$1 polar2euclidean $2,$3,5,1
 
 #@cli blur_selective : sigma>=0,_edges>0,_nb_scales>0
@@ -19113,7 +19114,7 @@ closing : skip "${2=},${3=}"
 #@cli : $ image.jpg +closing_circ 7
 closing_circ : check "$1>=0 && isbool(${2=0})"
   r0,r1=binary,real
-  e[^-1] "Apply morphologicel closing of image$? by circular kernel of size $1, in "${r$2}" mode."
+  e[^-1] "Apply morphological closing to image$? by circular kernel of size $1, in "${r$2}" mode."
   if $1<2 return fi
   shape_circle $1 closing[^-1] .,$2 rm.
 
@@ -19492,7 +19493,7 @@ dilate_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
 #@cli : $ image.jpg +dilate_oct 7
 dilate_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
-  e[^-1] "Apply octagonal dilation of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
+  e[^-1] "Apply octagonal dilation to image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   foreach {
     radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
     if $radius<2 continue fi
@@ -19592,7 +19593,7 @@ erode_circ : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
 #@cli : $ image.jpg +erode_oct 7
 erode_oct : check "$1>=0 && isint(${2=1},0,3) && isbool(${3=0})"
   r0,r1=binary,real
-  e[^-1] "Apply octagonal erosion of image$? by size $1, boundary conditions $2, in "${r$3}" mode."
+  e[^-1] "Apply octagonal erosion to image$? by size $1, boundary conditions $2, in "${r$3}" mode."
   foreach {
     radius:=round(ispercentage($1)?max(w,h,d)*$1:$1)
     if $radius<2 continue fi
@@ -19817,7 +19818,7 @@ _haar_z : # Direct haar transform along the z-axis
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +heat_flow 20
 heat_flow : skip ${1=10},${2=30},${3=0}
-  e[^-1] "Apply $1 iterations of the heat flow on image$?, with time step $2."
+  e[^-1] "Apply $1 iterations of the heat flow to image$?, with time step $2."
   pde_flow $1,$2,laplacian,$3
 
 #@cli hessian : { xx | xy | xz | yy | yz | zz }...{ xx | xy | xz | yy | yz | zz },_boundary_conditions : (no arg) :
@@ -20143,7 +20144,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3)
 #@cli : Default values: 'nb_global_iter=10', 'nb_local_iter=100', 'dt=5', 'alpha=1' and 'sigma=3'.
 #@cli : $ image.jpg 100%,100% ellipse[-1] 30%,30%,40,30,0,1,255 inpaint_flow[0] [1]
 inpaint_flow : check ${is_image_arg\ $1}" && ${2=10}>=0 && ${3=100}>=0 && ${4=5}>0 && ${5=1}>=0 && ${6=3}>=0"
-  e[^-1] "Apply $2x$3 iterations of the inpainting flow on image$?, with mask $1, time step $4, alpha $5 and sigma $6."
+  e[^-1] "Apply $2x$3 iterations of the inpainting flow to image$?, with mask $1, time step $4, alpha $5 and sigma $6."
   repeat $! {
     pass$1 0 l[$>,-1] {
       r. [0],[0],[0],1,0 inpaint.. [1]
@@ -20359,7 +20360,7 @@ _inpaint_warping2d :
 #@cli : Apply Kuwahara filter of specified size on selected images.
 #@cli : $ image.jpg kuwahara 9
 kuwahara : check $1>0
-  e[^-1] "Apply Kuwahara filter of size $1 on image$?."
+  e[^-1] "Apply Kuwahara filter of size $1 to image$?."
   foreach {
     s:=s
     +dilate $1 compose_channels. min
@@ -20406,7 +20407,7 @@ lic : skip ${1=30},${2=1}
 #@cli : Default values: 'threshold=0.1', 'gamma=0.8', 'smoothness=0.5' and 'nb_iter=30'.
 #@cli : $ image.jpg +map_tones ,
 map_tones : skip ${1=0.1},${2=0.8},${3=0.5},${4=30}
-  e[^-1] "Apply tone mapping operator on image$?, with threshold $1, gamma $2, smoothness $3 and $4 iterations."
+  e[^-1] "Apply tone mapping operator to image$?, with threshold $1, gamma $2, smoothness $3 and $4 iterations."
   foreach {
 
     # Estimate target divergence for each channel.
@@ -20429,7 +20430,7 @@ map_tones : skip ${1=0.1},${2=0.8},${3=0.5},${4=30}
 #@cli : Default values: 'radius=3%' and 'power=0.3'.
 #@cli : $ image.jpg +map_tones_fast ,
 map_tones_fast : check "${1=3%}>=0 && ${2=0.3}>=0"
-  e[^-1] "Apply fast tone mapping operator on image$?, with radius $1 and power $2."
+  e[^-1] "Apply fast tone mapping operator to image$?, with radius $1 and power $2."
   foreach {
     +luminance b. $1 n 0,1
     +*. 2 -. 1 abs. *. {$2*log(10)} exp.
@@ -20444,7 +20445,7 @@ map_tones_fast : check "${1=3%}>=0 && ${2=0.3}>=0"
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +meancurvature_flow 20
 meancurvature_flow : skip ${1=10},${2=30},${3=0}
-  e[^-1] "Apply $1 iterations of the mean curvature flow on image$?, with time step $2."
+  e[^-1] "Apply $1 iterations of the mean curvature flow to image$?, with time step $2."
   pde_flow $1,$2,iee,$3
 
 #@cli median : size>=0,_threshold>0 : (+)
@@ -20480,7 +20481,7 @@ nlmeans:
 
     # Guided-filtering
     check "${2=4}>0 && ${3=4}>0 && ${4=10}>0" skip "${5=-norm}"
-    e[^-1] "Apply non-local means denoising on image$?, with guide $1, patch size $2, spatial bandwidth $3,
+    e[^-1] "Apply non-local means denoising to image$?, with guide $1, patch size $2, spatial bandwidth $3,
             tonal bandwidth $4 and patch measure command '$5'."
     pass$1 0 l. { $5 k[0] } # [1] preprocessed image used to compute weights
     repeat $!-1 { l[$>,-1] {
@@ -20493,7 +20494,7 @@ nlmeans:
 
     # Non-guided filtering
     check "${1=4}>0 && ${2=4}>0 && ${3=10}>0" skip "${4=-norm}"
-    e[^-1] "Apply non-local means denoising on image$?, with patch size $1, spatial bandwidth $2,
+    e[^-1] "Apply non-local means denoising to image$?, with patch size $1, spatial bandwidth $2,
             tonal bandwidth $3 and patch measure command '$4'."
     foreach {
       +l { $4 k[0] } # [1] preprocessed image used to compute weights
@@ -20505,7 +20506,7 @@ nlmeans:
 #@cli nlmeans_core: _reference_image,_scaling_map,_patch_radius>0,_spatial_bandwidth>0
 #@cli : Apply non-local-means denoising using an image for weighting and a map for scaling
 nlmeans_core : check ${is_image_arg\ $1}" && "${is_image_arg\ $2}" && $3>0 && $4>0"
-  e[^-1] "Apply non-local means denoising using weight images $1, scaling map $2, patch size $3 and
+  e[^-1] "Apply non-local means denoising to image$?, using weight images $1, scaling map $2, patch size $3 and
           spatial bandwidth $4."
   pass$1 0 pass$2 0
   repeat $!-2 { l[$>,-1,-2] {
@@ -20632,7 +20633,7 @@ opening : skip "${2=},${3=}"
 #@cli : $ image.jpg +opening_circ 7
 opening_circ : check "$1>=0 && isbool(${2=0})"
   r0,r1=binary,real
-  e[^-1] "Apply morphological opening of image$? with circular kernel of size $1, in "${r$2}" mode."
+  e[^-1] "Apply morphological opening to image$? with circular kernel of size $1, in "${r$2}" mode."
   if $1<2 return fi
   shape_circle $1 opening[^-1] .,$2 rm.
 
@@ -20676,7 +20677,7 @@ percentile : check ${"is_image_arg $1"}" && inrange(${2=0},0,100) && inrange(${3
 #@cli : Default values: 'K_factor=20', 'nb_iter=5', 'dt=5' and 'keep_sequence=0'.
 #@cli : $ image.jpg +heat_flow 20
 peronamalik_flow : check "${1=20}>0 && ${2=5}>=0" skip ${3=5},${4=0}
-  e[^-1] "Apply $2 iterations of the Perona-Malik flow on image$?, with K factor $1 and time step $3."
+  e[^-1] "Apply $2 iterations of the Perona-Malik flow to image$?, with K factor $1 and time step $3."
   m "_peronamalik_flow :
    +gradient xy,0 a[-2,-1] c norm. b. 0.8 /. $1 sqr. *. -1 exp. a[-2,-1] c
    f. \"s1 = s-1;
@@ -20712,7 +20713,7 @@ phase_correlation : check ${"is_image_arg $1"}
 #@cli : Default values: 'nb_iter=10', 'dt=30', 'velocity_command=laplacian' and 'keep_sequence=0'.
 #@cli : $ image.jpg +pde_flow 20
 pde_flow : skip ${1=10},${2=30},${3=laplacian},${4=0}
-  e[^-1] "Apply $1 iterations of the velocity flow '$3' on image$?, with time step $2."
+  e[^-1] "Apply $1 iterations of the velocity flow '$3' to image$?, with time step $2."
   foreach {
     repeat $1 {
       +$3. *. {$2/(0.01+max(abs(im),abs(iM)))}
@@ -20923,7 +20924,7 @@ remove_pixels : check "$1>=0"
 #@cli : Default values: 'std_deviation_s=4', 'std_deviation_r=10' and 'precision=0.5'.
 #@cli : $ image.jpg +rolling_guidance , +-
 rolling_guidance : check "${1=4}>=0 && ${2=10}>=0 && ${3=0.5}>=0"
-  e[^-1] "Apply rolling guidance filter on image$?, with standard deviations ($1,$2) and precision $3."
+  e[^-1] "Apply rolling guidance filter to image$?, with standard deviations ($1,$2) and precision $3."
   precision:=2^-$3
   foreach { nm={n}
     +b $1
@@ -21292,7 +21293,7 @@ syntexturize_matchpatch : check "${1=100%}>0 && ${2=$1}>0 && isint(${3=0},0) && 
 #@cli : Default values: 'nb_iter=10', 'dt=30' and 'keep_sequence=0'.
 #@cli : $ image.jpg +tv_flow 40
 tv_flow : skip ${1=10},${2=30},${3=0}
-  e[^-1] "Apply $1 iterations of the total variation flow on image$?, with time step $2."
+  e[^-1] "Apply $1 iterations of the total variation flow to image$?, with time step $2."
   pde_flow $1,$2,curvature,$3
 
 #@cli unsharp : radius[%]>=0,_amount>=0,_threshold[%]>=0
@@ -21300,7 +21301,7 @@ tv_flow : skip ${1=10},${2=30},${3=0}
 #@cli : Default values: 'amount=2' and 'threshold=0'.
 #@cli : $ image.jpg blur 3 +unsharp 1.5,15 cut 0,255
 unsharp : check "${2=2}>=0" skip ${3=0}
-  e[^-1] "Apply unsharp mask on image$?, with radius $1, amount $2 and threshold $3."
+  e[^-1] "Apply unsharp mask to image$?, with radius $1, amount $2 and threshold $3."
   foreach {
     +b $1 -. ..
     if $3 +norm. >=. $3 *[-2,-1] fi
@@ -21312,7 +21313,7 @@ unsharp : check "${2=2}>=0" skip ${3=0}
 #@cli : Default values: 'nb_scales=4', 'radius=1', 'amount=2' and 'threshold=0'.
 #@cli : $ image.jpg blur 3 +unsharp_octave 4,5,15 cut 0,255
 unsharp_octave : check "${1=4}>0 && ${3=2}>=0" skip ${2=1},${4=0}
-  e[^-1] "Apply octave sharpening on image$?, with $1 scales, radius $2, amount $3 and threshold $4."
+  e[^-1] "Apply octave sharpening to image$?, with $1 scales, radius $2, amount $3 and threshold $4."
   foreach {
     nm={n}
     +f 0 weight=0
@@ -21575,7 +21576,7 @@ betti :
 #@cli : Default values: 'sigma=1', 'low_threshold=0.05', 'high_threshold=0.15'.
 #@cli : $ image.jpg canny 1
 canny : check "${1=1}>=0 && ${2=0.05}>=0 && ${3=0.15}>=0 && isint(${4=0},0,2)"
-  e[^-1] "Apply Canny edge detection on image$?, with sigma $1, low threshold $2 and high threshold $3."
+  e[^-1] "Apply Canny edge detection to image$?, with sigma $1, low threshold $2 and high threshold $3."
   low,high:=$2*$3,$3
   foreach {
     nm={n}
@@ -22522,7 +22523,7 @@ psnr_matrix : check "${1=255}>0"
 #@cli : Default values: 'threshold=2'.
 #@cli : $ image.jpg segment_watershed 2
 segment_watershed : check "${1=2}>=0"
-  e[^-1] "Apply watershed segmentation on image$?, with edge threshold $1."
+  e[^-1] "Apply watershed segmentation to image$?, with edge threshold $1."
   foreach {
     min:=im
     + {1+$min} +gradient_norm
@@ -28311,7 +28312,7 @@ apply_parallel :
   _gmic_s="$?" v + _$0 "$*"
 
 _apply_parallel :
-  e[0--3] "Apply command '$*' on all image"$_gmic_s" in parallel, using "$_cpus" threads."
+  e[0--3] "Apply command '$*' to all image"$_gmic_s" in parallel, using "$_cpus" threads."
   if $!" && "narg("$*")
     m "_ap : foreach { $* if $! k[0] else 0 fi }"
     N:=min($!,$_cpus)
@@ -28333,7 +28334,7 @@ apply_parallel_channels :
   _gmic_s="$?" v + _$0 "$*"
 
 _apply_parallel_channels :
-  e[0--3] "Apply command '$*' on all channels of image"$_gmic_s" in parallel, using "$_cpus" threads."
+  e[0--3] "Apply command '$*' to all channels of image"$_gmic_s" in parallel, using "$_cpus" threads."
   N=$! repeat $N { s$>={$>,s} } s c
   ap "$1"
   repeat $N { a[$>-{$>+${s$>}-1}] c }
@@ -28354,7 +28355,7 @@ apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0},0)"
 
 _apply_parallel_overlap : check "${2=0}>=0 && isint(${3=0},0)"
   N:=$3?max(1,round($3)):$_cpus N:=2^int(log2(min(16,$N)))
-  e[0--3] "Apply parallelized command '$1' on image"$_gmic_s", with overlap $2 and "$N" threads."
+  e[0--3] "Apply parallelized command '$1' to image"$_gmic_s", with overlap $2 and "$N" threads."
   __apo_exception=""
   m "_check1 : if $!!=1 rm 0 __apo_exception=\"Command 'apply_parallel_overlap': Specified command '$1' changes the
      size of the image stack.\" fi"
@@ -28416,7 +28417,7 @@ apply_tiles : check "${2=10%}>0 && ${3=10%}>0 && ${4=10%}>0 && ${5=0}>=0 && ${6=
   _gmic_s="$?" v + _$0 "$1",${2--1}
 
 _apply_tiles :
-  e[0--3] "Apply command '$1' on $2x$3x$4 tiles of image$?, with overlaps ($5,$6,$7) and "\
+  e[0--3] "Apply command '$1' to $2x$3x$4 tiles of image$?, with overlaps ($5,$6,$7) and "\
           ${"arg0 $8,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
     bw:=cut(round(ispercentage($2)?w*$2:$2),1,w)
@@ -28462,11 +28463,11 @@ _apply_tiles :
 #@cli : Default value: 'timeout=20'.
 apply_timeout : check "${2=20}>=0"
   if $2<=0
-    e[0--3] "Apply command '$1' on image$?, with no timeout."
+    e[0--3] "Apply command '$1' to image$?, with no timeout."
     $1
     _is_timeout=0
   else
-    e[0--3] "Apply command '$1' on image$?, with a timeout of $2 seconds."
+    e[0--3] "Apply command '$1' to image$?, with a timeout of $2 seconds."
     l[] { ('$/') id:=is rm }
     l {
       +store initial
@@ -34356,7 +34357,7 @@ _puzzle :
 #@cli : Default values: 'M=8' and 'N=M'.
 #@cli : $ image.jpg to_rgba rotate_tiles 10,8 drop_shadow 10,10 display_rgba
 rotate_tiles : skip ${2=8},${3=$2}
-  e[^-1] "Apply $2x$3 tiled-rotation effect on image$?, with angle $1 deg."
+  e[^-1] "Apply $2x$3 tiled-rotation effect to image$?, with angle $1 deg."
   split_tiles $2,$3,1 rotate $1 append_tiles $2,$3
 
 #@cli shift_tiles : M>0,_N>0,_amplitude
@@ -34364,7 +34365,7 @@ rotate_tiles : skip ${2=8},${3=$2}
 #@cli : Default values: 'N=M' and 'amplitude=20'.
 #@cli : $ image.jpg +shift_tiles 8,8,10
 shift_tiles : check "${2=$1}>=0" skip ${3=20}
-  e[^-1] "Apply $1x$2 tiled-shift effect on image$?, with amplitude $3."
+  e[^-1] "Apply $1x$2 tiled-shift effect to image$?, with amplitude $3."
   foreach { $1,$2,1,2 noise. $3 r. ..,..,1,2 warp.. .,1,1,0 rm. }
 
 #@cli taquin : M>0,_N>0,_remove_tile={ 0:None | 1:First | 2:Last | 3:Random },_relief,_border_thickness[%],\
@@ -34396,7 +34397,7 @@ taquin : check "isint($1,1) && isint(${2=$1},1)"
 #@cli : Default values: 'level=9', 'factor=80%', 'centering_x=centering_y=0.5', 'opacity=1' and 'angle=0'
 #@cli : $ image.jpg tunnel 20
 tunnel : check "${1=9}>=0 && ${2=80%}>0" skip ${3=0.5},${4=0.5},${5=0.1},${6=0}
-  e[^-1] "Apply tunnel effect on image$?, with depth $1, factor $2, centering ($3,$4), opacity $5 and angle $6."
+  e[^-1] "Apply tunnel effect to image$?, with depth $1, factor $2, centering ($3,$4), opacity $5 and angle $6."
   foreach {
     repeat $1 {
       +r. $2,$2,1,100%,5
@@ -34418,7 +34419,7 @@ tunnel : check "${1=9}>=0 && ${2=80%}>0" skip ${3=0.5},${4=0.5},${5=0.1},${6=0}
 #@cli : Default values: 'min_box_size=1', 'max_box_size=0', 'initial_density=0.25' and 'min_spacing=1'.
 #@cli : $ image.jpg boxfitting ,
 boxfitting : check "isint(${1=3},1) && isint(${2=0},0) && ${3=0.25}>=0 && isint(${4=1},1)"
-  e[^-1] "Apply box fitting effect on image$?, with box sizes ($1,$2), initial density $3 and min spacing $4."
+  e[^-1] "Apply box fitting effect to image$?, with box sizes ($1,$2), initial density $3 and min spacing $4."
   min_spacing,min_size:=$4,$1+$4-1
   foreach {
     max_size:=$4-1+($2?$2:max(w,h))
@@ -34592,7 +34593,7 @@ brushify : check ${"is_image_arg $1"}" &&"\ # $1: [brush]
 # and 'quantization=8'.
 #@cli : $ image.jpg cartoon 3,50,10,0.25,3,16
 cartoon : skip ${1=3},${2=150},${3=15},${4=0.25},${5=1.5},${6=8}
-  e[^-1] "Apply cartoon effect on image$?, with smoothness $1, sharpening $2, threshold $3, thickness $4, color $5
+  e[^-1] "Apply cartoon effect to image$?, with smoothness $1, sharpening $2, threshold $3, thickness $4, color $5
           and quantization $6."
   foreach {
     split_opacity
@@ -34622,7 +34623,7 @@ color_ellipses : skip ${1=1400},${2=5},${3=0.1}
 #@cli : Default values: 'density=50', 'thickness=10', 'max_angle=75', 'opacity=0.7' and 'smoothness=0'.
 #@cli : $ image.jpg cubism ,
 cubism : check "${1=50}>=0 && ${2=10}>=0 && $2<=50 && ${5=0}>=0" skip ${3=75},${4=0.7}
-  e[^-1] "Apply cubism effect on image$?, with density $1, thickness $2, maximum angle $3 deg., opacity $4 and
+  e[^-1] "Apply cubism effect to image$?, with density $1, thickness $2, maximum angle $3 deg., opacity $4 and
           smoothness $5."
   if "!$1 || !$2 || !$3 || !$4" return fi
   foreach {
@@ -34663,7 +34664,7 @@ cubism : check "${1=50}>=0 && ${2=10}>=0 && $2<=50 && ${5=0}>=0" skip ${3=75},${
 #@cli : Default value: 'amplitude=100'.
 #@cli : $ image.jpg draw_whirl ,
 draw_whirl : skip ${1=100}
-  e[^-1] "Apply whirl drawing effect on image$? with amplitude $1."
+  e[^-1] "Apply whirl drawing effect to image$? with amplitude $1."
   foreach {
     100%,100% noise. 70,2 ==. 1 *. 255 ri. .. &[-1,-2] smooth. $1,0,1,2,2
     sqrt. n. 0,255 equalize.
@@ -34879,7 +34880,7 @@ halftone : check "${1=5}>=2 && ${2=8}>=2 && ${3=8}>=2 && ${5=0}>=0" skip ${4=5}
 #@cli : Default values: 'amplitude=1000', 'sampling=3', 'opacity=0.1', 'edge_threshold=20' and 'is_fast=0'.
 #@cli : $ image.jpg +hardsketchbw 200,70,0.1,10 median[-1] 2 +local reverse blur[-1] 3 blend[-2,-1] overlay done
 hardsketchbw : skip ${1=300},${2=50},${3=0.1},${4=20},${5=0}
-  e[^-1] "Apply hard B&W sketch effect on image$?, with amplitude $1, density $2, opacity $3 and edge threshold $4."
+  e[^-1] "Apply hard B&W sketch effect to image$?, with amplitude $1, density $2, opacity $3 and edge threshold $4."
   if !$2 channels 0 f 255 return fi
   luminance n 0,1
 
@@ -34923,7 +34924,7 @@ hardsketchbw : skip ${1=300},${2=50},${3=0.1},${4=20},${5=0}
 #@cli : Default value: 'density=10'.
 #@cli : $ image.jpg hearts ,
 hearts : skip ${1=10}
-  e[^-1] "Apply heart filter on image$?, with density $1."
+  e[^-1] "Apply heart filter to image$?, with density $1."
   foreach {
     100%,100%,1 noise. $1,2 ==. 1 ri. .. n. 0,1 *[-1,-2] _heart9x7
     dilate.. . rm.
@@ -34938,7 +34939,7 @@ _heart9x7 :
 #@cli : Default values: 'density=100', 'radius=3', 'threshold=100', 'opacity=0.1' and 'votesize=100%'.
 #@cli : $ image.jpg +houghsketchbw ,
 houghsketchbw : check "${1=100}>=0 && ${2=3}>=0 && ${3=100}>=0 && $3<=100 && ${4=0.1}>=0 && $4<=1 && ${5=100%}>0"
-  e[^-1] "Apply hough B&W sketch effect on image$?, with density $1, radius $2, threshold $3, opacity $4
+  e[^-1] "Apply hough B&W sketch effect to image$?, with density $1, radius $2, threshold $3, opacity $4
           and votesize $5."
   luminance
   foreach {
@@ -35021,7 +35022,7 @@ light_relief : skip ${1=0.3},${2=0.5},${3=0.2},${4=0},${5=0.2},${6=0.5},${7=0.5}
 # and 'mode=0'.
 #@cli : $ image.jpg linify 60
 linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 && isint(${5=24},1) && isbool(${6=0})"
-  e[^-1] "Apply linify effect on image$?, with density $1, spreading $2, resolution $3, line opacity $4,
+  e[^-1] "Apply linify effect to image$?, with density $1, spreading $2, resolution $3, line opacity $4,
           line precision $5 and "${"arg0 $6,subtractive,additive"}" mode."
   foreach {
     remove_opacity nm={n}
@@ -35082,7 +35083,7 @@ linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 &
 #@cli : Default values: 'density=30'.
 #@cli : $ image.jpg mosaic , +fill "I!=J(1) || I!=J(0,1)?[0,0,0]:I"
 mosaic : check "${1=30}>=0"
-  e[^-1] "Apply mosaic effect on image$?, with density $1."
+  e[^-1] "Apply mosaic effect to image$?, with density $1."
   foreach {
     100%,100%,1,2,'u<0.25*($1%)^4?[u,1]' s. c
     distance. 1 *. -1 watershed.. . rm.
@@ -35093,7 +35094,7 @@ mosaic : check "${1=30}>=0"
 #@cli : Apply old photo effect on selected images.
 #@cli : $ image.jpg old_photo
 old_photo :
-  e[^-1] "Apply old photo effect on image$?."
+  e[^-1] "Apply old photo effect to image$?."
   noise 20 bilateral 30,60 b 2 sharpen 100 frame_fuzzy 8%,8%,6,3 to_rgb shadow_patch 0.75 n 0,255 sepia
 
 #@cli pencilbw : _size>=0,_amplitude>=0
@@ -35101,7 +35102,7 @@ old_photo :
 #@cli : Default values: 'size=0.3' and 'amplitude=60'.
 #@cli : $ image.jpg pencilbw ,
 pencilbw : skip ${1=0.3},${2=60}
-  e[^-1] "Apply B&W pencil effect on image$?, with size $1 and amplitude $2."
+  e[^-1] "Apply B&W pencil effect to image$?, with size $1 and amplitude $2."
   foreach {
     split_opacity l[0] { norm b $1 sharpen 4000 smooth $2,0,1 equalize sqrt n 0,255 }
     a c
@@ -35206,7 +35207,7 @@ polygonize : check "${1=300}>=0 && ${2=2%}>=0 && ${3=0.1%}>=0 && ${4=10%}>0 && $
 #@cli : $ image.jpg poster_edges ,
 poster_edges : check "${1=40}>=0 && $1<=100 && ${2=5}>=0 && $2<=100 && ${3=0.5}>=0 && ${4=10}>=0 &&
                       ${5=12}>=0 && $5<=15 && ${6=0}>=0"
-  e[^-1] "Apply poster edge on image$?, with edge threshold $1, edge shade $2, edge thickness $3,
+  e[^-1] "Apply poster edge to image$?, with edge threshold $1, edge shade $2, edge thickness $3,
           edge antialiasing $4, $5 level of posterization and posterization antialiasing $6."
   foreach {
     split_opacity l[0] {
@@ -35225,7 +35226,7 @@ poster_edges : check "${1=40}>=0 && $1<=100 && ${2=5}>=0 && $2<=100 && ${3=0.5}>
 #@cli : Default value: 'smoothness=3'.
 #@cli : $ image.jpg poster_hope ,
 poster_hope : check "${1=3}>=0"
-  e[^-1] "Apply Hope stencil poster effect on image$?, with smoothness $1."
+  e[^-1] "Apply Hope stencil poster effect to image$?, with smoothness $1."
   foreach {
     to_rgb
     apc "smooth 200,0,1,$1,1"
@@ -35242,7 +35243,7 @@ poster_hope : check "${1=3}>=0"
 #@cli : $ image.jpg rodilius 12,10,300,10 normalize_local 10,6
 #@cli : $ image.jpg normalize_local 10,16 rodilius 10,4,400,16 smooth 60,0,1,1,4 normalize_local 10,16
 rodilius : check "${1=10}>=0 && $1<=200 && ${2=10}>=0 && $2<=100 && ${3=400}>=0 && ${4=7}>0" skip ${5=0},${6=1}
-  e[^-1] "Apply rodilius filter on image$? with amplitude $1, thickness $2, sharpness $3, $4 orientations,
+  e[^-1] "Apply rodilius filter to image$? with amplitude $1, thickness $2, sharpness $3, $4 orientations,
           offset $5 and "${arg0\ !$6,brighter,darker}" color mode."
   foreach { nm={n} split_opacity l[0] {
     if !$6 negate fi
@@ -35268,7 +35269,7 @@ sketchbw :
   check "${1=2}>0 && ${3=180}>=0 && ${4=30}>=0 && ${5=3}>=0 && ${7=0}>=0 && ${8=0.6}>0 && ${9=0.1}>=0 &&
          ${10=0.6}>=0 && ${11=0.25}>=0 && ${12=1}>=0"
   skip ${2=45},${6=0.03},${13=0},${14=0}
-  e[^-1] "Apply B&W sketch effect on image$?."
+  e[^-1] "Apply B&W sketch effect to image$?."
   nb_angles,start_angle,angle_range,length,threshold,opacity,bgfactor,density,sharpness,\
   anisotropy,smoothness,coherence,is_boost,is_curved=${1-14}
   length:=max($length,1)
@@ -35349,7 +35350,7 @@ sketchbw :
 #@cli : Default value: 'size=13'.
 #@cli : $ image.jpg sponge ,
 sponge : skip ${1=13}
-  e[^-1] "Apply sponge filter on image$?, with brush size $1."
+  e[^-1] "Apply sponge filter to image$?, with brush size $1."
   foreach {
     100%,100%,1,1 noise. 20,2 ==. 1 ri. .. n. 0,1 *[-1,-2]
     _circle $1 dilate.. . rm.
@@ -35364,7 +35365,7 @@ _circle :
 #@cli : Default values: 'edges=40%', 'shading=0.2' and 'is_precise=0'.
 #@cli : $ image.jpg stained_glass 20%,1 cut 0,20
 stained_glass : check "${1=40%}>=0 && ${2=0.2}>=0" skip ${3=0}
-  e[^-1] "Apply stained glass effect on image$?, with edges $1, shading $2 and thin-separators "\
+  e[^-1] "Apply stained glass effect to image$?, with edges $1, shading $2 and thin-separators "\
          ${arg0\ !$3,enabled,disabled}"."
   foreach {
     im:=im-1 - $im # Ensure strict positiveness of image labels
@@ -35410,7 +35411,7 @@ stars : check "${1=10%}>=0 && ${2=1}>=0 && ${3=32}>0 && ${4=5}>=1 && ${5=0.38}>=
 #@cli : Default values: 'radius=3', 'smoothness=1' and 'iterations=8'.
 #@cli : $ image.jpg +norm stencil. 2,1,4 +mul rm[0]
 stencil : check "${1=3}>=0 && ${2=1}>=0 && ${3=8}>=0"
-  e[^-1] "Apply stencil filter on image$?, with radius $1, smoothness $2 and $3 iterations."
+  e[^-1] "Apply stencil filter to image$?, with radius $1, smoothness $2 and $3 iterations."
   n 0,1 repeat $3 { b $1 unsharp {$1+$2},1000 c 0,255 }
 
 #@cli stencilbw : _edges>=0,_smoothness>=0
@@ -35418,7 +35419,7 @@ stencil : check "${1=3}>=0 && ${2=1}>=0 && ${3=8}>=0"
 #@cli : Default values: 'edges=15' and 'smoothness=10'.
 #@cli : $ image.jpg +stencilbw 40,4
 stencilbw : skip ${1=15},${2=10}
-  e[^-1] "Apply B&W stencil effect on image$?, with edges $1 and smoothness $2."
+  e[^-1] "Apply B&W stencil effect to image$?, with edges $1 and smoothness $2."
   foreach {
     split_opacity luminance[0] n[0] 0,255
     +edges[0] $1 quantize[0] 3,0,1 b[0] $2
@@ -35430,8 +35431,8 @@ stencilbw : skip ${1=15},${2=10}
 # _patch_size_analysis>0,_patch_size_synthesis>0,_patch_size_synthesis_final>0,_nb_matches_finest>=0,\
 # _nb_matches_coarsest>=0,_penalize_repetitions>=0,_matching_precision>=0,_scale_factor>1,_skip_finest_scales>=0,\
 # _"image_matching_command"
-#@cli : Transfer colors and textures from specified style image to selected images, using a multi-scale \
-# patch-mathing algorithm.
+#@cli : Transfer the colors and the textures from the specified style image to the selected images, \
+# using a multi-scale patch-mathing algorithm.
 #@cli : If instant display window[0] is opened, the steps of the image synthesis are displayed on it.
 #@cli : 'init_type' can be { 0:Best-match | 1:Identity | 2:Randomized }.
 #@cli : Default values: 'fidelity_finest=0.5', 'fidelity_coarsest=2', 'fidelity_smoothness_finest=3', \
@@ -35563,7 +35564,7 @@ stylize :
 #@cli : Default value: 'scale=10'.
 #@cli : $ image.jpg +tetris 10
 tetris : skip ${1=10}
-  e[^-1] "Apply tetris effect on image$?, with scale $1."
+  e[^-1] "Apply tetris effect to image$?, with scale $1."
   foreach { wh={w},{h},1,{s} r $1%,$1%,$1%,100%,2 n 0,255 quantize 10,1,0 r $wh b 2 sharpen 300,1 }
 
 #@cli warhol : _M>0,_N>0,_smoothness>=0,_color>=0
@@ -35637,7 +35638,7 @@ whirls : skip ${1=3},${2=6},${3=0.5},${4=1.8}
 #@cli : Default values: 'amplitude=10', 'interpolation=1' and 'boundary_conditions=3'.
 #@cli : $ image.jpg +deform[0] 10 +deform[0] 20
 deform : check "${1=10}>=0 && isint(${2=1},0,2) && isint(${3=3},0,3)"
-  e[^-1] "Apply random smooth deformation on image$?, with amplitude $1."
+  e[^-1] "Apply random smooth deformation to image$?, with amplitude $1."
   foreach {
     if w
       {vmax([w,h,d]*2%,1)},3,"(ispercentage($1)?max(w,h,d)*$1:$1)*([ w#-1,h#-1,d#-1 ]>1)*[g,g,g]"
@@ -35652,7 +35653,7 @@ deform : check "${1=10}>=0 && isint(${2=1},0,2) && isint(${3=3},0,3)"
 #@cli : Default values: 'center_x=center_y=50%', 'stretch_factor=1' and 'boundary_conditions=3'.
 #@cli : $ image.jpg +euclidean2polar ,
 euclidean2polar : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3},0,3)"
-  e[^-1] "Apply euclidean to polar transform on image$?, with center point ($1,$2), stretch factor $3 and "\
+  e[^-1] "Apply euclidean to polar transform to image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
     cx,cy:=ispercentage($1)?$1*(w-1):$1,ispercentage($2)?$2*(h-1):$2
@@ -35692,7 +35693,7 @@ equirectangular2nadirzenith :
 #@cli : Default values: 'x=y=50', 'radius=50' and 'amplitude=1.2'.
 #@cli : $ image.jpg +fisheye ,
 fisheye : skip ${1=50},${2=50},${3=50},${4=1.2}
-  e[^-1] "Apply Fish-eye effect on image$?, centered at ($1%,$2%) with radius $3% and amplitude $4."
+  e[^-1] "Apply Fish-eye effect to image$?, centered at ($1%,$2%) with radius $3% and amplitude $4."
   if !$4 return fi
   foreach {
     100%,100%,1,1 =. 1,$1%,$2% distance. 1 c. 0,$3% *. -1 n. 0,1 ^. {1/$4}
@@ -35708,7 +35709,7 @@ fisheye : skip ${1=50},${2=50},${3=50},${4=1.2}
 # and 'boundary_conditions=3'.
 #@cli : $ image.jpg +flower ,
 flower : skip ${1=30},${2=6},${3=0},${4=0},${5=50%},${6=50%},${7=3}
-  e[^-1] "Apply flower deformation on image$?, with amplitude $1, frequency $2, offset $3, angle $4 deg. and
+  e[^-1] "Apply flower deformation to image$?, with amplitude $1, frequency $2, offset $3, angle $4 deg. and
           center point ($1,$2)."
   if ispercentage($3)
     transform_polar "r + (R*$3) + R*$1/100*cos(a*$2+$4*pi/180)","a",$5,$6,$7
@@ -35732,7 +35733,7 @@ kaleidoscope : skip ${1=50%},${2=50%},${3=100},${4=30},${5=3}
 #@cli : Default values: 'width=height=512', 'radius=100', 'dilation=0.5', 'fading=0' and 'fading_power=0.5'.
 #@cli : $ image.jpg map_sphere ,
 map_sphere : check "${1=512}>0 && ${2=512}>0 && ${5=0}>=0 && ${6=0.5}>=0" skip ${3=100},${4=0.5}
-   e[^-1] "Map image$? on spheres in $1x$2 images, with radius $3, dilation $4 and fading $5."
+   e[^-1] "Map image$? to spheres in $1x$2 images, with radius $3, dilation $4 and fading $5."
    r2:=($3*min($1,$2)/200)^2 # Compute squared radius
    foreach {
      i.. 100%,1,1,100%,0 =>[0] {1,n} a y # Add one border line to have a sphere exterior
@@ -35783,7 +35784,7 @@ nadirzenith2equirectangular :
 #@cli : Default values: 'center_x=center_y=50%', 'stretch_factor=1' and 'boundary_conditions=3'.
 #@cli : $ image.jpg +euclidean2polar ,
 polar2euclidean : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3},0,3)"
-  e[^-1] "Apply polar to euclidean transform on image$?, with center point ($1,$2), stretch factor $3 and "\
+  e[^-1] "Apply polar to euclidean transform to image$?, with center point ($1,$2), stretch factor $3 and "\
          ${"arg0 $4,dirichlet,neumann,periodic,mirror"}" boundary conditions."
   foreach {
     cx,cy:=ispercentage($1)?$1*(w-1):$1,ispercentage($2)?$2*(h-1):$2
@@ -35799,7 +35800,7 @@ polar2euclidean : skip ${1=50%},${2=50%} check "${3=1}>0 && isint(${4=3},0,3)"
 #@cli : Default values: 'amplitude=80','density=0.1', 'wavelength=1' and 'merging_steps=0'.
 #@cli : $ image.jpg +raindrops ,
 raindrops : check "${2=0.1}>=0 && ${3=1}>=0 && isint(${4=0},0)" skip ${1=80}
-  e[^-1] "Apply raindrops deformation on image$?, with amplitude $1, density $2, wavelength $3 and $4 merging steps."
+  e[^-1] "Apply raindrops deformation to image$?, with amplitude $1, density $2, wavelength $3 and $4 merging steps."
   foreach {
     100%,100% noise. $2,2 ==. 1 distance. 1 f. "cos(i)/(1+i/(1e-8+$3))"
     if $4
@@ -35815,7 +35816,7 @@ raindrops : check "${2=0.1}>=0 && ${3=1}>=0 && isint(${4=0},0)" skip ${1=80}
 #@cli : Default values: 'amplitude=10', 'bandwidth=10', 'shape=2', 'angle=0' and 'offset=0'.
 #@cli : $ image.jpg +ripple ,
 ripple : skip ${1=10},${2=20},${3=2},${4=0},${5=0}
-  e[^-1] "Apply ripple deformation on image$?, with amplitude $1, bandwidth $2, shape $3, angle $4 deg. and offset $5."
+  e[^-1] "Apply ripple deformation to image$?, with amplitude $1, bandwidth $2, shape $3, angle $4 deg. and offset $5."
   theta:=$4*pi/180 C:=cos($theta) S:=-sin($theta)
   foreach {
     100%,100%,1,1,"x" -. {w/2} 100%,100%,1,1,'y'
@@ -35850,7 +35851,7 @@ rotoidoscope : skip ${1=50%},${2=50%},${5=1} check "${3=10}>0 && ${4=3}>=0"
 #@cli : $ image.jpg grid 5%,5%,0,0,0.6,255 spherize ,
 spherize : check "${1=50%}>=0 && ${3=0}>=0 && ${6=1}>0 && isint(${8=1},0,2)"
            skip "${2=1},${4=50%},${5=50%},${7=0}"
-  e[^-1] "Apply spherize effect on image$?, with radius $1, strength $2, smoothness $3, center ($4,$5),
+  e[^-1] "Apply spherize effect to image$?, with radius $1, strength $2, smoothness $3, center ($4,$5),
           x/y-ratio $6, angle $7 and "${"arg0 $8,nearest-neighbor,linear,cubic"}" interpolation."
   if !$1||!$2 return fi
   foreach {
@@ -35906,7 +35907,7 @@ symmetrize : skip ${1=50%},${2=50%},${3=90},${4=3},${5=0},${6=0}
 #@cli : Default values: 'expr_radius=R-r', 'expr_rangle=a', 'center_x=center_y=50%' and 'boundary_conditions=3'.
 #@cli : $ image.jpg +transform_polar[0] R*(r/R)^2,a +transform_polar[0] r,2*a
 transform_polar : skip "${1=R-r}","${2=a}",${3=50%},${4=50%},${5=3}
-  e[^-1] "Apply custom polar transform with 'new_r = $1', 'new_a = $2', center point ($3%,$4%)."
+  e[^-1] "Apply custom polar transform to image$?, with 'new_r = $1', 'new_a = $2', center point ($3%,$4%)."
   foreach {
     cx:=ispercentage($3)?$3*(w-1):$3
     cy:=ispercentage($4)?$4*(h-1):$4
@@ -35925,7 +35926,7 @@ transform_polar : skip "${1=R-r}","${2=a}",${3=50%},${4=50%},${5=3}
 #@cli : Default values: 'amplitude=1', 'center_x=center_y=50%' and 'boundary_conditions=3'.
 #@cli : $ image.jpg twirl 0.6
 twirl : skip ${1=1},${2=50%},${3=50%},${4=3}
-  e[^-1] "Apply twirl deformation on image$?, with amplitude $1 and center point at ($2%,$3%)."
+  e[^-1] "Apply twirl deformation to image$?, with amplitude $1 and center point at ($2%,$3%)."
   euclidean2polar $2,$3,1,$4
   foreach { .,.,1,1,$1*x channels. -1,0 warp.. .,1,1,2 rm. }
   polar2euclidean $2,$3,1,1
@@ -36020,7 +36021,7 @@ warp_patch : check ${is_image_arg\ $1}" && isint($2,1) && isint(${3=$2},1) && "\
 #@cli : Default values: 'x-angle=1.5', 'y-angle=0', 'zoom=1', 'x-center=y-center=50' and 'boundary_conditions=2'.
 #@cli : $ image.jpg warp_perspective ,
 warp_perspective : skip ${1=1.5},${2=0},${3=1},${4=50},${5=50},${6=2}
-  e[^-1] "Apply perspective warp on image$?, with angles ($1 deg.,$2 deg.), zoom $3 and offsets ($4,$5)."
+  e[^-1] "Apply perspective warp to image$?, with angles ($1 deg.,$2 deg.), zoom $3 and offsets ($4,$5)."
   foreach {
     (0,100) -. $4 /. 100 (0;100) -. $5 /. 100 r[-2,-1] ...,...,...,1,3
     +*.. $2 +*.. $1 +[-2,-1] +. $3 /... . /[-2,-1]
@@ -36108,7 +36109,7 @@ warp_seamless : check "${2=5%}>=0 && isint(${3=0},0,3)"
 #@cli : Default values: 'amplitude=30', 'smoothness=1.5' and 'angle=45'.
 #@cli : $ image.jpg water ,
 water : check ${2=1.5}>=0 skip ${1=30},${3=1},${4=45}
-  e[^-1] "Apply water deformation on image$?, with amplitude $1, smoothness $2 and angle $3."
+  e[^-1] "Apply water deformation to image$?, with amplitude $1, smoothness $2 and angle $3."
   foreach {
     25%,25%,25%,1 noise. $1 g. xy *.. {-sin($3*pi/180)} *. {cos($3*pi/180)} +[-2,-1] b. $2 *. 2
     r. ..,..,1,2,3 warp.. .,1,1,1 rm.
@@ -36119,7 +36120,7 @@ water : check ${2=1.5}>=0 skip ${1=30},${3=1},${4=45}
 #@cli : Default values: 'amplitude=4', 'frequency=0.4' and 'center_x=center_y=50'.
 #@cli : $ image.jpg wave ,
 wave : skip ${1=4},${2=0.4},${3=50},${4=50}
-  e[^-1] "Apply wave deformation on image$?, with amplitude $1, frequency $2 and center point at ($3%,$4%)."
+  e[^-1] "Apply wave deformation to image$?, with amplitude $1, frequency $2 and center point at ($3%,$4%)."
   foreach {
     100%,100% =. 1,$3%,$4% distance. 1
     *. $2 +sin. cos.. a[-2,-1] c *. $1
@@ -36131,7 +36132,7 @@ wave : skip ${1=4},${2=0.4},${3=50},${4=50}
 #@cli : Default values: 'amplitude=20', 'angle=0', 'attenuation=0.7' and 'threshold=20'.
 #@cli : $ image.jpg +wind ,
 wind : check "isint(${1=20},0) && ${3=0.7}>=0 && $3<=1" skip "${2=0},${4=20}"
-  e[^-1] "Apply wind effect on image$?, with amplitude $1, angle $2 deg., attenuation $3 and contour threshold $4."
+  e[^-1] "Apply wind effect to image$?, with amplitude $1, angle $2 deg., attenuation $3 and contour threshold $4."
   if !$1 return fi
   foreach {
     +gradient_norm. >=. $4 distance. 0 +max_patch. 3 *[-2,-1]
@@ -36154,7 +36155,7 @@ wind : check "isint(${1=20},0) && ${3=0.7}>=0 && $3<=1" skip "${2=0},${4=20}"
 #@cli : Default values: 'factor=1', 'cx=cy=cz=0.5' and 'boundary_conditions=0'.
 #@cli : $ image.jpg +zoom[0] 0.6 +zoom[0] 1.5
 zoom : skip ${1=2},${2=0.5},${3=0.5},${4=0.5},${5=0}
-  e[^-1] "Apply zoom effect on image$?, with factor $1 and center ($2,$3)."
+  e[^-1] "Apply zoom effect to image$?, with factor $1 and center ($2,$3)."
   foreach {
     if d==1 # 2D image
        ({(w-1)*$2*(1-1/$1)},{(w-1)*($2+(1-$2)/$1)})
@@ -36219,7 +36220,7 @@ pixelize : skip ${1=20},${2=$1},${3=$1}
 #@cli : Default values: 'amplitude=60', 'bandwidth=2', 'shape=0', 'angle=0' and 'offset=0'.
 #@cli : $ image.jpg +scanlines ,
 scanlines : skip ${1=60},${2=2},${3=0},${4=0},${5=0}
-  e[^-1] "Apply scanlines effect on image$?, with amplitude $1, bandwidth $2, shape $3, angle $4 deg. and offset $5."
+  e[^-1] "Apply scanlines effect to image$?, with amplitude $1, bandwidth $2, shape $3, angle $4 deg. and offset $5."
   theta:=$4*pi/180 C:=cos($theta) S:=-sin($theta)
   foreach {
     100%,100%,1,1,"x" -. {w/2} 100%,100%,1,1,'y'
@@ -36916,7 +36917,7 @@ animate : skip ${1=30},${2=0},${3=""},${4=10},${5=1},"${6=}"
 #@cli : This command requires features from the OpenCV library (not enabled in G'MIC by default).
 #@cli : Default values: 'command=""', 'camera_index=0' (default camera), 'skip_frames=0' and 'output_filename=""'.
 apply_camera : check_opencv $0 skip "${1=},${4=}" check "${2=0}>=0 && ${3=0}>=0"
-  e[^-1] "Apply command '$1' on camera stream ""#$2, with $3 frames skip and output filename '$4'."
+  e[^-1] "Apply command '$1' to camera stream ""#$2, with $3 frames skip and output filename '$4'."
   m "_apply_camera_com : $1"
   is_ext "$4",avi is_outavi=${}
   is_ext "$4",mp4 is_outmp4=${}
@@ -36960,7 +36961,7 @@ apply_camera : check_opencv $0 skip "${1=},${4=}" check "${2=0}>=0 && ${3=0}>=0"
 #@cli : Default values: 'command=(undefined)', 'first_frame=0', 'last_frame=-1', 'frame_step=1' \
 # and 'output_filename=(undefined)'.
 apply_files : check "isint(${3=0},0) && isint(${4=-1},-1) && ${5=1}>=1" skip "${2=},${6=}"
-  e[^-1] "Apply command '$2' on input image files '$1', with first frame $3, last frame $4, frame step $5 and
+  e[^-1] "Apply command '$2' to input image files '$1', with first frame $3, last frame $4, frame step $5 and
           output filename '$6'.\n"
   files 3,"$1" _N=/{narg(${})-1} arg2var _file,${} v + _apply_stream[] "${_file{$frame+1}}","$2",${3-5},"$6"
 
@@ -36974,7 +36975,7 @@ apply_files : check "isint(${3=0},0) && isint(${4=-1},-1) && ${5=1}>=1" skip "${
 #@cli : Default values: 'first_frame=0', 'last_frame=-1', 'frame_step=1' and 'output_filename=(undefined)'.
 apply_video : check_opencv $0 check "isint(${3=0},0) && isint(${4=-1},-1) && ${5=1}>=1"
               skip "${2=},${6=}"
-  e[^-1] "Apply command '$2' on input video file '$1', with first frame $3, last frame $4, frame step $5 and
+  e[^-1] "Apply command '$2' to input video file '$1', with first frame $3, last frame $4, frame step $5 and
           output filename '$6'.\n"
   _N= v + _apply_stream[] "\"$1\",$frame","$2",${3-5},"$6"
 
@@ -40249,7 +40250,7 @@ x_bouncing : check_display $0
 x_color_curves : skip ${1=rgb}
   if ['"$1"']!='last'&&!{*,u} error[0--3] "Command '$0': No display available." return fi
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
-  e[^-1] "Apply color curves of image$?, in the '$1' color space."
+  e[^-1] "Apply color curves to image$?, in the '$1' color space."
   if ['"$1"']=='last'
     if !narg($_xcc_colorbase) return fi
     __x_color_curves[] $_xcc_colorbase
