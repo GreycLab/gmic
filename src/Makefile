@@ -505,7 +505,7 @@ displayless:
 cli_shared: lib
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS) -lgmic" _lib _cli_shared
 
-_cli_shared:
+_cli_shared: gmic_cli.cpp
 	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS) -lgmic
 	$(STRIP) gmic$(EXE)
 
@@ -753,10 +753,8 @@ check_cimg_version: # Check that versions of files 'CImg.h' and 'gmic.h' match.
 
 gmic_stdlib_community.h:
 	@echo "> Retrieve G'MIC Standard Library + Community Contributions..."
-	@if [ ! -f ./gmic_stdlib_community.h ]; then \
-	  $(WGET) gmic_stdlib_community.h https://gmic.eu/gmic_stdlib_community$(VERSION).h; \
-	  touch gmic_stdlib_community.h; \
-	fi
+	$(WGET) gmic_stdlib_community.h https://gmic.eu/gmic_stdlib_community$(VERSION).h; \
+	@touch gmic_stdlib_community.h; \
 	@echo " done!"
 
 do_gmic_stdlib_community.h:
