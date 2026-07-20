@@ -28,7 +28,7 @@ In this context, G'MIC can be viewed as a powerful companion to the [ImageMagick
 - **3** - **[G'MIC-Qt](https://github.com/GreycLab/gmic-qt)**, a plug-in designed to bring **G'MIC**'s capabilities to image editing applications like
   [GIMP](https://www.gimp.org),
   [Krita](https://www.krita.org),
-  [DigiKam](https://www.digikam.org),
+  [digiKam](https://www.digikam.org),
   [Photoshop](https://en.wikipedia.org/wiki/Adobe_Photoshop),
   [Affinity Photo](https://en.wikipedia.org/wiki/Affinity_Photo),
   [PaintShop Pro](https://en.wikipedia.org/wiki/PaintShop_Pro),
