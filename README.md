@@ -16,7 +16,7 @@ ranging from _1D scalar signals_ to _3D+t sequences of multi-spectral volumetric
 These user interfaces are:
 
 - **1** - **[gmic](https://gmic.eu/reference/)**, a command-line interface for using G'MIC's image processing features from a shell.
-In this context, G'MIC can be viewed as a friendly companion to the [ImageMagick](https://www.imagemagick.org) or [GraphicsMagick](https://www.graphicsmagick.org) software suites.
+In this context, G'MIC can be viewed as a powerful companion to the [ImageMagick](https://www.imagemagick.org) or [GraphicsMagick](https://www.graphicsmagick.org) software suites.
 
 <a href="https://gmic.eu/img/gmic_cli.jpg">![cli_interface](https://gmic.eu/img/gmic_cli_thumb.jpg)</a>
 
