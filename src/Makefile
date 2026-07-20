@@ -753,8 +753,8 @@ check_cimg_version: # Check that versions of files 'CImg.h' and 'gmic.h' match.
 
 gmic_stdlib_community.h:
 	@echo "> Retrieve G'MIC Standard Library + Community Contributions..."
-	$(WGET) gmic_stdlib_community.h https://gmic.eu/gmic_stdlib_community$(VERSION).h; \
-	@touch gmic_stdlib_community.h; \
+	$(WGET) gmic_stdlib_community.h https://gmic.eu/gmic_stdlib_community$(VERSION).h;
+	@touch gmic_stdlib_community.h;
 	@echo " done!"
 
 do_gmic_stdlib_community.h:
