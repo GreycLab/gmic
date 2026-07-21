@@ -6953,18 +6953,19 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'distance'.
         if (id_builtin_command==id_distance) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           unsigned int algorithm = 0, off = 0;
           int metric = 2;
           sep0 = sep1 = *indices = 0;
           value = 0;
-          if ((cimg_sscanf(argument,"%lf%c",
-                           &value,&end)==1 ||
-               (cimg_sscanf(argument,"%lf%c%c",
-                            &value,&sep0,&end)==2 && sep0=='%') ||
-               cimg_sscanf(argument,"%lf,%d%c",
-                           &value,&metric,&end)==2 ||
-               (cimg_sscanf(argument,"%lf%c,%d%c",
-                            &value,&sep0,&metric,&end)==3 && sep0=='%')) &&
+          if (((!nbc && cimg_sscanf(argument,"%lf%c",
+                                    &value,&end)==1) ||
+               (!nbc && cimg_sscanf(argument,"%lf%c%c",
+                                    &value,&sep0,&end)==2 && sep0=='%') ||
+               (nbc==1 && cimg_sscanf(argument,"%lf,%d%c",
+                                      &value,&metric,&end)==2) ||
+               (nbc==1 && cimg_sscanf(argument,"%lf%c,%d%c",
+                                      &value,&sep0,&metric,&end)==3 && sep0=='%')) &&
               metric>=0 && metric<=3) {
             print(0,"Compute distance map to isovalue %g%s in image%s, "
                   "with %s metric.",
