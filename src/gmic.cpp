@@ -8092,15 +8092,16 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'index'.
         if (id_builtin_command==id_index) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           unsigned int map_colors = 0;
           float dithering = 0;
           sep = 0;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
-                           indices,&dithering,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%u%c",
-                           indices,&dithering,&map_colors,&end)==3) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
+                                      gmic_use_indices,&dithering,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%u%c",
+                                      gmic_use_indices,&dithering,&map_colors,&end)==3)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"index")).height()==1) {
             const float ndithering = dithering<0?0:dithering>1?1:dithering;
             print(0,"Index values in image%s by LUT [%u], with dithering level %g%s.",
@@ -8123,18 +8124,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'inpaint'.
         if (id_builtin_command==id_inpaint) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           double patch_size = 11, lookup_size = 22, lookup_factor = 0.5, lookup_increment = 1,
             blend_size = 0, blend_threshold = 0, blend_decay = 0.05f, blend_scales = 10;
           unsigned int is_blend_outer = 1, method = 1;
           sep = *indices = 0;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 &&
-                sep==']') ||
-               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c%c",
-                            indices,&sep,&end)==2 &&
-                sep=='0') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],0,%u%c",
-                           indices,&method,&end)==2) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c%c",
+                                      gmic_use_indices,&sep,&end)==2 && sep=='0') ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],0,%u%c",
+                                      gmic_use_indices,&method,&end)==2)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"inpaint")).height()==1 &&
               method<=3) {
             print(0,"Inpaint image%s masked by image [%u], with %s algorithm.",
@@ -8144,35 +8144,35 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   method==2?"low-connectivity median":"high-connectivity median");
             const CImg<T> mask = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(inpaint(mask,method),false);
-          } else if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                                   gmic_use_indices,&sep,&end)==2 && sep==']') ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf%c",
-                                  indices,&patch_size,&end)==2 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&end)==3 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,&end)==4 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&end)==5 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&blend_size,&end)==6 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&blend_size,&blend_threshold,&end)==7 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
-                                  &end)==8 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
-                                  &blend_scales,&end)==9 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%u%c",
-                                  indices,&patch_size,&lookup_size,&lookup_factor,
-                                  &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
-                                  &blend_scales,&is_blend_outer,&end)==10) &&
+          } else if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                           gmic_use_indices,&sep,&end)==2 && sep==']') ||
+                      (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf%c",
+                                             gmic_use_indices,&patch_size,&end)==2) ||
+                      (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&end)==3) ||
+                      (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,&end)==4) ||
+                      (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&end)==5) ||
+                      (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&blend_size,&end)==6) ||
+                      (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&blend_size,&blend_threshold,&end)==7) ||
+                      (nbc==7 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
+                                             &end)==8) ||
+                      (nbc==8 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
+                                             &blend_scales,&end)==9) ||
+                      (nbc==9 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%u%c",
+                                             gmic_use_indices,&patch_size,&lookup_size,&lookup_factor,
+                                             &lookup_increment,&blend_size,&blend_threshold,&blend_decay,
+                                             &blend_scales,&is_blend_outer,&end)==10)) &&
                      (ind=selection2cimg(indices,images.size(),image_names,"inpaint")).height()==1 &&
                      patch_size>=0.5 && lookup_size>=0.5 && lookup_factor>=0 &&
                      blend_size>=0 && blend_threshold>=0 && blend_threshold<=1 &&
@@ -8206,13 +8206,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'isoline3d'.
         if (id_builtin_command==id_isoline3d) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           double x0 = -3, y0 = -3, x1 = 3, y1 = 3, dx = 256, dy = 256;
           sep = sepx = sepy = *formula = 0;
           value = 0;
-          if (cimg_sscanf(argument,"%lf%c",
-                          &value,&end)==1 ||
-              cimg_sscanf(argument,"%lf%c%c",
-                          &value,&sep,&end)==2) {
+          if (!nbc &&
+              (cimg_sscanf(argument,"%lf%c",
+                           &value,&end)==1 ||
+               cimg_sscanf(argument,"%lf%c%c",
+                           &value,&sep,&end)==2)) {
             print(0,"Extract 3D isolines from image%s, using isovalue %g%s.",
                   gmic_selection.data(),
                   value,sep=='%'?"%":"");
@@ -8254,20 +8256,21 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 g_img_uc.assign();
               } else gmic_apply(replace(img),false);
             }
-          } else if ((cimg_sscanf(argument,"'%4095[^']',%lf%c",
-                                  gmic_use_formula,&value,&end)==2 ||
-                      cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf%c",
-                                  formula,&value,&x0,&y0,&x1,&y1,&end)==6 ||
-                      cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  formula,&value,&x0,&y0,&x1,&y1,&dx,&dy,&end)==8 ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c",
-                                   formula,&value,&x0,&y0,&x1,&y1,&dx,&sepx,&dy,&end)==9 &&
-                       sepx=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c%c",
-                                   formula,&value,&x0,&y0,&x1,&y1,&dx,&dy,&sepy,&end)==9 &&
-                       sepy=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c%c",
-                                   formula,&value,&x0,&y0,&x1,&y1,&dx,&sepx,&dy,&sepy,&end)==10&&
+          } else if (((nbc==1 && cimg_sscanf(argument,"'%4095[^']',%lf%c",
+                                             gmic_use_formula,&value,&end)==2) ||
+                      (nbc==5 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_formula,&value,&x0,&y0,&x1,&y1,&end)==6) ||
+                      (nbc==7 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                             gmic_use_formula,&value,&x0,&y0,&x1,&y1,&dx,&dy,&end)==8) ||
+                      (nbc==7 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c",
+                                             gmic_use_formula,&value,&x0,&y0,&x1,&y1,&dx,&sepx,&dy,
+                                             &end)==9 && sepx=='%') ||
+                      (nbc==7 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c%c",
+                                             gmic_use_formula,&value,&x0,&y0,&x1,&y1,&dx,&dy,&sepy,
+                                             &end)==9 && sepy=='%') ||
+                      (nbc==7 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c%c",
+                                             gmic_use_formula,&value,&x0,&y0,&x1,&y1,&dx,&sepx,&dy,&sepy,
+                                             &end)==10 &&
                        sepx=='%' && sepy=='%')) &&
                      dx>0 && dy>0) {
             dx = cimg::round(dx);
@@ -8299,14 +8302,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'isosurface3d'.
         if (id_builtin_command==id_isosurface3d) {
           gmic_substitute_args(false);
-          double x0 = -3, y0 = -3, z0 = -3, x1 = 3, y1 = 3, z1 = 3,
-            dx = 32, dy = 32, dz = 32;
+          nbc = count_commas(argument);
+          double x0 = -3, y0 = -3, z0 = -3, x1 = 3, y1 = 3, z1 = 3, dx = 32, dy = 32, dz = 32;
           sep = sepx = sepy = sepz = *formula = 0;
           value = 0;
-          if (cimg_sscanf(argument,"%lf%c",
-                          &value,&end)==1 ||
-              cimg_sscanf(argument,"%lf%c%c",
-                          &value,&sep,&end)==2) {
+          if (!nbc &&
+              (cimg_sscanf(argument,"%lf%c",
+                           &value,&end)==1 ||
+               cimg_sscanf(argument,"%lf%c%c",
+                           &value,&sep,&end)==2)) {
             print(0,"Extract 3D isosurface from image%s, using isovalue %g%s.",
                   gmic_selection.data(),
                   value,sep=='%'?"%":"");
@@ -8352,40 +8356,33 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 primitives.assign(); g_list_uc.assign(); g_img_uc.assign();
               } else gmic_apply(replace(img),false);
             }
-          } else if ((cimg_sscanf(argument,"'%4095[^']',%lf%c",
-                                  gmic_use_formula,&value,&end)==2 ||
-                      cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&end)==8 ||
-                      cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
-                                  formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&dy,&dz,&end)==11 ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf,%lf%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&sepx,&dy,&dz,&end)==12 &&
-                       sepx=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&dy,&sepy,&dz,&end)==12 &&
-                       sepy=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&dy,&dz,&sepz,&end)==12 &&
-                       sepz=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c,%lf%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&sepx,&dy,&sepy,&dz,&end)==13 &&
-                       sepx=='%' && sepy=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf,%lf%c%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&sepx,&dy,&dz,&sepz,&end)==13 &&
-                       sepx=='%' && sepz=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&dy,&sepy,&dz,&sepz,&end)==13 &&
-                       sepy=='%' && sepz=='%') ||
-                      (cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c,%lf%c%c",
-                                   formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,
-                                   &dx,&sepx,&dy,&sepy,&dz,&sepz,&end)==14 &&
-                       sepx=='%' && sepy=='%' && sepz=='%')) &&
+          } else if (((nbc==1 && cimg_sscanf(argument,"'%4095[^']',%lf%c",
+                                  gmic_use_formula,&value,&end)==2) ||
+                      (nbc==7 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                  gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&end)==8) ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&dy,&dz,&end)==11) ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf,%lf%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&sepx,&dy,&dz,
+                                              &end)==12 && sepx=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&dy,&sepy,&dz,
+                                              &end)==12 && sepy=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&dy,&dz,&sepz,
+                                              &end)==12 && sepz=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c,%lf%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&sepx,&dy,&sepy,&dz,
+                                              &end)==13 && sepx=='%' && sepy=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf,%lf%c%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&sepx,&dy,&dz,&sepz,
+                                              &end)==13 && sepx=='%' && sepz=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&dy,&sepy,&dz,&sepz,
+                                              &end)==13 && sepy=='%' && sepz=='%') ||
+                      (nbc==10 && cimg_sscanf(argument,"'%4095[^']',%lf,%lf,%lf,%lf,%lf,%lf,%lf,%lf%c,%lf%c,%lf%c%c",
+                                              gmic_use_formula,&value,&x0,&y0,&z0,&x1,&y1,&z1,&dx,&sepx,&dy,&sepy,&dz,
+                                              &sepz,&end)==14 && sepx=='%' && sepy=='%' && sepz=='%')) &&
                      dx>0 && dy>0 && dz>0) {
             dx = cimg::round(dx);
             dy = cimg::round(dy);
