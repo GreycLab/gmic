@@ -1956,19 +1956,7 @@ inline double gmic_round(const double x) {
   return y;
 }
 
-// Count the number of commas in a C-string. It ignores commas located between `[]`.
-/*inline unsigned int count_commas(const char *const str) {
-  unsigned int n = 0;
-  bool in_brackets = false;
-  for (const char *s = str; *s; ++s) {
-    if (*s=='[') in_brackets = true;
-    else if (*s==']') in_brackets = false;
-    else if (*s==',' && !in_brackets) ++n;
-  }
-  return n;
-}
-*/
-
+// Count the number of commas in a C-string.
 inline unsigned int count_commas(const char *const str) {
   unsigned int n = 0;
   for (const char *s = str; *s; ++s)
