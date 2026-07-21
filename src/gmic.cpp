@@ -5717,7 +5717,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } else if (((nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c%c",
                                              &(*gmic_use_indices=0),&axis,&end)==2) ||
                       (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c,%f%c",
-                                             indices,&axis,&(align=0),&end)==3)) &&
+                                             &(*gmic_use_indices=0),&axis,&(align=0),&end)==3)) &&
                      is_xyzc(axis) &&
                      (ind=selection2cimg(indices,images.size(),image_names,"append")).height()==1) {
             print(0,"Append image [%u] to image%s, along the '%c'-axis, with alignment %g.",
@@ -5742,9 +5742,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'atan2'.
         if (id_builtin_command==id_atan2) {
           gmic_substitute_args(true);
-          sep = 0;
-          if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                          gmic_use_indices,&sep,&end)==2 && sep==']' &&
+          nbc = count_commas(argument);
+          if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                  gmic_use_indices,&(sep=0),&end)==2 && sep==']' &&
               (ind=selection2cimg(indices,images.size(),image_names,"atan2")).height()==1) {
             print(0,"Compute pointwise oriented arctangent of image%s, "
                   "with x-argument [%u].",
@@ -7973,30 +7973,32 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           *indices = *name = *argx = *argy = *argz = *argc = sep = sepx = sepy = sepz = sepc = 0;
           ind0.assign();
           opacity = 1;
-          gmic_use_indices; gmic_use_argx; gmic_use_argy; gmic_use_argz; gmic_use_argc;
           if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                                    indices,&sep,&end)==2 && sep==']') ||
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
                (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-]%c",
-                                      indices,argx,&end)==2) ||
+                                      gmic_use_indices,gmic_use_argx,&end)==2) ||
                (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
-                                      indices,argx,argy,&end)==3) ||
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
                (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
                                       "%255[0-9.eE%~+-]%c",
-                                      indices,argx,argy,argz,&end)==4) ||
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==4) ||
                (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
                                       "%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
-                                      indices,argx,argy,argz,argc,&end)==5) ||
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,
+                                      &end)==5) ||
                (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
                                       "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f%c",
-                                      indices,argx,argy,argz,argc,&opacity,&end)==6) ||
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,
+                                      &opacity,&end)==6) ||
                (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
                                       "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]%c%c",
-                                      indices,argx,argy,argz,argc,&opacity,name.data(),&sep,&end)==8 &&
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,
+                                      &opacity,name.data(),&sep,&end)==8 &&
                 sep==']') ||
                (nbc==7 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
                                       "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]],%f%c",
-                                      indices,argx,argy,argz,argc,&opacity,name.data(),
-                                      &max_opacity_mask,&end)==8)) &&
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,
+                                      &opacity,name.data(),&max_opacity_mask,&end)==8)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"image")).height()==1 &&
               (!*name ||
                (ind0=selection2cimg(name,images.size(),image_names,"image")).height()==1) &&
