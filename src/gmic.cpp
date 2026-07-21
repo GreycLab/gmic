@@ -8467,15 +8467,16 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'label'.
         if (id_builtin_command==id_label) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           float tolerance = 0;
           unsigned int is_L2_norm = 1;
           is_high_connectivity = 0;
-          if ((cimg_sscanf(argument,"%f%c",
-                           &tolerance,&end)==1 ||
-               cimg_sscanf(argument,"%f,%u%c",
-                           &tolerance,&is_high_connectivity,&end)==2 ||
-               cimg_sscanf(argument,"%f,%u,%u%c",
-                           &tolerance,&is_high_connectivity,&is_L2_norm,&end)==3) &&
+          if (((!nbc && cimg_sscanf(argument,"%f%c",
+                                    &tolerance,&end)==1) ||
+               (nbc==1 && cimg_sscanf(argument,"%f,%u%c",
+                                      &tolerance,&is_high_connectivity,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"%f,%u,%u%c",
+                                      &tolerance,&is_high_connectivity,&is_L2_norm,&end)==3)) &&
               tolerance>=0 && is_high_connectivity<=1 && is_L2_norm<=1) ++position;
           else { tolerance = 0; is_high_connectivity = 0; is_L2_norm = 1; }
           print(0,
@@ -8504,17 +8505,19 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'light3d'.
         if (id_builtin_command==id_light3d && no_get_selection) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           float lx = 0, ly = 0, lz = -5e8f;
           sep = *indices = 0;
-          if (cimg_sscanf(argument,"%f,%f,%f%c",
-                          &lx,&ly,&lz,&end)==3) {
+          if (nbc==2 && cimg_sscanf(argument,"%f,%f,%f%c",
+                                    &lx,&ly,&lz,&end)==3) {
             print(0,"Set 3D light position to (%g,%g,%g).",
                   lx,ly,lz);
             light3d_x = lx;
             light3d_y = ly;
             light3d_z = lz;
             ++position;
-          } else if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+          } else if (!nbc &&
+                     cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
                                  gmic_use_indices,&sep,&end)==2 &&
                      sep==']' &&
                      (ind=selection2cimg(indices,images.size(),image_names,"light3d")).height()==1) {
@@ -8532,28 +8535,28 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'line'.
         if (id_builtin_command==id_line) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           *argx = *argy = *argz = *argc = *color = 0;
           double x0 = 0, y0 = 0, x1 = 0, y1 = 0;
           char sepx0 = 0, sepy0 = 0, sepx1 = 0, sepy1 = 0;
           sep1 = 0;
           pattern = ~0U; opacity = 1;
-          if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%255[0-9.eE%+-]%c",
-                           gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&end)==4 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%255[0-9.eE%+-],%f%c",
-                           argx,argy,argz,argc,&opacity,&end)==5 ||
-               (cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                            "%255[0-9.eE%+-],%f,0%c%x%c",
-                            argx,argy,argz,argc,&opacity,&sep1,&pattern,&end)==7 &&
-                sep1=='x') ||
-               (cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                            "%255[0-9.eE%+-],%f,%4095[0-9.eEinfa,+-]%c",
-                            argx,argy,argz,argc,&opacity,gmic_use_color,&end)==6 && (bool)(pattern=~0U)) ||
-               (cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                            "%255[0-9.eE%+-],%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
-                            argx,argy,argz,argc,&opacity,&sep1,
-                            &pattern,&(*color=0),&end)==8 && sep1=='x')) &&
+          if (((nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&end)==4) ||
+               (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%f%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&opacity,&end)==5) ||
+               (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+                                      "%255[0-9.eE%+-],%f,0%c%x%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&opacity,&sep1,&pattern,
+                                      &end)==7 && sep1=='x') ||
+               (nbc>=5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+                                      "%255[0-9.eE%+-],%f,%4095[0-9.eEinfa,+-]%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&opacity,gmic_use_color,
+                                      &end)==6 && (bool)(pattern=~0U)) ||
+               (nbc>=6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+                                      "%255[0-9.eE%+-],%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&opacity,&sep1,
+                                      &pattern,&(*gmic_use_color=0),&end)==8 && sep1=='x')) &&
               (cimg_sscanf(argx,"%lf%c",&x0,&end)==1 ||
                (cimg_sscanf(argx,"%lf%c%c",&x0,&sepx0,&end)==2 && sepx0=='%')) &&
               (cimg_sscanf(argy,"%lf%c",&y0,&end)==1 ||
