@@ -1964,8 +1964,7 @@ inline double gmic_round(const double x) {
 // Count the number of commas in a C-string.
 inline unsigned int count_commas(const char *const str) {
   unsigned int n = 0;
-  for (const char *s = str; *s; ++s)
-    if (*s==',') ++n;
+  for (const char *s = str; *s; ++s) if (*s==',') ++n;
   return n;
 }
 
