@@ -6580,8 +6580,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           ind0.assign(); ind1.assign();
           sep0 = sep1 = *argx = *argy = *indices = 0;
           value0 = value1 = 0;
-          if (nbc==1 && cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-]%c",
-                                    gmic_use_argx,gmic_use_argy,&end)==2 &&
+          if (nbc==1 &&
+              cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-]%c",
+                          gmic_use_argx,gmic_use_argy,&end)==2 &&
               ((cimg_sscanf(argx,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep0,&end)==2 && sep0==']' &&
                 (ind0=selection2cimg(indices,images.size(),image_names,"cut")).height()==1) ||
                (cimg_sscanf(argx,"%lf%c%c",&value0,&sep0,&end)==2 && sep0=='%') ||
@@ -6608,8 +6609,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
               gmic_apply(cut((T)nvalue0,(T)nvalue1),true);
             }
-          } else if (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                                           gmic_use_indices,&sep0,&end)==2 && sep0==']' &&
+          } else if (nbc==1 &&
+                     cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                 gmic_use_indices,&sep0,&end)==2 && sep0==']' &&
                      (ind0=selection2cimg(indices,images.size(),image_names,"cut")).height()==1) {
             if (images[*ind0]) value1 = (double)images[*ind0].max_min(value0);
             print(0,"Cut image%s in range [%g,%g].",
@@ -7594,27 +7596,30 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'flood'.
         if (id_builtin_command==id_flood) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           double x = 0, y = 0, z = 0;
           float tolerance = 0;
           sepx = sepy = sepz = *argx = *argy = *argz = *color = 0;
           is_high_connectivity = 0;
           opacity = 1;
-          if ((cimg_sscanf(argument,"%255[0-9.eE%+-]%c",
-                           gmic_use_argx,&end)==1 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                           argx,gmic_use_argy,&end)==2 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                           argx,argy,gmic_use_argz,&end)==3 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f%c",
-                           argx,argy,argz,&tolerance,&end)==4 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u%c",
-                           argx,argy,argz,&tolerance,&is_high_connectivity,&end)==5 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f%c",
-                           argx,argy,argz,&tolerance,&is_high_connectivity,&opacity,&end)==6 ||
-               cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f,"
-                           "%4095[0-9.eEinfa,+-]%c",
-                           argx,argy,argz,&tolerance,&is_high_connectivity,
-                           &opacity,gmic_use_color,&end)==7) &&
+          if (((!nbc && cimg_sscanf(argument,"%255[0-9.eE%+-]%c",
+                                    gmic_use_argx,&end)==1) ||
+               (nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                      gmic_use_argx,gmic_use_argy,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==3) ||
+               (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&end)==4) ||
+               (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
+                                      &end)==5) ||
+               (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
+                                      &opacity,&end)==6) ||
+               (nbc==6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f,"
+                                      "%4095[0-9.eEinfa,+-]%c",
+                                      gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
+                                      &opacity,gmic_use_color,&end)==7)) &&
               (cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
                (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%')) &&
               (!*argy ||
@@ -7859,9 +7864,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'guided'.
         if (id_builtin_command==id_guided) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           float radius = 0, regularization = 0;
           sep0 = sep1 = 0;
-          if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+          if (nbc==2 &&
+              cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                           gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3 &&
               (cimg_sscanf(argx,"%f%c",&radius,&end)==1 ||
                (cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end)==2 && sep0=='%')) &&
@@ -7879,7 +7886,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') radius = -radius;
             if (sep1=='%') regularization = -regularization;
             cimg_forY(selection,l) gmic_apply(blur_guided(guide,radius,regularization),false);
-          } else if (cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+          } else if (nbc==1 &&
+                     cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                  gmic_use_argx,gmic_use_argy,&end)==2 &&
                      (cimg_sscanf(argx,"%f%c",&radius,&end)==1 ||
                       (cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end)==2 && sep0=='%')) &&
@@ -7923,32 +7931,33 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'histogram'.
         if (id_builtin_command==id_histogram) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           value = value0 = value1 = 0;
           sep = sep0 = sep1 = 0;
           is_cond = false; // no_min_max?
-          if (((cimg_sscanf(argument,"%lf%c",
-                            &value,&end)==1 && (is_cond = true)) ||
-               ((cimg_sscanf(argument,"%lf%c%c",
-                             &value,&sep,&end)==2 && sep=='%') && (is_cond = true)) ||
-               cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                           &value,&value0,&value1,&end)==3 ||
-               (cimg_sscanf(argument,"%lf%c,%lf,%lf%c",
-                            &value,&sep,&value0,&value1,&end)==4 && sep=='%') ||
-               (cimg_sscanf(argument,"%lf,%lf%c,%lf%c",
-                            &value,&value0,&sep0,&value1,&end)==4 && sep0=='%') ||
-               (cimg_sscanf(argument,"%lf%c,%lf%c,%lf%c",
-                            &value,&sep,&value0,&sep0,&value1,&end)==5 && sep=='%' &&
+          if (((!nbc && cimg_sscanf(argument,"%lf%c",
+                                    &value,&end)==1 && (is_cond = true)) ||
+               ((!nbc && cimg_sscanf(argument,"%lf%c%c",
+                                     &value,&sep,&end)==2 && sep=='%') && (is_cond = true)) ||
+               (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                                      &value,&value0,&value1,&end)==3) ||
+               (nbc==2 && cimg_sscanf(argument,"%lf%c,%lf,%lf%c",
+                                      &value,&sep,&value0,&value1,&end)==4 && sep=='%') ||
+               (nbc==2 && cimg_sscanf(argument,"%lf,%lf%c,%lf%c",
+                                      &value,&value0,&sep0,&value1,&end)==4 && sep0=='%') ||
+               (nbc==2 && cimg_sscanf(argument,"%lf%c,%lf%c,%lf%c",
+                                      &value,&sep,&value0,&sep0,&value1,&end)==5 && sep=='%' &&
                 sep0=='%') ||
-               (cimg_sscanf(argument,"%lf,%lf,%lf%c%c",
-                            &value,&value0,&value1,&sep1,&end)==4 && sep1=='%') ||
-               (cimg_sscanf(argument,"%lf%c,%lf,%lf%c%c",
-                            &value,&sep,&value0,&value1,&sep1,&end)==5 && sep=='%' &&
+               (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c%c",
+                                      &value,&value0,&value1,&sep1,&end)==4 && sep1=='%') ||
+               (nbc==2 && cimg_sscanf(argument,"%lf%c,%lf,%lf%c%c",
+                                      &value,&sep,&value0,&value1,&sep1,&end)==5 && sep=='%' &&
                 sep1=='%') ||
-               (cimg_sscanf(argument,"%lf,%lf%c,%lf%c%c",
-                            &value,&value0,&sep0,&value1,&sep1,&end)==5 && sep0=='%' &&
+               (nbc==2 && cimg_sscanf(argument,"%lf,%lf%c,%lf%c%c",
+                                      &value,&value0,&sep0,&value1,&sep1,&end)==5 && sep0=='%' &&
                 sep1=='%') ||
-               (cimg_sscanf(argument,"%lf%c,%lf%c,%lf%c%c",
-                            &value,&sep,&value0,&sep0,&value1,&sep1,&end)==6 && sep=='%' &&
+               (nbc==2 && cimg_sscanf(argument,"%lf%c,%lf%c,%lf%c%c",
+                                      &value,&sep,&value0,&sep0,&value1,&sep1,&end)==6 && sep=='%' &&
                 sep0=='%' && sep1=='%')) &&
               value>=0.5) {
             value = cimg::round(value);
