@@ -12939,7 +12939,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       &fullscreen,title)==5) ||
                (nbc>=3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%d,%255[^\n]",
                                       gmic_use_argx,gmic_use_argy,&(norm=fullscreen=-1),gmic_use_title)==4) ||
-               (((norm=fullscreen=-1),nbc)==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[^\n]",
+               (((norm=fullscreen=-1),nbc)>=2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[^\n]",
                                                              gmic_use_argx,gmic_use_argy,gmic_use_title)==3)) &&
               (cimg_sscanf(argx,"%f%c",&dimw,&end)==1 ||
                (cimg_sscanf(argx,"%f%c%c",&dimw,&sep0,&end)==2 && sep0=='%')) &&
