@@ -1855,9 +1855,9 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
                                 description4) \
  if (id_builtin_command==id_##command_name) { \
    gmic_substitute_args(true); \
+   nbc = count_commas(argument); \
    sep = 0; value = 0; \
-   if (cimg_sscanf(argument,"%lf%c",&value,&end)==1 || \
-       (cimg_sscanf(argument,"%lf%c%c",&value,&sep,&end)==2 && sep=='%')) { \
+   if (!nbc && ((err=cimg_sscanf(argument,"%lf%c%c",&value,&sep,&end))==1 || (err==2 && sep=='%'))) { \
      const char *const ssep = sep=='%'?"%":""; \
      print(0,description1 ".",arg1_1,arg1_2,arg1_3); \
      cimg_forY(selection,l) { \
@@ -1873,7 +1873,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
        } else img.function1((value_type1)nvalue); \
      } \
      ++position; \
-   } else if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' && \
+   } else if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' && \
               (ind=selection2cimg(indices,images.size(),image_names,#command_name)).height()==1) { \
      print(0,description2 ".",arg2_1,arg2_2); \
      const CImg<T> img0 = gmic_image_arg(*ind); \
