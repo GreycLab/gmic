@@ -6982,15 +6982,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
               gmic_apply(distance((T)nvalue,metric),true);
             }
-          } else if ((((cimg_sscanf(argument,"%lf,[%255[a-zA-Z0-9_.%+-]%c%c",
-                                    &value,gmic_use_indices,&sep1,&end)==3 ||
-                        (cimg_sscanf(argument,"%lf%c,[%255[a-zA-Z0-9_.%+-]%c%c",
-                                     &value,&sep0,indices,&sep1,&end)==4 && sep0=='%')) &&
+          } else if (((((nbc==1 && cimg_sscanf(argument,"%lf,[%255[a-zA-Z0-9_.%+-]%c%c",
+                                               &value,gmic_use_indices,&sep1,&end)==3) ||
+                        (nbc==1 && cimg_sscanf(argument,"%lf%c,[%255[a-zA-Z0-9_.%+-]%c%c",
+                                               &value,&sep0,indices,&sep1,&end)==4 && sep0=='%')) &&
                        sep1==']') ||
-                      ((cimg_sscanf(argument,"%lf,[%255[a-zA-Z0-9_.%+-]],%u%c",
-                                    &value,indices,&algorithm,&end)==3 ||
-                        (cimg_sscanf(argument,"%lf%c,[%255[a-zA-Z0-9_.%+-]],%u%c",
-                                     &value,&sep0,indices,&algorithm,&end)==4 && sep0=='%')) &&
+                      (((nbc==2 && cimg_sscanf(argument,"%lf,[%255[a-zA-Z0-9_.%+-]],%u%c",
+                                               &value,indices,&algorithm,&end)==3) ||
+                        (nbc==2 && cimg_sscanf(argument,"%lf%c,[%255[a-zA-Z0-9_.%+-]],%u%c",
+                                               &value,&sep0,indices,&algorithm,&end)==4 && sep0=='%')) &&
                        algorithm<=4)) &&
                      (ind=selection2cimg(indices,images.size(),image_names,"distance")).height()==1) {
             print(0,"Compute distance map%s to isovalue %g%s in image%s, "
@@ -7160,6 +7160,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'ellipse'.
         if (id_builtin_command==id_ellipse) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           double x = 0, y = 0, R = 0, r = 0, angle = 0;
           sep = sepx = sepy = sepz = sepc = *argx = *argy = *argz = *argc = *color = 0;
           pattern = ~0U; opacity = 1;
