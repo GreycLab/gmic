@@ -11020,12 +11020,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       &angle,&interpolation,&boundary,&end)==3) ||
                (nbc==4 && cimg_sscanf(argument,"%f,%u,%u,%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       &angle,&interpolation,&boundary,gmic_use_argx,gmic_use_argy,&end)==5)) &&
-              (!*argx ||
-               cimg_sscanf(argx,"%f%c",&cx,&end)==1 ||
-               (cimg_sscanf(argx,"%f%c%c",&cx,&sep0,&end)==2 && sep0=='%')) &&
-              (!*argy ||
-               cimg_sscanf(argy,"%f%c",&cy,&end)==1 ||
-               (cimg_sscanf(argy,"%f%c%c",&cy,&sep1,&end)==2 && sep1=='%')) &&
+              (!*argx || (err=cimg_sscanf(argx,"%f%c%c",&cx,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              (!*argy || (err=cimg_sscanf(argx,"%f%c%c",&cy,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               interpolation<=2 && boundary<=3) { // 2D rotation
             if (*argx) {
               print(0,"Rotate image%s by %g deg., with %s interpolation, %s boundary conditions "
@@ -11054,15 +11050,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                              &(*gmic_use_argx=0),&(*gmic_use_argy=0),&(*gmic_use_argz=0),&end)==9) ||
                       (nbc==5 && cimg_sscanf(argument,"%f,%f,%f,%f,%u,%u%c",
                                              &u,&v,&w,&angle,&interpolation,&boundary,&end)==6)) &&
-                     (!*argx ||
-                      cimg_sscanf(argx,"%f%c",&cx,&end)==1 ||
-                      (cimg_sscanf(argx,"%f%c%c",&cx,&sep0,&end)==2 && sep0=='%')) &&
-                     (!*argy ||
-                      cimg_sscanf(argy,"%f%c",&cy,&end)==1 ||
-                      (cimg_sscanf(argy,"%f%c%c",&cy,&sep1,&end)==2 && sep1=='%')) &&
-                     (!*argz ||
-                      cimg_sscanf(argz,"%f%c",&cz,&end)==1 ||
-                      (cimg_sscanf(argz,"%f%c%c",&cz,&sep2,&end)==2 && sep2=='%')) &&
+                     (!*argx || (err=cimg_sscanf(argx,"%f%c%c",&cx,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     (!*argy || (err=cimg_sscanf(argy,"%f%c%c",&cy,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     (!*argz || (err=cimg_sscanf(argz,"%f%c%c",&cz,&sep2,&end))==1 || (err==2 && sep2=='%')) &&
                      interpolation<=2 && boundary<=3) { // 3D rotation
             if (*argx) {
               print(0,"Rotate image%s around axis (%g,%g,%g) by %g deg., %s interpolation, "
@@ -11161,14 +11151,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           sepx = sepy = sepz = sepc = *argx = *argy = *argz = *argc = 0;
           if (cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                           gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&end)==4 &&
-              (cimg_sscanf(argx,"%lf%c",&value0,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&value0,&sepx,&end)==2 && sepx=='%')) &&
-              (cimg_sscanf(argy,"%lf%c",&value1,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&value1,&sepy,&end)==2 && sepy=='%')) &&
-              (cimg_sscanf(argz,"%lf%c",&nvalue0,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&nvalue0,&sepz,&end)==2 && sepz=='%')) &&
-              (cimg_sscanf(argc,"%lf%c",&nvalue1,&end)==1 ||
-               (cimg_sscanf(argc,"%lf%c%c",&nvalue1,&sepc,&end)==2 && sepc=='%'))) {
+              ((err=cimg_sscanf(argx,"%lf%c%c",&value0,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              ((err=cimg_sscanf(argy,"%lf%c%c",&value1,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              ((err=cimg_sscanf(argz,"%lf%c%c",&nvalue0,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
+              ((err=cimg_sscanf(argc,"%lf%c%c",&nvalue1,&sepc,&end))==1 || (err==2 && sepc=='%'))) {
             print(0,"Take screenshot, with coordinates (%s,%s) - (%s,%s).",
                   argx,argy,argz,argc);
             if (sepx=='%') value0 = value0*CImgDisplay::screen_width()/100;
@@ -11291,18 +11277,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       &value,gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==4) ||
                (nbc==4 && cimg_sscanf(argument,"%lf,%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       &value,gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&end)==5)) &&
-              (!*argx ||
-               (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%') ||
-               cimg_sscanf(argx,"%lf%c",&x,&end)==1) &&
-              (!*argy ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && sepy=='%') ||
-               cimg_sscanf(argy,"%lf%c",&y,&end)==1) &&
-              (!*argz ||
-               (cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end)==2 && sepz=='%') ||
-               cimg_sscanf(argz,"%lf%c",&z,&end)==1) &&
-              (!*argc ||
-               (cimg_sscanf(argc,"%lf%c%c",&c,&sepc,&end)==2 && sepc=='%') ||
-               cimg_sscanf(argc,"%lf%c",&c,&end)==1)) {
+              (!*argx || (err=cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
+              (!*argc || (err=cimg_sscanf(argc,"%lf%c%c",&c,&sepc,&end))==1 || (err==2 && sepc=='%'))) {
             print(0,"Set value %g in image%s, at coordinates (%g%s,%g%s,%g%s,%g%s).",
                   value,
                   gmic_selection.data(),
@@ -11499,17 +11477,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       "%u%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&boundary,&interpolation,
                                       &end)==6)) &&
-              (cimg_sscanf(argx,"%lf%c",&dx,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&dx,&sepx,&end)==2 && sepx=='%')) &&
-              (!*argy ||
-               cimg_sscanf(argy,"%lf%c",&dy,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&dy,&sepy,&end)==2 && sepy=='%')) &&
-              (!*argz ||
-               cimg_sscanf(argz,"%lf%c",&dz,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&dz,&sepz,&end)==2 && sepz=='%')) &&
-              (!*argc ||
-               cimg_sscanf(argc,"%lf%c",&dc,&end)==1 ||
-               (cimg_sscanf(argc,"%lf%c%c",&dc,&sepc,&end)==2 && sepc=='%')) &&
+              ((err=cimg_sscanf(argx,"%lf%c%c",&dx,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&dy,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&dz,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
+              (!*argc || (err=cimg_sscanf(argc,"%lf%c%c",&dc,&sepc,&end))==1 || (err==2 && sepc=='%')) &&
               boundary<=3 && interpolation<=1) {
             print(0,
                   "Shift image%s by displacement vector (%g%s,%g%s,%g%s,%g%s), "
@@ -11592,14 +11563,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       "%c",
                                       gmic_use_argz,&sharpness,&anisotropy,gmic_use_argx,gmic_use_argy,&dl,&da,
                                       &gauss_prec,&interpolation,&is_fast_approximation,&end)==10)) &&
-              (cimg_sscanf(argz,"%lf%c",&value,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&value,&sep,&end)==2 && sep=='%')) &&
-              (!*argx ||
-               cimg_sscanf(argx,"%lf%c",&value0,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&value0,&sep0,&end)==2 && sep0=='%')) &&
-              (!*argy ||
-               cimg_sscanf(argy,"%lf%c",&value1,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&value1,&sep1,&end)==2 && sep1=='%')) &&
+
+              ((err=cimg_sscanf(argz,"%lf%c%c",&value,&sep,&end))==1 || (err==2 && sep=='%')) &&
+              (!*argx || (err=cimg_sscanf(argx,"%lf%c%c",&value0,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&value1,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               value>=0 && value0>=0 && value1>=0 && sharpness>=0 && anisotropy>=0 && anisotropy<=1 && dl>0 &&
               (da>0 || (da==0 && sep!='%')) && gauss_prec>0 && interpolation<=2 && is_fast_approximation<=1) {
             if (da>0)
