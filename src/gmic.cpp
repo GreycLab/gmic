@@ -5036,7 +5036,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   else if (!_is_get && ((*it=='}' && !it[1]) || !std::strcmp("done",it)))
 
   unsigned int next_debug_line = ~0U, next_debug_filename = ~0U, is_high_connectivity, uind = 0,
-    boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0;
+    boundary = 0, pattern = 0, wind = 0, interpolation = 0, hash = 0, nbc = 0;
   char end, sep = 0, sep0 = 0, sep1 = 0, sepx = 0, sepy = 0, sepz = 0, sepc = 0, axis = 0;
   double vmin = 0, vmax = 0, value, value0, value1, nvalue, nvalue0, nvalue1;
   bool _is_get = false, check_elif = false, is_cond, is_end_local = false, run_main_ = false;
@@ -7963,6 +7963,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'image'.
         if (id_builtin_command==id_image) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           name.assign(256);
           double x = 0, y = 0, z = 0, c = 0;
           float max_opacity_mask = 1;
