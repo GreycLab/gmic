@@ -7396,10 +7396,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sx = cimg::round(sepx=='%'?sx*cimg::max(img.width(),img.height(),img.depth())/100:sx);
               gmic_apply(erode((unsigned int)sx),true);
             }
-          } else if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                  gmic_use_argx,gmic_use_argy,&end)==2 ||
-                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                  argx,argy,gmic_use_argz,&end)==3) &&
+          } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                             gmic_use_argx,gmic_use_argy,&end)==2) ||
+                      (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                             argx,argy,gmic_use_argz,&end)==3)) &&
                      (cimg_sscanf(argx,"%lf%c",&sx,&end)==1 ||
                       (cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end)==2 && sepx=='%')) &&
                      (cimg_sscanf(argy,"%lf%c",&sy,&end)==1 ||
