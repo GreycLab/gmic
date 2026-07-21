@@ -6182,6 +6182,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         is_cond = id_builtin_command==id_convolve;
         if (id_builtin_command==id_correlate || is_cond) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           unsigned int
             is_normalized = 0, channel_mode = 1;
           int
@@ -6190,30 +6191,34 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             xoffset = 0, yoffset = 0, zoffset = 0, xsize = (int)(~0U>>1), ysize = (int)(~0U>>1), zsize = (int)(~0U>>1);
           boundary = 1;
           sep = 0;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",
-                           indices,&boundary,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u%c",
-                           indices,&boundary,&is_normalized,&end)==3 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&end)==4 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,&end)==7 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
-                           &xstride,&ystride,&zstride,&end)==10 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
-                           &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,&end)==13 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
-                           &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,
-                           &xoffset,&yoffset,&zoffset,&end)==16 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
-                           indices,&boundary,&is_normalized,&channel_mode,&xcenter,&ycenter,&zcenter,
-                           &xstride,&ystride,&zstride,&xdilation,&ydilation,&zdilation,
-                           &xoffset,&yoffset,&zoffset,&xsize,&ysize,&zsize,&end)==19) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",
+                                      gmic_use_indices,&boundary,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u%c",
+                                      gmic_use_indices,&boundary,&is_normalized,&end)==3) ||
+               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u%c",
+                                      gmic_use_indices,&boundary,&is_normalized,&channel_mode,&end)==4) ||
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d%c",
+                                      gmic_use_indices,&boundary,&is_normalized,&channel_mode,
+                                      &xcenter,&ycenter,&zcenter,&end)==7) ||
+               (nbc==9 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d%c",
+                                      gmic_use_indices,&boundary,&is_normalized,&channel_mode,
+                                      &xcenter,&ycenter,&zcenter,&xstride,&ystride,&zstride,&end)==10) ||
+               (nbc==12 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
+                                       gmic_use_indices,&boundary,&is_normalized,&channel_mode,
+                                       &xcenter,&ycenter,&zcenter,&xstride,&ystride,&zstride,
+                                       &xdilation,&ydilation,&zdilation,&end)==13) ||
+               (nbc==15 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%c",
+                                       gmic_use_indices,&boundary,&is_normalized,&channel_mode,
+                                       &xcenter,&ycenter,&zcenter,&xstride,&ystride,&zstride,
+                                       &xdilation,&ydilation,&zdilation,&xoffset,&yoffset,&zoffset,&end)==16) ||
+               (nbc==18 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,"
+                                       "%d,%d,%d%c",
+                                       gmic_use_indices,&boundary,&is_normalized,&channel_mode,
+                                       &xcenter,&ycenter,&zcenter,&xstride,&ystride,&zstride,
+                                       &xdilation,&ydilation,&zdilation,&xoffset,&yoffset,&zoffset,
+                                       &xsize,&ysize,&zsize,&end)==19)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"correlate")).height()==1 &&
               boundary<=3 && channel_mode<=3 &&
               xstride>0 && ystride>0 && zstride>0 &&
