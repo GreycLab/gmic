@@ -1914,11 +1914,18 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
    continue; \
  }
 
+// Return list referencing all gmic runs.
+inline CImgList<void*>& gmic_runs() {
+  static CImgList<void*> val;
+  return val;
+}
+
 // Return true if specified character is considered as 'blank'.
 inline bool is_blank(const char x) {
   return (x>1 && x<gmic_dollar) || (x>gmic_store && x<=' ');
 }
 
+// Convert a special G'MIC character into an ASCII character.
 inline void _strreplace_fw(char &c) {
   switch (c) {
   case gmic_dollar : c = '$'; break;
@@ -1929,6 +1936,7 @@ inline void _strreplace_fw(char &c) {
   }
 }
 
+// Convert an ASCII character into a special G'MIC character.
 inline void _strreplace_bw(char &c) {
   switch (c) {
   case '$' : c = gmic_dollar; break;
@@ -1939,20 +1947,44 @@ inline void _strreplace_bw(char &c) {
   }
 }
 
-// Replace special characters in a string.
-char *gmic::strreplace_fw(char *const str) {
-  if (str) for (char *s = str ; *s; ++s) _strreplace_fw(*s);
-  return str;
+// Round a double value like %g.
+inline double gmic_round(const double x) {
+  char tmp[32];
+  double y;
+  cimg_snprintf(tmp,sizeof(tmp),"%g",x);
+  cimg_sscanf(tmp,"%lf",&y);
+  return y;
 }
 
-char *gmic::strreplace_bw(char *const str) {
-  if (str) for (char *s = str ; *s; ++s) _strreplace_bw(*s);
-  return str;
+// Count the number of commas in a C-string.
+inline unsigned int count_commas(const char *const str) {
+  if (!str) return 0;
+  unsigned int n = 0;
+  for (const char *s = str; *s; ++s) if (*s==',') ++n;
+  return n;
 }
 
-//! Escape a string.
+// Return current thread id.
+inline void* get_tid() {
+#if defined(__MACOSX__) || defined(__APPLE__)
+  void* tid = (void*)(cimg_ulong)getpid();
+#elif cimg_OS==1
+#if defined(__NetBSD__) || cimg_use_pthread==1
+  void* tid = (void*)(cimg_ulong)pthread_self();
+#else
+  void* tid = (void*)(cimg_ulong)syscall(SYS_gettid);
+#endif
+#elif cimg_OS==2
+  void* tid = (void*)(cimg_ulong)GetCurrentThreadId();
+#else
+  void* tid = (void*)0;
+#endif // #if defined(__MACOSX__) || defined(__APPLE__)
+  return tid;
+}
+
+// Escape a string.
 // 'res' must be a C-string large enough ('4*strlen(str) + 1' is always safe).
-unsigned int gmic::strescape(const char *const str, char *const res) {
+static unsigned int strescape(const char *const str, char *const res) {
   const char *const esc = "abtnvfr";
   char *ptrd = res;
   for (const unsigned char *ptrs = (unsigned char*)str; *ptrs; ++ptrs) {
@@ -1969,6 +2001,45 @@ unsigned int gmic::strescape(const char *const str, char *const res) {
   }
   *ptrd = 0;
   return (unsigned int)(ptrd - res);
+}
+
+// Return Levenshtein distance between two strings.
+// (adapted from http://rosettacode.org/wiki/Levenshtein_distance#C)
+static int _levenshtein(const char *const s, const char *const t,
+                        CImg<int>& d, const int i, const int j) {
+  const int ls = d.width() - 1, lt = d.height() - 1;
+  if (d(i,j)>=0) return d(i,j);
+  int x;
+  if (i==ls) x = lt - j;
+  else if (j==lt) x = ls - i;
+  else if (s[i]==t[j]) x = _levenshtein(s,t,d,i + 1,j + 1);
+  else {
+    x = _levenshtein(s,t,d,i + 1,j + 1);
+    int y;
+    if ((y=_levenshtein(s,t,d,i,j + 1))<x) x = y;
+    if ((y=_levenshtein(s,t,d,i + 1,j))<x) x = y;
+    ++x;
+  }
+  return d(i,j) = x;
+}
+
+static int levenshtein(const char *const s, const char *const t) {
+  const char *const ns = s?s:"", *const nt = t?t:"";
+  const int ls = (int)std::strlen(ns), lt = (int)std::strlen(nt);
+  if (!ls) return lt; else if (!lt) return ls;
+  CImg<int> d(1 + ls,1 + lt,1,1,-1);
+  return _levenshtein(ns,nt,d,0,0);
+}
+
+// Replace special characters in a string.
+char *gmic::strreplace_fw(char *const str) {
+  if (str) for (char *s = str ; *s; ++s) _strreplace_fw(*s);
+  return str;
+}
+
+char *gmic::strreplace_bw(char *const str) {
+  if (str) for (char *s = str ; *s; ++s) _strreplace_bw(*s);
+  return str;
 }
 
 // Parse debug info string (equivalent to 'cimg_sscanf(s,"%x,%x",&line_number,&file_number)').
@@ -1998,38 +2069,6 @@ bool gmic::get_debug_info(const char *s, unsigned int &line_number, unsigned int
     return true;
   }
   return false;
-}
-
-// Round a double value like %g.
-double gmic_round(const double x) {
-  char tmp[32];
-  double y;
-  cimg_snprintf(tmp,sizeof(tmp),"%g",x);
-  cimg_sscanf(tmp,"%lf",&y);
-  return y;
-}
-
-// Manage list of all gmic runs.
-inline CImgList<void*>& gmic_runs() {
-  static CImgList<void*> val;
-  return val;
-}
-
-inline void* get_tid() {
-#if defined(__MACOSX__) || defined(__APPLE__)
-  void* tid = (void*)(cimg_ulong)getpid();
-#elif cimg_OS==1
-#if defined(__NetBSD__) || cimg_use_pthread==1
-  void* tid = (void*)(cimg_ulong)pthread_self();
-#else
-  void* tid = (void*)(cimg_ulong)syscall(SYS_gettid);
-#endif
-#elif cimg_OS==2
-  void* tid = (void*)(cimg_ulong)GetCurrentThreadId();
-#else
-  void* tid = (void*)0;
-#endif // #if defined(__MACOSX__) || defined(__APPLE__)
-  return tid;
 }
 
 // Search G'MIC by image list (if 'p_list!=0') *or* thread_id (if 'p_list==0').
@@ -2556,34 +2595,6 @@ bool gmic::search_sorted(const char *const str, const T& list, const unsigned in
   return !err;
 }
 
-// Return Levenshtein distance between two strings.
-// (adapted from http://rosettacode.org/wiki/Levenshtein_distance#C)
-int gmic::_levenshtein(const char *const s, const char *const t,
-                       CImg<int>& d, const int i, const int j) {
-  const int ls = d.width() - 1, lt = d.height() - 1;
-  if (d(i,j)>=0) return d(i,j);
-  int x;
-  if (i==ls) x = lt - j;
-  else if (j==lt) x = ls - i;
-  else if (s[i]==t[j]) x = _levenshtein(s,t,d,i + 1,j + 1);
-  else {
-    x = _levenshtein(s,t,d,i + 1,j + 1);
-    int y;
-    if ((y=_levenshtein(s,t,d,i,j + 1))<x) x = y;
-    if ((y=_levenshtein(s,t,d,i + 1,j))<x) x = y;
-    ++x;
-  }
-  return d(i,j) = x;
-}
-
-int gmic::levenshtein(const char *const s, const char *const t) {
-  const char *const ns = s?s:"", *const nt = t?t:"";
-  const int ls = (int)std::strlen(ns), lt = (int)std::strlen(nt);
-  if (!ls) return lt; else if (!lt) return ls;
-  CImg<int> d(1 + ls,1 + lt,1,1,-1);
-  return _levenshtein(ns,nt,d,0,0);
-}
-
 // Wait for threads to finish.
 template<typename T>
 void gmic::wait_threads(void *const p_gmic_threads, const bool try_abort, const T& pixel_type) {
@@ -2628,7 +2639,7 @@ unsigned int gmic::hashcode(const char *const str, const bool is_variable) {
 }
 
 // Return true if the implementation of a G'MIC command contains arguments.
-bool gmic::has_arguments(const char *const command) {
+bool has_arguments(const char *const command) {
   if (!command || !*command) return false;
   for (const char *s = std::strchr(command,'$'); s; s = std::strchr(s,'$')) {
     const char c = *(++s);
@@ -2646,8 +2657,8 @@ bool gmic::has_arguments(const char *const command) {
 }
 
 // Compute the basename of a filename.
-const char* gmic::basename(const char *const str)  {
-  if (!str || !*str) return "";
+const char* basename(const char *const str)  {
+  if (!*str) return "";
   const unsigned int l = (unsigned int)std::strlen(str);
   unsigned int ll = l - 1; // 'Last' character to check
   while (ll>=3 && str[ll]>='0' && str[ll]<='9') --ll;
@@ -2805,7 +2816,7 @@ const CImg<char>& gmic::decompress_stdlib() {
 
 // Get the value of an environment variable.
 //-------------------------------------------
-static CImg<char> gmic_getenv(const char *const varname) {
+CImg<char> gmic_getenv(const char *const varname) {
 #if cimg_OS==2
   CImg<char> utf8Buffer;
   // Get the value of the environment variable using the wide-character
@@ -4548,8 +4559,8 @@ CImg<char> gmic::substitute_item(const char *const source,
               if (ind>=0 && *image_names[ind]) {
                 substr.assign(std::max(substr.width(),image_names[ind].width()));
                 cimg::split_filename(image_names[ind].data(),substr);
-                const char *const basename = gmic::basename(substr);
-                std::memmove(substr,basename,std::strlen(basename) + 1);
+                const char *const bname = basename(substr);
+                std::memmove(substr,bname,std::strlen(bname) + 1);
                 strreplace_bw(substr);
               }
               is_substituted = true;
@@ -4562,8 +4573,8 @@ CImg<char> gmic::substitute_item(const char *const source,
               if (ind>=0 && *image_names[ind]) {
                 substr.assign(std::max(substr.width(),image_names[ind].width()));
                 std::strcpy(substr,image_names[ind]);
-                const char *const basename = gmic::basename(substr);
-                substr[basename - substr.data()] = 0;
+                const char *const bname = basename(substr);
+                substr[bname - substr.data()] = 0;
                 strreplace_bw(substr);
               }
               is_substituted = true;
