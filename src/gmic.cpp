@@ -12038,18 +12038,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==7 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%u,%u,%u%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&L,&dl,&interpolation,&is_backward,
                                       &is_oriented_only,&end)==8)) &&
-
-              (cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%')) &&
-
-              (!*argy ||
-               cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && sepy=='%')) &&
-
-              (!*argz ||
-               cimg_sscanf(argz,"%lf%c",&z,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end)==2 && sepz=='%')) &&
-
+              ((err=cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
               L>=0 && dl>0 && interpolation<4 && is_backward<=1 && is_oriented_only<=1) {
             print(0,"Extract 3D streamline from image%s, starting from (%g%s,%g%s,%g%s).",
                   gmic_selection.data(),
