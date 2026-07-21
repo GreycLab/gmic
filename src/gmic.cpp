@@ -1956,11 +1956,23 @@ inline double gmic_round(const double x) {
   return y;
 }
 
-// Count the number of commas in a C-string.
-inline unsigned int count_commas(const char *const str) {
-  if (!str) return 0;
+// Count the number of commas in a C-string. It ignores commas located between `[]`.
+/*inline unsigned int count_commas(const char *const str) {
   unsigned int n = 0;
-  for (const char *s = str; *s; ++s) if (*s==',') ++n;
+  bool in_brackets = false;
+  for (const char *s = str; *s; ++s) {
+    if (*s=='[') in_brackets = true;
+    else if (*s==']') in_brackets = false;
+    else if (*s==',' && !in_brackets) ++n;
+  }
+  return n;
+}
+*/
+
+inline unsigned int count_commas(const char *const str) {
+  unsigned int n = 0;
+  for (const char *s = str; *s; ++s)
+    if (*s==',') ++n;
   return n;
 }
 
@@ -7970,29 +7982,30 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           *indices = *name = *argx = *argy = *argz = *argc = sep = sepx = sepy = sepz = sepc = 0;
           ind0.assign();
           opacity = 1;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-]%c",
-                           indices,gmic_use_argx,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
-                           indices,argx,gmic_use_argy,&end)==3 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
-                           "%255[0-9.eE%~+-]%c",
-                           indices,argx,argy,gmic_use_argz,&end)==4 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
-                           "%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
-                           indices,argx,argy,argz,gmic_use_argc,&end)==5 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
-                           "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f%c",
-                           indices,argx,argy,argz,argc,&opacity,&end)==6 ||
-               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
-                            "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]%c%c",
-                            indices,argx,argy,argz,argc,&opacity,name.data(),&sep,&end)==8 &&
+          gmic_use_indices; gmic_use_argx; gmic_use_argy; gmic_use_argz; gmic_use_argc;
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-]%c",
+                                      indices,argx,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
+                                      indices,argx,argy,&end)==3) ||
+               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
+                                      "%255[0-9.eE%~+-]%c",
+                                      indices,argx,argy,argz,&end)==4) ||
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
+                                      "%255[0-9.eE%~+-],%255[0-9.eE%~+-]%c",
+                                      indices,argx,argy,argz,argc,&end)==5) ||
+               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
+                                      "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f%c",
+                                      indices,argx,argy,argz,argc,&opacity,&end)==6) ||
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
+                                      "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]%c%c",
+                                      indices,argx,argy,argz,argc,&opacity,name.data(),&sep,&end)==8 &&
                 sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
-                           "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]],%f%c",
-                           indices,argx,argy,argz,argc,&opacity,name.data(),
-                           &max_opacity_mask,&end)==8) &&
+               (nbc==7 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%~+-],%255[0-9.eE%~+-],"
+                                      "%255[0-9.eE%~+-],%255[0-9.eE%~+-],%f,[%255[a-zA-Z0-9_.%+-]],%f%c",
+                                      indices,argx,argy,argz,argc,&opacity,name.data(),
+                                      &max_opacity_mask,&end)==8)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"image")).height()==1 &&
               (!*name ||
                (ind0=selection2cimg(name,images.size(),image_names,"image")).height()==1) &&
