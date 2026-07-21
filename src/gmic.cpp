@@ -5772,12 +5772,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'bilateral'.
         if (id_builtin_command==id_bilateral) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           float sigma_s = 0, sigma_r = 0, sampling_s = 0, sampling_r = 0;
           sep0 = sep1 = *argx = *argy = 0;
-          if ((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                           gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
-                           indices,argx,argy,&sampling_s,&sampling_r,&end)==5) &&
+          if (((nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&sampling_s,&sampling_r,&end)==5)) &&
               (cimg_sscanf(argx,"%f%c",&sigma_s,&end)==1 ||
                (cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end)==2 && sep0=='%')) &&
               (cimg_sscanf(argy,"%f%c",&sigma_r,&end)==1 ||
@@ -5795,10 +5796,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') sigma_s = -sigma_s;
             if (sep1=='%') sigma_r = -sigma_r;
             cimg_forY(selection,l) gmic_apply(blur_bilateral(guide,sigma_s,sigma_r,sampling_s,sampling_r),true);
-          } else if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                  gmic_use_argx,gmic_use_argy,&end)==2 ||
-                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
-                                  argx,argy,&sampling_s,&sampling_r,&end)==4) &&
+          } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                             gmic_use_argx,gmic_use_argy,&end)==2) ||
+                      (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
+                                             gmic_use_argx,gmic_use_argy,&sampling_s,&sampling_r,&end)==4)) &&
                      (cimg_sscanf(argx,"%f%c",&sigma_s,&end)==1 ||
                       (cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end)==2 && sep0=='%')) &&
                      (cimg_sscanf(argy,"%f%c",&sigma_r,&end)==1 ||
@@ -5823,6 +5824,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'blur'.
         if (id_builtin_command==id_blur) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           unsigned int is_gaussian = 1;
           float sigma = -1;
           sep = *argx = 0;
@@ -5831,20 +5833,21 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const char *p_argument = argument;
           if (cimg_sscanf(argument,"%255[xyzc]%c",gmic_use_argx,&sep)==2 && sep==',') {
             p_argument+=1 + std::strlen(argx);
+            --nbc;
           } else sep = *argx = 0;
 
-          if ((cimg_sscanf(p_argument,"%f%c",
-                           &sigma,&end)==1 ||
-               (cimg_sscanf(p_argument,"%f%c%c",
-                            &sigma,&sep,&end)==2 && sep=='%') ||
-               cimg_sscanf(p_argument,"%f,%u%c",
-                           &sigma,&boundary,&end)==2 ||
-               (cimg_sscanf(p_argument,"%f%c,%u%c",
-                            &sigma,&sep,&boundary,&end)==3 && sep=='%') ||
-               cimg_sscanf(p_argument,"%f,%u,%u%c",
-                           &sigma,&boundary,&is_gaussian,&end)==3 ||
-               (cimg_sscanf(p_argument,"%f%c,%u,%u%c",
-                            &sigma,&sep,&boundary,&is_gaussian,&end)==4 && sep=='%')) &&
+          if (((!nbc && cimg_sscanf(p_argument,"%f%c",
+                                    &sigma,&end)==1) ||
+               (!nbc && cimg_sscanf(p_argument,"%f%c%c",
+                                    &sigma,&sep,&end)==2 && sep=='%') ||
+               (nbc==1 && cimg_sscanf(p_argument,"%f,%u%c",
+                                      &sigma,&boundary,&end)==2) ||
+               (nbc==1 && cimg_sscanf(p_argument,"%f%c,%u%c",
+                                      &sigma,&sep,&boundary,&end)==3 && sep=='%') ||
+               (nbc==2 && cimg_sscanf(p_argument,"%f,%u,%u%c",
+                                      &sigma,&boundary,&is_gaussian,&end)==3) ||
+               (nbc==2 && cimg_sscanf(p_argument,"%f%c,%u,%u%c",
+                                      &sigma,&sep,&boundary,&is_gaussian,&end)==4 && sep=='%')) &&
               sigma>=0 && boundary<=3 && is_gaussian<=1) {
             print(0,"Blur image%s%s%s%s with standard deviation %g%s, %s boundary conditions "
                   "and %s kernel.",
@@ -5871,8 +5874,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
         // 'boxfilter'.
         if (id_builtin_command==id_boxfilter) {
-          unsigned int order = 0;
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
+          unsigned int order = 0;
           float sigma = -1;
           sep = *argx = 0;
           boundary = 1;
@@ -5880,23 +5884,24 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           const char *p_argument = argument;
           if (cimg_sscanf(argument,"%255[xyzc]%c",gmic_use_argx,&sep)==2 && sep==',') {
             p_argument+=1 + std::strlen(argx);
+            --nbc;
           } else sep = *argx = 0;
-          if ((cimg_sscanf(p_argument,"%f%c",
-                           &sigma,&end)==1 ||
-               (cimg_sscanf(p_argument,"%f%c%c",
-                            &sigma,&sep,&end)==2 && sep=='%') ||
-               cimg_sscanf(p_argument,"%f,%u%c",
-                           &sigma,&order,&end)==2 ||
-               (cimg_sscanf(p_argument,"%f%c,%u%c",
-                            &sigma,&sep,&order,&end)==3 && sep=='%') ||
-               cimg_sscanf(p_argument,"%f,%u,%u%c",
-                           &sigma,&order,&boundary,&end)==3 ||
-               (cimg_sscanf(p_argument,"%f%c,%u,%u%c",
-                            &sigma,&sep,&order,&boundary,&end)==4 && sep=='%') ||
-               cimg_sscanf(p_argument,"%f,%u,%u,%lf%c",
-                           &sigma,&order,&boundary,&value,&end)==4 ||
-               (cimg_sscanf(p_argument,"%f%c,%u,%u,%lf%c",
-                            &sigma,&sep,&order,&boundary,&value,&end)==5 && sep=='%')) &&
+          if (((!nbc && cimg_sscanf(p_argument,"%f%c",
+                                    &sigma,&end)==1) ||
+               (!nbc && cimg_sscanf(p_argument,"%f%c%c",
+                                    &sigma,&sep,&end)==2 && sep=='%') ||
+               (nbc==1 && cimg_sscanf(p_argument,"%f,%u%c",
+                                      &sigma,&order,&end)==2) ||
+               (nbc==1 && cimg_sscanf(p_argument,"%f%c,%u%c",
+                                      &sigma,&sep,&order,&end)==3 && sep=='%') ||
+               (nbc==2 && cimg_sscanf(p_argument,"%f,%u,%u%c",
+                                      &sigma,&order,&boundary,&end)==3) ||
+               (nbc==2 && cimg_sscanf(p_argument,"%f%c,%u,%u%c",
+                                      &sigma,&sep,&order,&boundary,&end)==4 && sep=='%') ||
+               (nbc==3 && cimg_sscanf(p_argument,"%f,%u,%u,%lf%c",
+                                      &sigma,&order,&boundary,&value,&end)==4) ||
+               (nbc==3 && cimg_sscanf(p_argument,"%f%c,%u,%u,%lf%c",
+                                      &sigma,&sep,&order,&boundary,&value,&end)==5 && sep=='%')) &&
               sigma>=0 && boundary<=3 && order<=2 && value>=0) {
             const unsigned int nb_iter = (unsigned int)cimg::round(value);
             print(0,"Blur image%s%s%s%s with normalized box filter of size %g%s, order %u and "
