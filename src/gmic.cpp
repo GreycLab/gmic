@@ -5742,9 +5742,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'atan2'.
         if (id_builtin_command==id_atan2) {
           gmic_substitute_args(true);
-          nbc = count_commas(argument);
-          if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                                  gmic_use_indices,&(sep=0),&end)==2 && sep==']' &&
+          if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                          gmic_use_indices,&(sep=0),&end)==2 && sep==']' &&
               (ind=selection2cimg(indices,images.size(),image_names,"atan2")).height()==1) {
             print(0,"Compute pointwise oriented arctangent of image%s, "
                   "with x-argument [%u].",
@@ -5975,8 +5974,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
                                       &cam_index,&nb_frames,&skip_frames,&end)==3) ||
                (nbc==4 && cimg_sscanf(argument,"%lf,%lf,%lf,%lf,%lf%c",
-                                      &cam_index,&nb_frames,&skip_frames,
-                                      &capture_width,&capture_height,&end)==5)) &&
+                                      &cam_index,&nb_frames,&skip_frames,&capture_width,&capture_height,&end)==5)) &&
               cam_index>=0 && nb_frames>=0 && skip_frames>=0 &&
               ((!capture_width && !capture_height) || (capture_width>0 && capture_height>0)))
             ++position;
@@ -6672,9 +6670,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           unsigned int is_fast_approximation = 0;
           double psize = 5, rsize = 6;
           sep0 = sep1 = *argx = *argy = 0;
-          if (((nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-]%c",
-                                      gmic_use_indices,gmic_use_argx,&end)==2) ||
-               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+          if (((nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
                (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&psize,&end)==4) ||
@@ -6706,9 +6702,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg_forY(selection,l)
               gmic_apply(blur_patch(guide,sigma_s,sigma_r,(unsigned int)psize,(unsigned int)rsize,smoothness,
                                     (bool)is_fast_approximation),false);
-          } else if (((!nbc && cimg_sscanf(argument,"%255[0-9.eE%+-]%c",
-                                           gmic_use_argx,&end)==1) ||
-                      (nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+          } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                              gmic_use_argx,gmic_use_argy,&end)==2) ||
                       (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf%c",
                                              gmic_use_argx,gmic_use_argy,&psize,&end)==3) ||
@@ -6751,10 +6745,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           float sigma = 0;
           axis = sep = 0;
           boundary = 1;
-          if (((nbc==2 && cimg_sscanf(argument,"%f,%u,%c%c",&sigma,&order,&axis,&end)==3) ||
-               (nbc==2 && cimg_sscanf(argument,"%f%c,%u,%c%c",&sigma,&sep,&order,&axis,&end)==4 &&
+          if (((nbc==2 && cimg_sscanf(argument,"%f,%u,%c%c",
+                                      &sigma,&order,&axis,&end)==3) ||
+               (nbc==2 && cimg_sscanf(argument,"%f%c,%u,%c%c",
+                                      &sigma,&sep,&order,&axis,&end)==4 &&
                 sep=='%') ||
-               (nbc==3 && cimg_sscanf(argument,"%f,%u,%c,%u%c",&sigma,&order,&axis,&boundary,&end)==4) ||
+               (nbc==3 && cimg_sscanf(argument,"%f,%u,%c,%u%c",
+                                      &sigma,&order,&axis,&boundary,&end)==4) ||
                (nbc==3 && cimg_sscanf(argument,"%f%c,%u,%c,%u%c",
                                       &sigma,&sep,&order,&axis,&boundary,&end)==5 && sep=='%')) &&
               sigma>=0 && order<=2 && is_xyzc(axis) && boundary<=3) {
