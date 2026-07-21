@@ -6746,16 +6746,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'deriche'.
         if (id_builtin_command==id_deriche) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           unsigned int order = 0;
           float sigma = 0;
           axis = sep = 0;
           boundary = 1;
-          if ((cimg_sscanf(argument,"%f,%u,%c%c",&sigma,&order,&axis,&end)==3 ||
-               (cimg_sscanf(argument,"%f%c,%u,%c%c",&sigma,&sep,&order,&axis,&end)==4 &&
+          if (((nbc==2 && cimg_sscanf(argument,"%f,%u,%c%c",&sigma,&order,&axis,&end)==3) ||
+               (nbc==2 && cimg_sscanf(argument,"%f%c,%u,%c%c",&sigma,&sep,&order,&axis,&end)==4 &&
                 sep=='%') ||
-               cimg_sscanf(argument,"%f,%u,%c,%u%c",&sigma,&order,&axis,&boundary,&end)==4 ||
-               (cimg_sscanf(argument,"%f%c,%u,%c,%u%c",
-                            &sigma,&sep,&order,&axis,&boundary,&end)==5 && sep=='%')) &&
+               (nbc==3 && cimg_sscanf(argument,"%f,%u,%c,%u%c",&sigma,&order,&axis,&boundary,&end)==4) ||
+               (nbc==3 && cimg_sscanf(argument,"%f%c,%u,%c,%u%c",
+                                      &sigma,&sep,&order,&axis,&boundary,&end)==5 && sep=='%')) &&
               sigma>=0 && order<=2 && is_xyzc(axis) && boundary<=3) {
             print(0,"Apply %u-order Deriche filter on image%s, along axis '%c' with standard "
                   "deviation %g%s and %s boundary conditions.",
