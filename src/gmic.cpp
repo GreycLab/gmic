@@ -11688,9 +11688,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==2 && cimg_sscanf(argument,"%255[xyzc],%255[0-9.eE%+-],%d%c",
                                       gmic_use_argx,gmic_use_argy,&imax_parts,&end)==3 &&
                 imax_parts>0)) &&
-              (!*argy ||
-               (cimg_sscanf(argy,"%lf%c%c",&nb,&sep,&end)==2 && nb<0 && sep=='%') ||
-               (cimg_sscanf(argy,"%lf%c",&nb,&end)==1 && nb==(int)nb))) {
+              (!*argy || ((err=cimg_sscanf(argy,"%lf%c%c",&nb,&sep,&end))==1 && nb==(int)nb) ||
+               (err==2 && nb<0 && sepy=='%'))) {
             if (imax_parts>0) max_parts = (unsigned int)imax_parts;
 
             // Split along axes.
