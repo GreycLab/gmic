@@ -5964,18 +5964,19 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'camera'.
         if (id_builtin_command==id_camera && no_get_selection) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           double
             cam_index = 0, nb_frames = 1, skip_frames = 0,
             capture_width = 0, capture_height = 0;
-          if ((cimg_sscanf(argument,"%lf%c",
-                           &cam_index,&end)==1 ||
-               cimg_sscanf(argument,"%lf,%lf%c",
-                           &cam_index,&nb_frames,&end)==2 ||
-               cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                           &cam_index,&nb_frames,&skip_frames,&end)==3 ||
-               cimg_sscanf(argument,"%lf,%lf,%lf,%lf,%lf%c",
-                           &cam_index,&nb_frames,&skip_frames,
-                           &capture_width,&capture_height,&end)==5) &&
+          if (((!nbc && cimg_sscanf(argument,"%lf%c",
+                                    &cam_index,&end)==1) ||
+               (nbc==1 && cimg_sscanf(argument,"%lf,%lf%c",
+                                      &cam_index,&nb_frames,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                                      &cam_index,&nb_frames,&skip_frames,&end)==3) ||
+               (nbc==4 && cimg_sscanf(argument,"%lf,%lf,%lf,%lf,%lf%c",
+                                      &cam_index,&nb_frames,&skip_frames,
+                                      &capture_width,&capture_height,&end)==5)) &&
               cam_index>=0 && nb_frames>=0 && skip_frames>=0 &&
               ((!capture_width && !capture_height) || (capture_width>0 && capture_height>0)))
             ++position;
