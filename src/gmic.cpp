@@ -1857,7 +1857,8 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
    gmic_substitute_args(true); \
    nbc = count_commas(argument); \
    sep = 0; value = 0; \
-   if (!nbc && ((err=cimg_sscanf(argument,"%lf%c%c",&value,&sep,&end))==1 || (err==2 && sep=='%'))) { \
+   if (!nbc && \
+       ((err=cimg_sscanf(argument,"%lf%c%c",&value,&sep,&end))==1 || (err==2 && sep=='%'))) { \
      const char *const ssep = sep=='%'?"%":""; \
      print(0,description1 ".",arg1_1,arg1_2,arg1_3); \
      cimg_forY(selection,l) { \
@@ -1873,7 +1874,8 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
        } else img.function1((value_type1)nvalue); \
      } \
      ++position; \
-   } else if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' && \
+   } else if (!nbc && \
+              cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' && \
               (ind=selection2cimg(indices,images.size(),image_names,#command_name)).height()==1) { \
      print(0,description2 ".",arg2_1,arg2_2); \
      const CImg<T> img0 = gmic_image_arg(*ind); \
@@ -5609,8 +5611,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
             }
             ++position;
-          } else if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 &&
-                     sep==']' &&
+          } else if (!nbc &&
+                     cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 && sep==']' &&
                      (ind=selection2cimg(indices,images.size(),image_names,"add3d")).height()==1) {
             const CImg<T> img0 = gmic_image_arg(*ind);
             print(0,"Merge 3D object%s with 3D object [%u].",
@@ -6792,10 +6794,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   is_real?"real":"binary");
             const CImg<T> kernel = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(dilate(kernel,boundary,(bool)is_real),false);
-          } else if (((!nbc && cimg_sscanf(argument,"%lf%c",
-                                           &sx,&end)==1) ||
-                      (!nbc && cimg_sscanf(argument,"%lf%c%c",
-                                           &sx,&sepx,&end)==2 && sepx=='%')) &&
+          } else if (!nbc &&
+                     (cimg_sscanf(argument,"%lf%c",
+                                  &sx,&end)==1 ||
+                      (cimg_sscanf(argument,"%lf%c%c",
+                                   &sx,&sepx,&end)==2 && sepx=='%')) &&
                      sx>=0) {
             print(0,"Dilate image%s with kernel of size %g%s and neumann boundary conditions.",
                   gmic_selection.data(),
@@ -6890,27 +6893,28 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'displacement'.
         if (id_builtin_command==id_displacement) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           double nb_scales = 0, nb_iterations = 1000;
           float smoothness = 0.1f, precision = 7.f;
           unsigned int is_forward = 0;
           sep = *argx = 0;
           ind0.assign();
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
-                           indices,&smoothness,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f%c",
-                           indices,&smoothness,&precision,&end)==3 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf%c",
-                           indices,&smoothness,&precision,&nb_scales,&end)==4 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf%c",
-                           indices,&smoothness,&precision,&nb_scales,&nb_iterations,&end)==5 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u%c",
-                           indices,&smoothness,&precision,&nb_scales,&nb_iterations,
-                           &is_forward,&end)==6 ||
-               (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]%c%c",
-                            indices,&smoothness,&precision,&nb_scales,&nb_iterations,
-                            &is_forward,gmic_use_argx,&sep,&end)==8 && sep==']')) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
+                                      indices,&smoothness,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f%c",
+                                      indices,&smoothness,&precision,&end)==3) ||
+               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf%c",
+                                      indices,&smoothness,&precision,&nb_scales,&end)==4) ||
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf%c",
+                                      indices,&smoothness,&precision,&nb_scales,&nb_iterations,&end)==5) ||
+               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u%c",
+                                      indices,&smoothness,&precision,&nb_scales,&nb_iterations,
+                                      &is_forward,&end)==6) ||
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]%c%c",
+                                      indices,&smoothness,&precision,&nb_scales,&nb_iterations,
+                                      &is_forward,gmic_use_argx,&sep,&end)==8 && sep==']')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"displacement")).height()==1 &&
               precision>=0 && nb_scales>=0 && nb_iterations>=0 && is_forward<=1 &&
               (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1)) {
