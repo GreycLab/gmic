@@ -7182,15 +7182,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       "%255[0-9.eE%+-],%lf,%f,%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&angle,&opacity,
                                       gmic_use_color,&end)==7)) &&
-              (cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%')) &&
-              (cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && sepy=='%')) &&
-              (cimg_sscanf(argz,"%lf%c",&R,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&R,&sepz,&end)==2 && sepz=='%')) &&
-              (!*argc ||
-               cimg_sscanf(argc,"%lf%c",&r,&end)==1 ||
-               (cimg_sscanf(argc,"%lf%c%c",&r,&sepc,&end)==2 && sepc=='%'))) {
+              ((err=cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              ((err=cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              ((err=cimg_sscanf(argz,"%lf%c%c",&R,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
+              (!*argc || (err=cimg_sscanf(argc,"%lf%c%c",&r,&sepc,&end))==1 || (err==2 && sepc=='%'))) {
             if (!*argc) r = R;
             print(0,"Draw %s ellipse at (%g%s,%g%s) with radii (%g%s,%g%s) on image%s, "
                   "with orientation %g deg., opacity %g and color (%s).",
@@ -7388,12 +7383,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                              gmic_use_argx,gmic_use_argy,&end)==2) ||
                       (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                              argx,argy,gmic_use_argz,&end)==3)) &&
-                     (cimg_sscanf(argx,"%lf%c",&sx,&end)==1 ||
-                      (cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end)==2 && sepx=='%')) &&
-                     (cimg_sscanf(argy,"%lf%c",&sy,&end)==1 ||
-                      (cimg_sscanf(argy,"%lf%c%c",&sy,&sepy,&end)==2 && sepy=='%')) &&
-                     (!*argz || cimg_sscanf(argz,"%lf%c",&sz,&end)==1 ||
-                      (cimg_sscanf(argz,"%lf%c%c",&sz,&sepz,&end)==2 && sepz=='%')) &&
+                     ((err=cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+                     ((err=cimg_sscanf(argy,"%lf%c%c",&sy,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+                     (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&sz,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
                      sx>=0 && sy>=0 && sz>=0) {
             print(0,"Erode image%s with kernel of size %g%sx%g%sx%g%s and neumann boundary conditions.",
                   gmic_selection.data(),
@@ -7606,14 +7598,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       "%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &opacity,gmic_use_color,&end)==7)) &&
-              (cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%')) &&
-              (!*argy ||
-               cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && sepy=='%')) &&
-              (!*argz ||
-               cimg_sscanf(argz,"%lf%c",&z,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end)==2 && sepz=='%')) &&
+              ((err=cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
+              (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
               tolerance>=0) {
             print(0,
                   "Flood fill image%s from (%g%s,%g%s,%g%s), with tolerance %g, %s connectivity, "
@@ -7856,10 +7843,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (nbc==2 &&
               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                           gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3 &&
-              (cimg_sscanf(argx,"%f%c",&radius,&end)==1 ||
-               (cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end)==2 && sep0=='%')) &&
-              (cimg_sscanf(argy,"%f%c",&regularization,&end)==1 ||
-               (cimg_sscanf(argy,"%f%c%c",&regularization,&sep1,&end)==2 && sep1=='%')) &&
+              ((err=cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              ((err=cimg_sscanf(argy,"%f%c%c",&regularization,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"guided")).height()==1 &&
               radius>=0 && regularization>=0) {
             print(0,"Apply guided filter on image%s, with guide image [%u], "
@@ -7875,10 +7860,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } else if (nbc==1 &&
                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                  gmic_use_argx,gmic_use_argy,&end)==2 &&
-                     (cimg_sscanf(argx,"%f%c",&radius,&end)==1 ||
-                      (cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end)==2 && sep0=='%')) &&
-                     (cimg_sscanf(argy,"%f%c",&regularization,&end)==1 ||
-                      (cimg_sscanf(argy,"%f%c%c",&regularization,&sep1,&end)==2 && sep1=='%')) &&
+                     ((err=cimg_sscanf(argx,"%f%c%c",&radius,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err=cimg_sscanf(argy,"%f%c%c",&regularization,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
                      radius>=0 && regularization>=0) {
             print(0,"Apply guided filter on image%s, with radius %g%s and regularization %g%s.",
                   gmic_selection.data(),
@@ -8025,18 +8008,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               (ind=selection2cimg(indices,images.size(),image_names,"image")).height()==1 &&
               (!*name ||
                (ind0=selection2cimg(name,images.size(),image_names,"image")).height()==1) &&
-              (!*argx ||
-               cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && (sepx=='%' || sepx=='~'))) &&
-              (!*argy ||
-               cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end)==2 && (sepy=='%' || sepy=='~'))) &&
-              (!*argz ||
-               cimg_sscanf(argz,"%lf%c",&z,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end)==2 && (sepz=='%' || sepz=='~'))) &&
-              (!*argc ||
-               cimg_sscanf(argc,"%lf%c",&c,&end)==1 ||
-               (cimg_sscanf(argc,"%lf%c%c",&c,&sepc,&end)==2 && (sepc=='%' || sepc=='~')))) {
+              (!*argx || (err=cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end))==1 || (err==2 && (sepx=='%' || sepx=='~'))) &&
+              (!*argy || (err=cimg_sscanf(argy,"%lf%c%c",&y,&sepy,&end))==1 || (err==2 && (sepy=='%' || sepy=='~'))) &&
+              (!*argz || (err=cimg_sscanf(argz,"%lf%c%c",&z,&sepz,&end))==1 || (err==2 && (sepz=='%' || sepz=='~'))) &&
+              (!*argc || (err=cimg_sscanf(argc,"%lf%c%c",&c,&sepc,&end))==1 || (err==2 && (sepc=='%' || sepc=='~')))) {
             const CImg<T> sprite = gmic_image_arg(*ind);
             CImg<T> mask;
             if (ind0) {
@@ -8543,14 +8518,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       "%255[0-9.eE%+-],%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&opacity,&sep1,
                                       &pattern,&(*gmic_use_color=0),&end)==8 && sep1=='x')) &&
-              (cimg_sscanf(argx,"%lf%c",&x0,&end)==1 ||
-               (cimg_sscanf(argx,"%lf%c%c",&x0,&sepx0,&end)==2 && sepx0=='%')) &&
-              (cimg_sscanf(argy,"%lf%c",&y0,&end)==1 ||
-               (cimg_sscanf(argy,"%lf%c%c",&y0,&sepy0,&end)==2 && sepy0=='%')) &&
-              (cimg_sscanf(argz,"%lf%c",&x1,&end)==1 ||
-               (cimg_sscanf(argz,"%lf%c%c",&x1,&sepx1,&end)==2 && sepx1=='%')) &&
-              (cimg_sscanf(argc,"%lf%c",&y1,&end)==1 ||
-               (cimg_sscanf(argc,"%lf%c%c",&y1,&sepy1,&end)==2 && sepy1=='%'))) {
+              ((err=cimg_sscanf(argx,"%lf%c%c",&x0,&sepx0,&end))==1 || (err==2 && sepx0=='%')) &&
+              ((err=cimg_sscanf(argy,"%lf%c%c",&y0,&sepy0,&end))==1 || (err==2 && sepy0=='%')) &&
+              ((err=cimg_sscanf(argz,"%lf%c%c",&x1,&sepx1,&end))==1 || (err==2 && sepx1=='%')) &&
+              ((err=cimg_sscanf(argc,"%lf%c%c",&y1,&sepy1,&end))==1 || (err==2 && sepy1=='%'))) {
             print(0,"Draw line (%g%s,%g%s) - (%g%s,%g%s) on image%s, with opacity %g, "
                   "pattern 0x%x and color (%s).",
                   x0,sepx0=='%'?"%":"",
