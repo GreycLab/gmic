@@ -6774,16 +6774,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'dilate'.
         if (id_builtin_command==id_dilate) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           double sx = 3, sy = 3, sz = 1;
           unsigned int is_real = 0;
           boundary = 1;
           sep = sepx = sepy = sepz = 0;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",
-                           indices,&boundary,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u%c",
-                           indices,&boundary,&is_real,&end)==3) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u%c",
+                                      gmic_use_indices,&boundary,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%u,%u%c",
+                                      gmic_use_indices,&boundary,&is_real,&end)==3)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"dilate")).height()==1 &&
               boundary<=3) {
             print(0,"Dilate image%s with kernel [%u] and %s boundary conditions, "
@@ -6794,10 +6795,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   is_real?"real":"binary");
             const CImg<T> kernel = gmic_image_arg(*ind);
             cimg_forY(selection,l) gmic_apply(dilate(kernel,boundary,(bool)is_real),false);
-          } else if ((cimg_sscanf(argument,"%lf%c",
-                                  &sx,&end)==1 ||
-                      (cimg_sscanf(argument,"%lf%c%c",
-                                   &sx,&sepx,&end)==2 && sepx=='%')) &&
+          } else if (((!nbc && cimg_sscanf(argument,"%lf%c",
+                                           &sx,&end)==1) ||
+                      (!nbc && cimg_sscanf(argument,"%lf%c%c",
+                                           &sx,&sepx,&end)==2 && sepx=='%')) &&
                      sx>=0) {
             print(0,"Dilate image%s with kernel of size %g%s and neumann boundary conditions.",
                   gmic_selection.data(),
@@ -6807,10 +6808,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               sx = cimg::round(sepx=='%'?sx*cimg::max(img.width(),img.height(),img.depth())/100:sx);
               gmic_apply(dilate((unsigned int)sx),true);
             }
-          } else if ((cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                  gmic_use_argx,gmic_use_argy,&end)==2 ||
-                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                  argx,argy,gmic_use_argz,&end)==3) &&
+          } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                             gmic_use_argx,gmic_use_argy,&end)==2) ||
+                      (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                             gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==3)) &&
                      (cimg_sscanf(argx,"%lf%c",&sx,&end)==1 ||
                       (cimg_sscanf(argx,"%lf%c%c",&sx,&sepx,&end)==2 && sepx=='%')) &&
                      (cimg_sscanf(argy,"%lf%c",&sy,&end)==1 ||
