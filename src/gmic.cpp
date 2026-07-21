@@ -7187,15 +7187,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&angle,&opacity,
                                       &sep,&pattern,&end)==8 &&
                 sep=='x') ||
-               (nbc==7 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+               (nbc>=7 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
                                       "%255[0-9.eE%+-],%lf,%f,0%c%x,%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&angle,&opacity,
                                       &sep,&pattern,gmic_use_color,&end)==9 &&
                 sep=='x') ||
-               (nbc==6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
+               (nbc>=6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-],"
                                       "%255[0-9.eE%+-],%lf,%f,%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,gmic_use_argc,&angle,&opacity,
-                                      color,&end)==7)) &&
+                                      gmic_use_color,&end)==7)) &&
               (cimg_sscanf(argx,"%lf%c",&x,&end)==1 ||
                (cimg_sscanf(argx,"%lf%c%c",&x,&sepx,&end)==2 && sepx=='%')) &&
               (cimg_sscanf(argy,"%lf%c",&y,&end)==1 ||
@@ -7616,7 +7616,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &opacity,&end)==6) ||
-               (nbc==6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f,"
+               (nbc>=6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f,"
                                       "%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &opacity,gmic_use_color,&end)==7)) &&
