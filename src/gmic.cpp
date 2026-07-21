@@ -9302,17 +9302,18 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'noise'.
         if (id_builtin_command==id_noise) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           int noise_type = 0;
           float amplitude = 0;
           sep = 0;
-          if ((cimg_sscanf(argument,"%f%c",
-                           &amplitude,&end)==1 ||
-               (cimg_sscanf(argument,"%f%c%c",
-                            &amplitude,&sep,&end)==2 && sep=='%') ||
-               cimg_sscanf(argument,"%f,%d%c",
-                           &amplitude,&noise_type,&end)==2 ||
-               (cimg_sscanf(argument,"%f%c,%d%c",
-                            &amplitude,&sep,&noise_type,&end)==3 && sep=='%')) &&
+          if (((!nbc && cimg_sscanf(argument,"%f%c",
+                                    &amplitude,&end)==1) ||
+               (!nbc && cimg_sscanf(argument,"%f%c%c",
+                                    &amplitude,&sep,&end)==2 && sep=='%') ||
+               (nbc==1 && cimg_sscanf(argument,"%f,%d%c",
+                                      &amplitude,&noise_type,&end)==2) ||
+               (nbc==1 && cimg_sscanf(argument,"%f%c,%d%c",
+                                      &amplitude,&sep,&noise_type,&end)==3 && sep=='%')) &&
               amplitude>=0 && noise_type>=0 && noise_type<=4) {
             const char *s_type = noise_type==0?"gaussian":
               noise_type==1?"uniform":
@@ -9333,13 +9334,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'normalize'.
         if (id_builtin_command==id_normalize) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           ind0.assign(); ind1.assign();
           sep0 = sep1 = *argx = *argy = *indices = 0;
           value0 = value1 = value = 0;
-          if ((cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-]%c",
-                           gmic_use_argx,gmic_use_argy,&end)==2 ||
-               cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-],%lf%c",
-                           argx,argy,&value,&end)==3) &&
+          if (((nbc==2 && cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-]%c",
+                                      gmic_use_argx,gmic_use_argy,&end)==2) ||
+               (nbc==3 && cimg_sscanf(argument,"%255[][a-zA-Z0-9_.eE%+-],%255[][a-zA-Z0-9_.eE%+-],%lf%c",
+                                      gmic_use_argx,gmic_use_argy,&value,&end)==3)) &&
               ((cimg_sscanf(argx,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep0,&end)==2 &&
                 sep0==']' &&
                 (ind0=selection2cimg(indices,images.size(),image_names,"normalize")).height()==1) ||
@@ -9394,6 +9396,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'object3d'.
         if (id_builtin_command==id_object3d) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           unsigned int is_zbuffer = 1, _double3d = ~0U, _render3d = ~0U, _multithreaded3d = ~0U;
           float x = 0, y = 0, z = 0,
             _focal3d = cimg::type<float>::nan(),
@@ -9404,51 +9407,47 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             _light3d_z = light3d_z;
           sep = sepx = sepy = *argx = *argy = 0;
           opacity = 1;
-          if (((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
-                            gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-]%c",
-                           indices,gmic_use_argx,&end)==2 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                           indices,argx,gmic_use_argy,&end)==3 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f%c",
-                           indices,argx,argy,&z,&end)==4 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f%c",
-                           indices,argx,argy,&z,&opacity,&end)==5 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&end)==6 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&end)==7 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &end)==8 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u,%f%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &_focal3d,&end)==9 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u,%f,%f,%f,%f%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,&end)==12 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u,%f,%f,%f,%f,%f%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,
-                           &_specl3d,&end)==13 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u,%f,%f,%f,%f,%f,%f%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,
-                           &_specl3d,&_specs3d,&end)==14 ||
-               cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],"
-                           "%f,%f,%u,%u,%u,%f,%f,%f,%f,%f,%f,%u%c",
-                           indices,argx,argy,&z,&opacity,&_render3d,&_double3d,&is_zbuffer,
-                           &_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,
-                           &_specl3d,&_specs3d,&_multithreaded3d,&end)==15) &&
+          if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
+                                    gmic_use_indices,&sep,&end)==2 && sep==']') ||
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-]%c",
+                                      gmic_use_indices,gmic_use_argx,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
+               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&end)==4) ||
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&end)==5) ||
+               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&end)==6) ||
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                      &end)==7) ||
+               (nbc==7 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                      "%u%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                      &is_zbuffer,&end)==8) ||
+               (nbc==8 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                      "%u,%f%c",
+                                      gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                      &is_zbuffer,&_focal3d,&end)==9) ||
+               (nbc==11 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                       "%u,%f,%f,%f,%f%c",
+                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                       &is_zbuffer,&_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,&end)==12) ||
+               (nbc==12 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                       "%u,%f,%f,%f,%f,%f%c",
+                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                       &is_zbuffer,&_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,&_specl3d,&end)==13) ||
+               (nbc==13 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                       "%u,%f,%f,%f,%f,%f,%f%c",
+                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                       &is_zbuffer,&_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,&_specl3d,&_specs3d,
+                                       &end)==14) ||
+               (nbc==14 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f,%u,%u,"
+                                       "%u,%f,%f,%f,%f,%f,%f,%u%c",
+                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&z,&opacity,&_render3d,&_double3d,
+                                       &is_zbuffer,&_focal3d,&_light3d_x,&_light3d_y,&_light3d_z,&_specl3d,&_specs3d,
+                                       &_multithreaded3d,&end)==15)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"object3d")).height()==1 &&
               (!*argx ||
                cimg_sscanf(argx,"%f%c",&x,&end)==1 ||
