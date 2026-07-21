@@ -5609,7 +5609,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
             }
             ++position;
-          } else if (cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 &&
+          } else if (!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",gmic_use_indices,&sep,&end)==2 &&
                      sep==']' &&
                      (ind=selection2cimg(indices,images.size(),image_names,"add3d")).height()==1) {
             const CImg<T> img0 = gmic_image_arg(*ind);
@@ -5714,11 +5714,11 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
               g_list.assign();
             }
-          } else if ((cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c%c",
-                                  &(*gmic_use_indices=0),&sep,&axis,&end)==3 ||
-                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c,%c,%f%c",
-                                  indices,&sep,&axis,&(align=0),&end)==4) &&
-                     is_xyzc(axis) && sep==']' &&
+          } else if (((nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c%c",
+                                             &(*gmic_use_indices=0),&axis,&end)==2) ||
+                      (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%c,%f%c",
+                                             indices,&axis,&(align=0),&end)==3)) &&
+                     is_xyzc(axis) &&
                      (ind=selection2cimg(indices,images.size(),image_names,"append")).height()==1) {
             print(0,"Append image [%u] to image%s, along the '%c'-axis, with alignment %g.",
                   *ind,gmic_selection.data(),axis,align);
