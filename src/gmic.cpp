@@ -6343,6 +6343,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'crop'.
         if (id_builtin_command==id_crop) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           name.assign(64,8);
           char
             *const st0 = name.data(0,0), *const st1 = name.data(0,1), *const st2 = name.data(0,2),
@@ -6351,13 +6352,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           char sep2 = sep0 = sep1 = 0, sep3 = 0, sep4 = 0, sep5 = 0, sep6 = 0, sep7 = 0;
           double a0 = 0, a1 = 0, a2 = 0, a3 = 0, a4 = 0, a5 = 0, a6 = 0, a7 = 0;
           *st0 = *st1 = *st2 = *st3 = *st4 = *st5 = *st6 = *st7 = 0;
-          boundary = 0;
-          if ((boundary=0,cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
+          if ((((boundary=0,nbc)==1 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
+                                                   st0,
+                                                   st1,&end)==2) ||
+               (nbc==2 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
                                       st0,
-                                      st1,&end)==2 ||
-               cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
-                           st0,
-                           st1,&boundary,&end)==3) &&
+                                      st1,&boundary,&end)==3)) &&
               (cimg_sscanf(st0,"%lf%c",&a0,&end)==1 ||
                (cimg_sscanf(st0,"%lf%c%c",&a0,&sep0,&end)==2 && sep0=='%')) &&
               (cimg_sscanf(st1,"%lf%c",&a1,&end)==1 ||
@@ -6379,14 +6379,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                          "Command 'crop': Cannot crop empty image [%d] (with arguments '%s').",
                          selection[l],gmic_argument_text());
             }
-          } else if ((boundary=0,cimg_sscanf(argument,
+          } else if ((((boundary=0,nbc)==3 && cimg_sscanf(argument,
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-],"
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
+                                                          st0,st1,st2,st3,&end)==4) ||
+                      (nbc==4 && cimg_sscanf(argument,
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                             "%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
-                                             st0,st1,st2,st3,&end)==4 ||
-                      cimg_sscanf(argument,
-                                  "%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                  "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
-                                  st0,st1,st2,st3,&boundary,&end)==5) &&
+                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
+                                             st0,st1,st2,st3,&boundary,&end)==5)) &&
                      (cimg_sscanf(st0,"%lf%c",&a0,&end)==1 ||
                       (cimg_sscanf(st0,"%lf%c%c",&a0,&sep0,&end)==2 && sep0=='%')) &&
                      (cimg_sscanf(st1,"%lf%c",&a1,&end)==1 ||
@@ -6417,13 +6417,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                          "Command 'crop': Cannot crop empty image [%d] (with arguments '%s').",
                          selection[l],gmic_argument_text());
             }
-          } else if ((boundary=0,cimg_sscanf(argument,
-                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
-                                             st0,st1,st2,st3,st4,st5,&end)==6 ||
-                      cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                  "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
-                                  st0,st1,st2,st3,st4,st5,&boundary,&end)==7) &&
+          } else if ((((boundary=0,nbc)==5 && cimg_sscanf(argument,
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
+                                                          st0,st1,st2,st3,st4,st5,&end)==6) ||
+                      (nbc==6 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
+                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
+                                             st0,st1,st2,st3,st4,st5,&boundary,&end)==7)) &&
                      (cimg_sscanf(st0,"%lf%c",&a0,&end)==1 ||
                       (cimg_sscanf(st0,"%lf%c%c",&a0,&sep0,&end)==2 && sep0=='%')) &&
                      (cimg_sscanf(st1,"%lf%c",&a1,&end)==1 ||
@@ -6461,15 +6461,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                          "Command 'crop': Cannot crop empty image [%d] (with arguments '%s').",
                          selection[l],gmic_argument_text());
             }
-          } else if ((boundary=0,cimg_sscanf(argument,
+          } else if ((((boundary=0,nbc)==7 && cimg_sscanf(argument,
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
+                                                          "%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
+                                                          st0,st1,st2,st3,st4,st5,st6,st7,&end)==8) ||
+                      (nbc==8 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                             "%63[0-9.eE%+-],%63[0-9.eE%+-]%c",
-                                             st0,st1,st2,st3,st4,st5,st6,st7,&end)==8 ||
-                      cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                  "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
-                                  "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
-                                  st0,st1,st2,st3,st4,st5,st6,st7,&boundary,&end)==9) &&
+                                             "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
+                                             st0,st1,st2,st3,st4,st5,st6,st7,&boundary,&end)==9)) &&
                      (cimg_sscanf(st0,"%lf%c",&a0,&end)==1 ||
                       (cimg_sscanf(st0,"%lf%c%c",&a0,&sep0,&end)==2 && sep0=='%')) &&
                      (cimg_sscanf(st1,"%lf%c",&a1,&end)==1 ||
