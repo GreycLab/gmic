@@ -5541,15 +5541,16 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'abscut'.
         if (id_builtin_command==id_abscut) {
           gmic_substitute_args(false);
+          nbc = count_commas(argument);
           vmin = -cimg::type<double>::inf();
           vmax = cimg::type<double>::inf();
           value = 0;
-          if (cimg_sscanf(argument,"%lf%c",
-                          &vmin,&end)==1 ||
-              cimg_sscanf(argument,"%lf,%lf%c",
-                          &vmin,&vmax,&end)==2 ||
-              cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                          &vmin,&vmax,&value,&end)==3) {
+          if ((!nbc && cimg_sscanf(argument,"%lf%c",
+                                   &vmin,&end)==1) ||
+              (nbc==1 && cimg_sscanf(argument,"%lf,%lf%c",
+                                     &vmin,&vmax,&end)==2) ||
+              (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                                     &vmin,&vmax,&value,&end)==3)) {
             print(0,"Cut absolute values of image%s in range [%g,%g], with offset %g.",
                   gmic_selection.data(),
                   vmin,vmax,value);
@@ -5583,14 +5584,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'add3d'.
         if (id_builtin_command==id_add3d) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           double tx = 0, ty = 0, tz = 0;
           sep = *indices = 0;
-          if (cimg_sscanf(argument,"%lf%c",
-                          &tx,&end)==1 ||
-              cimg_sscanf(argument,"%lf,%lf%c",
-                          &tx,&ty,&end)==2 ||
-              cimg_sscanf(argument,"%lf,%lf,%lf%c",
-                          &tx,&ty,&tz,&end)==3) {
+          if ((!nbc && cimg_sscanf(argument,"%lf%c",
+                                   &tx,&end)==1) ||
+              (nbc==1 && cimg_sscanf(argument,"%lf,%lf%c",
+                                     &tx,&ty,&end)==2) ||
+              (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
+                                     &tx,&ty,&tz,&end)==3)) {
             print(0,"Shift 3D object%s by displacement (%g,%g,%g).",
                   gmic_selection.data(),
                   tx,ty,tz);
@@ -5688,12 +5690,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'append'.
         if (id_builtin_command==id_append) {
           gmic_substitute_args(true);
+          nbc = count_commas(argument);
           float align = 0;
           axis = sep = 0;
-          if ((cimg_sscanf(argument,"%c%c",
-                           &axis,&end)==1 ||
-               cimg_sscanf(argument,"%c,%f%c",
-                           &axis,&align,&end)==2) &&
+          if (((!nbc && cimg_sscanf(argument,"%c%c",
+                                    &axis,&end)==1) ||
+               (nbc==1 && cimg_sscanf(argument,"%c,%f%c",
+                                      &axis,&align,&end)==2)) &&
               is_xyzc(axis)) {
             print(0,"Append image%s along the '%c'-axis, with alignment %g.",
                   gmic_selection.data(),
