@@ -52,7 +52,7 @@
 */
 
 #ifndef gmic_version
-#define gmic_version 403
+#define gmic_version 404
 
 #ifndef gmic_pixel_type
 #define gmic_pixel_type float
@@ -384,14 +384,9 @@ struct gmic {
                          const bool is_compressed, const char *const str,
                          void *const p_list, const T& pixel_type);
   static bool get_debug_info(const char *const s, unsigned int &line_number, unsigned int &file_number);
-  static int _levenshtein(const char *const s, const char *const t, gmic_image<int>& d, const int i, const int j);
-  static int levenshtein(const char *const s, const char *const t);
   static unsigned int hashcode(const char *const str, const bool is_variable);
-  static bool has_arguments(const char *const command);
-  static const char* basename(const char *const str);
   static char *strreplace_fw(char *const str);
   static char *strreplace_bw(char *const str);
-  static unsigned int strescape(const char *const str, char *const res);
   static const gmic_image<char>& decompress_stdlib();
   static void warn(const char *format, ...);
 
