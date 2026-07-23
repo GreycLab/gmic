@@ -2928,7 +2928,8 @@ const char* gmic::path_rc(const char *const custom_path) {
 
 // Create resources directory.
 //----------------------------
-void gmic::init_rc(const char *const custom_path) {
+// Return 'false' if function did not succeed.
+bool gmic::init_rc(const char *const custom_path) {
   CImg<char> dirname = CImg<char>::string(path_rc(custom_path));
   if (dirname.width()>=2) {
     char &c = dirname[dirname.width() - 2];
@@ -2937,7 +2938,9 @@ void gmic::init_rc(const char *const custom_path) {
   try { cimg::create_directory(dirname); }
   catch (CImgIOException&) {
     warn("Could not create G'MIC resource directory '%s'",dirname.data());
+    return false;
   }
+  return true;
 }
 
 // Get current call stack as a string.
