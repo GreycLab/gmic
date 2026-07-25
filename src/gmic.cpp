@@ -3676,7 +3676,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
           if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
         } while (_line++);
 
-      // Remove redudant trailing spaces.
+      // Remove redundant trailing spaces.
       char *linee = s_line.data() + std::strlen(s_line) - 1;
       while (linee>=s_line && is_blank(*linee)) --linee;
       *(linee + 1) = 0;
