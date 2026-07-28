@@ -18120,6 +18120,74 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
     rm[1] =>[^] $nm
   } } rm[0]
 
+#@cli layout : "layout_code",0<=_scaling_factor<=1
+#@cli : Merge all selected images into a single image, according to the specified layout code.
+#@cli : $ sample colorful,eagle,cat,dog layout VH0:1H2:3
+layout : check "inrange(${2=0.5},0,1)"
+  e[^-1] "Merge image$? according to layout '$1', with scaling factor $2."
+  m "__$0 : if $""1>0 ${$0$""1} $0$""1= else [{-$""1}] fi"
+
+  # Parse layout code and generate reverse sequence of transformations to apply
+  1,1,1,4  # { Type={ 0:Root | 'H' | 'V' | 'B' | 'R' | 'L' | 'X' | 'Y' }, Parent, Left child, Right child }
+  eval "
+    set_child(ind) = ( # Set first available child in tree
+      do (
+        isinf(i(0,curr,0,2))?(i(0,curr,0,2) = ind; break()); # Set as left child
+        parent = i(0,curr,0,1); # Parent of node
+        isinf(parent)?( # Error: invalid layout
+          run(['error \"Command 'layout'; Invalid layout string '$1'\"']);
+        ):isin(i(0,curr),0,_'R',_'L',_'X',_'Y')?( # Node is 'Root', 'R', 'L', 'X' or 'Y'
+          curr = parent; # Go to parent (only left child can be set)
+        ):( # Node is 'H', 'V' or 'B'
+          isinf(i(0,curr,0,3))?(i(0,curr,0,3) = ind; curr = parent; break()); # Set as right child and go to parent
+          curr = parent; # Go to parent
+        );
+      );
+    );
+    str = ['$1'];
+    da_push([ 0,inf,inf,inf ]); curr = 0; # Initialize tree (insert root node)
+    for (k = 0, k<size(str), ++k,
+      c = uppercase(str[k]);
+      isin(c,_'H',_'V',_'B',_'R',_'L',_'X',_'Y')?( # New node
+        new = da_size();
+        da_push([ c, curr, inf, inf ]);
+        set_child(new);
+        curr = new;
+      ):inrange(c,_'0',_'9') || c==_'-'?( # New leaf
+        leaf = s2v(str,k++)%(l - 1);
+        set_child(-leaf);
+        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+      );
+    );
+    da_freeze()"
+
+  # Generate montage.
+  repeat h {
+    type,parent,left,right:=I[$<]
+    __$0 $left
+    if isin($type,_'H',_'V',_'B')
+      if isinf($right) type=-1 # Missing image index, ignoring
+      else __$0 $right to_colormode[-2,-1] 0
+      fi
+    fi
+    if !$type k. # Root
+    elif $type==_'R' rotate. 90 # +90° rotation
+    elif $type==_'L' rotate. -90 # -90° rotation
+    elif $type==_'X' mirror. x # X-mirror
+    elif $type==_'Y' mirror. y # Y-mirror
+    elif $type==_'H' rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x # Horizontal merge
+    elif $type==_'V' rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y # Vertical merge
+    elif $type==_'B' # Best merge
+      fact_h:="nh = lerp(min(h#-2,h),max(h#-2,h),$2); nw = nh*(w#-2/h#-2 + w/h); min(nw,nh)/max(nw,nh)"
+      fact_v:="nw = lerp(min(w#-2,w),max(w#-2,w),$2); nh = nw*(h#-2/w#-2 + h/w); min(nw,nh)/max(nw,nh)"
+      if $fact_h>$fact_v rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x
+    else rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y fi
+    fi
+    if $type store. $0$< fi
+  }
+  => "[Layout '$1']"
+  uncommand __$0
+
 #@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
 # _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
 #@cli : Create a single image montage from selected images, according to specified layout code :
