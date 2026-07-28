@@ -18129,13 +18129,13 @@ layout : check "inrange(${2=0.5},0,1)"
 
   # Parse layout code and generate reverse sequence of transformations to apply
   1,1,1,4  # { Type={ 0:Root | 'H' | 'V' | 'B' | 'R' | 'L' | 'X' | 'Y' }, Parent, Left child, Right child }
-  eval "
+  is_ok={"
     set_child(ind) = ( # Set first available child in tree
       do (
         isinf(i(0,curr,0,2))?(i(0,curr,0,2) = ind; break()); # Set as left child
         parent = i(0,curr,0,1); # Parent of node
         isinf(parent)?( # Error: invalid layout
-          run(['error \"Command 'layout'; Invalid layout string '$1'\"']);
+          is_ok = 0; break();
         ):isin(i(0,curr),0,_'R',_'L',_'X',_'Y')?( # Node is 'Root', 'R', 'L', 'X' or 'Y'
           curr = parent; # Go to parent (only left child can be set)
         ):( # Node is 'H', 'V' or 'B'
@@ -18144,9 +18144,9 @@ layout : check "inrange(${2=0.5},0,1)"
         );
       );
     );
-    str = ['$1'];
+    str = ['$1']; is_ok = 1;
     da_push([ 0,inf,inf,inf ]); curr = 0; # Initialize tree (insert root node)
-    for (k = 0, k<size(str), ++k,
+    for (k = 0, k<size(str) && is_ok, ++k,
       c = uppercase(str[k]);
       isin(c,_'H',_'V',_'B',_'R',_'L',_'X',_'Y')?( # New node
         new = da_size();
@@ -18159,7 +18159,9 @@ layout : check "inrange(${2=0.5},0,1)"
         while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
       );
     );
-    da_freeze()"
+    da_freeze(); is_ok"}
+
+  if !$is_ok error[0--2] "Command '$0': Invalid layout code '$1'." fi
 
   # Generate montage.
   repeat h {
