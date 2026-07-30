@@ -2928,7 +2928,8 @@ const char* gmic::path_rc(const char *const custom_path) {
 
 // Create resources directory.
 //----------------------------
-void gmic::init_rc(const char *const custom_path) {
+// Return 'false' if function did not succeed.
+bool gmic::init_rc(const char *const custom_path) {
   CImg<char> dirname = CImg<char>::string(path_rc(custom_path));
   if (dirname.width()>=2) {
     char &c = dirname[dirname.width() - 2];
@@ -2937,7 +2938,9 @@ void gmic::init_rc(const char *const custom_path) {
   try { cimg::create_directory(dirname); }
   catch (CImgIOException&) {
     warn("Could not create G'MIC resource directory '%s'",dirname.data());
+    return false;
   }
+  return true;
 }
 
 // Get current call stack as a string.
@@ -3673,7 +3676,7 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
           if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
         } while (_line++);
 
-      // Remove redudant trailing spaces.
+      // Remove redundant trailing spaces.
       char *linee = s_line.data() + std::strlen(s_line) - 1;
       while (linee>=s_line && is_blank(*linee)) --linee;
       *(linee + 1) = 0;

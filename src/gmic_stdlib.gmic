@@ -914,7 +914,7 @@ reference : skip "${2=}"
 "* Function 'rand(#size,_min_value,_max_value,_pdf,_precision)' returns a vector of 'size' random values. "\
 "This is the math evaluator equivalent of command ''rand''."\n\
 "## String manipulation:"\n\
-"Character strings are defined as vector objects and can therfore be managed as such. "\
+"Character strings are defined as vector objects and can therefore be managed as such. "\
 "Dedicated functions and initializers to manage strings exist:"\n\
 "* `['string']` and `'string'` define a vector whose values are the character codes of the "\
 "given `character string` (e.g. `'foo'` is equal to `[ 102,111,111 ]`)."\n\
@@ -18119,6 +18119,76 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
       )"
     rm[1] =>[^] $nm
   } } rm[0]
+
+#@cli layout : "layout_code",0<=_scaling_factor<=1
+#@cli : Merge all selected images into a single image, according to the specified layout code.
+#@cli : $ sample colorful,eagle,cat,dog layout VH0:1H2:3
+layout : check "inrange(${2=0.5},0,1)"
+  e[^-1] "Merge image$? according to layout '$1', with scaling factor $2."
+  m "__$0 : if $""1>0 ${$0$""1} $0$""1= else [{-$""1}] fi"
+
+  # Parse layout code and generate reverse sequence of transformations to apply
+  1,1,1,4  # { Type={ 0:Root | 'H' | 'V' | 'B' | 'R' | 'L' | 'X' | 'Y' }, Parent, Left child, Right child }
+  is_ok={"
+    set_child(ind) = ( # Set first available child in tree
+      do (
+        isinf(i(0,curr,0,2))?(i(0,curr,0,2) = ind; break()); # Set as left child
+        parent = i(0,curr,0,1); # Parent of node
+        isinf(parent)?( # Error: invalid layout
+          is_ok = 0; break();
+        ):isin(i(0,curr),0,_'R',_'L',_'X',_'Y')?( # Node is 'Root', 'R', 'L', 'X' or 'Y'
+          curr = parent; # Go to parent (only left child can be set)
+        ):( # Node is 'H', 'V' or 'B'
+          isinf(i(0,curr,0,3))?(i(0,curr,0,3) = ind; curr = parent; break()); # Set as right child and go to parent
+          curr = parent; # Go to parent
+        );
+      );
+    );
+    str = ['$1']; is_ok = 1;
+    da_push([ 0,inf,inf,inf ]); curr = 0; # Initialize tree (insert root node)
+    for (k = 0, k<size(str) && is_ok, ++k,
+      c = uppercase(str[k]);
+      isin(c,_'H',_'V',_'B',_'R',_'L',_'X',_'Y')?( # New node
+        new = da_size();
+        da_push([ c, curr, inf, inf ]);
+        set_child(new);
+        curr = new;
+      ):inrange(c,_'0',_'9') || c==_'-'?( # New leaf
+        leaf = s2v(str,k++)%(l - 1);
+        set_child(-leaf);
+        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+      );
+    );
+    da_freeze(); is_ok"}
+
+  if !$is_ok error[0--2] "Command '$0': Invalid layout code '$1'." fi
+
+  # Generate montage.
+  repeat h {
+    type,parent,left,right:=I[$<]
+    __$0 $left
+    if isin($type,_'H',_'V',_'B')
+      if isinf($right) type=-1 # Missing image index, ignoring
+      else __$0 $right to_colormode[-2,-1] 0
+      fi
+    fi
+    if !$type k. # Root
+    elif $type==_'R' rotate. 90 # +90° rotation
+    elif $type==_'L' rotate. -90 # -90° rotation
+    elif $type==_'X' mirror. x # X-mirror
+    elif $type==_'Y' mirror. y # Y-mirror
+    elif $type==_'H' rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x # Horizontal merge
+    elif $type==_'V' rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y # Vertical merge
+    elif $type==_'B' # Best merge
+      fact_h:="nh = lerp(min(h#-2,h),max(h#-2,h),$2); nw = nh*(w#-2/h#-2 + w/h); min(nw,nh)/max(nw,nh)"
+      fact_v:="nw = lerp(min(w#-2,w),max(w#-2,w),$2); nh = nw*(h#-2/w#-2 + h/w); min(nw,nh)/max(nw,nh)"
+      if $fact_h>$fact_v rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x
+    else rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y fi
+    fi
+    if $type store. $0$< fi
+  }
+  => "[Layout '$1']"
+  uncommand __$0
 
 #@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
 # _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
@@ -52871,7 +52941,8 @@ _fx_cluts_colorslide :
 #@gui : Source Color 8 = color(0,255,255)_0-
 #@gui : Target Color 8 = color(0,255,255)_0
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/06/19</i>.</small>")
+#@gui : note = note("<small>Authors: <i>David Tschumperlé</i>, <i>Julien Rabin</i> and <i>Carole Le Guyader</i>.\
+#       Latest Update: <i>2026/06/19</i>.</small>")
 fx_transfer_colors :
   if $!<2 error "Command '$0': At least two layers are required !" fi
   _fx_transfer_colors $*
@@ -54244,7 +54315,7 @@ fx_heightfield_warp : skip "${2=}"
     light_x,light_y,ambient_light,diffuse_shadows,diffuse_highlights,specular_light,specular_material,\
     preview_grid_overlay,preview_resolution,ocenter_x,ocenter_y,center_x,center_y,size_x,size_y=$1,"$2",${3-20}
   is_preview,is_light:=0$_is_preview,!isnan($light_x);
-  if !$is_preview preview_grid_overlay=0 fi
+  if !$is_preview preview_grid_overlay=0 preview_resolution=0 fi
   size_x,size_y:=$size_x+($center_x-$ocenter_x),$size_y+($center_y-$ocenter_y) # Make size/angle point follows center
   size,angle:=dx=$size_x-$center_x;dy=$size_y-$center_y;[4*norm(dx,dy)%,rad2deg(atan2(dy,dx))]
 
@@ -56598,10 +56669,12 @@ fx_spread :
 #@gui : note = note("<span color="#EE5500"><small><b>Horizontal Stripes:</b></small></span>")
 #@gui : Height (%) = ~float(10,0,100)
 #@gui : Random Shift Amplitude (%) = ~float(20,0,100)
+#@gui : Random PDF = choice("Gaussian","Uniform")
 #@gui : sep = separator()
 #@gui : note = note("<span color="#EE5500"><small><b>Vertical Stripes:</b></small></span>")
 #@gui : Width (%) = ~float(10,0,100)
 #@gui : Random Shift Amplitude (%) = ~float(20,0,100)
+#@gui : Random PDF = choice("Gaussian","Uniform")
 #@gui : sep = separator()
 #@gui : Boundary = ~choice(3,"Transparent","Nearest","Periodic","Mirror")
 #@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
@@ -56615,17 +56688,21 @@ fx_spread :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2025/12/01</i>.</small>")
 fx_offset_stripes :
-  ac "_fx_offset_stripes ${1-8}",$9,1
+  ac "_fx_offset_stripes ${1-10}",$11,1
 
 _fx_offset_stripes :
-  iterations,random_seed,per_channel_shift,h_height,h_amp,v_width,v_amp,boundary_conditions=${1-8}
+  iterations,random_seed,per_channel_shift,h_height,h_amp,h_pdf,v_width,v_amp,v_pdf,boundary_conditions=${1-10}
   foreach {
     if !$boundary_conditions to_a fi
     srand $random_seed
     repeat $iterations {
       if $per_channel_shift s c fi
-      foreach { s y,-{max(1,round(h*$h_height%))} foreach { shift {$h_amp*g},0,0,0,$boundary_conditions } a y }
-      foreach { s x,-{max(1,round(w*$v_width%))} foreach { shift 0,{$v_amp*g},0,0,$boundary_conditions } a x }
+      foreach { s y,-{max(1,round(h*$h_height%))}
+        foreach { shift {$h_amp*($h_pdf?u(-1,1):g/2)},0,0,0,$boundary_conditions } a y
+      }
+      foreach { s x,-{max(1,round(w*$v_width%))}
+        foreach { shift 0,{$v_amp*($v_pdf?u(-1,1):g/2)},0,0,$boundary_conditions } a x
+      }
       if $per_channel_shift a c fi
     }
   }
