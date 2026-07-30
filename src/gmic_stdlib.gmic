@@ -18120,75 +18120,135 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
     rm[1] =>[^] $nm
   } } rm[0]
 
-#@cli layout : "layout_code",0<=_scaling_factor<=1
+#@cli layout : 0<=_scaling_factor<=1,"layout_code1",_"layout_code2",...
 #@cli : Merge all selected images into a single image, according to the specified layout code.
-#@cli : $ sample colorful,eagle,cat,dog layout VH0:1H2:3
-layout : check "inrange(${2=0.5},0,1)"
-  e[^-1] "Merge image$? according to layout '$1', with scaling factor $2."
-  m "__$0 : if $""1>0 ${$0$""1} $0$""1= else [{-$""1}] fi"
+#@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
+layout : check "inrange(${1=0.5},0,1)"
+  e[^-1] "Merge image$? with scaling factor $1, according to layout(s) '${2--1}'."
+  $=arg
+  nb_images,nb_layouts:=$!,$#-1
+  to_colormode 0
 
-  # Parse layout code and generate reverse sequence of transformations to apply
-  1,1,1,4  # { Type={ 0:Root | 'H' | 'V' | 'B' | 'R' | 'L' | 'X' | 'Y' }, Parent, Left child, Right child }
-  is_ok={"
-    set_child(ind) = ( # Set first available child in tree
-      do (
-        isinf(i(0,curr,0,2))?(i(0,curr,0,2) = ind; break()); # Set as left child
-        parent = i(0,curr,0,1); # Parent of node
-        isinf(parent)?( # Error: invalid layout
-          is_ok = 0; break();
-        ):isin(i(0,curr),0,_'R',_'L',_'X',_'Y')?( # Node is 'Root', 'R', 'L', 'X' or 'Y'
-          curr = parent; # Go to parent (only left child can be set)
-        ):( # Node is 'H', 'V' or 'B'
-          isinf(i(0,curr,0,3))?(i(0,curr,0,3) = ind; curr = parent; break()); # Set as right child and go to parent
-          curr = parent; # Go to parent
+  # Parse layout codes and generate trees of transformations.
+  repeat $nb_layouts {
+    layout=${arg{$>+2}}
+
+    # Tree structure: A vector-valued pixel I encodes a tree node as:
+    # I[0]: Node type={ 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
+    # I[1]: Index of parent.
+    # I[2]: Index of left child (or image index for 'I' type).
+    # I[3]: Index of right child.
+    # I[4]: Image width for the node.
+    # I[5]: Image height for the node.
+    # For each feature, '-1' means 'undefined'.
+    1,1,1,6
+    eval "
+      set_child(ind) = ( # Set node 'ind' as first available child in tree
+        curr>=0?do (
+          i(0,curr,0,2)<0?( # Found free left child
+            i(0,curr,0,2) = ind; i(0,ind,0,1) = curr; break()
+          );
+          parent = i(0,curr,0,1);
+          isin(i(0,curr),_'I',_'L',_'R',_'X',_'Y')?(
+            curr = parent; # Go up (only left child can be set for this type of nodes)
+          ):(
+            i(0,curr,0,3)<0?( # Found free right child
+              i(0,curr,0,3) = ind; i(0,ind,0,1) = curr; curr = parent; break();
+            );
+            curr = parent; # Go up
+          );
+        );
+      );
+      str = ['"$layout"'];
+      curr = -1;
+      for (k = 0, k<size(str), ++k,
+        c = uppercase(str[k]);
+        isin(c,_'B',_'H',_'L',_'R',_'V',_'X',_'Y')?( # New transformation (node)
+          new = da_size();
+          da_push([ c,-1,-1,-1,-1,-1 ]);
+          set_child(new);
+          curr = new;
+        ):inrange(c,_'0',_'9') || c==_'-'?( # New image (leaf)
+          img = s2v(str,k++)%$nb_images;
+          while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+          new = da_size();
+          da_push([ _'I',-1,img,-1,w#img,h#img ]);
+          set_child(new);
+        );
+      );
+      da_freeze()"
+  }
+
+  # Determine image size for each node of each tree.
+  f[-$nb_layouts--1] "<
+    N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
+    lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
+    isin(type,_'X',_'Y')?(width = lw; height = lh):
+    isin(type,_'R',_'L')?(width = lh; height = lw):(
+      rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
+      type==_'H'?(
+        height = lerp(min(lh,rh),max(lh,rh),$1);
+        width = height*(lw/lh + rw/rh);
+      ):type==_'V'?(
+        width = lerp(min(lw,rw),max(lw,rw),$1);
+        height = width*(lh/lw + rh/rw);
+      ):type==_'B'?(
+        hH = lerp(min(lh,rh),max(lh,rh),$1);
+        wH = hH*(lw/lh + rw/rh);
+        wV = lerp(min(lw,rw),max(lw,rw),$1);
+        hV = wV*(lh/lw + rh/rw);
+        min(wH,hH)/max(wH,hH)>min(wV,hV)/max(wV,hV)?( # Best: Horizontal
+          width = wH; height = hH; type = _'H';
+        ):( # Best: Vertical
+          width = wV; height = hV; type = _'V';
         );
       );
     );
-    str = ['$1']; is_ok = 1;
-    da_push([ 0,inf,inf,inf ]); curr = 0; # Initialize tree (insert root node)
-    for (k = 0, k<size(str) && is_ok, ++k,
-      c = uppercase(str[k]);
-      isin(c,_'H',_'V',_'B',_'R',_'L',_'X',_'Y')?( # New node
-        new = da_size();
-        da_push([ c, curr, inf, inf ]);
-        set_child(new);
-        curr = new;
-      ):inrange(c,_'0',_'9') || c==_'-'?( # New leaf
-        leaf = s2v(str,k++)%(l - 1);
-        set_child(-leaf);
-        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
-      );
-    );
-    da_freeze(); is_ok"}
+    [ type,parent,lchild,rchild,width,height ]"
 
-  if !$is_ok error[0--2] "Command '$0': Invalid layout code '$1'." fi
-
-  # Generate montage.
-  repeat h {
-    type,parent,left,right:=I[$<]
-    __$0 $left
-    if isin($type,_'H',_'V',_'B')
-      if isinf($right) type=-1 # Missing image index, ignoring
-      else __$0 $right to_colormode[-2,-1] 0
-      fi
-    fi
-    if !$type k. # Root
-    elif $type==_'R' rotate. 90 # +90° rotation
-    elif $type==_'L' rotate. -90 # -90° rotation
-    elif $type==_'X' mirror. x # X-mirror
-    elif $type==_'Y' mirror. y # Y-mirror
-    elif $type==_'H' rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x # Horizontal merge
-    elif $type==_'V' rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y # Vertical merge
-    elif $type==_'B' # Best merge
-      fact_h:="nh = lerp(min(h#-2,h),max(h#-2,h),$2); nw = nh*(w#-2/h#-2 + w/h); min(nw,nh)/max(nw,nh)"
-      fact_v:="nw = lerp(min(w#-2,w),max(w#-2,w),$2); nh = nw*(h#-2/w#-2 + h/w); min(nw,nh)/max(nw,nh)"
-      if $fact_h>$fact_v rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x
-    else rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y fi
-    fi
-    if $type store. $0$< fi
+  # Generate montages.
+  repeat $nb_layouts {
+    tree:=$nb_images+$>
+    {$tree,(I)[4,2]},1,{0,s+1}
+    eval[$tree] "i==_'I'?(
+        N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
+        rot = is_flipx = is_flipy = xi = yi = 0;
+        child = y;
+        for (curr = N[1], curr>=0,
+          N = I[curr]; type = N[0];
+          type==_'X'?(rot%2?(rot+=2); is_flipx = !is_flipx; xi = W - xi - wi);
+          type==_'Y'?(rot%2?(rot+=2); is_flipy = !is_flipy; yi = H - yi - hi):
+          type==_'R'?(++rot; oxi = xi; xi = yi; yi = W - oxi - wi; swap(wi,hi)):
+          type==_'L'?(--rot; oxi = xi; xi = H - yi - hi; yi = oxi; swap(wi,hi)):
+          type==_'H'?(
+            fact = N[5]/H;
+            xi = xi*fact + (N[3]==child?(N[4] - W*fact));
+            yi = yi*fact;
+            wi = wi*fact;
+            hi = hi*fact;
+          ):type==_'V'?(
+            fact = N[4]/W;
+            xi = xi*fact;
+            yi = yi*fact + (N[3]==child?(N[5] - H*fact));
+            wi = wi*fact;
+            hi = hi*fact;
+          );
+          W = N[4]; H = N[5];
+          child = curr; curr = N[1]; # Go up
+        );
+        rot%=4;
+        run('[',ind,'] \
+          if ',is_flipx,' mirror. x fi \
+          if ',is_flipy,' mirror. y fi \
+          if ',rot,' rotate. {',rot,'*90} fi \
+          r. ',ceil(wi),',',ceil(hi),',1,100%,2 \
+          100%,100%,1,1,1 a[-2,-1] c
+          j.. .,',round(xi),',',round(yi),',0,0,-1 rm.');
+      ); _0"
+    s. c,-{0,s} /[-2,-1]
+    => "[Montage '$2']"
   }
-  => "[Layout '$1']"
-  uncommand __$0
+  k[-$nb_layouts--1]
 
 #@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
 # _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
