@@ -11940,7 +11940,7 @@ _gallery :
 
 __gallery :
   if $!==2 if w>h a y else a x fi
-  else montage A # append_tiles 2
+  else arrange AH
   fi
 
 # Generate data files for the G'MIC Online website.
@@ -18312,151 +18312,6 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
       )"
     rm[1] =>[^] $nm
   } } rm[0]
-
-#@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
-# _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
-#@cli : Create a single image montage from selected images, according to specified layout code :
-#@cli : - 'X' to assemble all images using an automatically estimated layout.
-#@cli : - 'H' to assemble all images horizontally.
-#@cli : - 'V' to assemble all images vertically.
-#@cli : - 'A' to assemble all images as an horizontal array.
-#@cli : - 'B' to assemble all images as a vertical array.
-#@cli : - 'Ha:b' to assemble two blocks 'a' and 'b' horizontally.
-#@cli : - 'Va:b' to assemble two blocks 'a' and 'b' vertically.
-#@cli : - 'Ra' to rotate a block 'a' by 90 deg. ('RRa' for 180 deg. and 'RRRa' for 270 deg.).
-#@cli : - 'Ma' to mirror a block 'a' along the X-axis ('MRRa' for the Y-axis).
-#@cli : A block 'a' can be an image index (treated periodically) or a nested layout expression 'Hb:c','Vb:c','Rb' or
-#@cli : 'Mb' itself.
-#@cli : For example, layout code 'H0:V1:2' creates an image where image [0] is on the left, and images [1] and [2]
-#@cli : vertically packed on the right.
-#@cli : Default values: 'layout_code=X', 'montage_mode=2', output_mode='0' and 'processing_command=""'.
-#@cli : $ image.jpg sample ? +plasma[0] 1 shape_cupid 256 normalize 0,255 frame xy,3,0 frame xy,10,255 to_rgb \
-# +montage A +montage[^-1] H1:V0:VH2:1H0:3
-montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
-  if $2<=1 e[0--3] "Create aligned montage from image$?, with layout code '$1' and centering $2."
-  else e[0--3] "Create scaled montage from image$?, with layout code '$1' and scale "{$2-2}"."
-  fi
-  to_colormode 0
-
-  # Manage automatic layout.
-  if lowercase(['"$1"'])=='x'
-    +l {
-      foreach { => $> }
-      repeat $!-1 {
-        if {-2,w>h}" && "w>h mode=V # Both landscape
-        elif {-2,h>w}" && "h>w mode=H # Both portrait
-        elif {-2,w>h}" && "h>w # Landscape - portrait
-          if {-2,h/w}<(w/h) mode=V else mode=H fi
-        else # Portrait - landscape
-          if {-2,w/h}<(h/w) mode=H else mode=V fi
-        fi
-        name=$mode{-2,n}:{n}
-        montage[-2,-1] $mode,$2
-        mv. 0 =>[0] $name
-      }
-      layout={0,n}
-      rm
-    }
-    montage $layout,$2,$3,"$4"
-
-  else # Non-automatic layout
-
-    # Format and check validity of layout code.
-    N=$!
-    l[] {
-      _scode="$1" _mode=$2
-      if lowercase(['"$1"'])=='h' if $N>1 {$N-1},1,1,1,-1 $N,1,1,1,x a x y else return fi # Simple horizontal montage
-      elif lowercase(['"$1"'])=='v' if $N>1 {$N-1},1,1,1,-2 $N,1,1,1,x a x y else return fi # Simple vertical montage
-      elif isin(lowercase(['"$1"']),'a','b') # Montage as an array
-        if $N<2 return fi
-        nr:=round(sqrt($N)) nc:=round($N/$nr,1,1) # Horizontal array
-        if lowercase(['"$1"'])=='b' n=$nr nr=$nc nc=$n fi # Vertical array
-        $N,1,1,1,x s x,-{round(w/$nr,1,1)} foreach { if w>1 i[0] {w-1},1,1,1,-1 a x fi } a x
-        if $nr>1 i[0] {$nr-1},1,1,1,-2 a x fi y
-      else # Other complex montage
-        ('"$1"') f "i==72 || i==104?-1:
-                    i==86 || i==118?-2:
-                    i==82 || i==114?-3:
-                    i==77 || i==109?-4:
-                    i>=48 && i<=57?i-48:-5"
-        s +,-1 s +,-2 s +,-3 s +,-4 s +,-5
-        foreach { if im>=0 ++. 48 =.. {t} rm. rows 0 fi } a y discard -5
-      fi
-      f "i<0?i:i%$N"
-    }
-    if $!==$N rm return fi # Empty layout code
-    =>[^-1] 0
-    repeat h {
-      c:=i[$>] # Duplicate multiple references
-      if $c>=0 if {$c,n} i.. [$c] i:=$!-2 =. $i,0,$> ref$i=$c else =>[$c] 1 ref$c=$c fi fi
-    }
-    _code={^} _lcode:=narg($_code) rm.
-
-    # Determine image positions and sizes.
-    N=$! repeat $N { ($>,0,0,{$>,w},{$>,h},0,0,0) }
-    l[$N--1] {
-      _p=1 k[${-_montage}] w:=i[3] h:=i[4] f i(0,y)<0?-1:i discard -1 y r 8,{h/8},1,1,-1
-      onfail error[0--3] "Too many input images."
-    }
-
-    # Render montage.
-    if narg("$4") m "__montage : $4 k[0]"
-    else m "__montage : if $""7%2 mirror x fi if $""8%2 mirror y fi rotate {90*$""6}
-                        r {max(1,round($""4,1,1))},{max(1,round($""5,1,1))},1,100%,3"
-    fi
-
-    s=${max_s[^-1]}
-    repeat h {
-      i,xi,yi,wi,hi,ai,mxi,myi:=crop(0,$>,w,1)
-      if $3||!$> i.. $w,$h,1,$s fi
-      __montage[$i] ${ref$i},$xi,$yi,{max(1,$wi)},{max(1,$hi)},$ai,$mxi,$myi
-      j.. [$i],$xi,$yi
-    }
-    um __montage
-    rm[0-{$N-1},-1]
-
-  fi
-  => "[Montage '$1']"
-
-_montage :
-  if $_p>$_lcode error "Command 'montage': Incomplete layout code '"$_scode"'." fi
-  c:=arg1($_p,$_code)
-  if $c>=0 _p+=1 u $c # Single index
-  elif $c==-4 # Mirror
-    _p+=1 l=${-_montage} f[$l] "a=i(5,y)%2;(x==7&&a)||(x==6&&!a)?!i:x==1?i(3,0)-i(3,y)-i:i" u $l
-  elif $c==-3 # Rotation
-    _p+=1 l=${-_montage} l[$l] { s x +[2] [4] rv[1,2] *[1] -1 +[1] {4,@0} rv[3,4] +[5] 1 a x } u $l
-  else # Merge
-    _p+=1
-    l=${-_montage} lw={$l,@3} lh={$l,@4}
-    r=${-_montage} rw={$r,@3} rh={$r,@4}
-
-    if $c==-1 # Horizontal merge
-      if $_mode<2
-        h:=max($lh,$rh)
-        +[$l] '0,0,{($h-$lh)*min(1,$_mode)},0,0,0,0,0'
-        +[$r] '0,$lw,{($h-$rh)*min(1,$_mode)},0,0,0,0,0'
-      else
-        h:=($_mode-2)*max($lh,$rh)+(3-$_mode)*min($lh,$rh)
-        lf:=$h/$lh rf:=$h/$rh lw:=$lw*$lf rw:=$rw*$rf
-        *[$l] '1,$lf,$lf,$lf,$lf,1,1,1' *[$r] '1,$rf,$rf,$rf,$rf,1,1,1' +[$r] '0,$lw,0,0,0,0,0,0'
-      fi
-      i[$l] (-1,0,0,{$lw+$rw},$h,0,0,0) a[$l,{$l+1}] y a[$l] [$r],y r[$r] 1,1,1,1,0
-
-    else # Vertical merge
-      if $_mode<2
-        w:=max($lw,$rw)
-        +[$l] '0,{($w-$lw)*min(1,$_mode)},0,0,0,0,0,0'
-        +[$r] '0,{($w-$rw)*min(1,$_mode)},$lh,0,0,0,0,0'
-      else
-        w:=($_mode-2)*max($lw,$rw)+(3-$_mode)*min($lw,$rw)
-        lf:=$w/$lw rf:=$w/$rw lh:=$lh*$lf rh:=$rh*$rf
-        *[$l] '1,$lf,$lf,$lf,$lf,1,1,1' *[$r] '1,$rf,$rf,$rf,$rf,1,1,1' +[$r] '0,0,$lh,0,0,0,0,0'
-      fi
-      i[$l] (-1,0,0,$w,{$lh+$rh},0,0,0) a[$l,{$l+1}] y a[$l] [$r],y r[$r] 1,1,1,1,0
-    fi
-    u $l
-  fi
 
 #@cli mirror : { x | y | z }...{ x | y | z } : (+)
 #@cli : Mirror selected images along specified axes.
@@ -45175,7 +45030,7 @@ gui_parallel_overlap :
 # Function that renders a single preview image from multiple preview images.
 # Pre-cond : Number of image is $!>1.
 gui_preview :
-  frame xy,1,0,0,0,255 montage B
+  frame xy,1,0,0,0,255 arrange AV
 
 # Return name of a layer.
 gui_layer_name :
@@ -66614,7 +66469,7 @@ fx_solve_maze_preview :
 #@cli _gallery_arrays
 #@cli : This entry defines some examples of array filters for the G'MIC gallery page.
 #@cli : $ image.jpg fx_frame_blur 30,30,0,5,0,0,128,128,128,0,5,255,255,255,2,2,1,0,0.5,0.5,0 _label="Frame~[blur]"
-#@cli : $ sample tiger,leno,monkey,duck,eagle frame xy,3,0 frame xy,3,255 montage A _label="Montage"
+#@cli : $ sample tiger,leno,monkey,duck,eagle frame xy,3,0 frame xy,3,255 arrange AH _label="Montage"
 #@cli : $ image.jpg fx_puzzle 5,5,0.5,0,0,0.3,100,0.2,255,100,0,0,0,0,0,0 _label="Puzzle"
 
 #@cli _gallery_artistic
