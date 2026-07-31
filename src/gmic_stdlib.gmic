@@ -17813,26 +17813,34 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli arrange : "layout",_scaling_factor,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
 #@cli : Arrange selected images accordingly to a specified layout, described as a string.
 #@cli : 'layout' defines how images are positioned in the resulting composition.
-#@cli : Default values: 'scaling_factor=0', 'output_layers=0' and 'processing_command=""'.
+#@cli : Default values: 'scaling_factor=0.5', 'output_layers=0' and 'processing_command=""'.
 #@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
-arrange : check "isnum(${2=0}) && isbool(${3=0})" skip "${4=}"
+arrange : check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
   e[^-1] "Arrange image$? accordingly to layout '$2', with scaling factor $2."
-  if $!<2 return fi
   nb_images,max_spectrum:=$!,${-max_s}
 
-  # Set layout code for pre-defined layouts.
+  # Compute layout code for pre-defined meta layouts.
+  if "isin(['$1'],'AH','AV','H','V') && $nb_images<2" return fi
   if "['$1']=='H'" # Horizontal
     $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'H')`}{^:;} rm.
   elif "['$1']=='V'" # Vertical
     $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'V')`}{^:;} rm.
-  elif "isin(['$1'],'A','B')" # Horizontal and vertical arrays
+  elif "isin(['$1'],'AH','AV')" # Horizontal and vertical arrays
     M,N:=S=sqrt($nb_images);[M=ceil(S),ceil($nb_images/M)]
-    if _'$1'==_'B' N,M=$M,$N fi
-    layout={`vector(#$N-1,_'V')`}
+    if '$1'=='AV' N,M=$M,$N fi
+    if $N>1 layout={`vector(#$N-1,_'V')`} fi
     repeat $N {
       nb:=min($M,$nb_images-$>*$M)
       if $nb>1 $nb,1,1,1,x+$>*$M layout.=:{`vector(#$nb-1,_'H')`}{^:;} rm. else layout.=:{$>*$M} fi
     }
+  elif "['$1']=='A'" # Automatic
+    nb:=int($nb_images/2)
+    if $nb>1 layout={`vector(#$nb-1,_'B')`} fi
+    repeat $nb { layout.=B{s=2*$>;[s,s+1]:;} }
+    if $nb_images%2 layout=B$layout;{$nb_images-1} fi
+
+    e $layout
+
   else layout="$1"
   fi
 
@@ -17904,7 +17912,7 @@ arrange : check "isnum(${2=0}) && isbool(${3=0})" skip "${4=}"
         wH = hH*(lw/lh + rw/rh);
         wV = lerp(min(lw,rw),max(lw,rw),$2);
         hV = wV*(lh/lw + rh/rw);
-        min(wH,hH)/max(wH,hH)>min(wV,hV)/max(wV,hV)?( # Best: Horizontal
+        min(wH,hH)/max(wH,hH)>=min(wV,hV)/max(wV,hV)?( # Best: Horizontal
           width = wH; height = hH; type = _'H';
         ):( # Best: Vertical
           width = wV; height = hV; type = _'V';
