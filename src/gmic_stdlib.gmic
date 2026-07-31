@@ -17810,6 +17810,127 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
+#@cli arrange : "layout",0<=_scaling_factor<=1
+#@cli : Arrange selected images accordingly to a specified layout, described as a string.
+#@cli : 'layout' defines how images are positioned in the resulting composition
+#@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
+arrange : check "inrange(${2=0.5},0,1)"
+  e[^-1] "Arrange image$? accordingly to layout '$2', with scaling factor $2."
+  nb_images,spectrum:=$!,${-max_s}
+
+  # Parse layout codes and generate trees of transformations.
+  # Tree structure: A vector-valued pixel I encodes a tree node as:
+  # I[0]: Node type={ 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
+  # I[1]: Index of parent.
+  # I[2]: Index of left child (or image index for 'I' type).
+  # I[3]: Index of right child.
+  # I[4]: Image width for the node.
+  # I[5]: Image height for the node.
+  # For each feature, '-1' means 'undefined'.
+  1,1,1,6
+  eval "
+    set_child(ind) = ( # Set node 'ind' as first available child in tree
+      curr>=0?do (
+        i(0,curr,0,2)<0?( # Found free left child
+          i(0,curr,0,2) = ind; i(0,ind,0,1) = curr; break()
+        );
+        parent = i(0,curr,0,1);
+        isin(i(0,curr),_'I',_'L',_'R',_'X',_'Y')?(
+          curr = parent; # Go up (only left child can be set for this type of nodes)
+        ):(
+          i(0,curr,0,3)<0?( # Found free right child
+            i(0,curr,0,3) = ind; i(0,ind,0,1) = curr; curr = parent; break();
+          );
+          curr = parent; # Go up
+        );
+      );
+    );
+    str = ['$1'];
+    curr = -1;
+    for (k = 0, k<size(str), ++k,
+      c = uppercase(str[k]);
+      isin(c,_'B',_'H',_'L',_'R',_'V',_'X',_'Y')?( # New transformation (node)
+        new = da_size();
+        da_push([ c,-1,-1,-1,-1,-1 ]);
+        set_child(new);
+        curr = new;
+      ):inrange(c,_'0',_'9') || c==_'-'?( # New image (leaf)
+        img = s2v(str,k++)%$nb_images;
+        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+        new = da_size();
+        da_push([ _'I',-1,img,-1,w#img,h#img ]);
+        set_child(new);
+      );
+    );
+    da_freeze()"
+
+  # Determine image size for each node of each tree.
+  f. "<
+    N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
+    lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
+    isin(type,_'X',_'Y')?(width = lw; height = lh):
+    isin(type,_'R',_'L')?(width = lh; height = lw):(
+      rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
+      type==_'H'?(
+        height = lerp(min(lh,rh),max(lh,rh),$2);
+        width = height*(lw/lh + rw/rh);
+      ):type==_'V'?(
+        width = lerp(min(lw,rw),max(lw,rw),$2);
+        height = width*(lh/lw + rh/rw);
+      ):type==_'B'?(
+        hH = lerp(min(lh,rh),max(lh,rh),$2);
+        wH = hH*(lw/lh + rw/rh);
+        wV = lerp(min(lw,rw),max(lw,rw),$2);
+        hV = wV*(lh/lw + rh/rw);
+        min(wH,hH)/max(wH,hH)>min(wV,hV)/max(wV,hV)?( # Best: Horizontal
+          width = wH; height = hH; type = _'H';
+        ):( # Best: Vertical
+          width = wV; height = hV; type = _'V';
+        );
+      );
+    );
+    [ type,parent,lchild,rchild,width,height ]"
+
+  # Generate montage.
+  {(I)[4,2]},1,{$spectrum+1}
+  eval.. "i==_'I'?(
+      N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
+      rot = is_flipx = is_flipy = xi = yi = 0;
+      child = y;
+      for (curr = N[1], curr>=0,
+        N = I[curr]; type = N[0];
+        type==_'X'?(rot%2?(rot+=2); is_flipx = !is_flipx; xi = W - xi - wi);
+        type==_'Y'?(rot%2?(rot+=2); is_flipy = !is_flipy; yi = H - yi - hi):
+        type==_'R'?(++rot; oxi = xi; xi = yi; yi = W - oxi - wi; swap(wi,hi)):
+        type==_'L'?(--rot; oxi = xi; xi = H - yi - hi; yi = oxi; swap(wi,hi)):
+        type==_'H'?(
+          fact = N[5]/H;
+          xi = xi*fact + (N[3]==child?(N[4] - W*fact));
+          yi = yi*fact;
+          wi = wi*fact;
+          hi = hi*fact;
+        ):type==_'V'?(
+          fact = N[4]/W;
+          xi = xi*fact;
+          yi = yi*fact + (N[3]==child?(N[5] - H*fact));
+          wi = wi*fact;
+          hi = hi*fact;
+        );
+        W = N[4]; H = N[5];
+        child = curr; curr = N[1]; # Go up
+      );
+      rot%=4;
+      run('[',ind,'] \
+        if ',is_flipx,' mirror. x fi \
+        if ',is_flipy,' mirror. y fi \
+        if ',rot,' rotate. {',rot,'*90} fi \
+        r. ',ceil(wi),',',ceil(hi),',1,100%,2 \
+        100%,100%,1,1,1 a[-2,-1] c
+        j.. .,',round(xi),',',round(yi),',0,0,-1 rm.');
+      ); _0"
+  s. c,-{0,s} /[-2,-1]
+  k. => "[Montage '$1']"
+
 #@cli autocrop : _axes,_value1,_value2,...
 #@cli : Autocrop selected images according to specified axes and values.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
@@ -18119,136 +18240,6 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
       )"
     rm[1] =>[^] $nm
   } } rm[0]
-
-#@cli layout : 0<=_scaling_factor<=1,"layout_code1",_"layout_code2",...
-#@cli : Merge all selected images into a single image, according to the specified layout code.
-#@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
-layout : check "inrange(${1=0.5},0,1)"
-  e[^-1] "Merge image$? with scaling factor $1, according to layout(s) '${2--1}'."
-  $=arg
-  nb_images,nb_layouts:=$!,$#-1
-  to_colormode 0
-
-  # Parse layout codes and generate trees of transformations.
-  repeat $nb_layouts {
-    layout=${arg{$>+2}}
-
-    # Tree structure: A vector-valued pixel I encodes a tree node as:
-    # I[0]: Node type={ 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
-    # I[1]: Index of parent.
-    # I[2]: Index of left child (or image index for 'I' type).
-    # I[3]: Index of right child.
-    # I[4]: Image width for the node.
-    # I[5]: Image height for the node.
-    # For each feature, '-1' means 'undefined'.
-    1,1,1,6
-    eval "
-      set_child(ind) = ( # Set node 'ind' as first available child in tree
-        curr>=0?do (
-          i(0,curr,0,2)<0?( # Found free left child
-            i(0,curr,0,2) = ind; i(0,ind,0,1) = curr; break()
-          );
-          parent = i(0,curr,0,1);
-          isin(i(0,curr),_'I',_'L',_'R',_'X',_'Y')?(
-            curr = parent; # Go up (only left child can be set for this type of nodes)
-          ):(
-            i(0,curr,0,3)<0?( # Found free right child
-              i(0,curr,0,3) = ind; i(0,ind,0,1) = curr; curr = parent; break();
-            );
-            curr = parent; # Go up
-          );
-        );
-      );
-      str = ['"$layout"'];
-      curr = -1;
-      for (k = 0, k<size(str), ++k,
-        c = uppercase(str[k]);
-        isin(c,_'B',_'H',_'L',_'R',_'V',_'X',_'Y')?( # New transformation (node)
-          new = da_size();
-          da_push([ c,-1,-1,-1,-1,-1 ]);
-          set_child(new);
-          curr = new;
-        ):inrange(c,_'0',_'9') || c==_'-'?( # New image (leaf)
-          img = s2v(str,k++)%$nb_images;
-          while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
-          new = da_size();
-          da_push([ _'I',-1,img,-1,w#img,h#img ]);
-          set_child(new);
-        );
-      );
-      da_freeze()"
-  }
-
-  # Determine image size for each node of each tree.
-  f[-$nb_layouts--1] "<
-    N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
-    lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
-    isin(type,_'X',_'Y')?(width = lw; height = lh):
-    isin(type,_'R',_'L')?(width = lh; height = lw):(
-      rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
-      type==_'H'?(
-        height = lerp(min(lh,rh),max(lh,rh),$1);
-        width = height*(lw/lh + rw/rh);
-      ):type==_'V'?(
-        width = lerp(min(lw,rw),max(lw,rw),$1);
-        height = width*(lh/lw + rh/rw);
-      ):type==_'B'?(
-        hH = lerp(min(lh,rh),max(lh,rh),$1);
-        wH = hH*(lw/lh + rw/rh);
-        wV = lerp(min(lw,rw),max(lw,rw),$1);
-        hV = wV*(lh/lw + rh/rw);
-        min(wH,hH)/max(wH,hH)>min(wV,hV)/max(wV,hV)?( # Best: Horizontal
-          width = wH; height = hH; type = _'H';
-        ):( # Best: Vertical
-          width = wV; height = hV; type = _'V';
-        );
-      );
-    );
-    [ type,parent,lchild,rchild,width,height ]"
-
-  # Generate montages.
-  repeat $nb_layouts {
-    tree:=$nb_images+$>
-    {$tree,(I)[4,2]},1,{0,s+1}
-    eval[$tree] "i==_'I'?(
-        N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
-        rot = is_flipx = is_flipy = xi = yi = 0;
-        child = y;
-        for (curr = N[1], curr>=0,
-          N = I[curr]; type = N[0];
-          type==_'X'?(rot%2?(rot+=2); is_flipx = !is_flipx; xi = W - xi - wi);
-          type==_'Y'?(rot%2?(rot+=2); is_flipy = !is_flipy; yi = H - yi - hi):
-          type==_'R'?(++rot; oxi = xi; xi = yi; yi = W - oxi - wi; swap(wi,hi)):
-          type==_'L'?(--rot; oxi = xi; xi = H - yi - hi; yi = oxi; swap(wi,hi)):
-          type==_'H'?(
-            fact = N[5]/H;
-            xi = xi*fact + (N[3]==child?(N[4] - W*fact));
-            yi = yi*fact;
-            wi = wi*fact;
-            hi = hi*fact;
-          ):type==_'V'?(
-            fact = N[4]/W;
-            xi = xi*fact;
-            yi = yi*fact + (N[3]==child?(N[5] - H*fact));
-            wi = wi*fact;
-            hi = hi*fact;
-          );
-          W = N[4]; H = N[5];
-          child = curr; curr = N[1]; # Go up
-        );
-        rot%=4;
-        run('[',ind,'] \
-          if ',is_flipx,' mirror. x fi \
-          if ',is_flipy,' mirror. y fi \
-          if ',rot,' rotate. {',rot,'*90} fi \
-          r. ',ceil(wi),',',ceil(hi),',1,100%,2 \
-          100%,100%,1,1,1 a[-2,-1] c
-          j.. .,',round(xi),',',round(yi),',0,0,-1 rm.');
-      ); _0"
-    s. c,-{0,s} /[-2,-1]
-    => "[Montage '$2']"
-  }
-  k[-$nb_layouts--1]
 
 #@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
 # _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
