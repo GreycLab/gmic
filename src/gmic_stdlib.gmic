@@ -17933,6 +17933,9 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
         rchild<0?(is_invalid_layout = 1; break());
         height = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
         width = height*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
+
+#        height = max(lh,rh); width = lw + rw;
+
       ):type==_'V'?(
         rchild<0?(is_invalid_layout = 1; break());
         width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
@@ -17960,7 +17963,8 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
   if !$w_res||!$h_res 0
   else
     if !$3 $w_res,$h_res,1,$s_res fi
-    eval[$nb_images] ">i==_'I'?(
+    eval[$nb_images] ">const centering = cut($2,0,1);
+      i==_'I'?(
         N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
         min(wi,hi)>0?(
           rot = is_mirrorx = is_mirrory = xi = yi = 0;
@@ -17977,6 +17981,10 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
               yi = yi*fact;
               wi = wi*fact;
               hi = hi*fact;
+
+#              N[3]==child?(xi+=N[4] - W);
+#              yi+=(N[5] - H)*centering;
+
             ):type==_'V'?(
               fact = N[4]/W;
               xi = xi*fact;
