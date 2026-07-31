@@ -17811,10 +17811,49 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
   }
 
 #@cli arrange : "layout",_scaling_factor,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
-#@cli : Arrange selected images accordingly to a specified layout, described as a string.
-#@cli : 'layout' defines how images are positioned in the resulting composition.
-#@cli : Default values: 'layout="AH"', 'scaling_factor=0.5', 'output_layers=0' and 'processing_command=""'.
-#@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
+#@cli : Arrange selected images according to a specified layout, described as a string.
+#@cli :
+#@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
+#@cli : - A number: Refers to one of the selected images, by its indice.
+#@cli : - 'H' : Puts what follows side by side, horizontally (left / right).
+#@cli : - 'V' : Puts what follows one above the other, vertically (top / bottom).
+#@cli : - 'B' : Same as 'H' or 'V', but automatically picks whichever gives the most balanced (square-looking) result.
+#@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
+#@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
+#@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
+#@cli : - 'L' : Rotates what follows by 90 degrees counter-clockwise.
+#@cli : Any other character (e.g. ';' or ':') can be used as a separator between two numbers to avoid ambiguity \
+# (e.g. to distinguish images '0' and '1' from a single image '01').
+#@cli :
+#@cli : Images get combined together two by two as the layout is read. For instance:
+#@cli : - '"H0:1"' puts images 0 and 1 side by side.
+#@cli : - '"V0:1"' stacks images 0 and 1 on top of each other.
+#@cli : - '"VH0:1H2:3"' first forms two horizontal pairs (0,1) and (2,3), then stacks
+#@cli :   those two pairs vertically, resulting in a 2x2 grid.
+#@cli : - '"H0R1"' puts image 0 next to image 1 rotated 90 degrees clockwise.
+#@cli :
+#@cli : Four predefined shortcuts are also available for 'layout', to quickly arrange all selected images at once \
+# without having to spell out a full layout string:
+#@cli : - '"H"' : Concatenates all selected images horizontally, in order.
+#@cli : - '"V"' : Concatenates all selected images vertically, in order.
+#@cli : - '"AH"' : Automatically arranges all images into a grid, with more columns than rows.
+#@cli : - '"AV"' : Does the same as 'AH', but more rows than columns.
+#@cli :
+#@cli : 'scaling_factor' controls how images of different sizes get resized when combined together:
+#@cli : '0' shrinks to the smallest size involved, '1' grows to the largest, and intermediate values interpolate between both. \
+# Values outside range '[0,1]' are also valid.
+#@cli :
+#@cli : 'output_layers' sets whether the result is a single, flattened image ('Single'), or a set of individual \
+# images, each one already resized and positioned as in the final composition ('Multiple').
+#@cli :
+#@cli : 'processing_command' is an optional G'MIC command (or pipeline of commands) applied to each image \
+# individually, just after it has been resized and right before it gets placed into the composition \
+# (e.g. to add a colored border, apply a filter, etc.).
+#@cli :
+#@cli : Default values: 'scaling_factor=0.5', 'output_layers=0' and 'processing_command=""'.
+#@cli : $ sample colorful,eagle,cat,dog +arrange "VH0:1H2:3"
+#@cli : $ sample colorful,eagle,cat,dog,flower,rose arrange AH
+#@cli : $ sample colorful,eagle,duck +arrange VH0R1:2,,,"sepia shrink xy,20 frame xy,8,255 frame xy,12,0"
 arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
   e[^-1] "Arrange image$? accordingly to layout '$2', with scaling factor $2."
   nb_images,max_spectrum:=$!,${-max_s}
