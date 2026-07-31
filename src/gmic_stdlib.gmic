@@ -17810,7 +17810,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
-#@cli arrange : "layout",_scaling_factor,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
+#@cli arrange : "layout",_align_or_scale_factor,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
 #@cli : Arrange selected images according to a specified layout, described as a string.
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
@@ -17839,7 +17839,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : - '"AH"' : Automatically arranges all images into a grid, with more columns than rows.
 #@cli : - '"AV"' : Does the same as 'AH', but more rows than columns.
 #@cli :
-#@cli : 'scaling_factor' controls how images of different sizes get resized when combined together:
+#@cli : 'scale_factor' controls how images of different sizes get resized when combined together:
 #@cli : '0' shrinks to the smallest size involved, '1' grows to the largest, and intermediate values interpolate \
 # between both. Values outside range '[0,1]' are also valid.
 #@cli :
@@ -17850,12 +17850,12 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 # individually, just after it has been resized and right before it gets placed into the composition \
 # (e.g. to add a colored border, apply a filter, etc.).
 #@cli :
-#@cli : Default values: 'scaling_factor=0.5', 'output_layers=0' and 'processing_command=""'.
+#@cli : Default values: 'align_or_scale_factor=0.5', 'output_layers=0' and 'processing_command=""'.
 #@cli : $ sample colorful,eagle,cat,dog +arrange "VH0:1H2:3"
 #@cli : $ sample colorful,eagle,cat,dog,flower,rose arrange AH
 #@cli : $ sample colorful,eagle,duck +arrange VH0R1:2,,,"sepia shrink xy,20 frame xy,8,255 frame xy,12,0"
 arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
-  e[^-1] "Arrange image$? accordingly to layout '$1', with scaling factor $2."
+  e[^-1] "Arrange image$? accordingly to layout '$1', with scale factor $2."
   nb_images,max_spectrum:=$!,${-max_s}
 
   # Compute layout code for pre-defined meta layouts.
@@ -17931,11 +17931,13 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
       rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
       type==_'H'?(
         rchild<0?(is_invalid_layout = 1; break());
-        height = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
-        width = height*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
-
-#        height = max(lh,rh); width = lw + rw;
-
+        $2>=0?( # Scale
+          height = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
+          width = height*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
+        ):( # Align
+          height = max(lh,rh);
+          width = lw + rw
+        );
       ):type==_'V'?(
         rchild<0?(is_invalid_layout = 1; break());
         width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
@@ -17963,7 +17965,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
   if !$w_res||!$h_res 0
   else
     if !$3 $w_res,$h_res,1,$s_res fi
-    eval[$nb_images] ">const centering = cut($2,0,1);
+    eval[$nb_images] ">const align = cut(-$2-1,0,1);
       i==_'I'?(
         N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
         min(wi,hi)>0?(
@@ -17976,15 +17978,16 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
             type==_'R'?(++rot; oxi = xi; xi = yi; yi = W - oxi - wi; swap(wi,hi)):
             type==_'L'?(--rot; oxi = xi; xi = H - yi - hi; yi = oxi; swap(wi,hi)):
             type==_'H'?(
-              fact = N[5]/H;
-              xi = xi*fact + (N[3]==child?(N[4] - W*fact));
-              yi = yi*fact;
-              wi = wi*fact;
-              hi = hi*fact;
-
-#              N[3]==child?(xi+=N[4] - W);
-#              yi+=(N[5] - H)*centering;
-
+              $2>=0?( # Scale
+                fact = N[5]/H;
+                xi = xi*fact + (N[3]==child?(N[4] - W*fact));
+                yi = yi*fact;
+                wi = wi*fact;
+                hi = hi*fact;
+              ):( # Align
+                N[3]==child?(xi+=N[4] - W);
+                yi+=(N[5] - H)*align;
+              );
             ):type==_'V'?(
               fact = N[4]/W;
               xi = xi*fact;
