@@ -17819,6 +17819,19 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
   e[^-1] "Arrange image$? accordingly to layout '$2', with scaling factor $2."
   nb_images,max_spectrum:=$!,${-max_s}
 
+  # Set layout code for "meta'-layouts.
+  if "['$1']=='H'" # Horizontal layout
+
+  elif "['$1']=='V'" # Vertical layout
+
+  elif "['$1']=='A'" # Horizontal array
+
+  elif "['$1']=='B'" # Vertical array
+
+  else
+    layout="$1"
+  fi
+
   # Parse layout codes and generate trees of transformations.
   # Tree structure: A vector-valued pixel I encodes a tree node as:
   # I[0]: Node type={ 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
@@ -17846,7 +17859,7 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
         );
       );
     );
-    str = ['$1'];
+    str = ['"$layout"'];
     curr = -1;
     for (k = 0, k<size(str), ++k,
       c = uppercase(str[k]);
@@ -17897,7 +17910,7 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
     end(set('is_invalid_layout',is_invalid_layout));
     [ type,parent,lchild,rchild,width,height ]"
 
-  if $is_invalid_layout error[0--2] "Command '$0': Invalid specified layout '$1'." fi
+  if $is_invalid_layout error[0--2] "Command '$0': Invalid specified layout '"$layout"'." fi
 
   # Generate montage.
   w_res,h_res,s_res:=round((I)[4,2]),$max_spectrum+!$3
@@ -17945,7 +17958,7 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
       ); _0"
   rm[0-$nb_images]
   if !$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi
-  =>[^] "$1"
+  =>[^] $layout
 
 #@cli autocrop : _axes,_value1,_value2,...
 #@cli : Autocrop selected images according to specified axes and values.
