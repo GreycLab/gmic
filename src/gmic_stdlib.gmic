@@ -17923,17 +17923,18 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
       );
       rot%=4;
       xi = round(xi); yi = round(yi); wi = ceil(wi); hi = ceil(hi);
-
-      com_mirror = ' mirror.   ';
-      is_mirrorx || is_mirrory?copy(com_mirror[9],[ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ]):(com_mirror[0] = 0);
-      com_rotate = string(' rotate. ',90*rot); !rot?(com_rotate[0] = 0);
-      run('[',ind,']',com_mirror,com_rotate,'
-        r. ',wi,',',hi,',1,100%,2
-        if ',['$4']!=0,' l. { $4 } fi
-        r. ',wi,',',hi,',1,',$s_res,',0
-        if $3 ',$w_res,',',$h_res,',1,',$s_res,' rv[-2,-1]
-        else sh. 100% f. 1 rm. fi
-        j.. .,',xi,',',yi,',0,0,-1 rm.');
+      com_mirror = 'mirror.    ';
+      is_mirrorx || is_mirrory?copy(com_mirror[8],[ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ]):(com_mirror[0] = 0);
+      com_rotate = string('rotate. ',90*rot,' '); !rot?(com_rotate[0] = 0);
+      com_command = 'l. { $4 } '; ['$4']==0?(com_command[0] = 0);
+      com_init_draw = $3?string($w_res,',',$h_res,',1,',$s_res,' rv[-2,-1] '):'sh. 100% f. 1 rm. ';
+      run('[',ind,'] ',
+           com_mirror,com_rotate,
+           'r. ',wi,',',hi,',1,100%,2 ',
+           com_command,
+           'r. ',wi,',',hi,',1,',$s_res,',0 ',
+           com_init_draw,
+           'j.. .,',xi,',',yi,',0,0,-1 rm.');
       ); _0"
   rm[0-$nb_images]
   if !$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi
