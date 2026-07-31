@@ -17940,8 +17940,13 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
         );
       ):type==_'V'?(
         rchild<0?(is_invalid_layout = 1; break());
-        width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
-        height = width*((lw>0?lh/lw:0) + (rw>0?rh/rw:0));
+        $2>=0?( # Scale
+          width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
+          height = width*((lw>0?lh/lw:0) + (rw>0?rh/rw:0));
+        ):( # Align
+          width = max(lw,rw);
+          height = lh + rh;
+        );
       ):type==_'B'?(
         rchild<0?(is_invalid_layout = 1; break());
         hH = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
@@ -17960,12 +17965,13 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
 
   if $is_invalid_layout error[0--2] "Command '$0': Invalid specified layout '$1'." fi
 
+
   # Generate montage.
   w_res,h_res,s_res:=round((I)[4,2]),$max_spectrum+!$3
   if !$w_res||!$h_res 0
   else
     if !$3 $w_res,$h_res,1,$s_res fi
-    eval[$nb_images] ">const align = cut(-$2-1,0,1);
+    eval[$nb_images] ">
       i==_'I'?(
         N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
         min(wi,hi)>0?(
@@ -17986,14 +17992,19 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
                 hi = hi*fact;
               ):( # Align
                 N[3]==child?(xi+=N[4] - W);
-                yi+=(N[5] - H)*align;
+                yi+=(N[5] - H)*(-$2);
               );
             ):type==_'V'?(
-              fact = N[4]/W;
-              xi = xi*fact;
-              yi = yi*fact + (N[3]==child?(N[5] - H*fact));
-              wi = wi*fact;
-              hi = hi*fact;
+              $2>=0?( # Scale
+                fact = N[4]/W;
+                xi = xi*fact;
+                yi = yi*fact + (N[3]==child?(N[5] - H*fact));
+                wi = wi*fact;
+                hi = hi*fact;
+              ):( # Align
+                N[3]==child?(yi+=N[5] - H);
+                xi+=(N[4] - W)*(-$2);
+              );
             );
             W = N[4]; H = N[5];
             child = curr; curr = N[1]; # Go up
@@ -18001,7 +18012,8 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
           rot%=4;
           xi = round(xi); yi = round(yi); wi = ceil(wi); hi = ceil(hi);
           com_mirror = 'mirror.    ';
-          is_mirrorx || is_mirrory?copy(com_mirror[8],[ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ]):(com_mirror[0] = 0);
+          is_mirrorx || is_mirrory?copy(com_mirror[8],[ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ]):
+                                   (com_mirror[0] = 0);
           com_rotate = string('rotate. ',90*rot,' '); !rot?(com_rotate[0] = 0);
           com_command = 'l. { $4 } '; ['$4']==0?(com_command[0] = 0);
           com_init_draw = $3?string($w_res,',',$h_res,',1,',$s_res,' rv[-2,-1] '):'sh. 100% f. 1 rm. ';
