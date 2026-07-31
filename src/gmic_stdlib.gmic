@@ -17828,7 +17828,7 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
   # I[4]: Image width for the node.
   # I[5]: Image height for the node.
   # For each feature, '-1' means 'undefined'.
-  1,1,1,6 => tree
+  1,1,1,6
   eval "
     set_child(ind) = ( # Set node 'ind' as first available child in tree
       curr>=0?do (
@@ -17866,19 +17866,23 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
     da_freeze()"
 
   # Determine image size for each node of each tree.
-  f[tree] "<
+  f. "<begin(is_error = 0);
     N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
     lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
+    lchild<0?(is_error = 1; break());
     isin(type,_'X',_'Y')?(width = lw; height = lh):
     isin(type,_'R',_'L')?(width = lh; height = lw):(
       rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
       type==_'H'?(
+        rchild<0?(is_error = 1; break());
         height = lerp(min(lh,rh),max(lh,rh),$2);
         width = height*(lw/lh + rw/rh);
       ):type==_'V'?(
+        rchild<0?(is_error = 1; break());
         width = lerp(min(lw,rw),max(lw,rw),$2);
         height = width*(lh/lw + rh/rw);
       ):type==_'B'?(
+        rchild<0?(is_error = 1; break());
         hH = lerp(min(lh,rh),max(lh,rh),$2);
         wH = hH*(lw/lh + rw/rh);
         wV = lerp(min(lw,rw),max(lw,rw),$2);
@@ -17890,12 +17894,15 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
         );
       );
     );
+    end(set('is_error',is_error));
     [ type,parent,lchild,rchild,width,height ]"
+
+  if $is_error error[0--2] "Command '$0': Invalid specified layout '$1'." fi
 
   # Generate montage.
   w_res,h_res,s_res:=round((I)[4,2]),$max_spectrum+!$3
   if !$3 $w_res,$h_res,1,$s_res fi
-  eval[tree] ">i==_'I'?(
+  eval[$nb_images] ">i==_'I'?(
       N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
       rot = is_mirrorx = is_mirrory = xi = yi = 0;
       child = y;
