@@ -17817,7 +17817,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : $ sample colorful,eagle,cat,dog layout 1,VH0:1H2:3
 arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
   e[^-1] "Arrange image$? accordingly to layout '$2', with scaling factor $2."
-  nb_images,spectrum:=$!,${-max_s}
+  nb_images,max_spectrum:=$!,${-max_s}
 
   # Parse layout codes and generate trees of transformations.
   # Tree structure: A vector-valued pixel I encodes a tree node as:
@@ -17893,7 +17893,7 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
     [ type,parent,lchild,rchild,width,height ]"
 
   # Generate montage.
-  {(I)[4,2]},1,{$spectrum+1}
+  {(I)[4,2]},1,{$max_spectrum+1}
   eval.. "i==_'I'?(
       N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
       rot = is_mirrorx = is_mirrory = xi = yi = 0;
@@ -17924,12 +17924,11 @@ arrange : check "inrange(${2=0.5},0,1) && isbool(${3=0})" skip "${4=}"
       xi = round(xi); yi = round(yi); wi = ceil(wi); hi = ceil(hi);
       arg_mirror = [ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ];
       run('[',ind,'] \
-        if ',is_mirrorx || is_mirrory,' mirror. ',arg_mirror,' fi \
-        if ',rot,' rotate. {',rot,'*90} fi \
-        r. ',wi,',',hi,',1,100%,2 \
-        if ',['$4']!=0,' l. { $4 } fi \
-#        r. ',wi,',',hi,',1,',$spectrum,'0 \
-        100%,100%,1,1,1 a[-2,-1] c
+        if ',is_mirrorx || is_mirrory,' mirror. ',arg_mirror,' fi
+        if ',rot,' rotate. {',rot,'*90} fi
+        r. ',wi,',',hi,',1,100%,2
+        if ',['$4']!=0,' l. { $4 } fi
+        r. ',wi,',',hi,',1,',$max_spectrum + 1,',0 sh. 100% f. 1 rm.
         j.. .,',xi,',',yi,',0,0,-1 rm.');
       ); _0"
   s. c,-{0,s} /[-2,-1]
