@@ -17810,7 +17810,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
-#@cli arrange : "layout",_align_or_scale_factor,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
+#@cli arrange : "layout",-1<=_align_or_scale_factor<=1,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
 #@cli : Arrange selected images according to a specified layout, described as a string.
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
@@ -17819,11 +17819,9 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
 #@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
 #@cli : - 'L' : Rotates what follows by 90 degrees counter-clockwise.
-#@cli :
 #@cli : - 'H' : Puts what follows side by side, horizontally (left / right).
 #@cli : - 'V' : Puts what follows one above the other, vertically (top / bottom).
 #@cli : - 'B' : Same as 'H' or 'V', but automatically picks whichever gives the most balanced (square-looking) result.
-#@cli :
 #@cli : - 'Q' : Rotates what follows by a random multiple of 90 degrees.
 #@cli : - 'F' : Flips what follows randomly, along the x-axis or the y-axis.
 #@cli : - 'M' : Merges what follows randomly, either horizontally or vertically.
@@ -17834,8 +17832,8 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : Images get combined together two by two. For instance:
 #@cli : - '"H0:1"' puts images 0 and 1 side by side.
 #@cli : - '"V0:1"' stacks images 0 and 1 on top of each other.
-#@cli : - '"VH0:1H2:3"' first forms two horizontal pairs (0,1) and (2,3), then stacks
-#@cli :   those two pairs vertically, resulting in a 2x2 grid.
+#@cli : - '"VH0:1H2:3"' first forms two horizontal pairs (0,1) and (2,3), then stack those two pairs vertically, \
+# resulting in a 2x2 grid.
 #@cli : - '"H0R1"' puts image 0 next to image 1 rotated 90 degrees clockwise.
 #@cli :
 #@cli : Four predefined shortcuts are also available for 'layout', to quickly arrange all selected images at once \
@@ -17860,19 +17858,18 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : 'processing_command' is an optional G'MIC command (or pipeline of commands) applied to each image \
 # individually, just after it has been resized and right before it gets placed into the composition \
 # (e.g. to add a colored border, apply a filter, etc.).
-#@cli :
-#@cli : Default values: 'align_or_scale_factor=0.5', 'output_layers=0' and 'processing_command=""'.
+#@cli : Default values: 'layout=AH', 'align_or_scale_factor=0.5', 'output_layers=0' and 'processing_command=""'.
 #@cli : $ sample colorful,eagle,cat,dog +arrange "VH0:1H2:3"
 #@cli : $ sample cat,dog,monkey,duck +arrange AH,-0.5
 #@cli : $ sample colorful,eagle,cat,dog,flower,rose arrange AH
 #@cli : $ sample colorful,eagle,duck +arrange VH0R1:2,,,"sepia shrink xy,20 frame xy,8,255 frame xy,12,0"
-arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
+arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "${4=}"
   sf0,sf1,so0,so1="align","scale","Single","Multiple"
   e[^-1] "Arrange image$? accordingly to layout '$1', with "${sf{$2>=0}}" factor "{abs($2)}", "\
          "output layers '"${so$3}"', and processing command '$4'."
   nb_images,max_spectrum:=$!,${-max_s}
 
-  # Compute layout code for pre-defined meta layouts.
+  # Generate layout for pre-defined meta layouts.
   if "isin(['$1'],'AH','AV','H','V') && $nb_images<2" return fi
   if "['$1']=='H'" # Horizontal
     $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'H')`}{^:;} rm.
@@ -17888,7 +17885,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
     }
   else # Custom layout
     ({'"$1"'}) 0
-    eval.. ">i = i; # Set a value for random transformations
+    eval.. ">i = i; # Replace random transformations with their values
       i==_'M'?(i = arg0(v,_'V',_'H')):
       i==_'F'?(i = arg0(v,_'X',_'Y')):
       i==_'Q'?(i = arg0(r = v(2),_'R',_'L',_'R'); !r?da_push(_'R'));
