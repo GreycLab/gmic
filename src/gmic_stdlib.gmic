@@ -17845,6 +17845,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : - '"AH"' : Automatically arranges all images into a grid, with a number of columns greater than or equal to \
 # the number of rows.
 #@cli : - '"AV"' : Does the same as 'AH', but with a number of rows greater than or equal to the number of columns.
+#@cli : - '"M'"' : Apply a random layout, without flips and rotations.
 #@cli :
 #@cli : 'align_or_scale_factor' controls how images of different sizes are combined together:
 #@cli : - When positive, images get resized to a common size: '0' shrinks to the smallest size involved, '1' grows to \
@@ -17871,7 +17872,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
   nb_images,max_spectrum:=$!,${-max_s}
 
   # Compute layout code for pre-defined meta layouts.
-  if "isin(['$1'],'AH','AV','H','V') && $nb_images<2" return fi
+  if "isin(['$1'],'AH','AV','H','V','M') && $nb_images<2" return fi
   if "['$1']=='H'" # Horizontal
     $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'H')`}{^:;} rm.
   elif "['$1']=='V'" # Vertical
@@ -17891,7 +17892,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
       i==_'F'?(i = arg0(v,_'X',_'Y')):
       i==_'Q'?(i = arg0(r = v(2),_'R',_'L',_'R'); !r?da_push(_'R'));
       da_push(i);
-      end(da_freeze())" rm.. layout={t}
+      end(da_freeze())" layout={t} rm..
   fi
 
   # Parse layout codes and generate trees of transformations.
@@ -17945,8 +17946,8 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
     N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
     lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
     (y && parent<0) || lchild<0?(is_invalid_layout = 1; break());
-    isin(type,_'X',_'Y')?(width = lw; height = lh):
-    isin(type,_'R',_'L')?(width = lh; height = lw):(
+    isin(type,_'X',_'Y')?(width = lw; height = lh): # Flip
+    isin(type,_'R',_'L')?(width = lh; height = lw):( # Rotation
       rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
       type==_'H'?( # Horizontal merge
         rchild<0?(is_invalid_layout = 1; break());
