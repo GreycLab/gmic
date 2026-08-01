@@ -17815,6 +17815,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
 #@cli : - A number: Refers to one of the selected images, by its index.
+#@cli : - '?' : A random image index.
 #@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
 #@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
 #@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
@@ -17886,9 +17887,10 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
   else # Custom layout
     ({'"$1"'}) 0
     eval.. ">i = i; # Replace random transformations with their values
-      i==_'M'?(i = arg0(v,_'V',_'H')):
-      i==_'F'?(i = arg0(v,_'X',_'Y')):
-      i==_'Q'?(i = arg0(r = v(2),_'R',_'L',_'R'); !r?da_push(_'R'));
+      i==_'M'?da_push(v?_'V':_'H'):
+      i==_'F'?((r = v(3))?r<3?da_push(r - 1?_'Y':_'X'):da_push(_'X',_'Y')):
+      i==_'Q'?((r = v(3))?r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):
+      i==_'?'?(ind = v($nb_images - 1); str = v2s(ind); for (k = 0, str[k], da_push(str[k++]))):
       da_push(i);
       end(da_freeze())" layout={t} rm..
   fi
