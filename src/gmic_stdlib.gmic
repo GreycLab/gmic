@@ -17892,7 +17892,7 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
       i==_'Q'?((r = v(3))?r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):
       i==_'?'?(ind = v($nb_images - 1); str = v2s(ind); for (k = 0, str[k], da_push(str[k++]))):
       da_push(i);
-      end(da_freeze())" layout={t} rm..
+      end(da_freeze())" layout={t} rm[-2,-1]
   fi
 
   # Parse layout codes and generate trees of transformations.
@@ -17940,6 +17940,7 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
       );
     );
     da_freeze()"
+  if !w rm 0 =>[^] "$1" return fi
 
   # Determine image size for each node of each tree.
   f. "<begin(is_invalid_layout = 0);
@@ -46822,14 +46823,14 @@ fx_ministeck_preview :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Combines multiple input layers into a single montage image.
 #@gui : "}, sep = separator()
-#@gui : Montage Type = choice("Auto","Custom Layout","Horizontal","Vertical","Horizontal Array","Vertical Array")
-#@gui : Custom Layout = text{"V(H(0,1),H(2,V(3,4)))"}
+#@gui : Montage Type = choice(3,"Custom Layout","Horizontal","Vertical","Horizontal Array","Vertical Array")
+#@gui : Custom Layout = text{"VH0:1:H2V3:4"}
 #@gui : Merging Mode = choice(1,"Aligned","Scaled")
 #@gui : Centering / Scale = float(0.5,0,1)
 #@gui : Padding (px) = int(0,0,128)
 #@gui : sep = separator()
 #@gui : Frame (px) = int(0,0,128)
-#@gui : Frame Color = color(0,0,0,255)
+#@gui : Frame Color = color(255,255,255,255)
 #@gui : sep = separator()
 #@gui : Angle = float(0,0,360)
 #@gui : Angle Variations = float(0,0,180)
@@ -46838,68 +46839,61 @@ fx_ministeck_preview :
 #@gui : Revert Layer Order = bool()
 #@gui : Output As = _choice("Single Layer","Multiple Layers")
 #@gui : sep = separator()
-#@gui : note = note{"<small><b>Instructions:</b>\n
-#@gui : - Don't forget to set the <i>Input layers...</i> option on the left if you have multiple input layers
-#@gui : for your montage.\n
+#@gui : note = note{"<span color="#EE5500"><b>Instructions:</b></span>\n\n
+#@gui : - Don't forget to set the <i>Input layers...</i> option on the <i>All</i> to input multiple layers for your \
+# montage.\n\n
 #@gui : - The <i>Custom layout</i> parameter is only active when <i>Montage type</i> is set to <i>Custom layout</i>.
-#@gui : This is basically a string containing expressions such as:\n
-#@gui : \n     . <i>H(a,b)</i> or <i>V(a,b)</i> stand respectively for an horizontal and vertical merge of two
-#@gui : blocks <i>a</i> and <i>b</i>.
-#@gui : \n     . <i>R(a)</i>, stands for a 90-deg. rotated version of a block <i>a</i>. Use <i>RR(a)</i> and
-#@gui : <i>RRR(a)</i> for resp. 180-deg and 270-deg. rotations.
-#@gui : \n     . <i>M(a)</i>, stands for a X-mirrored version of a block <i>a</i>. Use <i>MRR(a)</i> for a Y-mirrored
-#@gui : version of <i>a</i>.\n\n
-#@gui : - A block <i>a</i> can be a layer index or a nested montage expression itself.\n
-#@gui : - Layer indices start from <i>0 (top layer)</i> and are treated periodically.
-#@gui : </small>"}
+#@gui : It describes how images are combined together, using the following symbols (case-insensitive):\n\n
+#@gui : - <b>A number</b>: Refers to one of the selected layer, by its index. Layer indices start from \
+# <i>0 (top layer)</i> and are treated periodically.\n
+#@gui : - '<b>?</b>' : A random layer index.\n
+#@gui : - '<b>X</b>' : Mirrors what follows horizontally (left-right flip).\n
+#@gui : - '<b>Y</b>' : Mirrors what follows vertically (top-bottom flip).\n
+#@gui : - '<b>R</b>' : Rotates what follows by 90 degrees clockwise.\n
+#@gui : - '<b>L</b>' : Rotates what follows by 90 degrees counter-clockwise.\n
+#@gui : - '<b>H</b>' : Puts what follows side by side, horizontally (left / right).\n
+#@gui : - '<b>V</b>' : Puts what follows one above the other, vertically (top / bottom).\n
+#@gui : - '<b>B</b>' : Same as '<b>H</b>' or '<b>V</b>', but automatically picks whichever gives the most balanced \
+# (square-looking) result.\n
+#@gui : - '<b>Q</b>' : Rotates what follows by a random multiple of 90 degrees.\n
+#@gui : - '<b>F</b>' : Flips what follows randomly, along the x-axis or the y-axis.\n
+#@gui : - '<b>M</b>' : Merges what follows randomly, either horizontally or vertically.\n\n
+#@gui : Any other character (e.g. ';' or ':') can be used as a separator between two numbers to avoid ambiguity \
+# (e.g. to distinguish images '0' and '1' from a single image '01').\n
+#@gui : Images get combined together two by two. For instance:\n\n
+#@gui : - '<b>H0:1</b>' puts images 0 and 1 side by side.\n
+#@gui : - '<b>V0:1</b>' stacks images 0 and 1 on top of each other.\n
+#@gui : - '<b>VH0:1H2:3</b>' first forms two horizontal pairs (0,1) and (2,3), then stack those two pairs vertically, \
+# resulting in a 2x2 grid.\n
+#@gui : - '<b>H0R1</b>' puts image 0 next to image 1 rotated 90 degrees clockwise.
+#@gui : "}
 #@gui : url = link("Click here for a tutorial","https://patdavid.net/2014/05/gmic-montage.html")
 #@gui : url = link("+ video tutorial","http://www.youtube.com/watch?v=iM42vx22gwg")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/12/22</i>.</small>")
-fx_montage : skip "${2=A}"
-  if !$! return fi
-  code0=X code1="$2" code2=H code3=V code4=A code5=B
-  if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/01</i>.</small>")
+fx_montage :
+  if !$!" || (!$1 && ['$2']==0)" return fi
+  code0,code1,code2,code3,code4="$2 ",H,V,AH,AV
   to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
   if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},$15,\
-    "if $""7%2 mirror x fi if $""8%2 mirror y fi "\
-    "rotate {90*$""6} "\
-    "if $5||$6 "\
-    "r {max(1,$""4-2*($5+$6))},{max(1,$""5-2*($5+$6))},1,100%,2 "\
-    "frame xy,$6,${7-10} "\
-    "r {w+2*$5},{h+2*$5},1,100%,0,0,0.5,0.5 "\
-    "else r $""4,$""5,1,100%,2 fi "
-  if $15 gui_autocrop_layers fi
-  gui_set_layer_name "[Montage]"
+  arrange ${code$1},{$3?$4:-max($4,1e-8)},$15,\
+          "if $5||$6 r {vmax(1,[w,h]-2*($5+$6))},1,100%,2 frame xy,${6-10} expand xy,$5 fi"
+  if !w rm
+  else
+    if $15 s z gui_autocrop_layers fi
+    gui_set_layer_name "[Montage]"
+  fi
 
-fx_montage_preview : skip "${2=A}"
+fx_montage_preview :
   if !$! return fi
-  w,h={w},{h}
-  if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
-  drgba
-  code0=X code1="$2" code2=H code3=V code4=A code5=B
-  to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
-  if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},0,\
-    "if $""7%2 mirror x fi if $""8%2 mirror y fi
-     rotate {90*$""6}
-     if $5||$6
-       r {max(1,$""4-2*($5+$6))},{max(1,$""5-2*($5+$6))},1,100%,2 fs:=min(53,max(w,h)/3)
-       frame xy,$6,${7-10}
-       r {w+2*$5},{h+2*$5},1,100%,0,0,0.5,0.5
-       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
-       dilate. {3+2*$fs/20} a.. .,c j[0] [1],{5+$5+$6},{$5+$6},0,0,1,[2],255 k[0]
-     else
-       r $""4,$""5,1,100%,2 fs:=min(53,max(w,h)/3)
-       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
-       dilate. {3+2*$fs/20} a.. .,c j[0] [1],5,0,0,0,1,[2],255 k[0]
-     fi "
-  nw,nh:=w,h
-  rs $w,{$h-16},2,1
-  drgba
-  i[0] 100%,15,1,3,240 t[0] "Estimated size : "{round(100*$nw/$w)}%" x "{round(100*$nh/$h)}%,2,0,16 r[0] 100%,16,1,3,0
-  a y
+  w,h:=w,h
+  fx_montage $"*"
+  if $!
+    nw,nh:=w,h rs $w,{$h-16},2,1 drgba
+    100%,15,1,3,240 t. "Estimated size : "{round(100*$nw/$w)}%" x "{round(100*$nh/$h)}%,2,0,16 r. {-2,w},16,1,3,0 mv. 0
+    a y
+  fi
+  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{$6}{${7-10}}{$11}{$12}{$13}{$14}{$15}"
 
 #@gui Puzzle : fx_puzzle, fx_puzzle_preview(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
