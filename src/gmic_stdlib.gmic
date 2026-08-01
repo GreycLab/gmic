@@ -17815,13 +17815,19 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
 #@cli : - A number: Refers to one of the selected images, by its index.
-#@cli : - 'H' : Puts what follows side by side, horizontally (left / right).
-#@cli : - 'V' : Puts what follows one above the other, vertically (top / bottom).
-#@cli : - 'B' : Same as 'H' or 'V', but automatically picks whichever gives the most balanced (square-looking) result.
 #@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
 #@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
 #@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
 #@cli : - 'L' : Rotates what follows by 90 degrees counter-clockwise.
+#@cli :
+#@cli : - 'H' : Puts what follows side by side, horizontally (left / right).
+#@cli : - 'V' : Puts what follows one above the other, vertically (top / bottom).
+#@cli : - 'B' : Same as 'H' or 'V', but automatically picks whichever gives the most balanced (square-looking) result.
+#@cli :
+#@cli : - 'Q' : Rotates what follows by a random multiple of 90 degrees.
+#@cli : - 'F' : Flips what follows randomly, along the x-axis or the y-axis.
+#@cli : - 'M' : Merges what follows randomly, either horizontally or vertically.
+#@cli :
 #@cli : Any other character (e.g. ';' or ':') can be used as a separator between two numbers to avoid ambiguity \
 # (e.g. to distinguish images '0' and '1' from a single image '01').
 #@cli :
@@ -17878,12 +17884,19 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
       nb:=min($M,$nb_images-$>*$M)
       if $nb>1 $nb,1,1,1,x+$>*$M layout.=:{`vector(#$nb-1,_'H')`}{^:;} rm. else layout.=:{$>*$M} fi
     }
-  else layout="$1"
+  else
+    ({'"$1"'}) 0
+    eval.. ">i = i; # Set a value for random transformations
+      i==_'M'?(i = arg0(v,_'V',_'H')):
+      i==_'F'?(i = arg0(v,_'X',_'Y')):
+      i==_'Q'?(i = arg0(r = v(2),_'R',_'L',_'R'); !r?da_push(_'R'));
+      da_push(i);
+      end(da_freeze())" rm.. layout={t}
   fi
 
   # Parse layout codes and generate trees of transformations.
   # Tree structure: A vector-valued pixel I encodes a tree node as:
-  # I[0]: Node type={ 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
+  # I[0]: Node type={ 'A' | 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
   # I[1]: Index of parent.
   # I[2]: Index of left child (or image index for 'I' type).
   # I[3]: Index of right child.
@@ -17935,7 +17948,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
     isin(type,_'X',_'Y')?(width = lw; height = lh):
     isin(type,_'R',_'L')?(width = lh; height = lw):(
       rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
-      type==_'H'?(
+      type==_'H'?( # Horizontal merge
         rchild<0?(is_invalid_layout = 1; break());
         $2>=0?( # Scale
           height = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
@@ -17944,7 +17957,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
           height = max(lh,rh);
           width = lw + rw
         );
-      ):type==_'V'?(
+      ):type==_'V'?( # Vertical merge
         rchild<0?(is_invalid_layout = 1; break());
         $2>=0?( # Scale
           width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
@@ -17953,7 +17966,7 @@ arrange : skip "${1=AH}" check "isnum(${2=0.5}) && isbool(${3=0})" skip "${4=}"
           width = max(lw,rw);
           height = lh + rh;
         );
-      ):type==_'B'?(
+      ):type==_'B'?( # Best of horizontal / vertical merge
         rchild<0?(is_invalid_layout = 1; break());
         hH = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
         wH = hH*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
