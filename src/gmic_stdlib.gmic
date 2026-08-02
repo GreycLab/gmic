@@ -18038,7 +18038,8 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
                                    (com_mirror[0] = 0);
           com_rotate = string('rotate. ',90*rot,' '); !rot?(com_rotate[0] = 0);
           com_command = 'l. { $4 } '; ['$4']==0?(com_command[0] = 0);
-          com_draw = $3==2?string('store. $0_layer_image',zi,' $0_layer_coords',zi,'=',xi,',',yi):
+          com_draw = $3==2?string('store. $0_layer_image',zi,' $0_layer_coords',zi,'=',xi,',',yi,
+                                  ' $0_layer_name',zi,'={',ind,',n}'):
                      $3==1?string('j.. .,',xi,',',yi,',',zi,' rm.'):
                            string('sh. 100% f. 1 j... ..,',xi,',',yi,',0,0,-1 rm[-2,-1]');
           run('[',ind,'] ',
@@ -18050,7 +18051,7 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
           $3?++zi;
         );
       ); _0"
-    if $3==2 rm repeat $nbi { ${$0_layer_image$>} =>. "$1,pos("{:${$0_layer_coords$>}}")" }
+    if $3==2 rm repeat $nbi { ${$0_layer_image$>} =>. "name("{:${$0_layer_name$>}}"),pos("{:${$0_layer_coords$>}}")" }
     else k. if w&&!$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi => "$1"
     fi
   fi
@@ -46876,12 +46877,13 @@ fx_ministeck_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/01</i>.</small>")
 fx_montage :
   if !$!" || (!$1 && ['$2']==0)" return fi
-  code0,code1,code2,code3,code4="$2 ",H,V,AH,AV
+  foreach { => ${-gui_layer_name} }
   to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
   if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
+  code0,code1,code2,code3,code4="$2 ",H,V,AH,AV
   arrange ${code$1},{$3?$4:-max($4,1e-8)},{$15?2:0},\
           "if $5||$6 r {vmax(1,[w,h]-2*($5+$6))},1,100%,2 frame xy,${6-10} expand xy,$5 fi"
-  if !w rm else gui_set_layer_name "[Montage]" fi
+  if !w rm else if !$15 gui_set_layer_name "[Montage]" fi fi
 
 fx_montage_preview :
   if !$! return fi
