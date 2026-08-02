@@ -17810,7 +17810,8 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
-#@cli arrange : "layout",-1<=_align_or_scale_factor<=1,_output_layers={ 0:Single | 1:Multiple },"_processing_command"
+#@cli arrange : _"layout",-1<=_align_or_scale_factor<=1,\
+# _output_layers={ 0:Single | 1:Multiple (volumetric) | 2:Multiple (named) },_"processing_command"
 #@cli : Arrange selected images according to a specified layout, described as a string.
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
@@ -17864,8 +17865,8 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : $ sample cat,dog,monkey,duck +arrange AH,-0.5
 #@cli : $ sample colorful,eagle,cat,dog,flower,rose arrange AH
 #@cli : $ sample colorful,eagle,duck +arrange VH0R1:2,,,"sepia shrink xy,20 frame xy,8,255 frame xy,12,0"
-arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "${4=}"
-  sf0,sf1,so0,so1="align","scale","Single","Multiple"
+arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" skip "${4=}"
+  sf0,sf1,so0,so1,so2="align","scale","Single","Multiple (volumetric)","Multiple (named)"
   e[^-1] "Arrange image$? accordingly to layout '$1', with "${sf{$2>=0}}" factor "{abs($2)}", "\
          "output layers '"${so$3}"', and processing command '$4'."
   nb_images,max_spectrum:=$!,${-max_s}
@@ -17988,12 +17989,11 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
 
   # Generate montage.
   w_res,h_res,s_res:=round((I)[4,2]),$max_spectrum+!$3
-  if !$w_res||!$h_res 0
+  if !$w_res||!$h_res rm 0
   else
-    nb=1
-    if $3 sh. 0 +histogram. 1,{'I'},{'I'} nb:=i rm[-2,-1] fi # Number of layers
-    $w_res,$h_res,$nb,$s_res
-    eval.. ">begin(zi = 0);
+    nbi=1 if $3 sh. 0 +histogram. 1,{'I'},{'I'} nbi:=i rm[-2,-1] fi # Number of output layers
+    if $3<2 $w_res,$h_res,$nbi,$s_res fi
+    eval[$nb_images] ">begin(zi = 0);
       i==_'I'?(
         N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
         min(wi,hi)>0?(
@@ -18038,8 +18038,9 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
                                    (com_mirror[0] = 0);
           com_rotate = string('rotate. ',90*rot,' '); !rot?(com_rotate[0] = 0);
           com_command = 'l. { $4 } '; ['$4']==0?(com_command[0] = 0);
-          com_draw = $3?string('j.. .,',xi,',',yi,',',zi,' rm.'):
-                        string('sh. 100% f. 1 j... ..,',xi,',',yi,',0,0,-1 rm[-2,-1]');
+          com_draw = $3==2?string('store. arrange_layer_',zi):
+                     $3==1?string('j.. .,',xi,',',yi,',',zi,' rm.'):
+                           string('sh. 100% f. 1 j... ..,',xi,',',yi,',0,0,-1 rm[-2,-1]');
           run('[',ind,'] ',
             com_mirror,com_rotate,
             'r. ',wi,',',hi,',1,100%,2 ',
@@ -18049,8 +18050,10 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isbool(${3=0})" skip "
           $3?++zi;
         );
       ); _0"
+    if $3==2 rm repeat $nbi { ${arrange_layer_$>} }
+    else k. if w&&!$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi
+    fi
   fi
-  k. if w&&!$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi
   =>[^] "$1"
 
 #@cli autocrop : _axes,_value1,_value2,...
