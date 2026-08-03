@@ -2175,7 +2175,11 @@ _display : skip ${1=},${3=}
   }
 
   # Save original image names to prevent name conflicts with those used in this command.
-  foreach { image_name$>={n} => _display$> }
+  foreach {
+    image_name$>={n}
+    l[] { ({'${image_name$>}'}) d_image_name$>={t} rm onfail d_image_name$>=(unnamed) }
+    =>. _display$>
+  }
 
   # Generate window and log titles and print log message.
   (${3--1}:y) => image_indices
@@ -2186,13 +2190,13 @@ _display : skip ${1=},${3=}
   repeat narg($sel) {
     l_ind:=arg0($>,$sel)
     g_ind={image_indices,i[$l_ind]}
-    if "s = u = lowercase(["{'${image_name$l_ind}'}"]);
+    if "s = u = lowercase(["{'${d_image_name$l_ind}'}"]);
         fill(u,k,c = u[k]; inrange(c,_'a',_'z') || inrange(c,_'0',_'9') || isin(c,_'/',_'\\',_'_',_'-',_'.'));
         s!=0 && min(u)"
-      basename {:${image_name$l_ind}}
-      if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
+      basename {:${d_image_name$l_ind}}
+      if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${d_image_name$l_ind}}') fi
     else
-      ('{:${image_name$l_ind}}')
+      ('{:${d_image_name$l_ind}}')
     fi
     basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
     log_title.=$sep$basename
@@ -2247,7 +2251,7 @@ _display : skip ${1=},${3=}
 
   # Print information of first images.
   repeat min($nb_images,$setting_print_images) {
-    =>[$>] ${image_name$>}
+    =>[$>] ${d_image_name$>}
     v + _print[$>] $1,0,{$image_indices,i[$>]} v - # '$image_indices' prevents issue if image name is 'image_indices'
     =>[$>] _display$>
     =[is_printed] 1,0,$>
@@ -2457,7 +2461,7 @@ _display : skip ${1=},${3=}
 
       # Print information about image on stderr/stdout (if not already done).
      if {is_printed,$setting_print_images" && "!i[$selected]}
-        =>[$selected] ${image_name$selected}
+        =>[$selected] ${d_image_name$selected}
         v + _print[$selected] $1,0,{image_indices,i[$selected]} v -
         =>[$selected] _display$selected
         =[is_printed] 1,0,$selected
@@ -2841,13 +2845,13 @@ _display : skip ${1=},${3=}
     # Generate label for image title.
     if !0$canvas_label_info
       0
-      if "s = u = lowercase(["{'${image_name$selected}'}"]);
+      if "s = u = lowercase(["{'${d_image_name$selected}'}"]);
         fill(u,k,c = u[k]; inrange(c,_'a',_'z') || inrange(c,_'0',_'9') || isin(c,_'/',_'\\',_'_',_'-',_'.'));
         s!=0 && min(u)"
-        basename {:${image_name$selected}}
-        if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${image_name$selected}}') fi
+        basename {:${d_image_name$selected}}
+        if ['{/${}}']!=0 ({'{/${}}'}) else ('{:${d_image_name$selected}}') fi
       else
-        ('{:${image_name$selected}}')
+        ('{:${d_image_name$selected}}')
       fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       if $nb_images==1" && "!$is_fullscreen
@@ -2861,7 +2865,7 @@ _display : skip ${1=},${3=}
       else
         str=
         if $thumb_mouse_over>=0" && "$thumb_mouse_over!=$selected
-          basename {:${image_name$thumb_mouse_over}}
+          basename {:${d_image_name$thumb_mouse_over}}
           ('${}') codes_nm={^} rm.
           basename_mo={`"b = ["$codes_nm"]; size(b)>32?copy(b[32-3],[['...'],0]); b"`}
           str.="#"{image_indices,i[$thumb_mouse_over]}": "
@@ -3970,7 +3974,7 @@ _display : skip ${1=},${3=}
           notification="Saved list copy: "$filename
         elif {*,-O}
           ang={is_rotated,i[$selected]} if $ang rotate[$selected] {-90*$ang} =[is_rotated] 0,0,$selected fi
-          =>[$selected] ${image_name$selected}
+          =>[$selected] ${d_image_name$selected}
           o[$selected] $filename
           =>[$selected] _display$selected
           notification="Saved image copy: "$filename
@@ -9556,7 +9560,11 @@ _plot : skip ${8=},${10=}
   nb_images=$!
 
   # Save original image names to prevent name conflicts with those used in this command.
-  foreach { image_name$>={n} => _plot$> }
+  foreach {
+    image_name$>={n}
+    l[] { ({'${image_name$>}'}) d_image_name$>={t} rm onfail d_image_name$>=(unnamed) }
+    =>. _plot$>
+  }
 
   # Print log message.
   (${10--1}:y) => image_indices
@@ -9568,8 +9576,8 @@ _plot : skip ${8=},${10=}
     repeat narg($sel) {
       l_ind:=arg0($>,$sel)
       g_ind={image_indices,i[$l_ind]}
-      basename {:${image_name$l_ind}}
-      if ['${}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
+      basename {:${d_image_name$l_ind}}
+      if ['${}']!=0 ({'{/${}}'}) else ('{:${d_image_name$l_ind}}') fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       log_title.=$sep$basename
       if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
@@ -9585,12 +9593,12 @@ _plot : skip ${8=},${10=}
 
     # Print image information.
     pass[image_indices] 1
-    =>.. ${image_name$>}
+    =>.. ${d_image_name$>}
     v + _print.. $8,0,{i[$>]} v -
     =>.. _plot$>
     rm.
 
-    basename ${image_name$>} title="[G'MIC] "${} => img
+    basename ${d_image_name$>} title="[G'MIC] "${} => img
     w_width,w_height=${"fitscreen[] 1024,600"}
     if !{*} w[] $w_width,$w_height,0,$title fi
 
@@ -9843,6 +9851,7 @@ _plot : skip ${8=},${10=}
   }
   rm.
   if $w_norm0<0 w 0 else w[] -1,-1,$w_norm0 fi
+  foreach { => ${image_name$>} } # Set back original images names
   is_change 0
 
 #@cli poincare_disk : _size>=0,_p>2,_q>2,_angle,_tiling={ 0:Triangular | 1:Polygonal },_nb_max_iter>=0,\
@@ -9970,7 +9979,11 @@ _print : skip ${1=},${3=}
   nb_images=$!
 
   # Save original image names to prevent name conflicts with those used in this command.
-  foreach { image_name$>={n} => _print$> }
+  foreach {
+    image_name$>={n}
+    l[] { ({'${image_name$>}'}) d_image_name$>={t} rm onfail d_image_name$>=(unnamed) }
+    =>. _print$>
+  }
 
   # Print log message.
   (${3--1}:y) => image_indices
@@ -9982,8 +9995,8 @@ _print : skip ${1=},${3=}
     repeat narg($sel) {
       l_ind:=arg0($>,$sel)
       g_ind={image_indices,i[$l_ind]}
-      basename {:${image_name$l_ind}}
-      if ['${}']!=0 ({'{/${}}'}) else ('{:${image_name$l_ind}}') fi
+      basename {:${d_image_name$l_ind}}
+      if ['${}']!=0 ({'{/${}}'}) else ('{:${d_image_name$l_ind}}') fi
       basename={`"b = crop(); size(b)>32?copy(b[32-3],[['...'],0]); b"`} rm.
       log_title.=$sep$basename
       if $is_ellipsized" && "$>==2 sep=", (...) " else sep=", " fi
@@ -10024,7 +10037,7 @@ _print : skip ${1=},${3=}
               ${_vt100_b}"coords_max"$_vt100_n" = ("$xM,$yM,$zM,$cM")."
       is_stats=1
     fi
-    ({'{/${image_name$>}}'}) name={`"b = crop(); size(b)>64?copy(b[64-3],[['...'],0]); b"`} rm.
+    ({'{/${d_image_name$>}}'}) name={`"b = crop(); size(b)>64?copy(b[64-3],[['...'],0]); b"`} rm.
     $1e $m$b"["$ind"] = "'$name'$n:\n\
         $b"  size"$n" = "$s_size\n\
         $b"  data"$n" = "$s_data
@@ -11940,7 +11953,7 @@ _gallery :
 
 __gallery :
   if $!==2 if w>h a y else a x fi
-  else montage A # append_tiles 2
+  else arrange AH
   fi
 
 # Generate data files for the G'MIC Online website.
@@ -17810,6 +17823,253 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
     rm[0] =>[^] $nm
   }
 
+#@cli arrange : _"layout",-1<=_align_or_scale_factor<=1,\
+# _output_layers={ 0:Single | 1:Multiple (volumetric) | 2:Multiple (named) },_"processing_command"
+#@cli : Arrange selected images according to a specified layout, described as a string.
+#@cli :
+#@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
+#@cli : - A number: Refers to one of the selected images, by its index.
+#@cli : - '?' : A random image index.
+#@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
+#@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
+#@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
+#@cli : - 'L' : Rotates what follows by 90 degrees counter-clockwise.
+#@cli : - 'H' : Puts what follows side by side, horizontally (left / right).
+#@cli : - 'V' : Puts what follows one above the other, vertically (top / bottom).
+#@cli : - 'B' : Same as 'H' or 'V', but automatically picks whichever gives the most balanced (square-looking) result.
+#@cli : - 'Q' : Rotates what follows by a random multiple of 90 degrees.
+#@cli : - 'F' : Flips what follows randomly, along the x-axis or the y-axis.
+#@cli : - 'M' : Merges what follows randomly, either horizontally or vertically.
+#@cli :
+#@cli : Any other character (e.g. ';' or ':') can be used as a separator between two numbers to avoid ambiguity \
+# (e.g. to distinguish images '0' and '1' from a single image '01').
+#@cli :
+#@cli : Images get combined together two by two. For instance:
+#@cli : - '"H0:1"' puts images 0 and 1 side by side.
+#@cli : - '"V0:1"' stacks images 0 and 1 on top of each other.
+#@cli : - '"VH0:1H2:3"' first forms two horizontal pairs (0,1) and (2,3), then stack those two pairs vertically, \
+# resulting in a 2x2 grid.
+#@cli : - '"H0R1"' puts image 0 next to image 1 rotated 90 degrees clockwise.
+#@cli :
+#@cli : Four predefined shortcuts are also available for 'layout', to quickly arrange all selected images at once \
+# without having to spell out a full layout string:
+#@cli : - '"H"' : Concatenates all selected images horizontally, in order.
+#@cli : - '"V"' : Concatenates all selected images vertically, in order.
+#@cli : - '"AH"' : Automatically arranges all images into a grid, with a number of columns greater than or equal to \
+# the number of rows.
+#@cli : - '"AV"' : Does the same as 'AH', but with a number of rows greater than or equal to the number of columns.
+#@cli :
+#@cli : 'align_or_scale_factor' controls how images of different sizes are combined together:
+#@cli : - When positive, images get resized to a common size: '0' shrinks to the smallest size involved, '1' grows to \
+# the largest, and intermediate values interpolate between both.
+#@cli : - When negative, images keep their original size instead, and are simply placed next to each other. \
+# Its absolute value then sets the alignment between images of different sizes \
+# ('0': top-left, '0.5':centered, '1':bottom-right).
+#@cli :
+#@cli : 'output_layers' sets whether the result is a single, flattened image ('Single'), or a single volumetric \
+# image whose slices are the individual, resized and positioned images ('Multiple'), each one exactly as it would \
+# appear in the final composition.
+#@cli :
+#@cli : 'processing_command' is an optional G'MIC command (or pipeline of commands) applied to each image \
+# individually, just after it has been resized and right before it gets placed into the composition \
+# (e.g. to add a colored border, apply a filter, etc.).
+#@cli : Default values: 'layout=AH', 'align_or_scale_factor=0.5', 'output_layers=0' and 'processing_command=""'.
+#@cli : $ sample colorful,eagle,cat,dog +arrange "VH0:1H2:3"
+#@cli : $ sample cat,dog,monkey,duck +arrange AH,-0.5
+#@cli : $ sample colorful,eagle,cat,dog,flower,rose arrange AH
+#@cli : $ sample colorful,eagle,duck +arrange VH0R1:2,,,"sepia shrink xy,20 frame xy,8,255 frame xy,12,0"
+arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" skip "${4=}"
+  sf0,sf1,so0,so1,so2="align","scale","Single","Multiple (volumetric)","Multiple (named)"
+  e[^-1] "Arrange image$? accordingly to layout '$1', with "${sf{$2>=0}}" factor "{abs($2)}", "\
+         "output layers '"${so$3}"', and processing command '$4'."
+  nb_images,max_spectrum:=$!,${-max_s}
+
+  # Generate layout for pre-defined meta layouts.
+  if "isin(['$1'],'AH','AV','H','V') && $nb_images<2" return fi
+  if "['$1']=='H'" # Horizontal
+    $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'H')`}{^:;} rm.
+  elif "['$1']=='V'" # Vertical
+    $nb_images,1,1,1,x layout={`vector(#$nb_images-1,_'V')`}{^:;} rm.
+  elif "isin(['$1'],'AH','AV')" # Horizontal and vertical arrays
+    M,N:=S=sqrt($nb_images);[M=ceil(S),ceil($nb_images/M)]
+    if '$1'=='AV' N,M=$M,$N fi
+    if $N>1 layout={`vector(#$N-1,_'V')`} fi
+    repeat $N {
+      nb:=min($M,$nb_images-$>*$M)
+      if $nb>1 $nb,1,1,1,x+$>*$M layout.=:{`vector(#$nb-1,_'H')`}{^:;} rm. else layout.=:{$>*$M} fi
+    }
+  else # Custom layout
+    ({'"$1"'}) 0
+    eval.. ">i = i; # Replace random transformations with their values
+      i==_'M'?da_push(v?_'V':_'H'):
+      i==_'F'?((r = v(3))?r<3?da_push(r - 1?_'Y':_'X'):da_push(_'X',_'Y')):
+      i==_'Q'?((r = v(3))?r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):
+      i==_'?'?(ind = v($nb_images - 1); str = v2s(ind); for (k = 0, str[k], da_push(str[k++]))):
+      da_push(i);
+      end(da_freeze())" layout={t} rm[-2,-1]
+  fi
+
+  # Parse layout codes and generate trees of transformations.
+  # Tree structure: A vector-valued pixel I encodes a tree node as:
+  # I[0]: Node type={ 'A' | 'B' | 'H' | 'I' | 'L' | 'R' | 'V' | 'X' | 'Y' }.
+  # I[1]: Index of parent.
+  # I[2]: Index of left child (or image index for 'I' type).
+  # I[3]: Index of right child.
+  # I[4]: Image width for the node.
+  # I[5]: Image height for the node.
+  # For each feature, '-1' means 'undefined'.
+  1,1,1,6
+  eval "
+    set_child(ind) = ( # Set node 'ind' as first available child in tree
+      while (curr>=0,
+        i(0,curr,0,2)<0?( # Found free left child
+          i(0,curr,0,2) = ind; i(0,ind,0,1) = curr; break()
+        );
+        parent = i(0,curr,0,1);
+        isin(i(0,curr),_'I',_'L',_'R',_'X',_'Y')?(
+          curr = parent; # Go up (only left child can be set for this type of nodes)
+        ):(
+          i(0,curr,0,3)<0?( # Found free right child
+            i(0,curr,0,3) = ind; i(0,ind,0,1) = curr; curr = parent; break();
+          );
+          curr = parent; # Go up
+        );
+      );
+    );
+    str = ['"$layout"'];
+    curr = -1;
+    for (k = 0, k<size(str), ++k,
+      c = uppercase(str[k]);
+      isin(c,_'B',_'H',_'L',_'R',_'V',_'X',_'Y')?( # New transformation (node)
+        new = da_size();
+        da_push([ c,-1,-1,-1,-1,-1 ]);
+        set_child(new);
+        curr = new;
+      ):inrange(c,_'0',_'9') || c==_'-'?( # New image (leaf)
+        img = s2v(str,k++)%$nb_images;
+        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+        new = da_size();
+        da_push([ _'I',-1,img,-1,w#img,h#img ]);
+        set_child(new);
+      );
+    );
+    da_freeze()"
+  if !w rm 0 =>[^] "$1" return fi
+
+  # Determine image size for each node of each tree.
+  f. "<begin(is_invalid_layout = 0);
+    N = I; type = N[0]; parent = N[1]; lchild = N[2]; rchild = N[3]; width = N[4]; height = N[5];
+    lw = i(0,lchild,0,4); lh = i(0,lchild,0,5);
+    (y && parent<0) || lchild<0?(is_invalid_layout = 1; break());
+    isin(type,_'X',_'Y')?(width = lw; height = lh): # Flip
+    isin(type,_'R',_'L')?(width = lh; height = lw):( # Rotation
+      rw = i(0,rchild,0,4); rh = i(0,rchild,0,5);
+      type==_'H'?( # Horizontal merge
+        rchild<0?(is_invalid_layout = 1; break());
+        $2>=0?( # Scale
+          height = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
+          width = height*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
+        ):( # Align
+          height = max(lh,rh);
+          width = lw + rw
+        );
+      ):type==_'V'?( # Vertical merge
+        rchild<0?(is_invalid_layout = 1; break());
+        $2>=0?( # Scale
+          width = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
+          height = width*((lw>0?lh/lw:0) + (rw>0?rh/rw:0));
+        ):( # Align
+          width = max(lw,rw);
+          height = lh + rh;
+        );
+      ):type==_'B'?( # Best of horizontal / vertical merge
+        rchild<0?(is_invalid_layout = 1; break());
+        hH = lerp(min(lh,rh),max(lh,rh),min(lh,rh)>0?$2:1);
+        wH = hH*((lh>0?lw/lh:0) + (rh>0?rw/rh:0));
+        wV = lerp(min(lw,rw),max(lw,rw),min(lw,rw)>0?$2:1);
+        hV = wV*((lw>0?lh/lw:0) + (rw>0?rh/rw:0));
+        min(wH,hH)/max(wH,hH)>=min(wV,hV)/max(wV,hV)?( # Best: Horizontal
+          width = wH; height = hH; type = _'H'
+        ):( # Best: Vertical
+          width = wV; height = hV; type = _'V';
+        );
+      );
+    );
+    end(set('is_invalid_layout',is_invalid_layout));
+    [ type,parent,lchild,rchild,width,height ]"
+
+  if $is_invalid_layout error[0--2] "Command '$0': Invalid specified layout '$1'." fi
+
+  # Generate montage.
+  w_res,h_res,s_res:=round((I)[4,2]),$max_spectrum+!$3
+  if !$w_res||!$h_res rm 0
+  else
+    nbi=1 if $3 sh. 0 +histogram. 1,{'I'},{'I'} nbi:=i rm[-2,-1] fi # Number of output layers
+    if $3<2 $w_res,$h_res,$nbi,$s_res fi
+    eval[$nb_images] ">begin(zi = 0);
+      i==_'I'?(
+        N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
+        min(wi,hi)>0?(
+          rot = is_mirrorx = is_mirrory = xi = yi = 0;
+          child = y;
+          for (curr = N[1], curr>=0,
+            N = I[curr]; type = N[0];
+            type==_'X'?(rot%2?(rot+=2); is_mirrorx = !is_mirrorx; xi = W - xi - wi);
+            type==_'Y'?(rot%2?(rot+=2); is_mirrory = !is_mirrory; yi = H - yi - hi):
+            type==_'R'?(++rot; oxi = xi; xi = yi; yi = W - oxi - wi; swap(wi,hi)):
+            type==_'L'?(--rot; oxi = xi; xi = H - yi - hi; yi = oxi; swap(wi,hi)):
+            type==_'H'?(
+              $2>=0?( # Scale
+                fact = N[5]/H;
+                xi = xi*fact + (N[3]==child?(N[4] - W*fact));
+                yi = yi*fact;
+                wi = wi*fact;
+                hi = hi*fact;
+              ):( # Align
+                N[3]==child?(xi+=N[4] - W);
+                yi+=(N[5] - H)*(-$2);
+              );
+            ):type==_'V'?(
+              $2>=0?( # Scale
+                fact = N[4]/W;
+                xi = xi*fact;
+                yi = yi*fact + (N[3]==child?(N[5] - H*fact));
+                wi = wi*fact;
+                hi = hi*fact;
+              ):( # Align
+                N[3]==child?(yi+=N[5] - H);
+                xi+=(N[4] - W)*(-$2);
+              );
+            );
+            W = N[4]; H = N[5];
+            child = curr; curr = N[1]; # Go up
+          );
+          rot%=4;
+          xi = round(xi); yi = round(yi); wi = ceil(wi); hi = ceil(hi);
+          com_mirror = 'mirror.    ';
+          is_mirrorx || is_mirrory?copy(com_mirror[8],[ is_mirrorx?_'x':_' ',is_mirrory?_'y':_' ' ]):
+                                   (com_mirror[0] = 0);
+          com_rotate = string('rotate. ',90*rot,' '); !rot?(com_rotate[0] = 0);
+          com_command = 'l. { $4 } '; ['$4']==0?(com_command[0] = 0);
+          com_draw = $3==2?string('store. $0_layer_image',zi,' $0_layer_coords',zi,'=',xi,',',yi,
+                                  ' $0_layer_name',zi,'={',ind,',n}'):
+                     $3==1?string('j.. .,',xi,',',yi,',',zi,' rm.'):
+                           string('sh. 100% f. 1 j... ..,',xi,',',yi,',0,0,-1 rm[-2,-1]');
+          run('[',ind,'] ',
+            com_mirror,com_rotate,
+            'r. ',wi,',',hi,',1,100%,2 ',
+            com_command,
+            'r. ',wi,',',hi,',1,',$s_res,',0 ',
+            com_draw);
+          $3?++zi;
+        );
+      ); _0"
+    if $3==2 rm repeat $nbi { ${$0_layer_image$>} =>. "name("{:${$0_layer_name$>}}"),pos("{:${$0_layer_coords$>}}")" }
+    else k. if w&&!$3 foreach { s c,-{s-1} max. 1 /[-2,-1] } fi => "$1"
+    fi
+  fi
+
+
 #@cli autocrop : _axes,_value1,_value2,...
 #@cli : Autocrop selected images according to specified axes and values.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
@@ -18119,221 +18379,6 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
       )"
     rm[1] =>[^] $nm
   } } rm[0]
-
-#@cli layout : "layout_code",0<=_scaling_factor<=1
-#@cli : Merge all selected images into a single image, according to the specified layout code.
-#@cli : $ sample colorful,eagle,cat,dog layout VH0:1H2:3
-layout : check "inrange(${2=0.5},0,1)"
-  e[^-1] "Merge image$? according to layout '$1', with scaling factor $2."
-  m "__$0 : if $""1>0 ${$0$""1} $0$""1= else [{-$""1}] fi"
-
-  # Parse layout code and generate reverse sequence of transformations to apply
-  1,1,1,4  # { Type={ 0:Root | 'H' | 'V' | 'B' | 'R' | 'L' | 'X' | 'Y' }, Parent, Left child, Right child }
-  is_ok={"
-    set_child(ind) = ( # Set first available child in tree
-      do (
-        isinf(i(0,curr,0,2))?(i(0,curr,0,2) = ind; break()); # Set as left child
-        parent = i(0,curr,0,1); # Parent of node
-        isinf(parent)?( # Error: invalid layout
-          is_ok = 0; break();
-        ):isin(i(0,curr),0,_'R',_'L',_'X',_'Y')?( # Node is 'Root', 'R', 'L', 'X' or 'Y'
-          curr = parent; # Go to parent (only left child can be set)
-        ):( # Node is 'H', 'V' or 'B'
-          isinf(i(0,curr,0,3))?(i(0,curr,0,3) = ind; curr = parent; break()); # Set as right child and go to parent
-          curr = parent; # Go to parent
-        );
-      );
-    );
-    str = ['$1']; is_ok = 1;
-    da_push([ 0,inf,inf,inf ]); curr = 0; # Initialize tree (insert root node)
-    for (k = 0, k<size(str) && is_ok, ++k,
-      c = uppercase(str[k]);
-      isin(c,_'H',_'V',_'B',_'R',_'L',_'X',_'Y')?( # New node
-        new = da_size();
-        da_push([ c, curr, inf, inf ]);
-        set_child(new);
-        curr = new;
-      ):inrange(c,_'0',_'9') || c==_'-'?( # New leaf
-        leaf = s2v(str,k++)%(l - 1);
-        set_child(-leaf);
-        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
-      );
-    );
-    da_freeze(); is_ok"}
-
-  if !$is_ok error[0--2] "Command '$0': Invalid layout code '$1'." fi
-
-  # Generate montage.
-  repeat h {
-    type,parent,left,right:=I[$<]
-    __$0 $left
-    if isin($type,_'H',_'V',_'B')
-      if isinf($right) type=-1 # Missing image index, ignoring
-      else __$0 $right to_colormode[-2,-1] 0
-      fi
-    fi
-    if !$type k. # Root
-    elif $type==_'R' rotate. 90 # +90° rotation
-    elif $type==_'L' rotate. -90 # -90° rotation
-    elif $type==_'X' mirror. x # X-mirror
-    elif $type==_'Y' mirror. y # Y-mirror
-    elif $type==_'H' rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x # Horizontal merge
-    elif $type==_'V' rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y # Vertical merge
-    elif $type==_'B' # Best merge
-      fact_h:="nh = lerp(min(h#-2,h),max(h#-2,h),$2); nw = nh*(w#-2/h#-2 + w/h); min(nw,nh)/max(nw,nh)"
-      fact_v:="nw = lerp(min(w#-2,w),max(w#-2,w),$2); nh = nw*(h#-2/w#-2 + h/w); min(nw,nh)/max(nw,nh)"
-      if $fact_h>$fact_v rs[-2,-1] ,{lerp(min(h#-2,h),max(h#-2,h),$2)} a[-2,-1] x
-    else rs[-2,-1] {lerp(min(w#-2,w),max(w#-2,w),$2)} a[-2,-1] y fi
-    fi
-    if $type store. $0$< fi
-  }
-  => "[Layout '$1']"
-  uncommand __$0
-
-#@cli montage : "_layout_code",_montage_mode={ 0<=centering<=1 | 2<=scale+2<=3 },\
-# _output_mode={ 0:Single layer | 1:Multiple layers },"_processing_command"
-#@cli : Create a single image montage from selected images, according to specified layout code :
-#@cli : - 'X' to assemble all images using an automatically estimated layout.
-#@cli : - 'H' to assemble all images horizontally.
-#@cli : - 'V' to assemble all images vertically.
-#@cli : - 'A' to assemble all images as an horizontal array.
-#@cli : - 'B' to assemble all images as a vertical array.
-#@cli : - 'Ha:b' to assemble two blocks 'a' and 'b' horizontally.
-#@cli : - 'Va:b' to assemble two blocks 'a' and 'b' vertically.
-#@cli : - 'Ra' to rotate a block 'a' by 90 deg. ('RRa' for 180 deg. and 'RRRa' for 270 deg.).
-#@cli : - 'Ma' to mirror a block 'a' along the X-axis ('MRRa' for the Y-axis).
-#@cli : A block 'a' can be an image index (treated periodically) or a nested layout expression 'Hb:c','Vb:c','Rb' or
-#@cli : 'Mb' itself.
-#@cli : For example, layout code 'H0:V1:2' creates an image where image [0] is on the left, and images [1] and [2]
-#@cli : vertically packed on the right.
-#@cli : Default values: 'layout_code=X', 'montage_mode=2', output_mode='0' and 'processing_command=""'.
-#@cli : $ image.jpg sample ? +plasma[0] 1 shape_cupid 256 normalize 0,255 frame xy,3,0 frame xy,10,255 to_rgb \
-# +montage A +montage[^-1] H1:V0:VH2:1H0:3
-montage : check "isnum(${2=2}) && $2>=0 && $2<=3" skip "${1=X}",${3=0},"${4=}"
-  if $2<=1 e[0--3] "Create aligned montage from image$?, with layout code '$1' and centering $2."
-  else e[0--3] "Create scaled montage from image$?, with layout code '$1' and scale "{$2-2}"."
-  fi
-  to_colormode 0
-
-  # Manage automatic layout.
-  if lowercase(['"$1"'])=='x'
-    +l {
-      foreach { => $> }
-      repeat $!-1 {
-        if {-2,w>h}" && "w>h mode=V # Both landscape
-        elif {-2,h>w}" && "h>w mode=H # Both portrait
-        elif {-2,w>h}" && "h>w # Landscape - portrait
-          if {-2,h/w}<(w/h) mode=V else mode=H fi
-        else # Portrait - landscape
-          if {-2,w/h}<(h/w) mode=H else mode=V fi
-        fi
-        name=$mode{-2,n}:{n}
-        montage[-2,-1] $mode,$2
-        mv. 0 =>[0] $name
-      }
-      layout={0,n}
-      rm
-    }
-    montage $layout,$2,$3,"$4"
-
-  else # Non-automatic layout
-
-    # Format and check validity of layout code.
-    N=$!
-    l[] {
-      _scode="$1" _mode=$2
-      if lowercase(['"$1"'])=='h' if $N>1 {$N-1},1,1,1,-1 $N,1,1,1,x a x y else return fi # Simple horizontal montage
-      elif lowercase(['"$1"'])=='v' if $N>1 {$N-1},1,1,1,-2 $N,1,1,1,x a x y else return fi # Simple vertical montage
-      elif isin(lowercase(['"$1"']),'a','b') # Montage as an array
-        if $N<2 return fi
-        nr:=round(sqrt($N)) nc:=round($N/$nr,1,1) # Horizontal array
-        if lowercase(['"$1"'])=='b' n=$nr nr=$nc nc=$n fi # Vertical array
-        $N,1,1,1,x s x,-{round(w/$nr,1,1)} foreach { if w>1 i[0] {w-1},1,1,1,-1 a x fi } a x
-        if $nr>1 i[0] {$nr-1},1,1,1,-2 a x fi y
-      else # Other complex montage
-        ('"$1"') f "i==72 || i==104?-1:
-                    i==86 || i==118?-2:
-                    i==82 || i==114?-3:
-                    i==77 || i==109?-4:
-                    i>=48 && i<=57?i-48:-5"
-        s +,-1 s +,-2 s +,-3 s +,-4 s +,-5
-        foreach { if im>=0 ++. 48 =.. {t} rm. rows 0 fi } a y discard -5
-      fi
-      f "i<0?i:i%$N"
-    }
-    if $!==$N rm return fi # Empty layout code
-    =>[^-1] 0
-    repeat h {
-      c:=i[$>] # Duplicate multiple references
-      if $c>=0 if {$c,n} i.. [$c] i:=$!-2 =. $i,0,$> ref$i=$c else =>[$c] 1 ref$c=$c fi fi
-    }
-    _code={^} _lcode:=narg($_code) rm.
-
-    # Determine image positions and sizes.
-    N=$! repeat $N { ($>,0,0,{$>,w},{$>,h},0,0,0) }
-    l[$N--1] {
-      _p=1 k[${-_montage}] w:=i[3] h:=i[4] f i(0,y)<0?-1:i discard -1 y r 8,{h/8},1,1,-1
-      onfail error[0--3] "Too many input images."
-    }
-
-    # Render montage.
-    if narg("$4") m "__montage : $4 k[0]"
-    else m "__montage : if $""7%2 mirror x fi if $""8%2 mirror y fi rotate {90*$""6}
-                        r {max(1,round($""4,1,1))},{max(1,round($""5,1,1))},1,100%,3"
-    fi
-
-    s=${max_s[^-1]}
-    repeat h {
-      i,xi,yi,wi,hi,ai,mxi,myi:=crop(0,$>,w,1)
-      if $3||!$> i.. $w,$h,1,$s fi
-      __montage[$i] ${ref$i},$xi,$yi,{max(1,$wi)},{max(1,$hi)},$ai,$mxi,$myi
-      j.. [$i],$xi,$yi
-    }
-    um __montage
-    rm[0-{$N-1},-1]
-
-  fi
-  => "[Montage '$1']"
-
-_montage :
-  if $_p>$_lcode error "Command 'montage': Incomplete layout code '"$_scode"'." fi
-  c:=arg1($_p,$_code)
-  if $c>=0 _p+=1 u $c # Single index
-  elif $c==-4 # Mirror
-    _p+=1 l=${-_montage} f[$l] "a=i(5,y)%2;(x==7&&a)||(x==6&&!a)?!i:x==1?i(3,0)-i(3,y)-i:i" u $l
-  elif $c==-3 # Rotation
-    _p+=1 l=${-_montage} l[$l] { s x +[2] [4] rv[1,2] *[1] -1 +[1] {4,@0} rv[3,4] +[5] 1 a x } u $l
-  else # Merge
-    _p+=1
-    l=${-_montage} lw={$l,@3} lh={$l,@4}
-    r=${-_montage} rw={$r,@3} rh={$r,@4}
-
-    if $c==-1 # Horizontal merge
-      if $_mode<2
-        h:=max($lh,$rh)
-        +[$l] '0,0,{($h-$lh)*min(1,$_mode)},0,0,0,0,0'
-        +[$r] '0,$lw,{($h-$rh)*min(1,$_mode)},0,0,0,0,0'
-      else
-        h:=($_mode-2)*max($lh,$rh)+(3-$_mode)*min($lh,$rh)
-        lf:=$h/$lh rf:=$h/$rh lw:=$lw*$lf rw:=$rw*$rf
-        *[$l] '1,$lf,$lf,$lf,$lf,1,1,1' *[$r] '1,$rf,$rf,$rf,$rf,1,1,1' +[$r] '0,$lw,0,0,0,0,0,0'
-      fi
-      i[$l] (-1,0,0,{$lw+$rw},$h,0,0,0) a[$l,{$l+1}] y a[$l] [$r],y r[$r] 1,1,1,1,0
-
-    else # Vertical merge
-      if $_mode<2
-        w:=max($lw,$rw)
-        +[$l] '0,{($w-$lw)*min(1,$_mode)},0,0,0,0,0,0'
-        +[$r] '0,{($w-$rw)*min(1,$_mode)},$lh,0,0,0,0,0'
-      else
-        w:=($_mode-2)*max($lw,$rw)+(3-$_mode)*min($lw,$rw)
-        lf:=$w/$lw rf:=$w/$rw lh:=$lh*$lf rh:=$rh*$rf
-        *[$l] '1,$lf,$lf,$lf,$lf,1,1,1' *[$r] '1,$rf,$rf,$rf,$rf,1,1,1' +[$r] '0,0,$lh,0,0,0,0,0'
-      fi
-      i[$l] (-1,0,0,$w,{$lh+$rh},0,0,0) a[$l,{$l+1}] y a[$l] [$r],y r[$r] 1,1,1,1,0
-    fi
-    u $l
-  fi
 
 #@cli mirror : { x | y | z }...{ x | y | z } : (+)
 #@cli : Mirror selected images along specified axes.
@@ -24296,6 +24341,56 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
     100%,100%,1,{0,s} fc. $color j[0] .,$xm,$ym,0,0,$opacity,..
     k[0]
   }
+
+#@cli thickpolyline : [coords],thickness>=0,_is_closed={ 0:No, 1:Yes },opacity,_pattern,_color1,...
+#@cli : Draw a thick polyline on selected images.
+#@cli : '[coords]' is the image of vertex coordinates (2D vector-valued pixels).
+#@cli : 'pattern' is an hexadecimal number starting with '0x' which can be omitted
+#@cli : even if a color is specified. If a pattern is specified, the thickness is assumed to be '0'.
+#@cli : Default values: 'thickness=1', 'is_closed=0', 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
+#@cli : $ 1024,1024,1,3 10,1,1,2 repeat 10 { rand. 0,1023 thickpolyline.. .,18,0,0.5,${-RGB} } rm. rs 50%
+thickpolyline : check ${"is_image_arg $1"}" && ${2=0}>=0 && isbool(${3=0}) && isnum(${4=1})" skip ${5=0},${6=0}
+  s0,s1="","closed "
+  if ${"is_pattern \"$5\""}
+    e[0--3] "Draw a thick "${s$3}"polyline on image$?, with thickness $2, opacity $4, pattern $5 and color (${6--1})."
+    pattern=$5 color=${6--1}
+  else
+    e[0--3] "Draw a thick "${s$3}"polyline on image$?, with thickness $2, opacity $4 and color (${5--1})."
+    pattern= color=${5--1}
+  fi
+  N=$! pass$1 if s<2 channels. 0,1 fi
+
+  # Transparent drawing: Draw polyline in a temporary binary image
+  if $4!=1
+    sh. 0 xm,xM:=floor(im-$2),ceil(iM+$2) rm. sh. 1 ym,yM:=floor(im-$2),ceil(iM+$2) rm.
+    . sh. 0 -. $xm rm. sh. 1 -. $ym rm.
+    {[$xM-$xm+1,$yM-$ym+1]} thickpolyline. ..,${2,3},1,1 100%,100%,1,{0,s} fc. $color j[^$N--1] .,$xm,$ym,0,0,$4,..
+    rm[$N--1]
+    return
+  fi
+
+  # Standard (opaque) drawing.
+  foreach[^-1] {
+    pass.
+    if $2>1 # Thick line: draw it with polygons
+      1,{whd},1,10
+      eval.. "begin(off = 0; const t = $2/2 - 0.5);
+        P0 = I; P1 = J[1,$3?2:1];
+        T = unitnorm(P1 - P0); N = [ -T[1], T[0] ]*t;
+        I[#-1,off++] = round([ P0, P0 - N, P0 + N, P1 + N, P1 - N ]);
+        _0"
+      eval. "
+        S0 = I; S1 = J[1,$3?2:3];
+        polygon(#0,4,S0[2,8],1,"$color");
+        polygon(#0,3,S0[8,2],S1[2,2],S1[0,2],1,"$color");
+        polygon(#0,3,S0[6,2],S1[0,2],S1[4,2],1,"$color");
+        _0"
+    else # Thin line: Use standard line drawing
+      eval. "P0 = I; P1 = J[1,$3?2:1]; polygon(#0,2,P0,P1,1,"$color")"
+    fi
+    k[0]
+  }
+  rm.
 
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
 #@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
@@ -45052,7 +45147,7 @@ gui_parallel_overlap :
 # Function that renders a single preview image from multiple preview images.
 # Pre-cond : Number of image is $!>1.
 gui_preview :
-  frame xy,1,0,0,0,255 montage B
+  frame xy,1,0,0,0,255 arrange AV
 
 # Return name of a layer.
 gui_layer_name :
@@ -46795,14 +46890,14 @@ fx_ministeck_preview :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Combines multiple input layers into a single montage image.
 #@gui : "}, sep = separator()
-#@gui : Montage Type = choice("Auto","Custom Layout","Horizontal","Vertical","Horizontal Array","Vertical Array")
-#@gui : Custom Layout = text{"V(H(0,1),H(2,V(3,4)))"}
+#@gui : Montage Type = choice(3,"Custom Layout","Horizontal","Vertical","Horizontal Array","Vertical Array")
+#@gui : Custom Layout = text{"VH0:1:H2V3:4"}_1
 #@gui : Merging Mode = choice(1,"Aligned","Scaled")
 #@gui : Centering / Scale = float(0.5,0,1)
 #@gui : Padding (px) = int(0,0,128)
 #@gui : sep = separator()
 #@gui : Frame (px) = int(0,0,128)
-#@gui : Frame Color = color(0,0,0,255)
+#@gui : Frame Color = color(255,255,255,255)
 #@gui : sep = separator()
 #@gui : Angle = float(0,0,360)
 #@gui : Angle Variations = float(0,0,180)
@@ -46811,68 +46906,58 @@ fx_ministeck_preview :
 #@gui : Revert Layer Order = bool()
 #@gui : Output As = _choice("Single Layer","Multiple Layers")
 #@gui : sep = separator()
-#@gui : note = note{"<small><b>Instructions:</b>\n
-#@gui : - Don't forget to set the <i>Input layers...</i> option on the left if you have multiple input layers
-#@gui : for your montage.\n
+#@gui : note = note{"<span color="#EE5500"><b>Instructions:</b></span>\n\n
+#@gui : - Don't forget to set the <i>Input layers...</i> option on the <i>All</i> to input multiple layers for your \
+# montage.\n\n
 #@gui : - The <i>Custom layout</i> parameter is only active when <i>Montage type</i> is set to <i>Custom layout</i>.
-#@gui : This is basically a string containing expressions such as:\n
-#@gui : \n     . <i>H(a,b)</i> or <i>V(a,b)</i> stand respectively for an horizontal and vertical merge of two
-#@gui : blocks <i>a</i> and <i>b</i>.
-#@gui : \n     . <i>R(a)</i>, stands for a 90-deg. rotated version of a block <i>a</i>. Use <i>RR(a)</i> and
-#@gui : <i>RRR(a)</i> for resp. 180-deg and 270-deg. rotations.
-#@gui : \n     . <i>M(a)</i>, stands for a X-mirrored version of a block <i>a</i>. Use <i>MRR(a)</i> for a Y-mirrored
-#@gui : version of <i>a</i>.\n\n
-#@gui : - A block <i>a</i> can be a layer index or a nested montage expression itself.\n
-#@gui : - Layer indices start from <i>0 (top layer)</i> and are treated periodically.
-#@gui : </small>"}
+#@gui : It describes how images are combined together, using the following symbols (case-insensitive):\n\n
+#@gui : - <b>A number</b>: Refers to one of the selected layer, by its index. Layer indices start from \
+# <i>0 (top layer)</i> and are treated periodically.\n
+#@gui : - '<b>?</b>' : A random layer index.\n
+#@gui : - '<b>X</b>' : Mirrors what follows horizontally (left-right flip).\n
+#@gui : - '<b>Y</b>' : Mirrors what follows vertically (top-bottom flip).\n
+#@gui : - '<b>R</b>' : Rotates what follows by 90 degrees clockwise.\n
+#@gui : - '<b>L</b>' : Rotates what follows by 90 degrees counter-clockwise.\n
+#@gui : - '<b>H</b>' : Puts what follows side by side, horizontally (left / right).\n
+#@gui : - '<b>V</b>' : Puts what follows one above the other, vertically (top / bottom).\n
+#@gui : - '<b>B</b>' : Same as '<b>H</b>' or '<b>V</b>', but automatically picks whichever gives the most balanced \
+# (square-looking) result.\n
+#@gui : - '<b>Q</b>' : Rotates what follows by a random multiple of 90 degrees.\n
+#@gui : - '<b>F</b>' : Flips what follows randomly, along the x-axis or the y-axis.\n
+#@gui : - '<b>M</b>' : Merges what follows randomly, either horizontally or vertically.\n\n
+#@gui : Any other character (e.g. ';' or ':') can be used as a separator between two numbers to avoid ambiguity \
+# (e.g. to distinguish images '0' and '1' from a single image '01').\n
+#@gui : Images get combined together two by two. For instance:\n\n
+#@gui : - '<b>H0:1</b>' puts images 0 and 1 side by side.\n
+#@gui : - '<b>V0:1</b>' stacks images 0 and 1 on top of each other.\n
+#@gui : - '<b>VH0:1H2:3</b>' first forms two horizontal pairs (0,1) and (2,3), then stack those two pairs vertically, \
+# resulting in a 2x2 grid.\n
+#@gui : - '<b>H0R1</b>' puts image 0 next to image 1 rotated 90 degrees clockwise.
+#@gui : "}
 #@gui : url = link("Click here for a tutorial","https://patdavid.net/2014/05/gmic-montage.html")
 #@gui : url = link("+ video tutorial","http://www.youtube.com/watch?v=iM42vx22gwg")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2014/12/22</i>.</small>")
-fx_montage : skip "${2=A}"
-  if !$! return fi
-  code0=X code1="$2" code2=H code3=V code4=A code5=B
-  if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/01</i>.</small>")
+fx_montage :
+  if !$!" || (!$1 && ['$2']==0)" return fi
+  foreach { => ${-gui_layer_name} }
   to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
   if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},$15,\
-    "if $""7%2 mirror x fi if $""8%2 mirror y fi "\
-    "rotate {90*$""6} "\
-    "if $5||$6 "\
-    "r {max(1,$""4-2*($5+$6))},{max(1,$""5-2*($5+$6))},1,100%,2 "\
-    "frame xy,$6,${7-10} "\
-    "r {w+2*$5},{h+2*$5},1,100%,0,0,0.5,0.5 "\
-    "else r $""4,$""5,1,100%,2 fi "
-  if $15 gui_autocrop_layers fi
-  gui_set_layer_name "[Montage]"
+  code0,code1,code2,code3,code4="$2 ",H,V,AH,AV
+  arrange ${code$1},{$3?$4:-max($4,1e-8)},{$15?2:0},\
+          "if $5||$6 r {vmax(1,[w,h]-2*($5+$6))},1,100%,2 frame xy,${6-10} expand xy,$5 fi"
+  if !w rm else if !$15 gui_set_layer_name "[Montage]" fi fi
 
-fx_montage_preview : skip "${2=A}"
+fx_montage_preview :
   if !$! return fi
-  w,h={w},{h}
-  if $3==1" && "$4<0.5 r {max(10,$4*200)}%,{max(10,$4*200)}%,1,100%,2 fi
-  drgba
-  code0=X code1="$2" code2=H code3=V code4=A code5=B
-  to_rgba if $14 rv fi if $13%$! mv[{$13%$!}--1] 0 fi
-  if $11" || "$12 repeat $! { rotate[$>] {$11+u(-$12,$12)},1,0 } fi
-  montage ${code$1},{!$3?$4:2+max(0,$4-0.5)},0,\
-    "if $""7%2 mirror x fi if $""8%2 mirror y fi
-     rotate {90*$""6}
-     if $5||$6
-       r {max(1,$""4-2*($5+$6))},{max(1,$""5-2*($5+$6))},1,100%,2 fs:=min(53,max(w,h)/3)
-       frame xy,$6,${7-10}
-       r {w+2*$5},{h+2*$5},1,100%,0,0,0.5,0.5
-       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
-       dilate. {3+2*$fs/20} a.. .,c j[0] [1],{5+$5+$6},{$5+$6},0,0,1,[2],255 k[0]
-     else
-       r $""4,$""5,1,100%,2 fs:=min(53,max(w,h)/3)
-       0 t. \\\#$""1,0,0,$fs,1,255 expand. xy,3 [-1]x3 a[-4--2] c
-       dilate. {3+2*$fs/20} a.. .,c j[0] [1],5,0,0,0,1,[2],255 k[0]
-     fi "
-  nw,nh:=w,h
-  rs $w,{$h-16},2,1
-  drgba
-  i[0] 100%,15,1,3,240 t[0] "Estimated size : "{round(100*$nw/$w)}%" x "{round(100*$nh/$h)}%,2,0,16 r[0] 100%,16,1,3,0
-  a y
+  w,h:=w,h
+  fx_montage $1,"$2",${3-14},0
+  if $!
+    nw,nh:=w,h rs $w,{$h-16},2,1 drgba
+    100%,15,1,3,240 t. "Estimated size : "{round(100*$nw/$w)}%" x "{round(100*$nh/$h)}%,2,0,16 r. {-2,w},16,1,3,0 mv. 0
+    a y
+  fi
+  u "{$1}{$2}_"{$1?1:2}"{$3}{$4}{$5}{$6}{${7-10}}{$11}{$12}{$13}{$14}{$15}"
 
 #@gui Puzzle : fx_puzzle, fx_puzzle_preview(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -49437,7 +49522,7 @@ fx_ditheredbw :
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Lightness (%) = float(0,-100,100)
 #@gui : sep = separator()
-#@gui : Anti-Aliasing = choice(1,"Disabled","x1.5","x2","x3")
+#@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
 #@gui : note = note("<small>Authors: <i>Lyle Kroll</i> and <i>David Tschumperlé</i>.
 #@gui :       Latest Update: <i>2015/03/13</i>.</small>")
@@ -64281,6 +64366,97 @@ fx_twisted_rays :
     blend alpha
   }
 
+#@gui Variable-Density Hilbert Curve : fx_vdhc,fx_vdhc_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Draw a single variable-density Hilbert Curve that reproduces an image.
+#@gui : "}, sep = separator()
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Gamma (%) = float(0,-100,100)
+#@gui : Smoothness = float(2,0,20)
+#@gui : sep = separator()
+#@gui : Curve Orientation = choice("Top Left → Top Right","Top Left → Bottom Left",\
+# "Top Right → Bottom Right","Top Right → Top Left",\
+# "Bottom Right → Bottom Left","Bottom Right → Top Right",\
+# "Bottom Left → Top Left","Bottom Left → Bottom Right")
+#@gui : Coarsest Level = int(5,0,16)
+#@gui : Finest Level = int(16,0,16)
+#@gui : Level Switching Step = int(2,1,16)
+#@gui : Color Mode = choice("White on Black","Black on White")
+#@gui : Curve Smoothness = float(0,0,10)
+#@gui : Curve Thickness = float(2,0,10)
+#@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
+fx_vdhc :
+  image_brightness,image_contrast,image_gamma,image_smoothness,\
+  curve_orientation,level_coarsest,level_finest,level_switching_step,\
+  color_mode,curve_smoothness,curve_thickness,antialiasing=${1-12}
+
+  foreach {
+    w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
+
+    # Generate N recursion levels of the Hilbert Curve.
+    l[] {
+      N:=ceil(log2(max($w,$h)))
+      level_max:=max(0,$N+$level_finest-17)
+      level_min:=min($level_coarsest,$level_max)
+      (0.25^0.25,0.25^0.75,0.75^0.75,0.75^0.25) => level0 # Level-0 curve ('U'-shaped)
+      repeat $level_max {
+        +f[-1] "[ i1,i0 ]" # Top-left quarter
+        +f[-2] "[ i0,i1 + 1]" # Bottom-left quarter
+        +f[-3] "[ 1 + i0,i1 + 1]" # Bottom-right quarter
+        +f[-4] "[ 2 - i1,1 - i0 ]" # Top-right quarter
+        a[-4--1] x /. 2 => level{$>+1}
+      }
+      k[$level_min-$level_max]
+      if $curve_orientation
+        arg1 $curve_orientation,"[i1,i0]","[1-i1,i0]","[1-i0,i1]","[1-i0,1-i1]","[1-i1,1-i0]","[i1,1-i0]","[i0,1-i1]"
+        f ${}
+      fi
+      nb_levels=$!
+    }
+    mv[0] $!
+
+    # Quantize image to reproduce.
+    luminance[img] b. $image_smoothness if $color_mode negate. fi
+    quantize. $nb_levels,0,1
+    => levelmap
+
+    # Generate variable-density Hilbert Curve.
+    1,1,1,2
+    eval "
+      x = l = 0;
+      while (x<w#l,
+        P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
+        da_push(P);
+        !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
+          nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
+          nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
+          nl!=l?(x = int(x*w#nl/w#l); l = nl);
+        );
+        ++x;
+      ); da_freeze()"
+    => coords
+    k[$nb_levels--1]
+    if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
+
+    # Draw curve.
+    fact:=arg0($antialiasing,1,1.5,2,3)
+    {[$w,$h]*$fact},1,1,{$color_mode?255:0} => canvas
+    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm. round..
+    thickpolyline[canvas] ..,{$curve_thickness*$fact},0,1,{$color_mode?0:255}
+    if 0$_is_preview
+      to_rgb[canvas]
+      circle[canvas] {coords,I[0]},{7*$fact},0.75,255,0,0
+      circle[canvas] {coords,I[-1,2]},{7*$fact},0.75,0,255,0
+    fi
+    r[canvas] $w,$h,1,100%,2 k[canvas]
+  }
+
+fx_vdhc_preview :
+  _is_preview=1 fx_vdhc $*
+
 #@gui ____<b>Repair</b>
 #-----------------------
 
@@ -66491,7 +66667,7 @@ fx_solve_maze_preview :
 #@cli _gallery_arrays
 #@cli : This entry defines some examples of array filters for the G'MIC gallery page.
 #@cli : $ image.jpg fx_frame_blur 30,30,0,5,0,0,128,128,128,0,5,255,255,255,2,2,1,0,0.5,0.5,0 _label="Frame~[blur]"
-#@cli : $ sample tiger,leno,monkey,duck,eagle frame xy,3,0 frame xy,3,255 montage A _label="Montage"
+#@cli : $ sample tiger,leno,monkey,duck,eagle frame xy,3,0 frame xy,3,255 arrange AH _label="Montage"
 #@cli : $ image.jpg fx_puzzle 5,5,0.5,0,0,0.3,100,0.2,255,100,0,0,0,0,0,0 _label="Puzzle"
 
 #@cli _gallery_artistic
