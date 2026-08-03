@@ -24348,7 +24348,7 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
 #@cli : 'pattern' is an hexadecimal number starting with '0x' which can be omitted
 #@cli : even if a color is specified. If a pattern is specified, the thickness is assumed to be '0'.
 #@cli : Default values: 'thickness=1', 'is_closed=0', 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
-#@cli : $ 512,512,1,3 10,1,1,2 repeat 10 { rand. 0,511 thickpolyline.. .,9,0,0.5,${-RGB} } rm.
+#@cli : $ 1024,1024,1,3 10,1,1,2 repeat 10 { rand. 0,1023 thickpolyline.. .,18,0,0.5,${-RGB} } rm. rs 50%
 thickpolyline : check ${"is_image_arg $1"}" && ${2=0}>=0 && isbool(${3=0}) && isnum(${4=1})" skip ${5=0},${6=0}
   s0,s1="","closed "
   if ${"is_pattern \"$5\""}
@@ -49519,7 +49519,7 @@ fx_ditheredbw :
 #@gui : Saturation (%) = float(0,-100,100)
 #@gui : Lightness (%) = float(0,-100,100)
 #@gui : sep = separator()
-#@gui : Anti-Aliasing = choice(1,"Disabled","x1.5","x2","x3")
+#@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
 #@gui : note = note("<small>Authors: <i>Lyle Kroll</i> and <i>David Tschumperlé</i>.
 #@gui :       Latest Update: <i>2015/03/13</i>.</small>")
@@ -64373,14 +64373,17 @@ fx_twisted_rays :
 # "Bottom Left → Top Left","Bottom Left → Bottom Right")
 #@gui : Coarsest Level = int(5,0,16)
 #@gui : Finest Level = int(16,0,16)
+#@gui : Level Switching Step = int(2,1,16)
 #@gui : Color Mode = choice("White on Black","Black on White")
 #@gui : Image Smoothness = float(2,0,20)
 #@gui : Curve Smoothness = float(0,0,10)
-#@gui : Level Switching Step = int(2,1,16)
+#@gui : Curve Thickness = float(0,0,10)
+#@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
 fx_vdhc :
-  curve_orientation,level_coarsest,level_finest,color_mode,smoothness,curve_smoothness,level_switching_step=${1-7}
+  curve_orientation,level_coarsest,level_finest,level_switching_step,\
+  color_mode,smoothness,curve_smoothness,curve_thickness,antialiasing=${1-9}
 
   foreach {
     w,h:=w,h => img
@@ -64432,12 +64435,11 @@ fx_vdhc :
     fi
 
     # Draw curve.
-    $w,$h,1,1,{$color_mode?255:0} => canvas
-    eval[coords] ":begin(color = $color_mode?0:255);
-      y>0?(
-        P0 = J[-1]; P1 = I;
-        polygon(#$canvas,2,round([ P0[0]*w#$canvas,P0[1]*h#$canvas,P1[0]*w#$canvas,P1[1]*h#$canvas ]),1,color);
-      ); _0"
+    fact:=arg0($antialiasing,1,1.5,2,3)
+    {[$w,$h]*$fact},1,1,{$color_mode?255:0} => canvas
+    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm.
+    thickpolyline[canvas] ..,{$curve_thickness*$fact},0,1,255
+    r[canvas] $w,$h,1,1,2
 
     if 0$_is_preview
       to_rgb[canvas]
