@@ -24358,18 +24358,21 @@ thickpolyline : check ${"is_image_arg $1"}" && ${2=0}>=0 && isbool(${3=0}) && is
     e[0--3] "Draw a thick "${s$3}"polyline on image$?, with thickness $2, opacity $4 and color (${5--1})."
     pattern= color=${5--1}
   fi
-  pass$1 0 if s<2 channels. 0,1 fi
+  N=$! pass$1 if s<2 channels. 0,1 fi
+
+  # Transparent drawing: Draw polyline in a temporary binary image
+  if $4!=1
+    sh. 0 xm,xM:=floor(im-$2),ceil(iM+$2) rm. sh. 1 ym,yM:=floor(im-$2),ceil(iM+$2) rm.
+    . sh. 0 -. $xm rm. sh. 1 -. $ym rm.
+    {[$xM-$xm+1,$yM-$ym+1]} thickpolyline. ..,${2,3},1,1 100%,100%,1,{0,s} fc. $color j[^$N--1] .,$xm,$ym,0,0,$4,..
+    rm[$N--1]
+    return
+  fi
+
+  # Standard (opaque) drawing.
   foreach[^-1] {
-    pass. 1
-    if $4!=1 # Transparent drawing: Draw polyline in a temporary binary image
-      sh. 0 xm,xM:=floor(im-$2),ceil(iM+$2) rm.
-      sh. 1 ym,yM:=floor(im-$2),ceil(iM+$2) rm.
-      . sh. 0 -. $xm rm. sh. 1 -. $ym rm.
-      {[$xM-$xm+1,$yM-$ym+1]}
-      thickpolyline. ..,${2,3},1,1
-      100%,100%,1,{0,s} fc. $color
-      j[0] .,$xm,$ym,0,0,$4,..
-    elif $2>1 # Thick line: draw it with polygons
+    pass.
+    if $2>1 # Thick line: draw it with polygons
       1,{whd},1,10
       eval.. "begin(off = 0; const t = $2/2 - 0.5);
         P0 = I; P1 = J[1,$3?2:1];
@@ -64367,6 +64370,11 @@ fx_twisted_rays :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Draw a single variable-density Hilbert Curve that reproduces an image.
 #@gui : "}, sep = separator()
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Gamma (%) = float(0,-100,100)
+#@gui : Smoothness = float(2,0,20)
+#@gui : sep = separator()
 #@gui : Curve Orientation = choice("Top Left → Top Right","Top Left → Bottom Left",\
 # "Top Right → Bottom Right","Top Right → Top Left",\
 # "Bottom Right → Bottom Left","Bottom Right → Top Right",\
@@ -64375,18 +64383,18 @@ fx_twisted_rays :
 #@gui : Finest Level = int(16,0,16)
 #@gui : Level Switching Step = int(2,1,16)
 #@gui : Color Mode = choice("White on Black","Black on White")
-#@gui : Image Smoothness = float(2,0,20)
 #@gui : Curve Smoothness = float(0,0,10)
 #@gui : Curve Thickness = float(2,0,10)
 #@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
 fx_vdhc :
+  image_brightness,image_contrast,image_gamma,image_smoothness,\
   curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,smoothness,curve_smoothness,curve_thickness,antialiasing=${1-9}
+  color_mode,curve_smoothness,curve_thickness,antialiasing=${1-12}
 
   foreach {
-    w,h:=w,h => img
+    w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
 
     # Generate N recursion levels of the Hilbert Curve.
     l[] {
@@ -64411,7 +64419,7 @@ fx_vdhc :
     mv[0] $!
 
     # Quantize image to reproduce.
-    luminance[img] b. $smoothness if $color_mode negate. fi
+    luminance[img] b. $image_smoothness if $color_mode negate. fi
     quantize. $nb_levels,0,1
     => levelmap
 
