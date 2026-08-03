@@ -64377,7 +64377,7 @@ fx_twisted_rays :
 #@gui : Color Mode = choice("White on Black","Black on White")
 #@gui : Image Smoothness = float(2,0,20)
 #@gui : Curve Smoothness = float(0,0,10)
-#@gui : Curve Thickness = float(0,0,10)
+#@gui : Curve Thickness = float(2,0,10)
 #@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
@@ -64430,24 +64430,20 @@ fx_vdhc :
         ++x;
       ); da_freeze()"
     => coords
-    if $curve_smoothness
-      r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness
-    fi
+    k[$nb_levels--1]
+    if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
 
     # Draw curve.
     fact:=arg0($antialiasing,1,1.5,2,3)
     {[$w,$h]*$fact},1,1,{$color_mode?255:0} => canvas
-    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm.
-    thickpolyline[canvas] ..,{$curve_thickness*$fact},0,1,255
-    r[canvas] $w,$h,1,1,2
-
+    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm. round..
+    thickpolyline[canvas] ..,{$curve_thickness*$fact},0,1,{$color_mode?0:255}
     if 0$_is_preview
       to_rgb[canvas]
-      circle[canvas] {coords,P=I[0];round([P[0]*w#$canvas,P[1]*h#$canvas])},7,0.75,255,0,0
-      circle[canvas] {coords,P=I[-1,2];round([P[0]*w#$canvas,P[1]*h#$canvas])},7,0.75,0,255,0
+      circle[canvas] {coords,I[0]},{7*$fact},0.75,255,0,0
+      circle[canvas] {coords,I[-1,2]},{7*$fact},0.75,0,255,0
     fi
-
-    k[canvas]
+    r[canvas] $w,$h,1,100%,2 k[canvas]
   }
 
 fx_vdhc_preview :
