@@ -64316,6 +64316,94 @@ fx_twisted_rays :
     blend alpha
   }
 
+#@gui Variable-Density Hilbert Curve : fx_vdhc,fx_vdhc_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Draw a single variable-density Hilbert Curve that reproduces an image.
+#@gui : "}, sep = separator()
+#@gui : Curve Orientation = choice("Top Left → Top Right","Top Left → Bottom Left",\
+# "Top Right → Bottom Right","Top Right → Top Left",\
+# "Bottom Right → Bottom Left","Bottom Right → Top Right",\
+# "Bottom Left → Top Left","Bottom Left → Bottom Right")
+#@gui : Coarsest Level = int(4,0,16)
+#@gui : Finest Level = int(16,0,16)
+#@gui : Color Mode = choice("White on Black","Black on White")
+#@gui : Image Smoothness = float(2,0,20)
+#@gui : Curve Smoothness = float(0,0,10)
+#@gui : Level Switching Step = int(2,1,16)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
+fx_vdhc :
+  curve_orientation,level_coarsest,level_finest,color_mode,smoothness,curve_smoothness,level_switching_step=${1-7}
+
+  foreach {
+    w,h:=w,h => img
+
+    # Generate N recursion levels of the Hilbert Curve.
+    l[] {
+      N:=ceil(log2(max($w,$h)))
+      level_max:=max(0,$N+$level_finest-17)
+      level_min:=min($level_coarsest,$level_max)
+      (0.25^0.25,0.25^0.75,0.75^0.75,0.75^0.25) => level0 # Level-0 curve ('U'-shaped)
+      repeat $level_max {
+        +f[-1] "[ i1,i0 ]" # Top-left quarter
+        +f[-2] "[ i0,i1 + 1]" # Bottom-left quarter
+        +f[-3] "[ 1 + i0,i1 + 1]" # Bottom-right quarter
+        +f[-4] "[ 2 - i1,1 - i0 ]" # Top-right quarter
+        a[-4--1] x /. 2 => level{$>+1}
+      }
+      k[$level_min-$level_max]
+      if $curve_orientation
+        arg1 $curve_orientation,"[i1,i0]","[1-i1,i0]","[1-i0,i1]","[1-i0,1-i1]","[1-i1,1-i0]","[i1,1-i0]","[i0,1-i1]"
+        f ${}
+      fi
+      nb_levels=$!
+    }
+    mv[0] $!
+
+    # Quantize image to reproduce.
+    +luminance[img] b. $smoothness if $color_mode negate. fi
+    quantize. $nb_levels,0,1
+    => levelmap
+
+    # Generate variable-density Hilbert Curve.
+    1,1,1,2
+    eval "
+      x = l = 0;
+      while (x<w#l,
+        P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
+        da_push(P);
+        !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
+          nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
+          nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
+          nl!=l?(x = int(x*w#nl/w#l); l = nl);
+        );
+        ++x;
+      ); da_freeze()"
+    => coords
+    if $curve_smoothness
+      r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness
+    fi
+
+    # Draw curve.
+    $w,$h,1,1,{$color_mode?255:0} => canvas
+    eval[coords] ":begin(color = $color_mode?0:255);
+      y>0?(
+        P0 = J[-1]; P1 = I;
+        polygon(#$canvas,2,round([ P0[0]*w#$canvas,P0[1]*h#$canvas,P1[0]*w#$canvas,P1[1]*h#$canvas ]),1,color);
+      ); _0"
+
+    if 0$_is_preview
+      to_rgb[canvas]
+      circle[canvas] {coords,P=I[0];round([P[0]*w#$canvas,P[1]*h#$canvas])},7,0.75,255,0,0
+      circle[canvas] {coords,P=I[-1,2];round([P[0]*w#$canvas,P[1]*h#$canvas])},7,0.75,0,255,0
+    fi
+
+    k[canvas]
+  }
+
+fx_vdhc_preview :
+  _is_preview=1 fx_vdhc $*
+
 #@gui ____<b>Repair</b>
 #-----------------------
 
