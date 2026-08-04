@@ -1766,6 +1766,24 @@ inline bool is_xyzc(const char c) {
   return c=='x' || c=='y' || c=='z' || c=='c';
 }
 
+// Fast equivalent to 'cimg_sscanf("%lf",&value)'.
+inline int sscanf_lf(const char *const str, double *const value) {
+  if (!*str) return -1;
+  char *ptod = 0;
+  *value = std::strtod(str,&ptod);
+  return ptod==str?0:1;
+}
+
+// Fast equivalent to 'cimg_sscanf("%lf%c",&value,&sep)'.
+inline int sscanf_lfc(const char *const str, double *const value, char *const sep) {
+  if (!*str) return -1;
+  char *ptod = 0;
+  *value = std::strtod(str,&ptod);
+  if (ptod==str) return 0;
+  if (*ptod) { *sep = *ptod; return 2; }
+  return 1;
+}
+
 // Return an image argument as a shared or non-shared copy of an existing image in the list.
 template<typename T>
 CImg<T> gmic::_gmic_image_arg(CImgList<T>& images, const CImgList<T>& parent_images,
@@ -5552,8 +5570,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           vmin = -cimg::type<double>::inf();
           vmax = cimg::type<double>::inf();
           value = 0;
-          if ((!nbc && cimg_sscanf(argument,"%lf%c",
-                                   &vmin,&end)==1) ||
+          if ((!nbc && sscanf_lfc(argument,&vmin,&end)==1) ||
               (nbc==1 && cimg_sscanf(argument,"%lf,%lf%c",
                                      &vmin,&vmax,&end)==2) ||
               (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
