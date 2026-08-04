@@ -7890,8 +7890,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           value = value0 = value1 = 0;
           sep = sep0 = sep1 = 0;
           is_cond = false; // no_min_max?
-          if (((!nbc && sscanf_lfc(argument,&value,&end)==1 && (is_cond = true)) ||
-               ((!nbc && sscanf_lfcc(argument,&value,&sep,&end)==2 && sep=='%') && (is_cond = true)) ||
+          if (((!nbc && ((err = sscanf_lfcc(argument,&value,&sep,&end))==1 || (err==2 && sep=='%')) &&
+                (is_cond = true)) ||
                (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
                                       &value,&value0,&value1,&end)==3) ||
                (nbc==2 && cimg_sscanf(argument,"%lf%c,%lf,%lf%c",
