@@ -2178,8 +2178,8 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
       const CImg<char> value = *str=='{'?gmic_instance.status.get_shared():
         gmic_instance.get_variable(str,variable_sizes,&image_names);
       if (value && *value) {
-        char *ptod = 0;
-        if ((res = std::strtod(value,&ptod)), (ptod==value.data() || *ptod)) res = cimg::type<double>::nan();
+        char end;
+        if (sscanf_lfc(value,&res,&end)!=1) res = cimg::type<double>::nan();
       }
     }
     }
@@ -2245,7 +2245,7 @@ double gmic::mp_get(double *const ptrd, const unsigned int siz, const bool to_st
             dest = list[0].resize(siz,1,1,1,-1);
 
           } else { // Regular string variable
-            if (((dvalue = std::strtod(value,&ptod)), ptod!=value.data()) && !*ptod) {
+            if (sscanf_lfc(value,&dvalue,&end)==1) {
               dest[0] = dvalue;
               if (dest._width>1) dest.get_shared_points(1,dest._width - 1).fill(0);
             } else if (dest.fill(0)._fill_from_values(value,false))
@@ -2331,7 +2331,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
 
   gmic *const p_gmic_instance = is_parallel_run?new gmic(gmic_instance):&gmic_instance;
   CImg<char> is_error;
-  char *ptod = 0;
+  char sep;
   if (p_gmic_instance->is_debug_info && p_gmic_instance->debug_line!=~0U) {
     CImg<char> title(32);
     cimg_snprintf(title,title.width(),"*expr#%u",p_gmic_instance->debug_line);
@@ -2347,7 +2347,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   }
   p_gmic_instance->callstack.remove();
   if (is_error || !p_gmic_instance->status || !*p_gmic_instance->status ||
-      ((res = std::strtod(p_gmic_instance->status,&ptod)), ptod==p_gmic_instance->status.data() || *ptod))
+      sscanf_lfc(p_gmic_instance->status,&res,&sep)!=1)
     res = cimg::type<double>::nan();
 
   if (is_parallel_run) delete p_gmic_instance;
@@ -3456,7 +3456,7 @@ const char *gmic::set_variable(const char *const name, const char operation,
   const char *const s_operation = !is_arithmetic?0:
     operation=='+'?"+":operation=='-'?"-":operation=='*'?"*":operation=='/'?"/":operation=='%'?"%":
     operation=='&'?"&":operation=='|'?"|":operation=='^'?"^":operation=='<'?"<<":">>";
-  char end, *ptod = 0;
+  char end;
 
   if (is_thread_global) cimg::mutex(30);
 
@@ -3486,7 +3486,7 @@ const char *gmic::set_variable(const char *const name, const char operation,
   // If arithmetic operation, get current variable value ('cvalue').
   double cvalue = 0;
   if (is_arithmetic) {
-    if ((cvalue = std::strtod(vars[ind],&ptod)), ptod==vars[ind].data() || *ptod) {
+    if (sscanf_lfc(vars[ind],&cvalue,&end)!=1) {
       if (is_thread_global) cimg::mutex(30,0);
       error(true,"Operator '%s=' on non-numerical variable '%s=%s'.",
             s_operation,name,vars[ind].data());
