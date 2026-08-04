@@ -6604,7 +6604,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               }
               gmic_apply(cut((T)nvalue0,(T)nvalue1),true);
             }
-          } else if (nbc==1 &&
+          } else if (!nbc &&
                      cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
                                  gmic_use_indices,&sep0,&end)==2 && sep0==']' &&
                      (ind0=selection2cimg(indices,images.size(),image_names,"cut")).height()==1) {
