@@ -1882,9 +1882,8 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
  if (id_builtin_command==id_##command_name) { \
    gmic_substitute_args(true); \
    nbc = count_commas(argument); \
-   sep = 0; value = 0; char *ptod = 0; \
-   if (!nbc && (((value = std::strtod(argument,&ptod)), ptod!=argument) && \
-                (!*ptod || (*ptod=='%' && (sep = '%', !ptod[1]))))) { \
+   sep = 0; value = 0; \
+   if (!nbc && ((err = sscanf_lfcc(argument,&value,&sep,&end))==1 || (err==2 && sep=='%'))) { \
      const char *const ssep = sep=='%'?"%":""; \
      print(0,description1 ".",arg1_1,arg1_2,arg1_3); \
      cimg_forY(selection,l) { \
