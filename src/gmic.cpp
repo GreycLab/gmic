@@ -6410,10 +6410,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                       (nbc==4 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],"
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
                                              st0,st1,st2,st3,&boundary,&end)==5)) &&
-                     (sscanf_lfc(st0,&a0,&end)==1 || (sscanf_lfcc(st0,&a0,&sep0,&end)==2 && sep0=='%')) &&
-                     (sscanf_lfc(st1,&a1,&end)==1 || (sscanf_lfcc(st1,&a1,&sep1,&end)==2 && sep1=='%')) &&
-                     (sscanf_lfc(st2,&a2,&end)==1 || (sscanf_lfcc(st2,&a2,&sep2,&end)==2 && sep2=='%')) &&
-                     (sscanf_lfc(st3,&a3,&end)==1 || (sscanf_lfcc(st3,&a3,&sep3,&end)==2 && sep3=='%')) &&
+                     ((err = sscanf_lfcc(st0,&a0,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err = sscanf_lfcc(st1,&a1,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     ((err = sscanf_lfcc(st2,&a2,&sep2,&end))==1 || (err==2 && sep2=='%')) &&
+                     ((err = sscanf_lfcc(st3,&a3,&sep3,&end))==1 || (err==2 && sep3=='%')) &&
                      boundary<=3) {
             print(0,
                   "Crop image%s with coordinates (%.17g%s,%.17g%s) - (%.17g%s,%.17g%s) and "
@@ -6442,12 +6442,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                       (nbc==6 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
                                              st0,st1,st2,st3,st4,st5,&boundary,&end)==7)) &&
-                     (sscanf_lfc(st0,&a0,&end)==1 || (sscanf_lfcc(st0,&a0,&sep0,&end)==2 && sep0=='%')) &&
-                     (sscanf_lfc(st1,&a1,&end)==1 || (sscanf_lfcc(st1,&a1,&sep1,&end)==2 && sep1=='%')) &&
-                     (sscanf_lfc(st2,&a2,&end)==1 || (sscanf_lfcc(st2,&a2,&sep2,&end)==2 && sep2=='%')) &&
-                     (sscanf_lfc(st3,&a3,&end)==1 || (sscanf_lfcc(st3,&a3,&sep3,&end)==2 && sep3=='%')) &&
-                     (sscanf_lfc(st4,&a4,&end)==1 || (sscanf_lfcc(st4,&a4,&sep4,&end)==2 && sep4=='%')) &&
-                     (sscanf_lfc(st5,&a5,&end)==1 || (sscanf_lfcc(st5,&a5,&sep5,&end)==2 && sep5=='%')) &&
+                     ((err = sscanf_lfcc(st0,&a0,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err = sscanf_lfcc(st1,&a1,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     ((err = sscanf_lfcc(st2,&a2,&sep2,&end))==1 || (err==2 && sep2=='%')) &&
+                     ((err = sscanf_lfcc(st3,&a3,&sep3,&end))==1 || (err==2 && sep3=='%')) &&
+                     ((err = sscanf_lfcc(st4,&a4,&sep4,&end))==1 || (err==2 && sep4=='%')) &&
+                     ((err = sscanf_lfcc(st5,&a5,&sep5,&end))==1 || (err==2 && sep5=='%')) &&
                      boundary<=3) {
             print(0,"Crop image%s with coordinates (%.17g%s,%.17g%s,%.17g%s) - (%.17g%s,%.17g%s,%.17g%s) "
                   "and %s boundary conditions.",
@@ -6481,14 +6481,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],%63[0-9.eE%+-],"
                                              "%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
                                              st0,st1,st2,st3,st4,st5,st6,st7,&boundary,&end)==9)) &&
-                     (sscanf_lfc(st0,&a0,&end)==1 || (sscanf_lfcc(st0,&a0,&sep0,&end)==2 && sep0=='%')) &&
-                     (sscanf_lfc(st1,&a1,&end)==1 || (sscanf_lfcc(st1,&a1,&sep1,&end)==2 && sep1=='%')) &&
-                     (sscanf_lfc(st2,&a2,&end)==1 || (sscanf_lfcc(st2,&a2,&sep2,&end)==2 && sep2=='%')) &&
-                     (sscanf_lfc(st3,&a3,&end)==1 || (sscanf_lfcc(st3,&a3,&sep3,&end)==2 && sep3=='%')) &&
-                     (sscanf_lfc(st4,&a4,&end)==1 || (sscanf_lfcc(st4,&a4,&sep4,&end)==2 && sep4=='%')) &&
-                     (sscanf_lfc(st5,&a5,&end)==1 || (sscanf_lfcc(st5,&a5,&sep5,&end)==2 && sep5=='%')) &&
-                     (sscanf_lfc(st6,&a6,&end)==1 || (sscanf_lfcc(st6,&a6,&sep6,&end)==2 && sep6=='%')) &&
-                     (sscanf_lfc(st7,&a7,&end)==1 || (sscanf_lfcc(st7,&a7,&sep7,&end)==2 && sep7=='%')) &&
+                     ((err = sscanf_lfcc(st0,&a0,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err = sscanf_lfcc(st1,&a1,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     ((err = sscanf_lfcc(st2,&a2,&sep2,&end))==1 || (err==2 && sep2=='%')) &&
+                     ((err = sscanf_lfcc(st3,&a3,&sep3,&end))==1 || (err==2 && sep3=='%')) &&
+                     ((err = sscanf_lfcc(st4,&a4,&sep4,&end))==1 || (err==2 && sep4=='%')) &&
+                     ((err = sscanf_lfcc(st5,&a5,&sep5,&end))==1 || (err==2 && sep5=='%')) &&
+                     ((err = sscanf_lfcc(st6,&a6,&sep6,&end))==1 || (err==2 && sep6=='%')) &&
+                     ((err = sscanf_lfcc(st7,&a7,&sep7,&end))==1 || (err==2 && sep7=='%')) &&
                      boundary<=3) {
             print(0,
                   "Crop image%s with coordinates (%.17g%s,%.17g%s,%.17g%s,%.17g%s) - (%.17g%s,%.17g%s,%.17g%s,%.17g%s) "
