@@ -81,9 +81,9 @@ static const char *storage_type(const CImgList<T>& images, const bool allow_bool
   if (is_int) {
     if (allow_bool && im==0 && iM==1) return "bool";
     else if (im>=0) {
-      if (iM<(1U<<8)) return "uint8";
-      else if (iM<(1U<<16)) return "uint16";
-      else if (iM<((cimg_uint64)1<<32)) return "uint32";
+      if ((cimg_uint64)iM<(1U<<8)) return "uint8";
+      else if ((cimg_uint64)iM<(1U<<16)) return "uint16";
+      else if ((cimg_uint64)iM<((cimg_uint64)1<<32)) return "uint32";
     } else {
       if (im>=-(1<<7) && iM<(1<<7) && cimg::type<char>::min()<0) return "int8";
       else if (im>=-(1<<15) && iM<(1<<15)) return "int16";
@@ -2169,8 +2169,8 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
       const CImg<char> value = *str=='{'?gmic_instance.status.get_shared():
         gmic_instance.get_variable(str,variable_sizes,&image_names);
       if (value && *value) {
-        char end;
-        if (cimg_sscanf(value,"%lf%c",&res,&end)!=1) res = cimg::type<double>::nan();
+        char *p = 0;
+        if ((res = std::strtod(value,&p)), (p==value._data || *p)) res = cimg::type<double>::nan();
       }
     }
     }
