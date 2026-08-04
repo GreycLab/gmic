@@ -3858,12 +3858,13 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
   const char *const p0 = p;
   CImg<char> name;
   unsigned int nb_intervals = 0, off_intervals, uindm = ~0U, uindM = 0;
+  char *ptod = 0;
   do {
     double ind0, ind1;
     int read, istep = 1, _iind0, _iind1, iind0 = -1, iind1 = -1;
     if (p!=p0 && *p==',') ++p;
-    if (cimg_sscanf(p,"%lf%n",&ind0,&read)==1) {
-      p+=read;
+    if ((ind0 = std::strtod(p,&ptod)), ptod!=p) {
+      p = ptod;
       if (*p=='%') { ++p; ind0 = _gmic_percent(ind0); iind0 = (int)cimg::round(ind0); }
       else { _iind0 = (int)cimg::round(ind0); iind0 = _iind0<0?_iind0 + (int)index_end:_iind0; }
       if (iind0<0 || iind0>=(int)index_end) {
@@ -3875,8 +3876,8 @@ CImg<unsigned int> gmic::selection2cimg(const char *const string, const unsigned
       }
       iind1 = iind0;
       if (*p=='-') { // Sub-expression 'ind0-ind1'
-        if (cimg_sscanf(++p,"%lf%n",&ind1,&read)==1) {
-          p+=read;
+        if ((ind1 = std::strtod(++p,&ptod)), ptod!=p) {
+          p = ptod;
           if (*p=='%') { ++p; ind1 = _gmic_percent(ind1); iind1 = (int)cimg::round(ind1); }
           else { _iind1 = (int)cimg::round(ind1); iind1 = _iind1<0?_iind1 + (int)index_end:_iind1; }
           if (iind1<0 || iind1>=(int)index_end)
