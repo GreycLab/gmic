@@ -2219,7 +2219,7 @@ double gmic::mp_get(double *const ptrd, const unsigned int siz, const bool to_st
       } else { // Convert variable content as numbers
         double dvalue = 0;
         if (!siz) { // Scalar result
-          if (cimg_sscanf(value,"%lf",&dvalue)!=1) *ptrd = cimg::type<double>::nan();
+          if ((dvalue = std::strtod(value,&p)), p==value.data()) *ptrd = cimg::type<double>::nan();
           else *ptrd = dvalue;
         } else { // Vector result
           CImg<double> dest(ptrd,siz,1,1,1,true);
