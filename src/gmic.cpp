@@ -1954,10 +1954,8 @@ inline void _strreplace_bw(char &c) {
 // Round a double value like %g.
 inline double gmic_round(const double x) {
   char tmp[32];
-  double y;
   cimg_snprintf(tmp,sizeof(tmp),"%g",x);
-  cimg_sscanf(tmp,"%lf",&y);
-  return y;
+  return std::strtod(tmp,0);
 }
 
 // Count the number of commas in a C-string.
@@ -2170,7 +2168,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
         gmic_instance.get_variable(str,variable_sizes,&image_names);
       if (value && *value) {
         char *p = 0;
-        if ((res = std::strtod(value,&p)), (p==value._data || *p)) res = cimg::type<double>::nan();
+        if ((res = std::strtod(value,&p)), (p==value.data() || *p)) res = cimg::type<double>::nan();
       }
     }
     }
@@ -2199,7 +2197,7 @@ double gmic::mp_get(double *const ptrd, const unsigned int siz, const bool to_st
     CImgList<char>& image_names = *(CImgList<char>*)gr[2];
     const unsigned int *const variable_sizes = (const unsigned int*)gr[5];
     CImg<char> _varname(256);
-    char *const varname = _varname.data(), end;
+    char *const varname = _varname.data(), end, *p = 0;
 
     if ((cimg_sscanf(str,"%255[a-zA-Z0-9_]%c",&(*varname=0),&end)==1 && (*varname<'0' || *varname>'9')) ||
         (*str=='{' && str[1]=='}' && !str[2])) {
@@ -2236,7 +2234,7 @@ double gmic::mp_get(double *const ptrd, const unsigned int siz, const bool to_st
             dest = list[0].resize(siz,1,1,1,-1);
 
           } else { // Regular string variable
-            if (cimg_sscanf(value,"%lf%c",&dvalue,&end)==1) {
+            if (((dvalue = std::strtod(value,&p)), p!=value.data()) && !*p) {
               dest[0] = dvalue;
               if (dest._width>1) dest.get_shared_points(1,dest._width - 1).fill(0);
             } else if (dest.fill(0)._fill_from_values(value,false))
