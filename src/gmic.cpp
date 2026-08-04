@@ -6385,8 +6385,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==2 && cimg_sscanf(argument,"%63[0-9.eE%+-],%63[0-9.eE%+-],%u%c",
                                       st0,
                                       st1,&boundary,&end)==3)) &&
-              (sscanf_lfc(st0,&a0,&end)==1 || (sscanf_lfcc(st0,&a0,&sep0,&end)==2 && sep0=='%')) &&
-              (sscanf_lfc(st1,&a1,&end)==1 || (sscanf_lfcc(st1,&a1,&sep1,&end)==2 && sep1=='%')) &&
+              ((err = sscanf_lfcc(st0,&a0,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              ((err = sscanf_lfcc(st1,&a1,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               boundary<=3) {
             print(0,"Crop image%s with coordinates (%.17g%s) - (%.17g%s) and "
                   "%s boundary conditions.",
