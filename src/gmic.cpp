@@ -5333,7 +5333,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         char *const pde = _command.end() - 1;
         for (err = 0; *ps && pd<pde; ++ps) {
           const char c = *ps;
-          if ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_') *(pd++) = c;
+          if (cimg::is_varchar(c)) *(pd++) = c;
           else break;
         }
         if (pd!=command) {
@@ -5480,10 +5480,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           if (*argument=='-' && !argument[1]) { --verbosity; is_verbose_argument = true; }
           else if (*argument=='+' && !argument[1]) { ++verbosity; is_verbose_argument = true; }
           else {
-            float level = 0;
-            if (cimg_sscanf(argument,"%f%c",
-                            &level,&end)==1) {
-              verbosity = (int)cimg::round(level);
+            double level = 0;
+            if (sscanf_lfc(argument,&level,&end)==1) {
+              verbosity = (int)level;
               is_verbose_argument = true;
             }
             else arg_error("verbose");
