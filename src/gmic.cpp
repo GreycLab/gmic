@@ -3106,7 +3106,7 @@ CImgList<char> gmic::command_line_to_CImgList(const char *const command_line) {
       }
     } while (c);
     *ptrd = 0;
-    error(true,"Invalid command line: Double quotes are not closed, in expression '%s'.",
+    error(true,"Invalid command line: Double quotes are not closed in expression '%s'.",
           str.data());
   }
   if (ptrd!=item.data() && !is_blank(c)) {
@@ -3528,7 +3528,7 @@ const char *gmic::set_variable(const char *const name, const char operation,
     varlengths[ind] = (unsigned int)std::strlen(vars[ind]);
 
   } else if ((!operation || operation=='=') && value && *value==gmic_store &&
-             !std::strncmp(value + 1,"*store/",7) && value[8]) { // Assign from another image-encoded variable
+             !std::strncmp(value + 1,"*store/",7) && value[8]) { // Assigning from another image-encoded variable
     const char *const c_name = value + 8;
     const bool
       c_is_global = *c_name=='_',
@@ -4359,7 +4359,7 @@ CImg<char> gmic::substitute_item(const char *const source,
           error(true,0,0,
                 "Item substitution '{}': Empty braces.");
 
-        // Display window features.
+        // Retrieve display window features.
         if (!is_substituted && *inbraces=='*' &&
             (!inbraces[1] ||
              (inbraces[1]>='0' && inbraces[1]<='9' && !inbraces[2]) ||
@@ -5128,13 +5128,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
       // Check consistency of the interpreter environment.
       if (image_names.size()!=images.size())
         error(true,"List of images is in an inconsistent state (%u images for %u image names). "
-              "It could be caused by concurrent threads manipulating the image list at the same time.",
+              "This may be caused by concurrent threads manipulating the image list simultaneously.",
               image_names.size(),images.size());
       if (!callstack)
         error(true,"G'MIC encountered a fatal error (empty call stack). "
               "Please submit a bug report, at: https://github.com/GreycLab/gmic/issues");
       if (callstack.size()>128)
-        error(true,"Call stack overflow (infinite recursion?).");
+        error(true,"Call stack overflow (possible infinite recursion?).");
 
       // Substitute expressions in current item.
       const char
