@@ -13699,7 +13699,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 cimg::strellipsize(name,80,true);
                 cimg::strellipsize(s_equal + 1,gmic_use_argx,80,true);
                 error(true,0,0,
-                      "Operator '%s=' on variable%s '%s': Right-hand side '%s' defines %s%d values for %s%d variables.",
+                      "Operator '%s=' on variable%s '%s': "
+                      "The right-hand side '%s' defines %s%d values for %s%d variables.",
                       s_operation,varnames.size()!=1?"s":"",name.data(),argx,
                       varvalues.width()<varnames.width()?"only ":"",varvalues.width(),
                       varvalues.width()>varnames.width()?"only ":"",varnames.width());
@@ -14875,7 +14876,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 s[1]=='f'?(s[4]!='e'?"for":"foreach"):"local",
                 reference_line);
         else error(true,0,0,
-                   "A '%s' command is missing, before the return point.",
+                   "A '%s' command is missing before the return point.",
                    s[1]=='d'?"while":s[1]=='i'?"fi":"done");
       }
     }
