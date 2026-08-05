@@ -1768,25 +1768,26 @@ inline bool is_xyzc(const char c) {
 
 // Fast equivalent to 'cimg_sscanf("%lf%c",&value,&c0)'.
 inline int sscanf_lfc(const char *const str, double *const value, char *const c0) {
-  if (!*str) return -1;
-  char *ptod = 0;
-  const double _value = std::strtod(str,&ptod);
-  if (ptod==str) return 0;
+  char *end;
+  const double _value = std::strtod(str,&end);
+  if (end==str) return *str?0:-1;
   *value = _value;
-  if (*ptod) { *c0 = *ptod; return 2; }
+  const char c = *end;
+  if (c) { *c0 = c; return 2; }
   return 1;
 }
 
 // Fast equivalent to 'cimg_sscanf("%lf%c%c",&value,&c0,&c1)'.
 inline int sscanf_lfcc(const char *const str, double *const value, char *const c0, char *const c1) {
-  if (!*str) return -1;
-  char *ptod = 0;
-  const double _value = std::strtod(str,&ptod);
-  if (ptod==str) return 0;
+  char *end;
+  const double _value = std::strtod(str,&end);
+  if (end==str) return *str?0:-1;
   *value = _value;
-  if (*ptod) {
-    *c0 = *(ptod++);
-    if (*ptod) { *c1 = *ptod; return 3; }
+  char c = *(end++);
+  if (c) {
+    *c0 = c;
+    c = *end;
+    if (c) { *c1 = c; return 3; }
     return 2;
   }
   return 1;
@@ -6944,7 +6945,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           int metric = 2;
           sep0 = sep1 = *indices = 0;
           value = 0;
-          if (((!nbc && ((err = sscanf_lfcc(argument,&value,&sep0,&end))==1 || (err==2 && sepx=='%'))) ||
+          if (((!nbc && ((err = sscanf_lfcc(argument,&value,&sep0,&end))==1 || (err==2 && sep0=='%'))) ||
                (nbc==1 && cimg_sscanf(argument,"%lf,%d%c",
                                       &value,&metric,&end)==2) ||
                (nbc==1 && cimg_sscanf(argument,"%lf%c,%d%c",
@@ -7275,7 +7276,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           bool no_min_max = false;
           sep = sep0 = sep1 = 0;
           value0 = value1 = 0;
-          if (((!nbc && ((err = sscanf_lfcc(argument,&nb_levels,&sep,&end))==1 || (err==2 && sep0=='%')) &&
+          if (((!nbc && ((err = sscanf_lfcc(argument,&nb_levels,&sep,&end))==1 || (err==2 && sep=='%')) &&
                 (no_min_max = true)) ||
                (nbc==2 && cimg_sscanf(argument,"%lf,%lf,%lf%c",
                                       &nb_levels,&value0,&value1,&end)==3) ||
