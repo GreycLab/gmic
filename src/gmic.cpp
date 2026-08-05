@@ -352,15 +352,15 @@ CImg<T>& gmic_blur(const float sigma_x, const float sigma_y, const float sigma_z
                    const unsigned int boundary_conditions, const bool is_gaussian) {
   if (is_empty()) return *this;
   if (is_gaussian) {
-    if (_width>1) vanvliet(sigma_x,0,'x',boundary_conditions);
-    if (_height>1) vanvliet(sigma_y,0,'y',boundary_conditions);
-    if (_depth>1) vanvliet(sigma_z,0,'z',boundary_conditions);
-    if (_spectrum>1) vanvliet(sigma_c,0,'c',boundary_conditions);
+    if (_width>1 && sigma_x) vanvliet(sigma_x,0,'x',boundary_conditions);
+    if (_height>1 && sigma_y) vanvliet(sigma_y,0,'y',boundary_conditions);
+    if (_depth>1 && sigma_z) vanvliet(sigma_z,0,'z',boundary_conditions);
+    if (_spectrum>1 && sigma_c) vanvliet(sigma_c,0,'c',boundary_conditions);
   } else {
-    if (_width>1) deriche(sigma_x,0,'x',boundary_conditions);
-    if (_height>1) deriche(sigma_y,0,'y',boundary_conditions);
-    if (_depth>1) deriche(sigma_z,0,'z',boundary_conditions);
-    if (_spectrum>1) deriche(sigma_c,0,'c',boundary_conditions);
+    if (_width>1 && sigma_x) deriche(sigma_x,0,'x',boundary_conditions);
+    if (_height>1 && sigma_y) deriche(sigma_y,0,'y',boundary_conditions);
+    if (_depth>1 && sigma_z) deriche(sigma_z,0,'z',boundary_conditions);
+    if (_spectrum>1 && sigma_c) deriche(sigma_c,0,'c',boundary_conditions);
   }
   return *this;
 }
@@ -399,6 +399,7 @@ CImg<Tfloat> get_gmic_blur_box(const float sigma, const unsigned int order, cons
 }
 
 CImg<T>& gmic_discard(const char *const axes) {
+  if (is_empty() || !axes || !*axes) return *this;
   for (const char *s = axes; *s; ++s) discard(*s);
   return *this;
 }
@@ -465,7 +466,7 @@ CImg<T>& gmic_draw_text(const float x, const float y,
     fx = sepx=='%' || sepx=='~'?0:x;
     fy = sepy=='%' || sepy=='~'?0:y;
     draw_text((int)cimg::round(fx),(int)cimg::round(fy),"%s",one,0,opacity,&font,text).resize(-100,-100,1,nb_cols);
-    cimg_forC(*this,c) get_shared_channel(c)*=col[c];
+    cimg_forC(*this,c) if (col[c]!=1) get_shared_channel(c)*=col[c];
     return *this;
   }
   if (sepx=='~' || sepy=='~') {
@@ -492,9 +493,10 @@ CImg<T> get_gmic_draw_text(const float x, const float y,
 CImg<T>& gmic_invert_endianness(const char *const stype) {
 
 #define _gmic_invert_endianness(svalue_type,value_type) \
-  if (!std::strcmp(stype,svalue_type)) \
+  if (!std::strcmp(stype,svalue_type)) { \
     if (pixel_type()==cimg::type<value_type>::string()) invert_endianness(); \
-    else CImg<value_type>(*this).invert_endianness().move_to(*this);
+    else CImg<value_type>(*this).invert_endianness().move_to(*this); \
+  }
   if (!std::strcmp(stype,"bool") ||
       !std::strcmp(stype,"uint8") ||
       !std::strcmp(stype,"int8")) return *this;
@@ -1070,7 +1072,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
           CImg_3x3(I,T);
           CImg_3x3(_M, unsigned char);
           cimg_forC(pP,c) cimg_for3x3(pP,p,q,0,c,I,T) {
-            // Compute weight-mean of structure tensor inside patch.
+            // Compute weightes mean of the structure tensor inside the patch.
             cimg_get3x3(pM,p,q,0,0,_M,unsigned char);
             const float
               ixf = (float)(_Mnc*_Mcc*(Inc - Icc)),
@@ -1130,7 +1132,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
     *(ptr_lookup_candidates++) = (unsigned int)target_x;
     *(ptr_lookup_candidates++) = (unsigned int)target_y;
 
-    // Divide size of lookup regions if several lookup sources have been detected.
+    // Divide the size of lookup regions if several lookup sources are detected.
     unsigned int final_lookup_size = _lookup_size;
     if (nb_lookup_candidates>1) {
       const unsigned int
@@ -1283,7 +1285,7 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
       blend_map(x,y) = ion*iin;
     }
     blend_map.threshold(blend_map.max()*_blend_threshold).distance(1);
-    cimg_forXY(blend_map,x,y) blend_map(x,y) = 1/(1 + blend_decay*blend_map(x,y));
+    cimg_for(blend_map,ptr,float) *ptr = 1/(1 + blend_decay*(*ptr));
     blend_map.quantize(blend_scales + 1,false);
     float bm, bM = blend_map.max_min(bm);
     if (bm==bM) blend_map.fill((float)blend_scales);
@@ -1346,8 +1348,8 @@ CImg<T>& inpaint_patch(const CImg<t>& mask, const unsigned int patch_size=11,
   return *this;
 }
 
-// Special crop function that supports more boundary conditions:
-// 0=dirichlet (with value 0), 1=dirichlet (with value 1) and 2=neumann.
+// Special crop function supporting extra boundary conditions:
+// 0=Dirichlet (with value 0), 1=Dirichlet (with value 1) and 2=Neumann.
 CImg<T> _inpaint_patch_crop(const int x0, const int y0, const int x1, const int y1,
                             const unsigned int boundary=0) const {
   const int
