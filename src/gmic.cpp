@@ -5851,7 +5851,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           gmic_substitute_args(false);
           nbc = count_commas(argument);
           unsigned int is_gaussian = 1;
-          float sigma = -1;
+          double sigma = -1;
           sep = *argx = 0;
           boundary = 1;
 
@@ -5862,17 +5862,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             --nbc;
           } else sep = *argx = 0;
 
-          if (((!nbc && cimg_sscanf(p_argument,"%f%c",
-                                    &sigma,&end)==1) ||
-               (!nbc && cimg_sscanf(p_argument,"%f%c%c",
-                                    &sigma,&sep,&end)==2 && sep=='%') ||
-               (nbc==1 && cimg_sscanf(p_argument,"%f,%u%c",
+          if (((!nbc & ((err = sscanf_lfcc(p_argument,&sigma,&sep,&end))==1 || (err==2 && sep=='%'))) ||
+               (nbc==1 && cimg_sscanf(p_argument,"%lf,%u%c",
                                       &sigma,&boundary,&end)==2) ||
-               (nbc==1 && cimg_sscanf(p_argument,"%f%c,%u%c",
+               (nbc==1 && cimg_sscanf(p_argument,"%lf%c,%u%c",
                                       &sigma,&sep,&boundary,&end)==3 && sep=='%') ||
-               (nbc==2 && cimg_sscanf(p_argument,"%f,%u,%u%c",
+               (nbc==2 && cimg_sscanf(p_argument,"%lf,%u,%u%c",
                                       &sigma,&boundary,&is_gaussian,&end)==3) ||
-               (nbc==2 && cimg_sscanf(p_argument,"%f%c,%u,%u%c",
+               (nbc==2 && cimg_sscanf(p_argument,"%lf%c,%u,%u%c",
                                       &sigma,&sep,&boundary,&is_gaussian,&end)==4 && sep=='%')) &&
               sigma>=0 && boundary<=3 && is_gaussian<=1) {
             print(0,"Blur image%s%s%s%s with standard deviation %g%s, %s boundary conditions "
@@ -5891,7 +5888,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               cimg_forY(selection,l) gmic_apply(gmic_blur(g_img[0],g_img[1],g_img[2],g_img[3],
                                                           boundary,(bool)is_gaussian),true);
               g_img.assign();
-            } else cimg_forY(selection,l) gmic_apply(blur(sigma,boundary,(bool)is_gaussian),true);
+            } else cimg_forY(selection,l) gmic_apply(blur((float)sigma,boundary,(bool)is_gaussian),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
