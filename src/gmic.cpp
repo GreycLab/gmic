@@ -5800,14 +5800,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_bilateral) {
           gmic_substitute_args(true);
           nbc = count_commas(argument);
-          float sigma_s = 0, sigma_r = 0, sampling_s = 0, sampling_r = 0;
+          double sigma_s = 0, sigma_r = 0, sampling_s = 0, sampling_r = 0;
           sep0 = sep1 = *argx = *argy = 0;
           if (((nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
-               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&sampling_s,&sampling_r,&end)==5)) &&
-              ((err = cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
-              ((err = cimg_sscanf(argy,"%f%c%c",&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+              ((err = sscanf_lfcc(argx,&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              ((err = sscanf_lfcc(argy,&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"bilateral")).height()==1 &&
               sigma_s>=0 && sigma_r>=0 && sampling_s>=0 && sampling_r>=0) {
             print(0,"Apply joint bilateral filter on image%s, with guide image [%u], "
@@ -5820,13 +5820,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const CImg<T> guide = gmic_image_arg(*ind);
             if (sep0=='%') sigma_s = -sigma_s;
             if (sep1=='%') sigma_r = -sigma_r;
-            cimg_forY(selection,l) gmic_apply(blur_bilateral(guide,sigma_s,sigma_r,sampling_s,sampling_r),true);
+            cimg_forY(selection,l) gmic_apply(blur_bilateral(guide,(float)sigma_s,(float)sigma_r,
+                                                             (float)sampling_s,(float)sampling_r),true);
           } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                              gmic_use_argx,gmic_use_argy,&end)==2) ||
-                      (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%f,%f%c",
+                      (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf%c",
                                              gmic_use_argx,gmic_use_argy,&sampling_s,&sampling_r,&end)==4)) &&
-                     ((err = cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
-                     ((err = cimg_sscanf(argy,"%f%c%c",&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     ((err = sscanf_lfcc(argx,&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err = sscanf_lfcc(argy,&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
                      sigma_s>=0 && sigma_r>=0 && sampling_s>=0 && sampling_r>=0) {
             print(0,"Apply bilateral filter on image%s, with standard deviations (%g%s,%g%s) and "
                   "sampling (%g,%g).",
@@ -5837,7 +5838,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') sigma_s = -sigma_s;
             if (sep1=='%') sigma_r = -sigma_r;
             cimg_forY(selection,l)
-              gmic_apply(blur_bilateral(images[selection[l]],sigma_s,sigma_r,sampling_s,sampling_r),true);
+              gmic_apply(blur_bilateral(images[selection[l]],(float)sigma_s,(float)sigma_r,
+                                        (float)sampling_s,(float)sampling_r),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
