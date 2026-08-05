@@ -5884,8 +5884,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep=='%') sigma = -sigma;
             if (*argx) {
               g_img.assign(4,1,1,1,(T)0);
-              for (const char *s = argx; *s; ++s) g_img[*s>='x'?*s - 'x':3]+=sigma;
-              cimg_forY(selection,l) gmic_apply(gmic_blur(g_img[0],g_img[1],g_img[2],g_img[3],
+              for (const char *s = argx; *s; ++s) g_img[*s>='x'?*s - 'x':3]+=(T)sigma;
+              cimg_forY(selection,l) gmic_apply(gmic_blur((float)g_img[0],(float)g_img[1],
+                                                          (float)g_img[2],(float)g_img[3],
                                                           boundary,(bool)is_gaussian),true);
               g_img.assign();
             } else cimg_forY(selection,l) gmic_apply(blur((float)sigma,boundary,(bool)is_gaussian),true);
@@ -5900,7 +5901,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           gmic_substitute_args(false);
           nbc = count_commas(argument);
           unsigned int order = 0;
-          float sigma = -1;
+          double sigma = -1;
           sep = *argx = 0;
           boundary = 1;
           value = 1;
@@ -5910,21 +5911,18 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             p_argument+=1 + std::strlen(argx);
             --nbc;
           } else sep = *argx = 0;
-          if (((!nbc && cimg_sscanf(p_argument,"%f%c",
-                                    &sigma,&end)==1) ||
-               (!nbc && cimg_sscanf(p_argument,"%f%c%c",
-                                    &sigma,&sep,&end)==2 && sep=='%') ||
-               (nbc==1 && cimg_sscanf(p_argument,"%f,%u%c",
+          if (((!nbc & ((err = sscanf_lfcc(p_argument,&sigma,&sep,&end))==1 || (err==2 && sep=='%'))) ||
+               (nbc==1 && cimg_sscanf(p_argument,"%lf,%u%c",
                                       &sigma,&order,&end)==2) ||
-               (nbc==1 && cimg_sscanf(p_argument,"%f%c,%u%c",
+               (nbc==1 && cimg_sscanf(p_argument,"%lf%c,%u%c",
                                       &sigma,&sep,&order,&end)==3 && sep=='%') ||
-               (nbc==2 && cimg_sscanf(p_argument,"%f,%u,%u%c",
+               (nbc==2 && cimg_sscanf(p_argument,"%lf,%u,%u%c",
                                       &sigma,&order,&boundary,&end)==3) ||
-               (nbc==2 && cimg_sscanf(p_argument,"%f%c,%u,%u%c",
+               (nbc==2 && cimg_sscanf(p_argument,"%lf%c,%u,%u%c",
                                       &sigma,&sep,&order,&boundary,&end)==4 && sep=='%') ||
-               (nbc==3 && cimg_sscanf(p_argument,"%f,%u,%u,%lf%c",
+               (nbc==3 && cimg_sscanf(p_argument,"%lf,%u,%u,%lf%c",
                                       &sigma,&order,&boundary,&value,&end)==4) ||
-               (nbc==3 && cimg_sscanf(p_argument,"%f%c,%u,%u,%lf%c",
+               (nbc==3 && cimg_sscanf(p_argument,"%lf%c,%u,%u,%lf%c",
                                       &sigma,&sep,&order,&boundary,&value,&end)==5 && sep=='%')) &&
               sigma>=0 && boundary<=3 && order<=2 && value>=0) {
             const unsigned int nb_iter = (unsigned int)cimg::round(value);
@@ -5941,11 +5939,12 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep=='%') sigma = -sigma;
             if (*argx) {
               g_img.assign(4,1,1,1,(T)0);
-              for (const char *s = argx; *s; ++s) g_img[*s>='x'?*s - 'x':3]+=sigma;
-              cimg_forY(selection,l) gmic_apply(gmic_blur_box(g_img[0],g_img[1],g_img[2],g_img[3],
+              for (const char *s = argx; *s; ++s) g_img[*s>='x'?*s - 'x':3]+=(T)sigma;
+              cimg_forY(selection,l) gmic_apply(gmic_blur_box((float)g_img[0],(float)g_img[1],
+                                                              (float)g_img[2],(float)g_img[3],
                                                               order,boundary,nb_iter),true);
               g_img.assign();
-            } else cimg_forY(selection,l) gmic_apply(gmic_blur_box(sigma,order,boundary,nb_iter),true);
+            } else cimg_forY(selection,l) gmic_apply(gmic_blur_box((float)sigma,order,boundary,nb_iter),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
@@ -6663,9 +6662,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_denoise) {
           gmic_substitute_args(true);
           nbc = count_commas(argument);
-          float sigma_s = 10, sigma_r = 10, smoothness = 1;
+          double sigma_s = 10, sigma_r = 10, smoothness = 1, psize = 5, rsize = 6;
           unsigned int is_fast_approximation = 0;
-          double psize = 5, rsize = 6;
           sep0 = sep1 = *argx = *argy = 0;
           if (((nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&end)==3) ||
@@ -6673,14 +6671,14 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&psize,&end)==4) ||
                (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&psize,&rsize,&end)==5) ||
-               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%f%c",
+               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%lf%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&psize,&rsize,&smoothness,
                                       &end)==6) ||
-               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%f,%u%c",
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%lf,%u%c",
                                       gmic_use_indices,gmic_use_argx,gmic_use_argy,&psize,&rsize,&smoothness,
                                       &is_fast_approximation,&end)==7)) &&
-              ((err = cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
-              ((err = cimg_sscanf(argy,"%f%c%c",&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+              ((err = sscanf_lfcc(argx,&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+              ((err = sscanf_lfcc(argy,&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"denoise")).height()==1 &&
               sigma_s>=0 && sigma_r>=0 && psize>=0 && rsize>=0 && is_fast_approximation<=1) {
             psize = cimg::round(psize);
@@ -6695,21 +6693,21 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') sigma_s = -sigma_s;
             if (sep1=='%') sigma_r = -sigma_r;
             cimg_forY(selection,l)
-              gmic_apply(blur_patch(guide,sigma_s,sigma_r,(unsigned int)psize,(unsigned int)rsize,smoothness,
-                                    (bool)is_fast_approximation),false);
+              gmic_apply(blur_patch(guide,(float)sigma_s,(float)sigma_r,(unsigned int)psize,(unsigned int)rsize,
+                                    (float)smoothness,(bool)is_fast_approximation),false);
           } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                              gmic_use_argx,gmic_use_argy,&end)==2) ||
                       (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf%c",
                                              gmic_use_argx,gmic_use_argy,&psize,&end)==3) ||
                       (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf%c",
                                              gmic_use_argx,gmic_use_argy,&psize,&rsize,&end)==4) ||
-                      (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%f%c",
+                      (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%lf%c",
                                              gmic_use_argx,gmic_use_argy,&psize,&rsize,&smoothness,&end)==5) ||
-                      (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%f,%u%c",
+                      (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%lf,%lf,%lf,%u%c",
                                              gmic_use_argx,gmic_use_argy,&psize,&rsize,&smoothness,
                                              &is_fast_approximation,&end)==6)) &&
-                     ((err = cimg_sscanf(argx,"%f%c%c",&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
-                     ((err = cimg_sscanf(argy,"%f%c%c",&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
+                     ((err = sscanf_lfcc(argx,&sigma_s,&sep0,&end))==1 || (err==2 && sep0=='%')) &&
+                     ((err = sscanf_lfcc(argy,&sigma_r,&sep1,&end))==1 || (err==2 && sep1=='%')) &&
                      sigma_s>=0 && sigma_r>=0 && psize>=0 && rsize>=0 && is_fast_approximation<=1) {
             psize = cimg::round(psize);
             rsize = cimg::round(rsize);
@@ -6722,8 +6720,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             if (sep0=='%') sigma_s = -sigma_s;
             if (sep1=='%') sigma_r = -sigma_r;
             cimg_forY(selection,l)
-              gmic_apply(blur_patch(sigma_s,sigma_r,(unsigned int)psize,(unsigned int)rsize,smoothness,
-                                    (bool)is_fast_approximation),false);
+              gmic_apply(blur_patch((float)sigma_s,(float)sigma_r,(unsigned int)psize,(unsigned int)rsize,
+                                    (float)smoothness,(bool)is_fast_approximation),false);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
