@@ -11043,15 +11043,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_rotate3d) {
           gmic_substitute_args(false);
           nbc = count_commas(argument);
-          float u = 0, v = 0, w = 1, angle = 0;
+          double u = 0, v = 0, w = 1, angle = 0;
           if (nbc==3 &&
-              cimg_sscanf(argument,"%f,%f,%f,%f%c",
+              cimg_sscanf(argument,"%lf,%lf,%lf,%lf%c",
                           &u,&v,&w,&angle,&end)==4) {
             print(0,"Rotate 3D object%s around axis (%g,%g,%g), by %g deg.",
                   gmic_selection.data(),
                   u,v,w,
                   angle);
-            CImg<float>::rotation_matrix(u,v,w,angle).move_to(vertices);
+            CImg<float>::rotation_matrix((float)u,(float)v,(float)w,(float)angle).move_to(vertices);
             cimg_forY(selection,l) {
               uind = selection[l];
               CImg<T>& img = images[uind];
