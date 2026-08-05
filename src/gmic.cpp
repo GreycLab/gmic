@@ -8046,7 +8046,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%u%c",
                                       gmic_use_indices,&dithering,&map_colors,&end)==3)) &&
               (ind=selection2cimg(indices,images.size(),image_names,"index")).height()==1) {
-            const float ndithering = dithering<0?0:dithering>1?1:dithering;
+            const float ndithering = cimg::cut(dithering,0.0f,1.0f);
             print(0,"Index values in image%s by LUT [%u], with dithering level %g%s.",
                   gmic_selection.data(),
                   *ind,
@@ -9077,8 +9077,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'named'.
         if (id_builtin_command==id_named && no_get) {
           gmic_substitute_args(false);
-          if (cimg_sscanf(argument,"%u%c",
-                          &pattern,&sep)==2 && pattern<=5 && sep==',') is_cond = true;
+          if (*argument>='0' && *argument<='5' && argument[1]==',') { pattern = *argument - '0'; is_cond = true; }
           else { pattern = 0; is_cond = false; }
           boundary = pattern%3;
           CImg<char>::string(argument + (is_cond?2:0)).get_split(CImg<char>::vector(','),0,false).move_to(g_list_c);
@@ -10758,7 +10757,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             catch (CImgException &e) {
               const char *const e_ptr = std::strstr(e.what(),": ");
               error(true,0,"repeat",
-                    "Command 'repeat': Invalid argument '%s'; %s",
+                    "Command 'repeat': Invalid argument '%s': %s",
                     cimg::strellipsize(name,64,false),e_ptr?e_ptr + 2:e.what());
             }
           }
@@ -12063,13 +12062,13 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'sub'.
         gmic_arithmetic_command(sub,
                                 operator-=,
-                                "Subtract %g%s to image%s",
+                                "Subtract %g%s from image%s",
                                 value,ssep,gmic_selection.data(),Tfloat,
                                 operator-=,
-                                "Subtract image [%d] to image%s",
+                                "Subtract image [%d] from image%s",
                                 ind[0],gmic_selection.data(),
                                 operator_minuseq,
-                                "Subtract expression %s to image%s",
+                                "Subtract expression %s from image%s",
                                 gmic_argument_text_printed(),gmic_selection.data(),
                                 "Subtract image%s");
 
