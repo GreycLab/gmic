@@ -6733,17 +6733,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           gmic_substitute_args(false);
           nbc = count_commas(argument);
           unsigned int order = 0;
-          float sigma = 0;
+          double sigma = 0;
           axis = sep = 0;
           boundary = 1;
-          if (((nbc==2 && cimg_sscanf(argument,"%f,%u,%c%c",
+          if (((nbc==2 && cimg_sscanf(argument,"%lf,%u,%c%c",
                                       &sigma,&order,&axis,&end)==3) ||
-               (nbc==2 && cimg_sscanf(argument,"%f%c,%u,%c%c",
+               (nbc==2 && cimg_sscanf(argument,"%lf%c,%u,%c%c",
                                       &sigma,&sep,&order,&axis,&end)==4 &&
                 sep=='%') ||
-               (nbc==3 && cimg_sscanf(argument,"%f,%u,%c,%u%c",
+               (nbc==3 && cimg_sscanf(argument,"%lf,%u,%c,%u%c",
                                       &sigma,&order,&axis,&boundary,&end)==4) ||
-               (nbc==3 && cimg_sscanf(argument,"%f%c,%u,%c,%u%c",
+               (nbc==3 && cimg_sscanf(argument,"%lf%c,%u,%c,%u%c",
                                       &sigma,&sep,&order,&axis,&boundary,&end)==5 && sep=='%')) &&
               sigma>=0 && order<=2 && is_xyzc(axis) && boundary<=3) {
             print(0,"Apply %u-order Deriche filter on image%s, along axis '%c' with standard "
@@ -6752,7 +6752,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   sigma,sep=='%'?"%":"",
                   boundary==0?"dirichlet":boundary==1?"neumann":boundary==2?"periodic":"mirror");
             if (sep=='%') sigma = -sigma;
-            cimg_forY(selection,l) gmic_apply(deriche(sigma,order,axis,boundary),true);
+            cimg_forY(selection,l) gmic_apply(deriche((float)sigma,order,axis,boundary),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
@@ -6878,25 +6878,24 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_displacement) {
           gmic_substitute_args(true);
           nbc = count_commas(argument);
-          double nb_scales = 0, nb_iterations = 1000;
-          float smoothness = 0.1f, precision = 7.f;
+          double nb_scales = 0, nb_iterations = 1000, smoothness = 0.1f, precision = 7.f;
           unsigned int is_forward = 0;
           sep = *argx = 0;
           ind0.assign();
           if (((!nbc && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]%c%c",
                                     gmic_use_indices,&sep,&end)==2 && sep==']') ||
-               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f%c",
+               (nbc==1 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf%c",
                                       gmic_use_indices,&smoothness,&end)==2) ||
-               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f%c",
+               (nbc==2 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf%c",
                                       gmic_use_indices,&smoothness,&precision,&end)==3) ||
-               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf%c",
+               (nbc==3 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf%c",
                                       gmic_use_indices,&smoothness,&precision,&nb_scales,&end)==4) ||
-               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf%c",
+               (nbc==4 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf%c",
                                       gmic_use_indices,&smoothness,&precision,&nb_scales,&nb_iterations,&end)==5) ||
-               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u%c",
+               (nbc==5 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%u%c",
                                       gmic_use_indices,&smoothness,&precision,&nb_scales,&nb_iterations,
                                       &is_forward,&end)==6) ||
-               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%f,%f,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]%c%c",
+               (nbc==6 && cimg_sscanf(argument,"[%255[a-zA-Z0-9_.%+-]],%lf,%lf,%lf,%lf,%u,[%255[a-zA-Z0-9_.%+-]%c%c",
                                       gmic_use_indices,&smoothness,&precision,&nb_scales,&nb_iterations,
                                       &is_forward,gmic_use_argx,&sep,&end)==8 && sep==']')) &&
               (ind=selection2cimg(indices,images.size(),image_names,"displacement")).height()==1 &&
@@ -6924,7 +6923,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               reference = gmic_image_arg(*ind),
               constraints = ind0?gmic_image_arg(*ind0):CImg<T>::empty();
             cimg_forY(selection,l)
-              gmic_apply(displacement(reference,smoothness,precision,(unsigned int)nb_scales,
+              gmic_apply(displacement(reference,(float)smoothness,(float)precision,(unsigned int)nb_scales,
                                       cimg::type<double>::is_inf(nb_iterations)?~0U:(unsigned int)nb_iterations,
                                       (bool)is_forward,
                                       constraints),false);
@@ -7557,8 +7556,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         if (id_builtin_command==id_flood) {
           gmic_substitute_args(false);
           nbc = count_commas(argument);
-          double x = 0, y = 0, z = 0;
-          float tolerance = 0;
+          double x = 0, y = 0, z = 0, tolerance = 0;
           sepx = sepy = sepz = *argx = *argy = *argz = *color = 0;
           is_high_connectivity = 0;
           opacity = 1;
@@ -7568,15 +7566,15 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                                       gmic_use_argx,gmic_use_argy,&end)==2) ||
                (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==3) ||
-               (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f%c",
+               (nbc==3 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%lf%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&end)==4) ||
-               (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u%c",
+               (nbc==4 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%lf,%u%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &end)==5) ||
-               (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f%c",
+               (nbc==5 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%lf,%u,%f%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &opacity,&end)==6) ||
-               (nbc>=6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%f,%u,%f,"
+               (nbc>=6 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eEinfa%+-],%lf,%u,%f,"
                                       "%4095[0-9.eEinfa,+-]%c",
                                       gmic_use_argx,gmic_use_argy,gmic_use_argz,&tolerance,&is_high_connectivity,
                                       &opacity,gmic_use_color,&end)==7)) &&
@@ -7602,7 +7600,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 nx = (int)cimg::round(sepx=='%'?x*(img.width() - 1)/100:x),
                 ny = (int)cimg::round(sepy=='%'?y*(img.height() - 1)/100:y),
                 nz = (int)cimg::round(sepz=='%'?z*(img.depth() - 1)/100:z);
-              gmic_apply(draw_fill(nx,ny,nz,g_img.data(),opacity,tolerance,(bool)is_high_connectivity),false);
+              gmic_apply(draw_fill(nx,ny,nz,g_img.data(),opacity,(float)tolerance,(bool)is_high_connectivity),false);
             }
           } else arg_error(builtin_command);
           g_img.assign();
