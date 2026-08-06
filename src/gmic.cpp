@@ -2685,7 +2685,7 @@ bool has_arguments(const char *const command) {
 }
 
 // Compute the basename of a filename.
-const char* basename(const char *const str)  {
+const char* gmic_basename(const char *const str)  {
   if (!*str) return "";
   const unsigned int l = (unsigned int)std::strlen(str);
   unsigned int ll = l - 1; // 'Last' character to check
@@ -4591,7 +4591,7 @@ CImg<char> gmic::substitute_item(const char *const source,
               if (ind>=0 && *image_names[ind]) {
                 substr.assign(std::max(substr.width(),image_names[ind].width()));
                 cimg::split_filename(image_names[ind].data(),substr);
-                const char *const bname = basename(substr);
+                const char *const bname = gmic_basename(substr);
                 std::memmove(substr,bname,std::strlen(bname) + 1);
                 strreplace_bw(substr);
               }
@@ -4605,7 +4605,7 @@ CImg<char> gmic::substitute_item(const char *const source,
               if (ind>=0 && *image_names[ind]) {
                 substr.assign(std::max(substr.width(),image_names[ind].width()));
                 std::strcpy(substr,image_names[ind]);
-                const char *const bname = basename(substr);
+                const char *const bname = gmic_basename(substr);
                 substr[bname - substr.data()] = 0;
                 strreplace_bw(substr);
               }
