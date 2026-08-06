@@ -24296,7 +24296,7 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   if isnum($1) # Coordinates explicitly set in arguments
     N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 } vertices=
   else # Coordinates specified as an image
-    pass$1 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx round. store. vertices ind=2
+    pass$1 0 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx round. store. vertices ind=2
   fi
   thickness,is_open,opacity,color=3,0,1,0
   if $ind<=$#
@@ -64394,9 +64394,11 @@ fx_vdhc :
     # Draw curve.
     fact:=arg0($antialiasing,1,1.5,2,3)
     {[$w,$h]*$fact},1,1,{$color_mode?255:0} => canvas
-    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm. round..
-    permute.. cxyz thickpolygon[canvas] ..,-{$curve_thickness*$fact},1,{$color_mode?0:255}
+    sh[coords] 0 *. {canvas,w} rm. sh[coords] 1 *. {canvas,h} rm. round[coords]
+    permute[coords] cyzx
+    thickpolygon[canvas] [coords],-{$curve_thickness*$fact},1,{$color_mode?0:255}
     if 0$_is_preview
+      permute[coords] cyzx
       to_rgb[canvas]
       circle[canvas] {coords,I[0]},{7*$fact},0.75,255,0,0
       circle[canvas] {coords,I[-1,2]},{7*$fact},0.75,0,255,0
