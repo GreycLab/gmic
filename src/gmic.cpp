@@ -7367,7 +7367,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           } else if (((nbc==1 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                              gmic_use_argx,gmic_use_argy,&end)==2) ||
                       (nbc==2 && cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
-                                             argx,argy,gmic_use_argz,&end)==3)) &&
+                                             gmic_use_argx,gmic_use_argy,gmic_use_argz,&end)==3)) &&
                      ((err = sscanf_lfcc(argx,&sx,&sepx,&end))==1 || (err==2 && sepx=='%')) &&
                      ((err = sscanf_lfcc(argy,&sy,&sepy,&end))==1 || (err==2 && sepy=='%')) &&
                      (!*argz || (err = sscanf_lfcc(argz,&sz,&sepz,&end))==1 || (err==2 && sepz=='%')) &&
