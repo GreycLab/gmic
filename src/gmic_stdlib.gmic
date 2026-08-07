@@ -10695,11 +10695,11 @@ _select :
 
 
 #@cli shape_hilbert : _size>=0,_nb_recursions>=0
-#@cli : Input a 2D hilbert curve with specified size.
+#@cli : Input a 2D image of the Hilbert curve.
 #@cli : Default values: 'size=512' and 'nb_recursions=5'.
 #@cli : $ shape_hilbert ,
 shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
-  e[^-1] "Input a $1x$1 hilbert curve shape."
+  e[^-1] "Input a $1x$1 image of the Hilbert curve."
   ir:=round($1)
   if !$ir 0
   else l[] {
@@ -10719,7 +10719,7 @@ shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
         px = x; py = y;
       )"
   } fi
-  => "[2D hilbert curve]"
+  => "[Hilbert curve]"
 
 #@cli shape_menger : _nb_iterations>=0
 #@cli : Input a 3D voxelized representation of the Menger sponge.
@@ -10744,6 +10744,45 @@ shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
     repeat $nbi { r. {3*[w,h,d]},1,0,2 +ri[0] . *[-2,-1] }
     k.
   } => "[3D Mosely Snowflake]"
+
+#@cli shape_peano : _size>=0,_nb_recursions>=0
+#@cli : Input a 2D image of the Peano curve.
+#@cli : Default values: 'size=512' and 'nb_recursions=3'.
+#@cli : $ shape_peano ,
+shape_peano : check "${1=512}>=0 && isint(${2=3},0)"
+  e[^-1] "Input a $1x$1 image of the Peano curve."
+
+  # Generate curve vertices.
+  0 eval "
+    x = y = 0; dy = 1; dx = 0;
+    turn_left() = ( swap(dx,dy); dx=-dx; );
+    turn_right() = ( swap(dx,dy); dy=-dy; );
+    forward() = ( x+=dx; y+=dy; da_push([x,y]); );
+    L(n) = (
+      n>0?(
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+        turn_right(); forward(); turn_right();
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+        turn_left(); forward(); turn_left();
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+      );
+    );
+    R(n) = (
+      n>0?(
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+        turn_left(); forward(); turn_left();
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+        turn_right(); forward(); turn_right();
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+      );
+    );
+    da_push([0,0]); L(1 + $2);
+    da_freeze()"
+
+  # Draw curve.
+  repeat 2 { sh. $> n. 0,{$1-1} rm. } round. permute. cyxz
+  $1,$1 polygon. ..,1,-0xFFFFFFFF,1
+  rm.. => "[Peano curve]"
 
 #@cli shape_polygon : _size>=0,_nb_vertices>=3,_angle
 #@cli : Input a 2D polygonal binary shape with specified geometry.
