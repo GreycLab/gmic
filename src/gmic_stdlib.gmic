@@ -17902,8 +17902,8 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
     ({'"$1"'}) 0
     eval.. ">i = i; # Replace random transformations with their values
       i==_'M'?da_push(v?_'V':_'H'):
-      i==_'F'?((r = v(3))?r<3?da_push(r - 1?_'Y':_'X'):da_push(_'X',_'Y')):
-      i==_'Q'?((r = v(3))?r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):
+      i==_'F'?((r = v(3))?(r<3?da_push(r - 1?_'Y':_'X'):da_push(_'X',_'Y')):da_push(_':')):
+      i==_'Q'?((r = v(3))?(r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):da_push(_':')):
       i==_'?'?(ind = v($nb_images - 1); str = v2s(ind); for (k = 0, str[k], da_push(str[k++]))):
       da_push(i);
       end(da_freeze())" layout={t} rm[-2,-1]
@@ -24296,7 +24296,7 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
   if isnum($1) # Coordinates explicitly set in arguments
     N=$1 x0,y0=${2,3} k,ind=1,4 repeat $N-1 { x$k,y$k=${arg$ind},${arg{$ind+1}} k+=1 ind+=2 } vertices=
   else # Coordinates specified as an image
-    pass$1 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx round. store. vertices ind=2
+    pass$1 0 N:=int(whds/2) r. 2,$N,1,1,-1 permute. yzcx round. store. vertices ind=2
   fi
   thickness,is_open,opacity,color=3,0,1,0
   if $ind<=$#
@@ -24341,56 +24341,6 @@ thickpolygon : check "(isnum($1) && isint($1,1)) || "${"is_image_arg $1"}
     100%,100%,1,{0,s} fc. $color j[0] .,$xm,$ym,0,0,$opacity,..
     k[0]
   }
-
-#@cli thickpolyline : [coords],thickness>=0,_is_closed={ 0:No, 1:Yes },opacity,_pattern,_color1,...
-#@cli : Draw a thick polyline on selected images.
-#@cli : '[coords]' is the image of vertex coordinates (2D vector-valued pixels).
-#@cli : 'pattern' is an hexadecimal number starting with '0x' which can be omitted
-#@cli : even if a color is specified. If a pattern is specified, the thickness is assumed to be '0'.
-#@cli : Default values: 'thickness=1', 'is_closed=0', 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
-#@cli : $ 1024,1024,1,3 10,1,1,2 repeat 10 { rand. 0,1023 thickpolyline.. .,18,0,0.5,${-RGB} } rm. rs 50%
-thickpolyline : check ${"is_image_arg $1"}" && ${2=0}>=0 && isbool(${3=0}) && isnum(${4=1})" skip ${5=0},${6=0}
-  s0,s1="","closed "
-  if ${"is_pattern \"$5\""}
-    e[0--3] "Draw a thick "${s$3}"polyline on image$?, with thickness $2, opacity $4, pattern $5 and color (${6--1})."
-    pattern=$5 color=${6--1}
-  else
-    e[0--3] "Draw a thick "${s$3}"polyline on image$?, with thickness $2, opacity $4 and color (${5--1})."
-    pattern= color=${5--1}
-  fi
-  N=$! pass$1 if s<2 channels. 0,1 fi
-
-  # Transparent drawing: Draw polyline in a temporary binary image
-  if $4!=1
-    sh. 0 xm,xM:=floor(im-$2),ceil(iM+$2) rm. sh. 1 ym,yM:=floor(im-$2),ceil(iM+$2) rm.
-    . sh. 0 -. $xm rm. sh. 1 -. $ym rm.
-    {[$xM-$xm+1,$yM-$ym+1]} thickpolyline. ..,${2,3},1,1 100%,100%,1,{0,s} fc. $color j[^$N--1] .,$xm,$ym,0,0,$4,..
-    rm[$N--1]
-    return
-  fi
-
-  # Standard (opaque) drawing.
-  foreach[^-1] {
-    pass.
-    if $2>1 # Thick line: draw it with polygons
-      1,{whd},1,10
-      eval.. "begin(off = 0; const t = $2/2 - 0.5);
-        P0 = I; P1 = J[1,$3?2:1];
-        T = unitnorm(P1 - P0); N = [ -T[1], T[0] ]*t;
-        I[#-1,off++] = round([ P0, P0 - N, P0 + N, P1 + N, P1 - N ]);
-        _0"
-      eval. "
-        S0 = I; S1 = J[1,$3?2:3];
-        polygon(#0,4,S0[2,8],1,"$color");
-        polygon(#0,3,S0[8,2],S1[2,2],S1[0,2],1,"$color");
-        polygon(#0,3,S0[6,2],S1[0,2],S1[4,2],1,"$color");
-        _0"
-    else # Thin line: Use standard line drawing
-      eval. "P0 = I; P1 = J[1,$3?2:1]; polygon(#0,2,P0,P1,1,"$color")"
-    fi
-    k[0]
-  }
-  rm.
 
 #@cli thickspline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_thickness,_opacity,_color1,...
 #@cli : Draw specified colored thick spline curve on selected images (cubic hermite spline).
@@ -27349,6 +27299,7 @@ rotation3d :
 
 #@cli sierpinski3d : _recursion_level>=0,_width,_height
 #@cli : Input 3D Sierpinski pyramid.
+#@cli : Default values: 'recursion_level=4', 'width=1' and 'height=1'.
 #@cli : $ sierpinski3d 3,100,-100 +primitives3d 1 color3d[-2] ${-rgb}
 +sierpinski3d : check ${1=4}>=0 skip ${2=1},${3=1}
   e[^-1] "Input 3D Sierpinski pyramid of degree $1, with width $2 and height $3."
@@ -64444,9 +64395,11 @@ fx_vdhc :
     # Draw curve.
     fact:=arg0($antialiasing,1,1.5,2,3)
     {[$w,$h]*$fact},1,1,{$color_mode?255:0} => canvas
-    sh.. 0 *. {canvas,w} rm. sh.. 1 *. {canvas,h} rm. round..
-    thickpolyline[canvas] ..,{$curve_thickness*$fact},0,1,{$color_mode?0:255}
+    sh[coords] 0 *. {canvas,w} rm. sh[coords] 1 *. {canvas,h} rm. round[coords]
+    permute[coords] cyzx
+    thickpolygon[canvas] [coords],-{$curve_thickness*$fact},1,{$color_mode?0:255}
     if 0$_is_preview
+      permute[coords] cyzx
       to_rgb[canvas]
       circle[canvas] {coords,I[0]},{7*$fact},0.75,255,0,0
       circle[canvas] {coords,I[-1,2]},{7*$fact},0.75,0,255,0
