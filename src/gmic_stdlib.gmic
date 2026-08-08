@@ -15625,17 +15625,18 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
   foreach { nm={n}
 
     # Always extract full colormap first (avoid working on duplicated colors).
-    eval "begin(is_int = 1); is_int&=isint(i); end(merge(is_int,&); set('is_int',is_int); set('delta',iM-im))"
-    if $is_int" && "((s==1" && "$delta<16777216)" || "(s==2" && "$delta<4096))
-      # Optimized case when only relatively small integers are used for 1D or 2D pixel values.
-      repeat s { sh. $> im$>,siz$>:=im,iM-im+1 rm. }
+    eval "begin(is_int = 1); is_int&=isint(i); end(merge(is_int,&); set('is_int',is_int))"
+    if $is_int" && "s<=3 repeat s { sh. $> im$>,siz$>:=im,iM-im+1 rm. } fi
+    if 0&&$is_int" && "s<=3" && "((s==1" && "$siz0<=16777216)" || "(s==2" && "$siz0*$siz1<=16777216))
+      # Optimized case when only relatively small integers are used for pixel values.
       if s==1 $siz0 else $siz0,$siz1 fi
-      eval.. ">begin(const im0 = $im0; const im1 = $im1); s==1?++i(#-1,i - im0):++i(#-1,i0 - im0,i1 - im1); _0"
+      eval.. ">begin(const im0 = $im0; const im1 = $im1); s==1?++i[#-1,i - im0]:++i(#-1,i0 - im0,i1 - im1); _0"
       1,1,1,{-2,s}
       eval.. "begin(const im0 = $im0; const im1 = $im1); i?(s#-3==1?da_push(x + im0):da_push([ x + im0,y + im1 ]));
-              end(da_freeze())"
-      rm.. permute. yxzc
-    else # Generic case: Use hashcodes
+        end(da_freeze())"
+      permute. yxzc rm..
+
+    elif 0&&$is_int # More generic case, with larger integers -> use integer hashes
       +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
       rm.. equalize. 2048 n. 0,2047 round. 1
       0x2048 eval[0] "> # Find single occurrence of each color/vector
@@ -15648,8 +15649,43 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
         );
         end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
       a[2--1] y permute. yzcx rm..
+
+    else # Most generic case -> use float32 hashes
+      100%,100%,100%,4,":
+        hash_f32(C) = (
+          const A = 2654435761;
+          const B = 2246822519;
+          const M = 16777213;
+          H = 1;
+          repeat (size(C),i,
+            X = isnan(C[i])?0:((C[i]*8192)%M);
+            H = (H*A + X*B + 1)%M;
+          );
+          H;
+        );
+        C = I(#-1);
+        [ hash_f32(C),x,y,z ]"
+      r. {whd},1,1,100%,-1 sort. +,x
+
+      1,1,1,{s-1}x2
+      eval... ">begin(hash = -1); # Extract unique colors.
+        color = I(#-4,i1,i2,i3);
+        hash!=i0?(
+          hash = i0;
+          i(#-2,0,h(#-2) - 1) = 0; # Empty dynamic array
+          da_push(#-2,color); da_push(#-1,color);
+        ):( # Check that color doesn't already exist in dynamic array
+          already_exist = 0;
+          repeat(da_size(#-2),k,I[#-2,k]==color?(already_exist = 1; break()));
+          !already_exist?(
+            da_push(#-2,color); da_push(#-1,color);
+          );
+        );
+        end(da_freeze(#-1)); _0"
+      rm[-3,-2] permute. yxzc
     fi
 
+    # Quantize colors in 'nb_levels'.
     if $1" && "$1<w
 
       # Median-cut algorithm.
