@@ -15624,19 +15624,31 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
 
   foreach { nm={n}
 
-    # Always extract full colormap (avoid working on duplicated colors).
-    +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
-    rm.. equalize. 2048 n. 0,2047 round. 1
-    0x2048 eval[0] "> # Find single occurrence of each color/vector
-      begin(size = vector2048());
-      I = I; H = i#1; indH = H + 2; sizH = size[H];
-      !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
-        sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
-        copy(i(#indH,0,sizH,0,0),I);
-        ++size[H];
-      );
-      end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
-    a[2--1] y permute. yzcx rm..
+    # Always extract full colormap first (avoid working on duplicated colors).
+    eval "begin(is_int = 1); is_int&=isint(i); end(merge(is_int,&); set('is_int',is_int); set('delta',iM-im))"
+    if $is_int" && "((s==1" && "$delta<16777216)" || "(s==2" && "$delta<4096))
+      # Optimized case when only relatively small integers are used for 1D or 2D pixel values.
+      repeat s { sh. $> im$>,siz$>:=im,iM-im+1 rm. }
+      if s==1 $siz0 else $siz0,$siz1 fi
+      eval.. ">begin(const im0 = $im0; const im1 = $im1); s==1?++i(#-1,i - im0):++i(#-1,i0 - im0,i1 - im1); _0"
+      1,1,1,{-2,s}
+      eval.. "begin(const im0 = $im0; const im1 = $im1); i?(s#-3==1?da_push(x + im0):da_push([ x + im0,y + im1 ]));
+              end(da_freeze())"
+      rm.. permute. yxzc
+    else # Generic case: Use hashcodes
+      +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
+      rm.. equalize. 2048 n. 0,2047 round. 1
+      0x2048 eval[0] "> # Find single occurrence of each color/vector
+        begin(size = vector2048());
+        I = I; H = i#1; indH = H + 2; sizH = size[H];
+        !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
+          sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
+          copy(i(#indH,0,sizH,0,0),I);
+          ++size[H];
+        );
+        end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
+      a[2--1] y permute. yzcx rm..
+    fi
 
     if $1" && "$1<w
 
