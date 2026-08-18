@@ -15639,8 +15639,8 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
         end(da_freeze())"
       permute. yxzc rm..
 
-    elif $is_int # More generic case with integers -> use integer hashes
-      100%,100%,100%,1,"
+    else # More generic case -> use hashes
+      100%,100%,100%,1,": # Compute color hashes
         H = 1; repeat (s#0,c,i = j(#0,0,0,0,c); ((H*=2654435761)+=2246822519*(isnan(i)?0:i))%=2048); int(H)"
       0x2048 eval[0] "> # Find single occurrence of each color/vector
         begin(size = vector2048());
@@ -15652,39 +15652,6 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
         );
         end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
       a[2--1] y permute. yzcx rm..
-
-    else # Most generic case -> use float32 hashes
-      100%,100%,100%,4,":
-        hash_f32(C) = (
-          const A = 2654435761;
-          const B = 2246822519;
-          const M = 16777213;
-          H = 1;
-          repeat (size(C),i,
-            X = isnan(C[i])?0:((C[i]*8192)%M);
-            H = (H*A + X*B + 1)%M;
-          );
-          H;
-        );
-        C = I(#-1);
-        [ hash_f32(C),x,y,z ]"
-      r. {whd},1,1,100%,-1 sort. +,x
-      1,1,1,{0,s}x2
-      eval... ">begin(hash = -1); # Extract unique colors.
-        color = I(#-4,i1,i2,i3);
-        hash!=i0?(
-          hash = i0;
-          i(#-2,0,h(#-2) - 1) = 0; # Empty dynamic array
-          da_push(#-2,color); da_push(#-1,color);
-        ):( # Check that color doesn't already exist in dynamic array
-          already_exist = 0;
-          repeat(da_size(#-2),k,I[#-2,k]==color?(already_exist = 1; break()));
-          !already_exist?(
-            da_push(#-2,color); da_push(#-1,color);
-          );
-        );
-        end(da_freeze(#-1)); _0"
-      rm[-3,-2] permute. yxzc
     fi
 
     # Quantize colors in 'nb_levels'.
