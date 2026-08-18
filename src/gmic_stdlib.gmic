@@ -15640,7 +15640,7 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
       permute. yxzc rm..
 
     else # More generic case -> use hashes
-      N=256
+      N=1024 # Number of buckets
       100%,100%,100%,1,": # Compute color hashes
         H = 1; repeat (s#0,c,i = j(#0,0,0,0,c); ((H*=2654435761)+=2246822519*(isnan(i)?0:i))%=$N); int(H)"
       +%. $_cpus histogram. $_cpus,0,{$_cpus-1} M:=iM rm. # Retrieve max number of colors per thread
@@ -15653,8 +15653,7 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
         begin(size = vector(#$N));
         H = i;
         H>=0?(
-          indH = H + 2; sizH = size[H];
-          C = I(#0,i1,i2,i3);
+          indH = H + 2; sizH = size[H]; C = I(#0,i1,i2,i3);
           !sizH || find(#indH,C,s#0*(sizH - 1),-s#0)<0?( # Color not found
             sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
             copy(i(#indH,0,sizH,0,0),C);
