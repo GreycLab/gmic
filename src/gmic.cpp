@@ -1871,6 +1871,7 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
 #define gmic_simple_command(command_name,description) \
   if (id_builtin_command==id_##command_name) { \
     print(0,description,gmic_selection.data()); \
+    cimg_pragma_openmp(parallel for) \
     cimg_forY(selection,l) gmic_apply(command_name(),true); \
     is_change = true; \
     continue; \
