@@ -847,8 +847,8 @@ reference : skip "${2=}"
 "given interpolation mode. 'interpolation' can be "\
 "{ -1:None (memory content) | 0:None | 1:Nearest | 2:Average | 3:Linear | 4:Grid | 5:Bicubic | 6:Lanczos }, and "\
 "'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }."\n\
-"* Function 'find(A,B,_starting_index,_search_step)' returns the index where sub-vector 'B' appears in vector 'A', "\
-"(or '-1' if 'B' is not contained in 'A'). Argument 'A' can be also replaced by an image index '#ind'."\n\
+"* Function 'find(A,B,_starting_index,_search_step,_max_iterations)' returns the index where sub-vector 'B' appears "\
+"in vector 'A' (or '-1' if 'B' is not contained in 'A'). Argument 'A' can be also replaced by an image index '#ind'."\n\
 "* Specifying a vector-valued math expression as an argument of a command that operates on image values "\
 "(e.g. 'fill') modifies the whole spectrum range of the processed image(s), for each spatial coordinates `(x,y,z)`. "\
 "The command does not loop over the `c`-axis in this case."\n\
@@ -10695,11 +10695,11 @@ _select :
 
 
 #@cli shape_hilbert : _size>=0,_nb_recursions>=0
-#@cli : Input a 2D hilbert curve with specified size.
+#@cli : Input a 2D image of the Hilbert curve.
 #@cli : Default values: 'size=512' and 'nb_recursions=5'.
 #@cli : $ shape_hilbert ,
 shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
-  e[^-1] "Input a $1x$1 hilbert curve shape."
+  e[^-1] "Input a $1x$1 image of the Hilbert curve."
   ir:=round($1)
   if !$ir 0
   else l[] {
@@ -10719,7 +10719,7 @@ shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
         px = x; py = y;
       )"
   } fi
-  => "[2D hilbert curve]"
+  => "[Hilbert curve]"
 
 #@cli shape_menger : _nb_iterations>=0
 #@cli : Input a 3D voxelized representation of the Menger sponge.
@@ -10744,6 +10744,45 @@ shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
     repeat $nbi { r. {3*[w,h,d]},1,0,2 +ri[0] . *[-2,-1] }
     k.
   } => "[3D Mosely Snowflake]"
+
+#@cli shape_peano : _size>=0,_nb_recursions>=0
+#@cli : Input a 2D image of the Peano curve.
+#@cli : Default values: 'size=512' and 'nb_recursions=3'.
+#@cli : $ shape_peano ,
+shape_peano : check "${1=512}>=0 && isint(${2=3},0)"
+  e[^-1] "Input a $1x$1 image of the Peano curve."
+
+  # Generate curve vertices.
+  0 eval "
+    x = y = 0; dy = 1; dx = 0;
+    turn_left() = ( swap(dx,dy); dx=-dx; );
+    turn_right() = ( swap(dx,dy); dy=-dy; );
+    forward() = ( x+=dx; y+=dy; da_push([x,y]); );
+    L(n) = (
+      n>0?(
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+        turn_right(); forward(); turn_right();
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+        turn_left(); forward(); turn_left();
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+      );
+    );
+    R(n) = (
+      n>0?(
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+        turn_left(); forward(); turn_left();
+        L(n - 1); forward(); R(n - 1); forward(); L(n - 1);
+        turn_right(); forward(); turn_right();
+        R(n - 1); forward(); L(n - 1); forward(); R(n - 1);
+      );
+    );
+    da_push([0,0]); L(1 + $2);
+    da_freeze()"
+
+  # Draw curve.
+  repeat 2 { sh. $> n. 0,{$1-1} rm. } round. permute. cyxz
+  $1,$1 polygon. ..,1,-0xFFFFFFFF,1
+  rm.. => "[Peano curve]"
 
 #@cli shape_polygon : _size>=0,_nb_vertices>=3,_angle
 #@cli : Input a 2D polygonal binary shape with specified geometry.
@@ -12481,11 +12520,14 @@ update_reference_html : check "isbool(${1=0})"
                 "should be '"$path_ok"'."
   fi
   x "rm -f *.pdf"
+  x "ln -fs "$HOME/work/src/gmic-community/reference/Reptorian/Combinatorics/Main.gmd" "\
+    $HOME/work/src/gmic-community/reference/"\"Reptorian's Combinatorics Library.gmd\""
 
   rm
   e[^-1] "Generate reference documentation pages for the G'MIC website."
   it $HOME/work/src/gmic/src/gmic_stdlib.gmic
-  a y
+  it $HOME/work/src/gmic-community/include/reptorian.gmic
+  i[1--1] ('\n') a y
 
   # Generate image of examples.
   if $1 _prerelease= fi
@@ -12500,6 +12542,26 @@ update_reference_html : check "isbool(${1=0})"
   x "ln -fs "$HOME/work/src/gmic/html/footer.html" ."
   x "cp -rf "$HOME/work/src/gmic-community/reference/images" ."
   reference html,$HOME/work/src/gmic-community/reference
+
+  # Generate reference pages for Reptorian's Combinatorics Library.
+  e "\n > Generate reference pages for Reptorian's Combinatorics Library."
+  PATH=$HOME/work/src/gmic-community/reference/Reptorian/Combinatorics/
+  files 0,${PATH}*.gmd files=${}
+  repeat narg($files) {
+    arg0 $>,$files file=${} 0 => $file strvar {b} url=rcl_${}.html rm.
+    l[] {
+      it ${PATH}$file
+      replace_str "Permutations.html","rcl_permutations.html"
+      replace_str "Combinations.html","rcl_combinations.html"
+      replace_str "Cartesian_Product.html","rcl_cartesian_product.html"
+      replace_str "Sum_Combinatorics.html","rcl_sum_combinatorics.html"
+      replace_str "Incremental_Combination.html","rcl_incremental_combination.html"
+      replace_str "RDE.html","rcl_rde.html"
+      gmd2html 1
+      ot $url rm
+    }
+  }
+  x "ln -fs rcl_main.html reptorian_s_combinatorics_library.html"
 
   # Upload to G'MIC server.
   if $1
@@ -15585,20 +15647,47 @@ colormap : check "isint($1,0) && isbool(${2=1}) && isint(${3=1},0,2)"
 
   foreach { nm={n}
 
-    # Always extract full colormap (avoid working on duplicated colors).
-    +n 0,255 100%,100%,100%,1,"H = 0; repeat (s#-1,c,(H*=31)+=j(#-1,0,0,0,c)); H%2048" # Compute hashcode map
-    rm.. equalize. 2048 n. 0,2047 round. 1
-    0x2048 eval[0] "> # Find single occurrence of each color/vector
-      begin(size = vector2048());
-      I = I; H = i#1; indH = H + 2; sizH = size[H];
-      !sizH || find(#indH,I,s#0*(sizH - 1),-s#0)<0?( # Color not found
-        sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
-        copy(i(#indH,0,sizH,0,0),I);
-        ++size[H];
-      );
-      end(fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
-    a[2--1] y permute. yzcx rm..
+    # Always extract full colormap first (avoid working on duplicated colors).
+    eval "begin(is_int = 1); is_int&=isint(i); end(merge(is_int,&); set('is_int',is_int))"
+    if $is_int" && "s<=2 repeat s { sh. $> im$>,siz$>:=im,iM-im+1 rm. } fi
+    if $is_int" && "s<=2" && "\
+       ((s==1" && "$siz0<=16777216)" || "\
+        (s==2" && "$siz0*$siz1<=16777216))
+      # Optimized case when only relatively small integers are used for pixel values.
+      if s==1 $siz0 else $siz0,$siz1 fi
+      eval.. ":begin(const im0 = $im0; const im1 = $im1); s==1?(i[#-1,i - im0] = 1):(i(#-1,i0 - im0,i1 - im1) = 1); _0"
+      1,1,1,{-2,s}
+      eval.. "begin(const im0 = $im0; const im1 = $im1);
+        i?(s#-3==1?da_push(x + im0):da_push([ x + im0,y + im1 ]));
+        end(da_freeze())"
+      permute. yxzc rm..
 
+    else # More generic case -> use hashes
+      N=1024 # Number of buckets
+      100%,100%,100%,1,": # Compute color hashes
+        H = 1; repeat (s#0,c,i = j(#0,0,0,0,c); ((H*=2654435761)+=2246822519*(isnan(i)?0:i))%=$N); int(H)"
+      +%. {;n} histogram. {[n,0,n-1]} M:=iM rm. # Retrieve max number of colors per thread
+
+      $M,{;n},1,4,-1 # Dispatch colors to each thread
+      eval[1] ">begin(size = vector(#n)); H = i; m = H%n; I(#2,size[m]++,m) = [ H,x,y,z ]" rm..
+
+      0x$N
+      eval[1] ": # Find single occurrence of each color/vector
+        begin(size = vector(#$N));
+        H = i;
+        H>=0?(
+          indH = H + 2; sizH = size[H]; C = I(#0,i1,i2,i3);
+          !sizH || find(#indH,C,s#0*(sizH - 1),-s#0)<0?( # Color not found
+            sizH>=h(#indH)?resize(#indH,s#0,max(8,2*h#indH),1,1,0);
+            copy(i(#indH,0,sizH,0,0),C);
+            ++size[H];
+          );
+        );
+        end(merge(size,+); fill(size,k,resize(#k + 2,s#0,size[k],1,1,0))); _0"
+      a[2--1] y permute. yzcx rm..
+    fi
+
+    # Quantize colors in 'nb_levels'.
     if $1" && "$1<w
 
       # Median-cut algorithm.
@@ -55467,7 +55556,7 @@ _fx_zoom_v2 :
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Adds film grain noise to the image.
 #@gui : "}, sep = separator()
-#@gui : Preset = choice{"Orwo NP20-GDR","Kodak TMAX 400","Kodak TMAX 3200","Kodak TRI-X 1600","Unknown"}
+#@gui : Preset = choice{"Orwo NP20-GDR","Kodak TMAX 400","Kodak TMAX 3200","Kodak TRI-X 1600"}
 #@gui : Blend Mode = choice(1,"Alpha","Grain Merge","Hard Light","Overlay","Soft Light","Grain Only")
 #@gui : Opacity = float(0.2,0,1)
 #@gui : Scale = float(100,30,800)
@@ -55490,7 +55579,7 @@ fx_simulate_grain :
   __fx_simulate_grain ${arg0\ $1,${-_fx_simulate_grain}},${2-11},0,0
 
 _fx_simulate_grain :
-  u orwo_np20,kodak_tmax400,kodak_tmax3200,kodak_trix1600,unknown
+  u orwo_np20,kodak_tmax400,kodak_tmax3200,kodak_trix1600
 
 fx_simulate_grain_preview :
   gui_split_preview "_fx_simulate_grain_preview $*",$-2
@@ -55500,11 +55589,10 @@ _fx_simulate_grain_preview :
 
 __fx_simulate_grain :
   bm0=alpha bm1=grainmerge bm2=hardlight bm3=overlay bm4=softlight bm5=alpha
-  input_cached data_film_presets/grain_$1.cimgz
+  l[] { input_cached gmic_grain.gmz k[$1] }
   r. $4%,$4%,1,1,6
   if $4>100 b. 1 fi
   sharpen. $5 c. 0,255
-
   repeat $!-1 { l[$>,-1] {
     split_opacity[0]
     +syntexturize. {0,[w,h]}
