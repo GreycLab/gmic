@@ -5017,7 +5017,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   CImgList<_gmic_parallel<T> > gmic_threads;
   CImgList<unsigned int> primitives;
   CImgList<unsigned char> g_list_uc;
-  CImgList<float> g_list_f;
+  CImgList<gmic_pixel_type> g_list_f;
   CImgList<char> g_list_c;
   CImgList<T> g_list;
 
