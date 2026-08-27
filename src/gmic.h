@@ -252,7 +252,7 @@ inline double gmic_mp_name(const unsigned int ind, double *const out_str, const 
 template<typename T>
 inline double gmic_mp_run(char *const str, const bool is_parallel_run, void *const p_list, const T& pixel_type);
 #define cimg_mp_func_run(str,is_parallel_run) \
-  return ::gmic_mp_run(str,is_parallel_run,&mp.imglist,(T)0)
+  return ::gmic_mp_run(str,is_parallel_run,&mp.imglist,(gmic_pixel_type)0)
 
 template<typename T>
 inline double gmic_mp_store(const double *const ptrs, const unsigned int siz,

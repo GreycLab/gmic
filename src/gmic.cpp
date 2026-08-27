@@ -1837,22 +1837,14 @@ inline char *_gmic_argument_text(const char *const argument, char *const argumen
 
 // Macro for having 'get' or 'non-get' versions of G'MIC commands.
 // Set 'optim_inplace' to true only for function implementations that act in-place.
-#if gmic_pixel_type==half
-#define _gmic_apply(function,optim_inplace) \
-  images[uind].get_##function.move_to(images)
-#else
-#define _gmic_apply(function,optim_inplace) \
-  if (optim_inplace) \
-    CImg<gmic_pixel_type>(images[uind],false).function.move_to(images); /* Surprisingly faster */ \
-  else \
-    images[uind].get_##function.move_to(images)
-#endif
-
 #define gmic_apply(function,optim_inplace) { \
     uind = selection[l]; \
     gmic_check_shared_image(images[uind]); \
     if (is_get) { \
-      _gmic_apply(function,optim_inplace); \
+      if (optim_inplace) \
+        CImg<gmic_pixel_type>(images[uind],false).function.move_to(images); /* Surprisingly faster */ \
+      else \
+        images[uind].get_##function.move_to(images); \
       image_names[uind].get_copymark().move_to(image_names); \
     } else images[uind].function; \
   }
@@ -5017,7 +5009,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
   CImgList<_gmic_parallel<T> > gmic_threads;
   CImgList<unsigned int> primitives;
   CImgList<unsigned char> g_list_uc;
-  CImgList<float> g_list_f;
+  CImgList<gmic_pixel_type> g_list_f;
   CImgList<char> g_list_c;
   CImgList<T> g_list;
 
