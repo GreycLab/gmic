@@ -14544,8 +14544,8 @@ ir : check "isbool(${3=1}) && isbool(${4=$3})"
 #@cli : Each output image has 'M*N' channels, where 'M' and 'N' are the numbers of channels of, respectively, \
 # the corresponding input image and the 'palette' image.
 #@cli : 'palette_name' can be { default | hsv | lines | hot | cool | jet | flag | cube | rainbow | algae | amp | \
-# balance | curl | deep | delta | dense | diff | gray | haline | ice | matter | oxy | phase | rain | solar | speed | \
-# tarn | tempo | thermal | topo | turbid | aurora | hocuspocus | srb2 | uzebox }
+# balance | curl | deep | delta | dense | diff | gray | haline | ice | matter | oxy | phase | rain | random | solar | \
+# speed | tarn | tempo | thermal | topo | turbid | aurora | hocuspocus | srb2 | uzebox }
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : Default value: 'boundary_conditions=0'.
 #@cli : $ image.jpg +luminance map[-1] 3
@@ -14557,7 +14557,9 @@ map : check "isint(${2=0},0,3)"
   names=${-_palette_names} N:=narg($names)
   l[] { if isint("$1") name=${"arg0 ($1%"$N"),"$names} else name="$1" fi onfail name="$1" }
   e[^-1] "Map color LUT '"$name"' to image$?, with "$boundary" boundary conditions."
-  palette $1 map[^-1] .,$2 rm.
+  if ['$1']=='random' foreach { {ceil(iM-im+1)},1,1,{s==1?3:1} rand. 0,255 map.. . rm. }
+  else palette $1 map[^-1] .,$2 rm.
+  fi
 
 #@cli mix_channels : (a00,...,aMN) : [matrix]
 #@cli : Apply specified matrix to channels of selected images.
