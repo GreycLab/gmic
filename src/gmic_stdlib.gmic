@@ -64430,11 +64430,13 @@ fx_twisted_rays :
 #@gui : Curve Thickness = float(2,0,10)
 #@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
+#@gui : SVG Output = fileout("")
+#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
-fx_vdhc :
+fx_vdhc : skip "${13=}"
   image_brightness,image_contrast,image_gamma,image_smoothness,\
   curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,curve_smoothness,curve_thickness,antialiasing=${1-12}
+  color_mode,curve_smoothness,curve_thickness,antialiasing,outfile=${1-12},"$13"
 
   foreach {
     w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
@@ -64483,6 +64485,34 @@ fx_vdhc :
     => coords
     k[$nb_levels--1]
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
+
+    # Generate SVG output.
+    if !0$_is_preview" && ['$13']!=0"
+      if $color_mode bg_color,fg_color=white,black else bg_color,fg_color=black,white fi
+      ('"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 "{levelmap,w}" "{levelmap,h}"\" "\
+        "width=\"100%\" height=\"100%\">"\n\
+        "<style>"\n\
+        "  .background {"\n\
+        "    fill: "$bg_color";"\n\
+        "  }"\n\
+        "  .hilbert-curve {"\n\
+        "    fill: none;"\n\
+        "    stroke: "$fg_color";"\n\
+        "    stroke-width: 0.5;"\n\
+        "  }"\n\
+        "</style>"\n\n\
+        "<!-- Background -->"\n\
+        "<rect class=\"background\" width=\"100%\" height=\"100%\" />"\n\n\
+        "<!-- Variable-Density Hilbert Curve ("{coords,h}" Points) -->"\n\
+        "<path class=\"hilbert-curve\" d=\""':y)
+
+      0 eval[coords] ">begin(item = vector256(); L = [ _' ',_'L',_' ' ]; M = [ _'M',_' ',0 ]);
+        copy(item,string(y?L:M,i0*w#$levelmap,' ',i1*h#$levelmap));
+        for (k = 0, item[k], ++k, da_push(item[k]));
+        end(da_freeze())"
+
+      ('"\" />"\n"</svg>"\n':y) a[-3--1] y ot. "$13"
+    fi
 
     # Draw curve.
     fact:=arg0($antialiasing,1,1.5,2,3)
