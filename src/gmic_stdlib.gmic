@@ -64430,13 +64430,15 @@ fx_twisted_rays :
 #@gui : Curve Thickness = float(2,0,10)
 #@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
-#@gui : SVG Export = _fileout("")
+#@gui : Description = note{"<span color="#EE5500"><b>SVG Export:</span>"}
+#@gui : Output SVG File = _fileout("")
+#@gui : Stroke Thickness = float(0.25,0,1)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/02</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/03</i>.</small>")
 fx_vdhc : skip "${13=}"
   image_brightness,image_contrast,image_gamma,image_smoothness,\
   curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,curve_smoothness,curve_thickness,antialiasing,out_svg=${1-12},"$13"
+  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-12},"$13",$14
 
   foreach {
     w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
@@ -64487,7 +64489,7 @@ fx_vdhc : skip "${13=}"
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
 
     # Generate SVG output.
-    if !0$_is_preview" && ['"$out_svg"']!=0"
+    if !0$_is_preview" && ['"$svg_out"']!=0"
       if $color_mode bg_color,fg_color=white,black else bg_color,fg_color=black,white fi
       ('"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 "{levelmap,w}" "{levelmap,h}"\" "\
         "width=\"100%\" height=\"100%\">"\n\
@@ -64498,7 +64500,7 @@ fx_vdhc : skip "${13=}"
         "  .hilbert-curve {"\n\
         "    fill: none;"\n\
         "    stroke: "$fg_color";"\n\
-        "    stroke-width: 0.5;"\n\
+        "    stroke-width: "$svg_thickness";"\n\
         "  }"\n\
         "</style>"\n\n\
         "<!-- Background -->"\n\
@@ -64512,7 +64514,7 @@ fx_vdhc : skip "${13=}"
         s = da_size(); da_push_n(l); copy(i[#-1,s],item,l);
         end(da_freeze())"
 
-      ('"\" />"\n"</svg>"\n':y) a[-3--1] y ot. $out_svg
+      ('"\" />"\n"</svg>"\n':y) a[-3--1] y ot. $svg_out
     fi
 
     # Draw curve.
