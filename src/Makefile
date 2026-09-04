@@ -847,6 +847,7 @@ install:
 	                    ../resources/gmic_denoise_cnn.gmz \
 	                    ../resources/gmic_scale2x_cnn.gmz \
 	                    ../resources/gmic_fonts.gmz \
+	                    ../resources/gmic_grain.gmz \
 	                    ../resources/gmic_lightleaks.gmz \
 	                    $(DESTDIR)$(SHARE)/gmic; \
 	fi
