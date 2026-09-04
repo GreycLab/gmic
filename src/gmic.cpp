@@ -3759,9 +3759,12 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
         if (prev_hash!=~0U && prev_pos!=~0U && (prev_hash!=hash || prev_pos!=pos)) { // Freeze body of previous command
           if (commands[prev_hash][prev_pos].end() - prev_ptr_body>256)
-            commands[prev_hash][prev_pos].resize(prev_ptr_body - commands[prev_hash][prev_pos].data() + 1,1,1,1,0);
+            commands[prev_hash][prev_pos].resize((unsigned int)(prev_ptr_body -
+                                                                commands[prev_hash][prev_pos].data() + 1),
+                                                 1,1,1,0);
           else
-            commands[prev_hash][prev_pos]._width = prev_ptr_body - commands[prev_hash][prev_pos].data() + 1;
+            commands[prev_hash][prev_pos]._width = (unsigned int)(prev_ptr_body -
+                                                                  commands[prev_hash][prev_pos].data() + 1);
         }
 
       } else { // Continuation of a previous line
@@ -3784,9 +3787,10 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
     if (hash!=~0U && pos!=~0U && ptr_body) { // Freeze body of latest processed command
       if (commands[hash][pos].end() - ptr_body>256)
-        commands[hash][pos].resize(ptr_body - commands[hash][pos].data() + 1,1,1,1,0);
+        commands[hash][pos].resize((unsigned int)(ptr_body - commands[hash][pos].data() + 1),
+                                   1,1,1,0);
       else
-        commands[hash][pos]._width = ptr_body - commands[hash][pos].data() + 1;
+        commands[hash][pos]._width = (unsigned int)(ptr_body - commands[hash][pos].data() + 1);
     }
   } catch (...) { cimg::mutex(23,0); throw; }
   cimg::mutex(23,0);
@@ -5577,7 +5581,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             print(0,"Cut absolute values of image%s in range [%g,%g], with offset %g.",
                   gmic_selection.data(),
                   vmin,vmax,value);
-            cimg_forY(selection,l) gmic_apply(abscut(vmin,vmax,value),true);
+            cimg_forY(selection,l) gmic_apply(abscut((T)vmin,(T)vmax,(T)value),true);
           } else arg_error(builtin_command);
           is_change = true;
           ++position;
@@ -7831,7 +7835,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             const CImg<T> guide = gmic_image_arg(*ind);
             if (sep0=='%') radius = -radius;
             if (sep1=='%') regularization = -regularization;
-            cimg_forY(selection,l) gmic_apply(blur_guided(guide,radius,regularization),false);
+            cimg_forY(selection,l) gmic_apply(blur_guided(guide,(float)radius,(float)regularization),false);
           } else if (nbc==1 &&
                      cimg_sscanf(argument,"%255[0-9.eE%+-],%255[0-9.eE%+-]%c",
                                  gmic_use_argx,gmic_use_argy,&end)==2 &&
@@ -10419,7 +10423,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               error(true,0,"polygon",
                     "Command 'polygon': Coordinates image [%u] has invalid dimensions (%u,%u,%u,%u).",
                     *ind,vertices._width,vertices._height,vertices._depth,vertices._spectrum);
-            vertices.resize(2,vsiz/2,1,1,-1).transpose();
+            vertices.resize(2,(int)(vsiz/2),1,1,-1).transpose();
             if (sep1=='x')
               print(0,"Draw %u-vertices %s on image%s, with coords [%u], opacity %g, "
                     "pattern 0x%x and color (%s).",
@@ -10676,7 +10680,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     value1,sep1=='%'?"%":"",
                     *ind);
               pdf = gmic_check_shared_image(images[*ind]);
-              precision = axis=='%'?std::max(1U,(unsigned int)(value*pdf.size()/100)):!value?65536:value;
+              precision = axis=='%'?std::max(1U,(unsigned int)(value*pdf.size()/100)):!value?65536U:(unsigned int)value;
             } else
               print(0,"Fill image%s with random values in range [%g%s,%g%s] (uniformly distributed).",
                     gmic_selection.data(),
@@ -11025,7 +11029,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                     gmic_selection.data(),u,v,w,angle,
                     interpolation==0?"nearest-neighbor":interpolation==1?"linear":"cubic",
                     boundary==0?"dirichlet":boundary==1?"neumann":boundary==2?"periodic":"mirror");
-              cimg_forY(selection,l) gmic_apply(rotate(u,v,w,angle,interpolation,boundary),false);
+              cimg_forY(selection,l) gmic_apply(rotate((float)u,(float)v,(float)w,(float)angle,
+                                                       interpolation,boundary),false);
             }
           } else arg_error(builtin_command);
           is_change = true;
@@ -12207,7 +12212,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               if (!is_cond) {
                 CImgList<T> font;
                 uind = ~0U;
-                const int l_argz = std::strlen(argz);
+                const int l_argz = (int)std::strlen(argz);
                 if (*argz=='[' && argz[l_argz-1]==']') {
                   argz[l_argz-1] = 0;
                   ind = selection2cimg(argz + 1,images.size(),image_names,"text");
@@ -12797,7 +12802,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             dimw = dimw<0?-1:cimg::round(sep0=='%'?optw*dimw/100:dimw);
             dimh = dimh<0?-1:cimg::round(sep1=='%'?opth*dimh/100:dimh);
 
-            const bool is_move = !cimg::type<float>::is_inf(posx) && !cimg::type<float>::is_inf(posy);
+            const bool is_move = !cimg::type<double>::is_inf(posx) && !cimg::type<double>::is_inf(posy);
             CImgDisplay &disp = gmic_display_window(wind);
 
             if (!dimw || !dimh) { // Close
