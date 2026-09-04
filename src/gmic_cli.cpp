@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   CImg<char> filename_update, command_updates;
   bool is_invalid_updatefile = false;
   char sep = 0;
-  filename_update.assign(std::strlen(gmic::path_rc()) + 64);
+  filename_update.assign((unsigned int)(std::strlen(gmic::path_rc()) + 64));
   cimg_snprintf(filename_update,filename_update.width(),"%supdate%u.gmic",
                 gmic::path_rc(),gmic_version);
   try { command_updates.load_cimg(filename_update); }
@@ -209,13 +209,13 @@ int main(int argc, char **argv) {
   items.insert(CImg<char>::string("cli_start , ",false),is_first_item_verbose?2:0);
 
   if (is_invalid_userfile) { // Display warning message in case of invalid user command file
-    CImg<char> tmpstr(std::strlen(filename_user) + 256);
+    CImg<char> tmpstr((unsigned int)(std::strlen(filename_user) + 256));
     cimg_snprintf(tmpstr,tmpstr.width(),"warn \"File '\"{/\"%s\"}\"' is not a valid G'MIC command file.\" ",
                   filename_user);
     items.insert(CImg<char>::string(tmpstr.data(),false),is_first_item_verbose?2:0);
   }
   if (is_invalid_updatefile) { // Display warning message in case of invalid update file
-    CImg<char> tmpstr(std::strlen(filename_update) + 256);
+    CImg<char> tmpstr((unsigned int)(std::strlen(filename_update) + 256));
     cimg_snprintf(tmpstr,tmpstr.width(),"warn \"File '\"{/\"%s\"}\"' is not a valid G'MIC update file.\" ",
                   filename_update.data());
     items.insert(CImg<char>::string(tmpstr.data(),false),is_first_item_verbose?2:0);
@@ -263,9 +263,9 @@ int main(int argc, char **argv) {
         CImgList<char> image_names;
         images.insert(gmic::stdlib);
         CImg<char>::string("stdlib").move_to(image_names);
-        CImg<char> tmp_line(2*std::strlen(filename_update.data()) +
-                            2*std::strlen(filename_user) +
-                            std::strlen(e.command()) + 256);
+        CImg<char> tmp_line((unsigned int)(2*std::strlen(filename_update.data()) +
+                                           2*std::strlen(filename_user) +
+                                           std::strlen(e.command()) + 256));
         cimg_snprintf(tmp_line,tmp_line.width(),
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "
                       "l[] { i raw:\"%s\",uint8 m \"%s\" onfail rm } "

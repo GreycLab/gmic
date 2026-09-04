@@ -11116,7 +11116,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '4.0.3').
+# $1 = version number (e.g. '4.0.5').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -45838,7 +45838,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plug-in version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.3</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.5</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45871,8 +45871,8 @@ fx_gmicky_preview :
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <b>2026/07/01</b> : version <i>4.0.0</i>.\n
-#@gui : - <span foreground="#EE5500"><b>2026/08/19</b> : version <i>4.0.4</i> (Current stable).</span>\n
-#@gui : - <b>2026/08/20</b> : version <i>4.0.5</i> (Current pre-release).\n
+#@gui : - <span foreground="#EE5500"><b>2026/09/04</b> : version <i>4.0.5</i> (Current stable).</span>\n
+##@gui : - <b>2026/XX/XX</b> : version <i>4.0.6</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (4.1)","https://discuss.pixls.us/t/on-the-road-to-gmic-4-1"}
@@ -64411,7 +64411,8 @@ fx_twisted_rays :
 
 #@gui Variable-Density Hilbert Curve : fx_vdhc,fx_vdhc_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# Draw a single variable-density Hilbert Curve that reproduces an image.
+# Draw a single variable-density Hilbert Curve that reproduces an image. \
+# Works better with square images.
 #@gui : "}, sep = separator()
 #@gui : Brightness (%) = float(0,-100,100)
 #@gui : Contrast (%) = float(0,-100,100)
@@ -64430,11 +64431,15 @@ fx_twisted_rays :
 #@gui : Curve Thickness = float(2,0,10)
 #@gui : Anti-Aliasing = choice(1,"None","x1.5","x2","x3")
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/08/03</i>.</small>")
-fx_vdhc :
+#@gui : Description = note{"<span color="#EE5500"><b>SVG Export:</span>"}
+#@gui : Output SVG File = _fileout("")
+#@gui : Stroke Thickness = float(0.25,0,1)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/03</i>.</small>")
+fx_vdhc : skip "${13=}"
   image_brightness,image_contrast,image_gamma,image_smoothness,\
   curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,curve_smoothness,curve_thickness,antialiasing=${1-12}
+  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-12},"$13",$14
 
   foreach {
     w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
@@ -64462,9 +64467,9 @@ fx_vdhc :
     mv[0] $!
 
     # Quantize image to reproduce.
-    luminance[img] b. $image_smoothness if $color_mode negate. fi
-    quantize. $nb_levels,0,1
-    => levelmap
+    luminance[img] b[img] $image_smoothness if $color_mode negate[img] fi
+    quantize[img] $nb_levels,0,1
+    =>[img] levelmap
 
     # Generate variable-density Hilbert Curve.
     1,1,1,2
@@ -64483,6 +64488,35 @@ fx_vdhc :
     => coords
     k[$nb_levels--1]
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
+
+    # Generate SVG output.
+    if !0$_is_preview" && ['"$svg_out"']!=0"
+      if $color_mode bg_color,fg_color=white,black else bg_color,fg_color=black,white fi
+      ('"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 "{levelmap,w}" "{levelmap,h}"\" "\
+        "width=\"100%\" height=\"100%\">"\n\
+        "<style>"\n\
+        "  .background {"\n\
+        "    fill: "$bg_color";"\n\
+        "  }"\n\
+        "  .hilbert-curve {"\n\
+        "    fill: none;"\n\
+        "    stroke: "$fg_color";"\n\
+        "    stroke-width: "$svg_thickness";"\n\
+        "  }"\n\
+        "</style>"\n\n\
+        "<!-- Background -->"\n\
+        "<rect class=\"background\" width=\"100%\" height=\"100%\" />"\n\n\
+        "<!-- Variable-Density Hilbert Curve ("{coords,h}" Points) -->"\n\
+        "<path class=\"hilbert-curve\" d=\""':y)
+
+      0 eval[coords] ">begin(L = [ _' ',_'L',_' ' ]; M = [ _'M',_' ',0 ]);
+        item = string(y?L:M,v2s(i0*w#$levelmap,-1),' ',v2s(i1*h#$levelmap,-1));
+        l = find(item,0); l<0?(l = size(item));
+        s = da_size(); da_push_n(l); copy(i[#-1,s],item,l);
+        end(da_freeze())"
+
+      ('"\" />"\n"</svg>"\n':y) a[-3--1] y ot. $svg_out
+    fi
 
     # Draw curve.
     fact:=arg0($antialiasing,1,1.5,2,3)
