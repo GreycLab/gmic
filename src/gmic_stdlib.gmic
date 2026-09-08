@@ -62672,7 +62672,7 @@ fx_linear_gradient : skip ${13=0}
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generates a color gradient between control points.
 #@gui : "}, sep = separator()
-#@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
+#@gui : φ(r) = choice{5,"PDE","exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
 #@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
@@ -62709,16 +62709,28 @@ __fx_gradient_poles :
 
 fx_gradient_poles :
   __fx_gradient_poles $*
-  arg0 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
-  foreach {
-    w,h:=w,h rm
-    l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
-    sh. 2,100% _gb_fwd. $colorspace rm.
-    rbf {[$w,$h,0,0,100,100]},$phi_r
-    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
-    _gb_bwd. $colorspace
-    c 0,255
-  }
+  if $phi_r # RBF interpolation
+    arg1 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
+    foreach {
+      w,h:=w,h rm
+      l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
+      sh. 2,100% _gb_fwd. $colorspace rm.
+      rbf {[$w,$h,0,0,100,100]},$phi_r
+      if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+      _gb_bwd. $colorspace
+      c 0,255
+    }
+  else # PDE interpolation
+    foreach {
+      100%,100%,1,5 rm..
+      repeat 8 { if !isnan(${x$>}) point. {${x$>}*(w-1)%},{${y$>}*(h-1)%},0,1,${R$>},${G$>},${B$>},${A$>},1 fi }
+      sh. 0,2 _gb_fwd. $colorspace rm.
+      solidify ,
+      if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+      _gb_bwd. $colorspace
+      c 0,255
+    }
+  fi
 
 fx_gradient_poles_preview :
   rs $_preview_area_width,$_preview_area_height,1
