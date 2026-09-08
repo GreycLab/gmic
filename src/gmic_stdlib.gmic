@@ -20321,6 +20321,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3)
               copy(I(#-1),[ ix,iy,iz ],3,whd);
             ):copy(I(#-1),[ ix,iy ],2,whd)"
           rm.. orientation.
+
           repeat $nb_iter {
             j[-4] ...,0,0,0,0,1,..
             +warp[-4] .,1,2,1 *.. -1 warp[-5] ..,1,2,1 +[-5,-1] /[-4] 2
@@ -21389,15 +21390,78 @@ structuretensors : skip "${1=}"
     fi
   }
 
-#@cli solidify : _smoothness[%]>=0,_diffusion_type={ 0:Isotropic | 1:Delaunay-guided | 2:Edge-oriented },\
-# _diffusion_iter>=0
-#@cli : Solidify selected transparent images.
-#@cli : Default values: 'smoothness=75%', 'diffusion_type=1' and 'diffusion_iter=20'.
-#@cli : $ image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
-solidify : check "${1=75%}>=0 && isint(${2=1},0,2) && ${3=20}>=0"
-  s0="isotropic" s1="Delaunay-guided" s2="edge-oriented"
-  e[^-1] "Solidify transparent image$? with smoothness $1 and $3 iterations of "${s$2}" diffusion."
-  foreach { split_opacity if $!>1 <=. 128 inpaint_pde.. [1],${1-3} rm. c 0,255 fi }
+#@cli solidify : _nb_diffusion_iterations>=0,_opacity_threshold
+#@cli : Solidify selected transparent images, using a multi-scale propagation/diffusion algoritthm.
+#@cli : Last image channel of each selected image is assumed to represent the opacity mask.
+#@cli : Each output images has one channel less than each input image.
+#@cli : Default values: 'nb_diffusion_iterations=10' and 'opacity_threshold=0'.
+#@cli : image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
+solidify : check "isint(${1=10},0) && isnum(${2=0})"
+  e[^-1] "Solidify image$?, with $1 diffusion iterations and opacity threshold $2."
+  foreach { nm={n}
+    s. c,-{s-1} => img_colors,img_opacity # Split colors/opacities
+
+    # Compute a small dilation only of the color part.
+    +b[img_colors,img_opacity] 1.5 /. 255 +. 1e-10 /[-2,-1] j. [img_colors],0,0,0,0,1,[img_opacity],255
+    => img_colors rv[img_colors] rm.
+
+    # Propagate colors in RGB part using distance function as a guide.
+    >[img_opacity] $2 distance[img_opacity] 1
+    if {img_colors,d>1} # 3D
+      f[img_colors] "
+        (d = i#$img_opacity)?(
+          dx = maxabs(j(#$img_opacity,1,0,0) - d,d - j(#$img_opacity,-1,0,0));
+          dy = maxabs(j(#$img_opacity,0,1,0) - d,d - j(#$img_opacity,0,-1,0));
+          dz = maxabs(j(#$img_opacity,0,0,1) - d,d - j(#$img_opacity,0,0,-1));
+          f = d/norm(1e-10,dx,dy,dz);
+          I(x - f*dx,y - f*dy,z - f*dz,1,1);
+        ):I"
+    else # 2D
+      f[img_colors] "
+        (d = i#$img_opacity)?(
+          dx = maxabs(j(#$img_opacity,1,0) - d,d - j(#$img_opacity,-1,0));
+          dy = maxabs(j(#$img_opacity,0,1) - d,d - j(#$img_opacity,0,-1));
+          f = d/norm(1e-10,dx,dy);
+          I(x - f*dx,y - f*dy,0,1,1);
+        ):I"
+    fi
+    ==[img_opacity] 0
+
+    # Apply multi-scale diffusion.
+    if !$1
+      rm. => img_out
+    else
+      repeat ceil(log2(max(w,h))) {
+        scale_width,scale_height,scale_depth:=ceil([w#$img_colors,h#$img_colors,d#$img_colors]*2^-$<)
+        +r[img_colors,img_opacity] $scale_width,$scale_height,$scale_depth,100%,2 !=. 0 => scale_colors,scale_opacity
+        if !$> [scale_colors] => img_out else r[img_out] $scale_width,$scale_height,$scale_depth,100%,5 fi
+        +distance[scale_opacity] 1
+        if {img_colors,d>1} g. xyz,6 a[-3--1] c else g. xy,6 a[-2,-1] c fi
+        orientation. *. 1.25 => orientations
+        j[img_out] [scale_colors],0,0,0,0,1,[scale_opacity]
+
+        if {scale_colors,max(w,h)>2}
+          if {img_colors,d>1} # 3D
+            repeat $1 {
+              f[img_out] "!i(#$scale_opacity)?(
+                  D = I(#$orientations,x,y,z);
+                  0.5*(I(x - D[0],y - D[1],z - D[2],2,1) + I(x + D[0],y + D[1],z + D[2],2,1));
+                ):I"
+            }
+          else # 2D
+            repeat $1 {
+              f[img_out] "!i(#$scale_opacity)?(
+                  D = I(#$orientations,x,y);
+                  0.5*(I(x - D[0],y - D[1],0,2,1) + I(x + D[0],y + D[1],0,2,1));
+                ):I"
+            }
+          fi
+        fi
+        rm[scale_colors,scale_opacity,orientations]
+      }
+    fi
+    k[img_out] => $nm
+  }
 
 #@cli syntexturize : _width[%]>0,_height[%]>0
 #@cli : Resynthesize 'width'x'height' versions of selected micro-textures by phase randomization.
@@ -48461,7 +48525,7 @@ fx_quadtree :
         if ("$outline">0, ellipse(#0,Xcc,R,r,angle°,1,colo));
         ellipse(#0,Xcc,R - "$outline",r - "$outline",angle°,1,col);
         _0"
-      if !$outline sh[0] 100% if !im solidify[0] 10% fi fi
+      if !$outline sh[0] 100% if !im solidify[0] , fi fi
     fi
     k[0]
   }
@@ -65249,15 +65313,20 @@ fx_smooth_haar :
 fx_solidify_td :
   foreach {
     to_rgba sh 0,{s-2} if $5 srgb2rgb. fi rm.
-    if $4
+    if $4 foreach {
       . sh. 100% if $4>0 erode. {1+2*$4} else dilate. {1-2*$4} fi rm.
-      solidify. $1%,$2,$3
+      _$0. $1%,$2,$3
       rv blend alpha
-    else
-      solidify $1%,$2,$3
+    } else
+      _$0 $1%,$2,$3
     fi
     if $5 rgb2srgb. fi
   }
+
+_fx_solidify_td : check "${1=75%}>=0 && isint(${2=1},0,2) && ${3=20}>=0"
+  s0="isotropic" s1="Delaunay-guided" s2="edge-oriented"
+  e[^-1] "Solidify transparent image$? with smoothness $1 and $3 iterations of "${s$2}" diffusion."
+  foreach { split_opacity if $!>1 <=. 128 inpaint_pde.. [1],${1-3} rm. c 0,255 fi }
 
 #@gui Upscale [CNN2x] : fx_scale2x_cnn, fx_scale2x_cnn_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
