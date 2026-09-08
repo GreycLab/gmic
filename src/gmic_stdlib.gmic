@@ -21390,7 +21390,7 @@ structuretensors : skip "${1=}"
     fi
   }
 
-#@cli solidify : _nb_diffusion_iterations>=0,_opacity_threshold
+#@cli solidify : _nb_diffusion_iterations>=0,_opacity_threshold[%]
 #@cli : Solidify selected transparent images, using a multi-scale propagation/diffusion algoritthm.
 #@cli : Last image channel of each selected image is assumed to represent the opacity mask.
 #@cli : Each output images has one channel less than each input image.
@@ -21399,14 +21399,14 @@ structuretensors : skip "${1=}"
 solidify : check "isint(${1=10},0) && isnum(${2=0})"
   e[^-1] "Solidify image$?, with $1 diffusion iterations and opacity threshold $2."
   foreach { nm={n}
-    s. c,-{s-1} => img_colors,img_opacity # Split colors/opacities
+    s. c,-{s-1} >. $2 => img_colors,img_opacity # Split colors/opacities
 
     # Compute a small dilation only of the color part.
-    /. 255 mul.. . +b[img_colors,img_opacity] 1.5 +. 1e-10 /[-2,-1] j. [img_colors],0,0,0,0,1,[img_opacity],255
+    mul.. . +b[img_colors,img_opacity] 1.5 +. 1e-10 /[-2,-1] j. [img_colors],0,0,0,0,1,[img_opacity]
     => img_colors rv[img_colors] rm.
 
     # Propagate colors in RGB part using distance function as a guide.
-    >[img_opacity] $2 distance[img_opacity] 1
+    distance[img_opacity] 1
     if {img_colors,d>1} # 3D
       f[img_colors] "
         (d = i#$img_opacity)?(
