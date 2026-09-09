@@ -21396,7 +21396,7 @@ structuretensors : skip "${1=}"
 #@cli : Each output images has one channel less than each input image.
 #@cli : Default values: 'nb_diffusion_iterations=10' and 'opacity_threshold=50%'.
 #@cli : image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
-solidify : check "isint(${1=10},0)" skip "${2=50%}"
+solidify : check "isint(${1=20},0)" skip "${2=50%}"
   e[^-1] "Solidify image$?, with $1 diffusion iterations and opacity threshold $2."
   foreach { nm={n}
     s. c,-{s-1} im,iM={0,[im,iM]} >. $2 => img_colors,img_opacity # Split colors/opacities
@@ -21442,15 +21442,16 @@ solidify : check "isint(${1=10},0)" skip "${2=50%}"
         j[img_out] [scale_colors],0,0,0,0,1,[scale_opacity]
 
         if {scale_colors,max(w,h)>2}
+          scale_iterations:=min($1,round(lerp($1,2,$%^4)))
           if {img_colors,d>1} # 3D
-            repeat $1 {
+            repeat $scale_iterations {
               f[img_out] "!i(#$scale_opacity)?(
                   D = I(#$orientations,x,y,z);
                   0.5*(I(x - D[0],y - D[1],z - D[2],2,1) + I(x + D[0],y + D[1],z + D[2],2,1));
                 ):I"
             }
           else # 2D
-            repeat $1 {
+            repeat $scale_iterations {
               f[img_out] "!i(#$scale_opacity)?(
                   D = I(#$orientations,x,y);
                   0.5*(I(x - D[0],y - D[1],0,2,1) + I(x + D[0],y + D[1],0,2,1));
