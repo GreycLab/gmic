@@ -64493,6 +64493,7 @@ fx_twisted_rays :
 # "Top Right → Bottom Right","Top Right → Top Left",\
 # "Bottom Right → Bottom Left","Bottom Right → Top Right",\
 # "Bottom Left → Top Left","Bottom Left → Bottom Right")
+#@gui : Connection Type = choice("Free","H/V Only")
 #@gui : Coarsest Level = int(5,0,16)
 #@gui : Finest Level = int(16,0,16)
 #@gui : Level Switching Step = int(2,1,16)
@@ -64506,10 +64507,10 @@ fx_twisted_rays :
 #@gui : Stroke Thickness = float(0.25,0,1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/03</i>.</small>")
-fx_vdhc : skip "${13=}"
+fx_vdhc : skip "${14=}"
   image_brightness,image_contrast,image_gamma,image_smoothness,\
-  curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-12},"$13",$14
+  curve_orientation,curve_connection_type,level_coarsest,level_finest,level_switching_step,\
+  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-13},"$14",$15
 
   foreach {
     w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
@@ -64549,7 +64550,19 @@ fx_vdhc : skip "${13=}"
       l = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
       while (x<w#l,
         P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
-        da_push(P);
+        !$curve_connection_type || !x?da_push(P):(
+          pP = da_back();
+          pP[0]==P[0] || pP[1]==P[1]?da_push(P):(
+            C = lerp(pP,P,0.5);
+            siz = da_size();
+            bP = siz>1?I[siz - 2]:[ 0,0 ];
+
+            dot = dot(pP - bP,P - pP);
+            (pP[1]==bP[1] && dot>=0) || (pP[0]==bP[0] && dot<=0)?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
+            da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
+          );
+        );
+
         !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
           nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
           nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
