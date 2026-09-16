@@ -687,11 +687,11 @@ gmic_qt_sdl3: fetch_gmic_qt_files fetch_headers
 
 # G'MIC-Qt (shared)
 #-------------------
-gimp_shared: fetch_gmic_qt_files fetch_headers
+gimp_shared: fetch_gmic_qt_files fetch_headers lib
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=gimp gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
 
-gmic_qt_shared: fetch_gmic_qt_files fetch_headers
+gmic_qt_shared: fetch_gmic_qt_files fetch_headers lib
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
@@ -728,7 +728,7 @@ else
 endif
 	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
 
-zart_shared: fetch_zart_files fetch_headers
+zart_shared: fetch_zart_files fetch_headers lib
 ifeq ($(BUILD_OS),Darwin)
 	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
 else
