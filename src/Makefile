@@ -390,7 +390,7 @@ endif
         install uninstall clean distclean \
         man bashcompletion \
         do_gmic_stdlib_community.h \
-        gmic_qt_files zart_files libcgmic_files \
+        fetch_gmic_qt_files fetch_zart_files fetch_libcgmic_files \
         check_cimg_version
 
 # Multi-targets
@@ -409,7 +409,9 @@ endif
 
 # libgmic
 #---------
-lib:
+fetch_headers: gmic_stdlib_community.h CImg.h
+
+lib: fetch_headers
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib
 
 _lib: libgmic.so use_libgmic
@@ -441,44 +443,44 @@ use_libgmic: use_libgmic.cpp libgmic.so
 
 # Regular builds.
 #
-cli: # Default: Without OpenCV support
+cli: fetch_headers # Default: Without OpenCV support
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-opencv: # Default: With OpenCV support
+opencv: fetch_headers # Default: With OpenCV support
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) $(OPENCV_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS) $(OPENCV_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-half: # Using float16 rather than float32 to store images: HIGHLY EXPERIMENTAL, DO NOT EXPECT MUCH FROM THAT!
+half: fetch_headers # Using float16 rather than float32 to store images: HIGHLY EXPERIMENTAL, DO NOT EXPECT MUCH FROM THAT!
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=half" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-double: # Using float64 rather than float32 to store images
+double: fetch_headers # Using float64 rather than float32 to store images
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -Dgmic_pixel_type=double" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-native: # Optimized with architecture-specific flags, with OpenCV support
+native: fetch_headers # Optimized with architecture-specific flags, with OpenCV support
 	$(MAKE) --no-print-directory "OPT_CFLAGS=-O3 -march=native -mtune=native -funroll-loops -fno-math-errno" opencv
 	$(STRIP) gmic$(EXE)
 
 # Debug builds.
 #
-dev: # Without optimizations enabled, used for quick compile
+dev: fetch_headers # Without optimizations enabled, used for quick compile
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
-debug: # With sanitize-address enabled and symbols kept, to track bugs
+debug: fetch_headers # With sanitize-address enabled and symbols kept, to track bugs
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
-valgrind: # With symbols kept, to track bugs with valgrind
+valgrind: fetch_headers # With symbols kept, to track bugs with valgrind
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 # Profiling builds.
 #
-perf: # With optimization enabled and symbols kept, for code profiling
+perf: fetch_headers # With optimization enabled and symbols kept, for code profiling
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
-gprof: # With optimization enabled, symbols kept and gprof enabled, for code profiling
+gprof: fetch_headers # With optimization enabled, symbols kept and gprof enabled, for code profiling
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS) -g -pg" "LIBS+=gmic.o $(GMIC_STD_LIBS) $(OPT_LIBS)" gmic.o _cli
 
 _cli: gmic$(EXE)
@@ -491,13 +493,13 @@ gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
 
 # Testing builds.
 #
-cli_sdl3:
+cli_sdl3: fetch_headers
 	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" cli
 
-opencv_sdl3:
+opencv_sdl3: fetch_headers
 	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=$(SDL3_CFLAGS)" "DISPLAY_LIBS=$(SDL3_LIBS)" opencv
 
-displayless:
+displayless: fetch_headers
 	$(MAKE) --no-print-directory "DISPLAY_CFLAGS=-Dcimg_display=0" "DISPLAY_LIBS=" "OPT_CFLAGS=" cli
 
 # CLI (shared)
@@ -521,19 +523,14 @@ GMIC_STATIC_CLI_LIBS = ./libgmic.o $(PARALLEL_LIBS) \
 	               $(GMIC_STATIC_CLI_PATH)/libfftw3_threads.a $(GMIC_STATIC_CLI_PATH)/libfftw3.a \
 	               $(GMIC_STATIC_CLI_EXTRA)
 
-cli_static:
+cli_static: fetch_headers
 	$(RM) libgmic.o
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 # libcgmic
 #----------
-libc:
-	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib _libc
-
-_libc: libcgmic_files libcgmic.so use_libcgmic
-
-libcgmic_files:
+fetch_libcgmic_files:
 	@echo "> Retrieve G'MIC libcgmic files..."
 	@if [ ! -f gmic_libc.cpp ]; then \
 	  if [ -d ../../gmic-community/libcgmic ]; then \
@@ -548,6 +545,12 @@ libcgmic_files:
 	  fi; \
 	fi
 	@echo " done!"
+
+libc: fetch_libcgmic_files fetch_headers lib
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STD_LIBS) $(OPT_LIBS)" _lib _libc
+
+_libc: libcgmic.so use_libcgmic
+
 
 libcgmic.so: libcgmic.o libgmic.o
 	ar rcs libcgmic.a libcgmic.o
@@ -589,13 +592,13 @@ GMIC_LIBC_STATIC_CFLAGS += $(OPENMP_CFLAGS) $(GDI32_CFLAGS)
 GMIC_LIBC_STATIC_LIBS += $(OPENMP_LIBS) $(GDI32_LIBS)
 endif
 
-libc_static:
+libc_static: fetch_libcgmic_files fetch_headers
 ifeq ($(BUILD_OS),Windows)
 	$(RM) libgmic.o
 endif
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_LIBC_STATIC_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_LIBC_STATIC_LIBS) $(OPT_LIBS)" _lib _libc_static
 
-_libc_static: libcgmic_files libcgmic_static.so use_libcgmic_static
+_libc_static: libcgmic_static.so use_libcgmic_static
 
 libcgmic_static.so: libcgmic_static.o
 	ar rcs libcgmic_static.a libcgmic_static.o
@@ -625,7 +628,7 @@ GMICOL_LIB_PATH ?= /usr/lib/x86_64-linux-gnu/
 GMICOL_CFLAGS = $(MANDATORY_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) -Dcimg_display=0 # $(OPENMP_CFLAGS)
 GMICOL_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a # $(OPENMP_LIBS)
 
-gmicol:
+gmicol: fetch_headers
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMICOL_LIBS) $(OPT_LIBS)" _cli
 	$(STRIP) gmic$(EXE)
 
@@ -634,31 +637,7 @@ gmicol:
 QMAKE_BASE = GMIC_PATH=$(SRC_PATH) PRERELEASE=$(PRERELEASE)
 QMAKE_COMMON = $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=off
 
-gimp: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
-
-gimp_debug:  gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=debug ASAN=on $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
-
-gimp_sdl3: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
-
-gmic_qt: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
-
-gmic_qt_debug: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=debug ASAN=on $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
-
-gmic_qt_sdl3: gmic_qt_files CImg.h gmic_stdlib_community.h
-	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
-	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
-
-gmic_qt_files:
+fetch_gmic_qt_files:
 	@if [ ! -e ../gmic-qt ]; then \
 	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../gmic-qt ]; then \
@@ -682,35 +661,43 @@ gmic_qt_files:
 	   if [ -d ../../gmic-qt ]; then ln -sf ../gmic-qt ..; fi \
 	 fi
 
+gimp: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
+
+gimp_debug: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=debug ASAN=on $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
+
+gimp_sdl3: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on $(QMAKE_COMMON) HOST=gimp gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
+
+gmic_qt: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
+
+gmic_qt_debug: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=debug ASAN=on $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
+
+gmic_qt_sdl3: fetch_gmic_qt_files fetch_headers
+	cd ../gmic-qt && $(QMAKE) CONFIG+=release SDL3=on $(QMAKE_COMMON) HOST=none gmic_qt.pro && $(MAKE)
+	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
+
 # G'MIC-Qt (shared)
 #-------------------
-gimp_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
+gimp_shared: fetch_gmic_qt_files fetch_headers
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=gimp gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_gimp_qt' has been successfully compiled in '../gmic-qt/'."
 
-gmic_qt_shared: gmic_qt_files CImg.h gmic_stdlib_community.h
+gmic_qt_shared: fetch_gmic_qt_files fetch_headers
 	cd ../gmic-qt && $(QMAKE) CONFIG+=release $(QMAKE_BASE) GMIC_DYNAMIC_LINKING=on HOST=none gmic_qt.pro && $(MAKE)
 	@echo "Executable 'gmic_qt' has been successfully compiled in '../gmic-qt/'."
 
 # ZArt
 #------
-zart_shared: zart_files CImg.h gmic_stdlib_community.h
-ifeq ($(BUILD_OS),Darwin)
-	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
-else
-	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart
-endif
-	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
-
-zart: zart_files CImg.h gmic_stdlib_community.h
-ifeq ($(BUILD_OS),Darwin)
-	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
-else
-	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart
-endif
-	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
-
-zart_files:
+fetch_zart_files:
 	@if [ ! -e ../zart ]; then \
 	   curr_pwd=$$(pwd); \
 	   if [ ! -d ../../zart ]; then \
@@ -732,6 +719,22 @@ zart_files:
 	   cd $$curr_pwd; \
 	   if [ -d ../../zart ]; then ln -sf ../zart ..; fi \
 	 fi
+
+zart: fetch_zart_files fetch_headers
+ifeq ($(BUILD_OS),Darwin)
+	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
+else
+	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) zart.pro && $(MAKE) && $(STRIP) zart
+endif
+	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
+
+zart_shared: fetch_zart_files fetch_headers
+ifeq ($(BUILD_OS),Darwin)
+	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart.app/Contents/MacOS/zart
+else
+	cd ../zart && $(QMAKE) CONFIG+=release GMIC_PATH=$(SRC_PATH) GMIC_DYNAMIC_LINKING=on zart.pro && $(MAKE) && $(STRIP) zart
+endif
+	@echo "Executable 'zart' has been successfully compiled in '../zart/'."
 
 # Get header files
 #------------------
@@ -922,5 +925,29 @@ clean:
 	@if [ -h gmic_libc.h ]; then $(RM) gmic_libc.h; fi
 	@if [ -h gmic_libc.cpp ]; then $(RM) gmic_libc.cpp; fi
 	@if [ -h use_libcgmic.c ]; then $(RM) use_libcgmic.c; fi
+
+#---------------------------------------------------------
+# Prevent parallel conflicts for Qt & ZArt targets
+#---------------------------------------------------------
+GMIC_QT_TARGETS = gimp gimp_shared gimp_debug gimp_sdl3 gmic_qt gmic_qt_shared gmic_qt_debug gmic_qt_sdl3
+ACTIVE_GMIC_QT_TARGETS = $(filter $(GMIC_QT_TARGETS),$(MAKECMDGOALS))
+
+# If multiple gmic-qt targets are requested simultaneously, serialize them
+ifneq ($(word 2,$(ACTIVE_GMIC_QT_TARGETS)),)
+$(word 2,$(ACTIVE_GMIC_QT_TARGETS)): $(word 1,$(ACTIVE_GMIC_QT_TARGETS))
+ifneq ($(word 3,$(ACTIVE_GMIC_QT_TARGETS)),)
+$(word 3,$(ACTIVE_GMIC_QT_TARGETS)): $(word 2,$(ACTIVE_GMIC_QT_TARGETS))
+ifneq ($(word 4,$(ACTIVE_GMIC_QT_TARGETS)),)
+$(word 4,$(ACTIVE_GMIC_QT_TARGETS)): $(word 3,$(ACTIVE_GMIC_QT_TARGETS))
+endif
+endif
+endif
+
+# Same for ZArt targets
+ZART_TARGETS = zart zart_shared
+ACTIVE_ZART_TARGETS = $(filter $(ZART_TARGETS),$(MAKECMDGOALS))
+ifneq ($(word 2,$(ACTIVE_ZART_TARGETS)),)
+$(word 2,$(ACTIVE_ZART_TARGETS)): $(word 1,$(ACTIVE_ZART_TARGETS))
+endif
 
 # End of Makefile.
