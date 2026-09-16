@@ -10699,7 +10699,7 @@ _select :
 #@cli : Default values: 'size=512' and 'nb_recursions=5'.
 #@cli : $ shape_hilbert ,
 shape_hilbert : check "${1=512}>=0 && isint(${2=4},0)"
-  e[^-1] "Input a $1x$1 image of the Hilbert curve."
+  e[^-1] "Input a $1x$1 image of the Hilbert curve, at recursivity level $2."
   ir:=round($1)
   if !$ir 0
   else l[] {
@@ -11116,7 +11116,7 @@ update_deprecate : check "isint($1,1,999)"
 
 # update_download_html.
 # Update file versions on G'MIC download page, with specified version number.
-# $1 = version number (e.g. '4.0.5').
+# $1 = version number (e.g. '4.0.6').
 update_download_html : check "
     is_digit(c)=(c>=_'0' && c<=_'9');
     ver = ['${1=undefined}'];
@@ -13043,7 +13043,7 @@ upload_filters :
   x "cd "$HOME"/work/src/gmic-community && git pull"
 
   # Define the list of compatible versions.
-  versions=400,401,402,403,404,405,$_version
+  versions=400,401,402,403,404,405,406,$_version
 
   # Import filters from stdlib and community.
   files $HOME/work/src/gmic-community/include/*.gmic
@@ -17922,7 +17922,10 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli :
 #@cli : 'layout' describes how images are combined together, using the following symbols (case-insensitive):
 #@cli : - A number: Refers to one of the selected images, by its index.
+#@cli : - '>' : An increasing image index, starting from 0.
+#@cli : - '<' : A decreasing image index, starting from 'nb_images - 1'.
 #@cli : - '?' : A random image index.
+#@cli : - '!' : A random image index that cannot repeated itself until all image indices have been traversed.
 #@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
 #@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
 #@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
@@ -17975,7 +17978,9 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
   sf0,sf1,so0,so1,so2="align","scale","Single","Multiple (volumetric)","Multiple (named)"
   e[^-1] "Arrange image$? accordingly to layout '$1', with "${sf{$2>=0}}" factor "{abs($2)}", "\
          "output layers '"${so$3}"', and processing command '$4'."
-  nb_images,max_spectrum:=$!,${-max_s}
+  nb_images=$!
+  if !$nb_images 0 return fi
+  max_spectrum=${-max_s}
 
   # Generate layout for pre-defined meta layouts.
   if "isin(['$1'],'AH','AV','H','V') && $nb_images<2" return fi
@@ -17993,12 +17998,29 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
     }
   else # Custom layout
     ({'"$1"'}) 0
-    eval.. ">i = i; # Replace random transformations with their values
+    eval.. ">
+      begin(
+        const nb_images = $nb_images;
+        const nb_exclamation_points = "{histogram(crop(#-2),1,_'!',_'!')}";
+        const nb_M = max(nb_images,nb_exclamation_points);
+        nb_exclamation_points?(
+          permutations = sort(expr('x%2?u:x/2',2*nb_M),1,0,nb_M,2,1);
+          ind_permutations = 0;
+        );
+        ind_fwd = 0; ind_bwd = nb_images - 1;
+      );
+      i = i; # Replace random transformations with their values
       i==_'M'?da_push(v?_'V':_'H'):
       i==_'F'?((r = v(3))?(r<3?da_push(r - 1?_'Y':_'X'):da_push(_'X',_'Y')):da_push(_':')):
       i==_'Q'?((r = v(3))?(r<3?da_push(r - 1?_'L':_'R'):da_push(_'R',_'R')):da_push(_':')):
-      i==_'?'?(ind = v($nb_images - 1); str = v2s(ind); for (k = 0, str[k], da_push(str[k++]))):
-      da_push(i);
+      isin(i,_'>',_'<',_'?',_'!')?(
+        i==_'>'?(ind = ind_fwd; (++ind_fwd)%=nb_images):
+        i==_'<'?(ind = ind_bwd; (--ind_bwd)%=nb_images):
+        i==_'?'?(ind = v(nb_images - 1)):
+        nb_exclamation_points && i==_'!'?(ind = permutations[2*(ind_permutations++)]);
+        str = v2s(ind); for (k = 0, str[k], da_push(str[k++]));
+        da_push(_':');
+      ):da_push(i);
       end(da_freeze())" layout={t} rm[-2,-1]
   fi
 
@@ -20321,6 +20343,7 @@ inpaint_pde : check ${is_image_arg\ $1}" && isexpr(${2=-9}) && isint(${3=1},0,3)
               copy(I(#-1),[ ix,iy,iz ],3,whd);
             ):copy(I(#-1),[ ix,iy ],2,whd)"
           rm.. orientation.
+
           repeat $nb_iter {
             j[-4] ...,0,0,0,0,1,..
             +warp[-4] .,1,2,1 *.. -1 warp[-5] ..,1,2,1 +[-5,-1] /[-4] 2
@@ -21389,15 +21412,80 @@ structuretensors : skip "${1=}"
     fi
   }
 
-#@cli solidify : _smoothness[%]>=0,_diffusion_type={ 0:Isotropic | 1:Delaunay-guided | 2:Edge-oriented },\
-# _diffusion_iter>=0
-#@cli : Solidify selected transparent images.
-#@cli : Default values: 'smoothness=75%', 'diffusion_type=1' and 'diffusion_iter=20'.
-#@cli : $ image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
-solidify : check "${1=75%}>=0 && isint(${2=1},0,2) && ${3=20}>=0"
-  s0="isotropic" s1="Delaunay-guided" s2="edge-oriented"
-  e[^-1] "Solidify transparent image$? with smoothness $1 and $3 iterations of "${s$2}" diffusion."
-  foreach { split_opacity if $!>1 <=. 128 inpaint_pde.. [1],${1-3} rm. c 0,255 fi }
+#@cli solidify : _nb_diffusion_iterations>=0,_opacity_threshold[%]
+#@cli : Solidify selected transparent images, using a multi-scale propagation/diffusion algoritthm.
+#@cli : Last image channel of each selected image is assumed to represent the opacity mask.
+#@cli : Each output images has one channel less than each input image.
+#@cli : Default values: 'nb_diffusion_iterations=10' and 'opacity_threshold=50%'.
+#@cli : image.jpg 100%,100% circle[-1] 50%,50%,25%,1,255 append c +solidify , display_rgba
+solidify : check "isint(${1=20},0)" skip "${2=50%}"
+  e[^-1] "Solidify image$?, with $1 diffusion iterations and opacity threshold $2."
+  foreach { nm={n}
+    s. c,-{s-1} im,iM={0,[im,iM]} >. $2 => img_colors,img_opacity # Split colors/opacities
+
+    # Compute a small dilation only of the color part.
+    mul[img_colors] [img_opacity]
+    +b[img_colors,img_opacity] 1.5 +. 1e-10 /[-2,-1] j. [img_colors],0,0,0,0,1,[img_opacity]
+    => img_colors rv[img_colors] rm.
+
+    # Propagate colors in RGB part using distance function as a guide.
+    distance[img_opacity] 1
+    if {img_colors,d>1} # 3D
+      f[img_colors] "
+        (d = i#$img_opacity)?(
+          dx = maxabs(j(#$img_opacity,1,0,0) - d,d - j(#$img_opacity,-1,0,0));
+          dy = maxabs(j(#$img_opacity,0,1,0) - d,d - j(#$img_opacity,0,-1,0));
+          dz = maxabs(j(#$img_opacity,0,0,1) - d,d - j(#$img_opacity,0,0,-1));
+          f = d/norm(1e-10,dx,dy,dz);
+          I(x - f*dx,y - f*dy,z - f*dz,1,1);
+        ):I"
+    else # 2D
+      f[img_colors] "
+        (d = i#$img_opacity)?(
+          dx = maxabs(j(#$img_opacity,1,0) - d,d - j(#$img_opacity,-1,0));
+          dy = maxabs(j(#$img_opacity,0,1) - d,d - j(#$img_opacity,0,-1));
+          f = d/norm(1e-10,dx,dy);
+          I(x - f*dx,y - f*dy,0,1,1);
+        ):I"
+    fi
+    ==[img_opacity] 0
+
+    # Apply multi-scale diffusion.
+    if !$1
+      rm. => img_out
+    else
+      repeat ceil(log2(max(w,h))) {
+        scale_width,scale_height,scale_depth:=ceil([w#$img_colors,h#$img_colors,d#$img_colors]*2^-$<)
+        +r[img_colors,img_opacity] $scale_width,$scale_height,$scale_depth,100%,2 !=. 0 => scale_colors,scale_opacity
+        if !$> [scale_colors] => img_out else r[img_out] $scale_width,$scale_height,$scale_depth,100%,5 fi
+        +distance[scale_opacity] 1
+        if {img_colors,d>1} g. xyz,6 a[-3--1] c else g. xy,6 a[-2,-1] c fi
+        orientation. *. 1.15 => orientations
+        j[img_out] [scale_colors],0,0,0,0,1,[scale_opacity]
+
+        if {scale_colors,max(w,h)>2}
+          scale_iterations:=min($1,round(lerp($1,2,$%^4)))
+          if {img_colors,d>1} # 3D
+            repeat $scale_iterations {
+              f[img_out] "!i(#$scale_opacity)?(
+                  D = I(#$orientations,x,y,z);
+                  0.5*(I(x - D[0],y - D[1],z - D[2],2,1) + I(x + D[0],y + D[1],z + D[2],2,1));
+                ):I"
+            }
+          else # 2D
+            repeat $scale_iterations {
+              f[img_out] "!i(#$scale_opacity)?(
+                  D = I(#$orientations,x,y);
+                  0.5*(I(x - D[0],y - D[1],0,2,1) + I(x + D[0],y + D[1],0,2,1));
+                ):I"
+            }
+          fi
+        fi
+        rm[scale_colors,scale_opacity,orientations]
+      }
+    fi
+    k[img_out] c $im,$iM => $nm
+  }
 
 #@cli syntexturize : _width[%]>0,_height[%]>0
 #@cli : Resynthesize 'width'x'height' versions of selected micro-textures by phase randomization.
@@ -23357,7 +23445,7 @@ axes : check "isint(${5=14},0) && ${6=1}>=0" skip ${7=0},${8=0}
 # $1 = min value, $2 = max value, $3 = max number of tags(>=1).
 _axes :
   n:=max(1,round($3))
-  d:=abs($2-$1)/($n-1)
+  d:=abs($2-$1)/(1e-10+$n-1)
   s:=10^round(log10($d))
   m:=round(min($1,$2),$s,-1)
   M:=round(max($1,$2),$s,1)
@@ -34016,18 +34104,10 @@ array_fade : skip ${2=$1},${3=60},${4=90},${5=1}
 #@cli : $ image.jpg array_mirror 2
 array_mirror : skip ${2=2},${3=0}
   e[^-1] "Create a 2^$1x2^$1 mirrored-array from image$?, with expand type $2."
-  repeat $1 {
-    if !$3
-      if $2>=3 r 33%,33%,100%,100%,2
-      else r 50%,50%,100%,100%,2
-      fi
-    fi
-    foreach {
-      if !$2 +mirror x a x
-      elif $2==1 +mirror y a y
-      else +mirror x a x +mirror y a y if $2==3 r 150%,150%,1,100%,0,2,1,1 fi
-      fi
-    }
+  layout0,layout1,layout2,layout3,fact=H0X0,V0Y0,VH0X0YH0X0,VVHHXY0Y0XY0HHX0:0X0HHXY0Y0XY0,{$2<3?50:33}
+  foreach { nm={n}
+    repeat $1 { arrange $layout$2,0 if !$3 r $fact%,$fact%,100%,100%,2 fi }
+    => $nm
   }
 
 #@cli array_random : Ms>0,_Ns>0,_Md>0,_Nd>0
@@ -45838,7 +45918,7 @@ fx_gmicky_preview :
 #@gui : from the server logs: <i>IP address of the client; date and time of the request;</i>
 #@gui : as well as a short string, supplied through the HTTP protocol <i>"User Agent"</i> header
 #@gui : field, which describes the full plug-in version as shown in the window title
-#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.5</i>").\n\n
+#@gui : (e.g. "<i>G'MIC-Qt for GIMP 3.2 - Linux 64 bits - 4.0.6</i>").\n\n
 #@gui : Note that this information may solely be used for purely anonymous
 #@gui : statistical purposes.
 #@gui : "}
@@ -45872,7 +45952,7 @@ fx_gmicky_preview :
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <b>2026/07/01</b> : version <i>4.0.0</i>.\n
 #@gui : - <span foreground="#EE5500"><b>2026/09/04</b> : version <i>4.0.5</i> (Current stable).</span>\n
-##@gui : - <b>2026/XX/XX</b> : version <i>4.0.6</i> (Current pre-release).\n
+#@gui : - <b>2026/09/16</b> : version <i>4.0.6</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (4.1)","https://discuss.pixls.us/t/on-the-road-to-gmic-4-1"}
@@ -48469,7 +48549,7 @@ fx_quadtree :
         if ("$outline">0, ellipse(#0,Xcc,R,r,angle°,1,colo));
         ellipse(#0,Xcc,R - "$outline",r - "$outline",angle°,1,col);
         _0"
-      if !$outline sh[0] 100% if !im solidify[0] 10% fi fi
+      if !$outline sh[0] 100% if !im solidify[0] , fi fi
     fi
     k[0]
   }
@@ -62615,7 +62695,7 @@ fx_linear_gradient : skip ${13=0}
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generates a color gradient between control points.
 #@gui : "}, sep = separator()
-#@gui : φ(r) = choice{4,"exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
+#@gui : φ(r) = choice{5,"PDE","exp(-r)","√(1+r²)","r","r³","r.log(1+r)"}
 #@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : Quantization = ~int(0,0,64)
 #@gui : sep = separator()
@@ -62652,16 +62732,28 @@ __fx_gradient_poles :
 
 fx_gradient_poles :
   __fx_gradient_poles $*
-  arg0 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
-  foreach {
-    w,h:=w,h rm
-    l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
-    sh. 2,100% _gb_fwd. $colorspace rm.
-    rbf {[$w,$h,0,0,100,100]},$phi_r
-    if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
-    _gb_bwd. $colorspace
-    c 0,255
-  }
+  if $phi_r # RBF interpolation
+    arg1 $phi_r,"exp(-r/100)","sqrt(1+r^2)","r","r^3","r*log(1+r)" phi_r=${}
+    foreach {
+      w,h:=w,h rm
+      l[] { repeat 8 { if !isnan(${x$>}) (${x$>}^${y$>}^${R$>}^${G$>}^${B$>}^${A$>}) fi } a x }
+      sh. 2,100% _gb_fwd. $colorspace rm.
+      rbf {[$w,$h,0,0,100,100]},$phi_r
+      if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+      _gb_bwd. $colorspace
+      c 0,255
+    }
+  else # PDE interpolation
+    foreach {
+      100%,100%,1,5 rm..
+      repeat 8 { if !isnan(${x$>}) point. {${x$>}*(w-1)%},{${y$>}*(h-1)%},0,1,${R$>},${G$>},${B$>},${A$>},1 fi }
+      sh. 0,2 _gb_fwd. $colorspace rm.
+      solidify ,
+      if $quantization +norm quantize. $quantization,0,1 blend shapeaverage fi
+      _gb_bwd. $colorspace
+      c 0,255
+    }
+  fi
 
 fx_gradient_poles_preview :
   rs $_preview_area_width,$_preview_area_height,1
@@ -64423,6 +64515,7 @@ fx_twisted_rays :
 # "Top Right → Bottom Right","Top Right → Top Left",\
 # "Bottom Right → Bottom Left","Bottom Right → Top Right",\
 # "Bottom Left → Top Left","Bottom Left → Bottom Right")
+#@gui : Connection Type = choice("Free","H/V Only")
 #@gui : Coarsest Level = int(5,0,16)
 #@gui : Finest Level = int(16,0,16)
 #@gui : Level Switching Step = int(2,1,16)
@@ -64436,10 +64529,10 @@ fx_twisted_rays :
 #@gui : Stroke Thickness = float(0.25,0,1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/03</i>.</small>")
-fx_vdhc : skip "${13=}"
+fx_vdhc : skip "${14=}"
   image_brightness,image_contrast,image_gamma,image_smoothness,\
-  curve_orientation,level_coarsest,level_finest,level_switching_step,\
-  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-12},"$13",$14
+  curve_orientation,curve_connection_type,level_coarsest,level_finest,level_switching_step,\
+  color_mode,curve_smoothness,curve_thickness,antialiasing,svg_out,svg_thickness=${1-13},"$14",$15
 
   foreach {
     w,h:=w,h adjust_colors $image_brightness,$image_contrast,$image_gamma => img
@@ -64474,10 +64567,29 @@ fx_vdhc : skip "${13=}"
     # Generate variable-density Hilbert Curve.
     1,1,1,2
     eval "
-      x = l = 0;
+      x = 0;
+      P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
+      l = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
       while (x<w#l,
         P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
-        da_push(P);
+        !$curve_connection_type || !x?da_push(P):(
+          pP = da_back();
+          siz = da_size();
+          bP = siz>1?I[siz - 2]:pP;
+          dot = dot(pP - bP,P - pP);
+          pP[0]==P[0] || pP[1]==P[1]?(
+            dot<0?da_remove(-1);
+          ):(
+            bP[1]==pP[1]?( # Previous segment was horizontal
+              dot>=0?(I[siz - 1] = [ P[0],pP[1] ]; 0): # Forward
+              da_push([ pP[0],P[1] ]); # Backward
+            ):bP[0]==pP[0]?( # Previous segment was vertical
+              dot>=0?(I[siz - 1] = [ pP[0],P[1] ]; 0): # Forward
+              da_push([ P[0],pP[1] ]); # Backward
+            );
+          );
+          da_push(P);
+        );
         !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
           nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
           nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
@@ -64513,7 +64625,7 @@ fx_vdhc : skip "${13=}"
         item = string(y?L:M,v2s(i0*w#$levelmap,-1),' ',v2s(i1*h#$levelmap,-1));
         l = find(item,0); l<0?(l = size(item));
         s = da_size(); da_push_n(l); copy(i[#-1,s],item,l);
-        end(da_freeze())"
+        end(da_freeze()); _0"
 
       ('"\" />"\n"</svg>"\n':y) a[-3--1] y ot. $svg_out
     fi
@@ -65257,15 +65369,20 @@ fx_smooth_haar :
 fx_solidify_td :
   foreach {
     to_rgba sh 0,{s-2} if $5 srgb2rgb. fi rm.
-    if $4
+    if $4 foreach {
       . sh. 100% if $4>0 erode. {1+2*$4} else dilate. {1-2*$4} fi rm.
-      solidify. $1%,$2,$3
+      _$0. $1%,$2,$3
       rv blend alpha
-    else
-      solidify $1%,$2,$3
+    } else
+      _$0 $1%,$2,$3
     fi
     if $5 rgb2srgb. fi
   }
+
+_fx_solidify_td : check "${1=75%}>=0 && isint(${2=1},0,2) && ${3=20}>=0"
+  s0="isotropic" s1="Delaunay-guided" s2="edge-oriented"
+  e[^-1] "Solidify transparent image$? with smoothness $1 and $3 iterations of "${s$2}" diffusion."
+  foreach { split_opacity if $!>1 <=. 128 inpaint_pde.. [1],${1-3} rm. c 0,255 fi }
 
 #@gui Upscale [CNN2x] : fx_scale2x_cnn, fx_scale2x_cnn_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
