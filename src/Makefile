@@ -110,7 +110,12 @@ SOVERSION = $(VERSION1).$(VERSION2)
 SRC_PATH ?= $(CURDIR)
 
 ifneq (,$(wildcard CImg.h))
+# Check that versions of files 'CImg.h' and 'gmic.h' match.
 CIMG_VERSION := $(shell awk '/cimg_version[[:space:]]/ {print $$3; exit}' CImg.h)
+ifneq ($(VERSION),$(CIMG_VERSION))
+$(info > CImg.h version mismatch, removing...)
+$(RM) CImg.h;
+endif
 else
 CIMG_VERSION = $(VERSION)
 endif
@@ -391,7 +396,6 @@ endif
         man bashcompletion \
         do_gmic_stdlib_community.h \
         fetch_gmic_qt_files fetch_zart_files fetch_libcgmic_files \
-        check_cimg_version
 
 # Multi-targets
 #---------------
@@ -738,7 +742,7 @@ endif
 
 # Get header files
 #------------------
-CImg.h: check_cimg_version
+CImg.h:
 	@echo "> Retrieve CImg Library..."
 	@if [ -f ../../CImg/CImg.h ]; then \
           if [ ! -f ./CImg.h ]; then ln -sf ../../CImg/CImg.h .; fi; \
@@ -747,12 +751,6 @@ CImg.h: check_cimg_version
           touch CImg.h; \
         fi
 	@echo " done!"
-
-check_cimg_version: # Check that versions of files 'CImg.h' and 'gmic.h' match.
-	@if [ -f CImg.h ] && [ "$(VERSION)" != "$(CIMG_VERSION)" ]; then \
-	  echo "> CImg.h version mismatch, removing..."; \
-	  $(RM) CImg.h; \
-	fi
 
 gmic_stdlib_community.h:
 	@echo "> Retrieve G'MIC Standard Library + Community Contributions..."
