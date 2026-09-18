@@ -73,7 +73,24 @@
 #  knowledge of the CeCILL and CeCILL-C licenses and that you accept its terms.
 #
 
-all: all
+# Retrieve all targets specified on the command line.
+# If no target is specified, default to 'all'.
+TARGETS := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)
 
-%:
-	cd src && $(MAKE) $*
+# Bind all requested targets to a single shared dependency.
+# This prevents GNU Make from spawning multiple independent sub-makes
+# when called with parallel execution (e.g. 'make -j lib cli').
+# By grouping them, we evaluate the dependency tree exactly once.
+$(TARGETS): _forward
+	@: # Do nothing at this level (the recipe is effectively empty).
+
+# The actual forwarding target.
+# It executes exactly once, passing the full list of requested targets
+# to the inner Makefile in 'src/', which will properly handle its own
+# parallelization and target serialization.
+_forward:
+	$(MAKE) -C src $(TARGETS)
+
+.PHONY: _forward $(TARGETS)
+
+# End of Makefile.
