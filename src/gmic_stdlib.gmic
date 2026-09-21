@@ -64572,45 +64572,24 @@ fx_vdhc : skip "${14=}"
       l = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
       while (x<w#l,
         P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
-        !$curve_connection_type || !x?da_push(P):(
-          pP = da_back();
-          U = unitnorm(P - pP);
-          !U[0] || !U[1]?( # Purely horizontal or vertical segments
-            da_push(P);
-          ):(
-            C = lerp(pP,P,0.5);
-            abs(U[0])>=abs(U[1])?( # Mostly horizontal segment
-              da_push([ pP[0],C[1] ],[ P[0],C[1]], P);
-            ):( # Mostly vertical segment
-              da_push([ C[0],pP[1] ],[ C[0],P[1]], P);
-            );
-          );
-
-          # siz = da_size();
-          # bP = siz>1?I[siz - 2]:pP;
-          # dot = dot(pP - bP,P - pP);
-          # pP[0]==P[0] || pP[1]==P[1]?(
-          #   dot<0?da_remove(-1);
-          # ):(
-          #   bP[1]==pP[1]?( # Previous segment was horizontal
-          #     dot>=0?(I[siz - 1] = [ P[0],pP[1] ]; 0): # Forward
-          #     da_push([ pP[0],P[1] ]); # Backward
-          #   ):bP[0]==pP[0]?( # Previous segment was vertical
-          #     dot>=0?(I[siz - 1] = [ pP[0],P[1] ]; 0): # Forward
-          #     da_push([ P[0],pP[1] ]); # Backward
-          #   );
-          # );
-          # da_push(P);
-        );
+        da_push(P);
         !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
           nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
           nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
           nl!=l?(x = int(x*w#nl/w#l); l = nl);
         );
         ++x;
-      ); da_freeze()"
-    => coords
+      )"
     k[$nb_levels--1]
+
+    # Filter curve coordinates if H/V constraint is enabled.
+    if $curve_connection_type
+
+
+    fi
+    da_freeze.
+    => coords
+
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
 
     # Generate SVG output.
