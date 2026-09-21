@@ -64579,15 +64579,33 @@ fx_vdhc : skip "${14=}"
           nl!=l?(x = int(x*w#nl/w#l); l = nl);
         );
         ++x;
-      )"
+      ); da_freeze()"
     k[$nb_levels--1]
+
 
     # Filter curve coordinates if H/V constraint is enabled.
     if $curve_connection_type
+      1,1,1,2
+      eval.. "const boundary = 1;
+        P = I; nP = J[1]; pP = J[-1]; bP = J[-2];
+        U = unitnorm(pP - bP);
+        V = unitnorm(P - pP);
+        W = unitnorm(nP - P);
+        dotUV = dot(U,V);
+        dotVW = dot(V,W);
 
-
+        dotUV>=0 && dotVW>=0?(
+          C = lerp(pP,P,0.5);
+          aU0 = abs(U[0]);
+          aU1 = abs(U[1]);
+          aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ]):
+                   da_push([ pP[0],C[1] ],[ P[0],C[1] ]);
+        );
+        da_push(P);
+        end(da_freeze());
+        P"
+      rm..
     fi
-    da_freeze.
     => coords
 
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
