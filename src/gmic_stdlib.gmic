@@ -64586,7 +64586,7 @@ fx_vdhc : skip "${14=}"
     # Filter curve coordinates if H/V constraint is enabled.
     if $curve_connection_type
       1,1,1,2
-      eval.. "const boundary = 1;
+      eval.. ">const boundary = 1;
         P = I; nP = J[1]; pP = J[-1]; bP = J[-2];
         U = unitnorm(pP - bP);
         V = unitnorm(P - pP);
@@ -64596,13 +64596,16 @@ fx_vdhc : skip "${14=}"
         aU0 = abs(U[0]);
         aU1 = abs(U[1]);
 
-        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):
+        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P): # Segment is already H/V
         dotUV>=0 && dotVW>=0?(
           C = lerp(pP,P,0.5);
           aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
                    da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
-        ):dotUV>=0 && dotVW<=0?(
-          da_push(P);
+        ):dotUV<=0 && dotVW<=0?(
+          C = lerp(pP,P,0.5);
+          siz = da_size();
+          aU0>=aU1?(I[#-1,siz - 1] = [ C[0],pP[1] ]; da_push([ C[0],P[1] ])):
+                   (I[#-1,siz - 1] = [ pP[0],C[1] ]; da_push([ P[0],C[1] ]));
         ):da_push(P);
         end(da_freeze());
         P"
