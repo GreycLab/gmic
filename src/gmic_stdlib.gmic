@@ -64593,15 +64593,17 @@ fx_vdhc : skip "${14=}"
         W = unitnorm(nP - P);
         dotUV = dot(U,V);
         dotVW = dot(V,W);
+        aU0 = abs(U[0]);
+        aU1 = abs(U[1]);
 
+        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):
         dotUV>=0 && dotVW>=0?(
           C = lerp(pP,P,0.5);
-          aU0 = abs(U[0]);
-          aU1 = abs(U[1]);
-          aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ]):
-                   da_push([ pP[0],C[1] ],[ P[0],C[1] ]);
-        );
-        da_push(P);
+          aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
+                   da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
+        ):dotUV>=0 && dotVW<=0?(
+          da_push(P);
+        ):da_push(P);
         end(da_freeze());
         P"
       rm..
