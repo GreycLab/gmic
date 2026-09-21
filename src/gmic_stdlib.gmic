@@ -64597,19 +64597,22 @@ fx_vdhc : skip "${14=}"
         C = lerp(pP,P,0.5);
         siz = da_size();
         abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P): # Segment [pP,P] is already H/V
-        dotUV>=0 && dotVW>=0?(
-          aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
-                   da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
-        ):dotUV<=0 && dotVW<=0?(
-          aU0>=aU1?(I[#-1,siz - 1] = [ C[0],pP[1] ]; da_push([ C[0],P[1] ])):
-                   (I[#-1,siz - 1] = [ pP[0],C[1] ]; da_push([ P[0],C[1] ]));
-        ):dotUV>=0 && dotVW<=0?(
-          P0 = [ pP[0],P[1] ]; t0 = dot(P0 - P,W)/dot(W,W); projP0 = P + t0*W; dist0 = norm(P0 - projP0);
-          P1 = [ P[0],pP[1] ]; t1 = dot(P1 - P,W)/dot(W,W); projP1 = P + t1*W; dist1 = norm(P1 - projP1);
-          dist0>=dist1?
-            da_push(P0,P):
-            da_push(P1,P);
-        ):da_push(P);
+        dotUV>=0?(
+          dotVW>=0?(
+            aU0>=aU1?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
+          ):(
+            P0 = [ pP[0],P[1] ]; t0 = dot(P0 - P,W)/dot(W,W); projP0 = P + t0*W; dist0 = norm(P0 - projP0);
+            P1 = [ P[0],pP[1] ]; t1 = dot(P1 - P,W)/dot(W,W); projP1 = P + t1*W; dist1 = norm(P1 - projP1);
+            dist0>=dist1?da_push(P0,P):da_push(P1,P);
+          )
+        ):(
+          dotVW<=0?(
+            aU0>=aU1?(I[#-1,siz - 1] = [ C[0],pP[1] ]; da_push([ C[0],P[1] ])):
+                     (I[#-1,siz - 1] = [ pP[0],C[1] ]; da_push([ P[0],C[1] ]));
+          ):(
+            da_push(P);
+          )
+        );
         end(da_freeze());
         P"
       rm..
