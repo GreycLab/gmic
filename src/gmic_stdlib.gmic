@@ -64586,11 +64586,12 @@ fx_vdhc : skip "${14=}"
     if $curve_connection_type
       1,1,1,2
       eval.. ">const boundary = 1;
-        P = I; nP = J[1]; pP = J[-1]; bP = J[-2];
-        U = unitnorm(pP - bP);
+        P = I; pP = J[-1];
         V = unitnorm(P - pP);
-        W = unitnorm(nP - P);
         abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):( # Segment [pP,P] is already H/V
+          bP = J[-2]; nP = J[1];
+          U = unitnorm(pP - bP);
+          W = unitnorm(nP - P);
           C = lerp(pP,P,0.5);
           P0 = [ P[0],pP[1] ];
           P1 = [ pP[0],P[1] ];
@@ -64604,10 +64605,11 @@ fx_vdhc : skip "${14=}"
           score3 = dpPP1 + dP0P;
           max(score0,score1,score2,score3)>=0?(
             best_path = argmax(score0,score1,score2,score3);
-            best_path==0?da_push(P0,P):
-            best_path==1?da_push(P1,P):
-            best_path==2?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
-                         da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
+            best_path==0?da_push(P0):
+            best_path==1?da_push(P1):
+            best_path==2?da_push([ C[0],pP[1] ],[ C[0],P[1] ]):
+                         da_push([ pP[0],C[1] ],[ P[0],C[1] ]);
+            da_push(P);
           );
         );
         end(da_freeze()); P"
