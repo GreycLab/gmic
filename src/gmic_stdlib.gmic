@@ -64594,14 +64594,20 @@ fx_vdhc : skip "${14=}"
           C = lerp(pP,P,0.5);
           P0 = [ P[0],pP[1] ];
           P1 = [ pP[0],P[1] ];
-          dpPP0 = dot(unitnorm(P0 - pP),U);
-          dpPP1 = dot(unitnorm(P1 - pP),U);
-          dP0P = dot(unitnorm(P - P0),W);
-          dP1P = dot(unitnorm(P - P1),W);
-          best_path = argmax(dpPP0 + dP1P,dpPP1 + dP0P,dpPP0 + dP0P,dpPP1 + dP1P);
-          best_path==0?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
-          best_path==1?da_push([ pP[0],C[1] ],[ P[0],C[1] ],P):
-          best_path==2?da_push(P0,P):da_push(P1,P);
+          dpPP0 = dot(unitnorm(P0 - pP),U); dpPP0<0?(dpPP0 = -inf);
+          dpPP1 = dot(unitnorm(P1 - pP),U); dpPP1<0?(dpPP1 = -inf);
+          dP0P = dot(unitnorm(P - P0),W); dP0P<0?(dP0P = -inf);
+          dP1P = dot(unitnorm(P - P1),W); dP1P<0?(dP1P = -inf);
+          score0 = dpPP0 + dP1P;
+          score1 = dpPP1 + dP0P;
+          score2 = dpPP0 + dP0P;
+          score3 = dpPP1 + dP1P;
+          max(score0,score1,score2,score3)>=0?(
+            best_path = argmax(score0,score1,score2,score3);
+            best_path==0?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
+            best_path==1?da_push([ pP[0],C[1] ],[ P[0],C[1] ],P):
+            best_path==2?da_push(P0,P):da_push(P1,P);
+          );
         );
         end(da_freeze()); P"
       rm..
