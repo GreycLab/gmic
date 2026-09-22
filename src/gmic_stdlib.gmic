@@ -64587,22 +64587,22 @@ fx_vdhc : skip "${14=}"
       1,1,1,2
       eval.. ">const boundary = 1;
         P = I; nP = J[1]; pP = J[-1]; bP = J[-2];
-        U = pP - bP;
-        V = P - pP;
-        W = nP - P;
-        normW2 = norm(W)^2;
-        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P): # Segment [pP,P] is already H/V
-        dot(U,V)>=0 || dot(V,W)>=0?(
-          P0 = [ pP[0],P[1] ]; t0 = dot(P0 - P,W)/normW2; projP0 = P + t0*W; dist0 = norm(P0 - projP0);
-          P1 = [ P[0],pP[1] ]; t1 = dot(P1 - P,W)/normW2; projP1 = P + t1*W; dist1 = norm(P1 - projP1);
-          dist0>=dist1?da_push(P0,P):da_push(P1,P);
-        ):(
+        U = unitnorm(pP - bP);
+        V = unitnorm(P - pP);
+        W = unitnorm(nP - P);
+        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):( # Segment [pP,P] is already H/V
           C = lerp(pP,P,0.5);
-          P0 = [ pP[0],C[1] ]; t0 = dot(P0 - P,W)/normW2; projP0 = P + t0*W; dist0 = norm(P0 - projP0);
-          P1 = [ P[0],C[1] ]; t1 = dot(P1 - P,W)/normW2; projP1 = P + t1*W; dist1 = norm(P1 - projP1);
-          P2 = [ C[0],pP[1] ]; t2 = dot(P2 - P,W)/normW2; projP2 = P + t2*W; dist2 = norm(P2 - projP2);
-          P3 = [ C[0],P[1] ]; t3 = dot(P3 - P,W)/normW2; projP3 = P + t3*W; dist3 = norm(P3 - projP3);
-          min(dist0,dist1)>min(dist2,dist3)?da_push(P0,P1,P):da_push(P2,P3,P);
+          P0 = [ P[0],pP[1] ];
+          P1 = [ pP[0],P[1] ];
+          dpPP0 = dot(unitnorm(P0 - pP),U);
+          dpPP1 = dot(unitnorm(P1 - pP),U);
+          dP0P = dot(unitnorm(P - P0),W);
+          dP1P = dot(unitnorm(P - P1),W);
+          best_path = argmax(dpPP0 + dP0P,dpPP1 + dP1P,dpPP0 + dP1P,dpPP1 + dP0P);
+          best_path==0?da_push(P0,P):
+          best_path==1?da_push(P1,P):
+          best_path==2?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
+                       da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
         );
         end(da_freeze()); P"
       rm..
