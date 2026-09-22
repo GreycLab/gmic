@@ -64590,6 +64590,8 @@ fx_vdhc : skip "${14=}"
         U = unitnorm(pP - bP);
         V = unitnorm(P - pP);
         W = unitnorm(nP - P);
+        dotUV = dot(U,V);
+        dotVW = dot(V,W);
         abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):( # Segment [pP,P] is already H/V
           C = lerp(pP,P,0.5);
           P0 = [ P[0],pP[1] ];
@@ -64598,11 +64600,10 @@ fx_vdhc : skip "${14=}"
           dpPP1 = dot(unitnorm(P1 - pP),U);
           dP0P = dot(unitnorm(P - P0),W);
           dP1P = dot(unitnorm(P - P1),W);
-          best_path = argmax(dpPP0 + dP0P,dpPP1 + dP1P,dpPP0 + dP1P,dpPP1 + dP0P);
-          best_path==0?da_push(P0,P):
-          best_path==1?da_push(P1,P):
-          best_path==2?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
-                       da_push([ pP[0],C[1] ],[ P[0],C[1] ],P);
+          best_path = argmax(dpPP0 + dP1P,dpPP1 + dP0P,dpPP0 + dP0P,dpPP1 + dP1P);
+          best_path==0?da_push([ C[0],pP[1] ],[ C[0],P[1] ],P):
+          best_path==1?da_push([ pP[0],C[1] ],[ P[0],C[1] ],P):
+          best_path==2?da_push(P0,P):da_push(P1,P);
         );
         end(da_freeze()); P"
       rm..
