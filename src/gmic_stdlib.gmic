@@ -62305,6 +62305,34 @@ fx_ball_preview :
   fx_ball ${1-10}
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
+#@gui Chladni Figures : fx_chladni, fx_chladni(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# This filter replaces the active layer with a generated Chladni figure.
+#@gui : "}, sep = separator()
+#@gui : Frequency X (n) = int(5, 1, 20)
+#@gui : Frequency Y (m) = int(2, 1, 20)
+#@gui : Zoom (%) = float(0,-100,100)
+#@gui : Line Sharpness (%) = float(15, 1, 100)
+#@gui : Granularity (%) = float(8,0,100)
+#@gui : Colormap = choice("Hot","Gray","Ice","Jet","Aurora")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/26</i>.</small>")
+fx_chladni :
+  n,m,zoom,sharpness,granularity,colormap=${1-6}
+  foreach {
+    100%,100%,1,1,"
+      const granularity = $granularity%;
+      const r = lerp(1,0.1,$zoom%);
+      X = lerp(-r,r,x/(w - 1));
+      Y = lerp(-r,r,y/(h - 1));
+      V = abs(cos($n*pi*X)*cos($m*pi*Y) - cos($m*pi*X)*cos($n*pi*Y));
+      density = exp(-$sharpness*V);
+      noise = 1 + granularity*(u - 1);
+      density*noise"
+    k. b 0.5 n 0,255
+    map ${"arg0 "$colormap",hot,gray,ice,jet,aurora"}
+  }
+
 #@gui Circle Art : fx_circle_art, fx_circle_art
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Abstract rendering of spiraled circles.
