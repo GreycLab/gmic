@@ -62418,6 +62418,82 @@ fx_circle_art :
   n 0,255
   if $5 r 50%,50%,1,100%,2 fi
 
+#@gui Cosmic Nebula : fx_cosmic_nebula, fx_cosmic_nebula(1)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Generate a procedural cosmic nebula.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color=\"#EE5500\"><b>General:</b></span>")
+#@gui : Random Seed = int(0, 0, 1000000)
+#@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Gas and Dust:</b></span>")
+#@gui : Gas Scale = float(1.5, 0.5, 5.0)
+#@gui : Gas Color 1 = color(25,128,204)
+#@gui : Gas Color 2 = color(204,51,128)
+#@gui : Core Color = color(255,230,178)
+#@gui : Dust Density = float(1.5, 0.5, 3.0)
+#@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Stars:</b></span>")
+#@gui : Stars Density = float(1.0, 0.0, 5.0)
+#@gui : Spikes Angle = float(45, 0, 90)
+#@gui : Spikes Size = float(1.0, 0.0, 5.0)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/28</i>.</small>")
+fx_cosmic_nebula :
+  C1_R,C1_G,C1_B,C2_R,C2_G,C2_B,CC_R,CC_G,CC_B:=[${3-11}]/255
+  if $1>0 srand $1 fi
+  pow_bg,pow_fg:=300/max(0.01,$13),2000/max(0.01,$13)
+
+  foreach {
+    w,h:=w,h nm={n} rm
+
+    # Dust map.
+    $w,$h,1,1 plasma. $2 n. 0,1 pow. $12 to_rgb.
+
+    # Background stars.
+    $w,$h,1,3,"v = 350*u^$pow_bg; $13 && v>5 ? v*[ u(0.5,1.2),u(0.5,1.2),u(0.7,1.5) ]:_0" *. ..
+
+    # Nebula (Gas 1 + Gas 2)
+    $w,$h,1,1 plasma. $2 n. 0,255 to_rgb. f. "I*[ $C1_R,$C1_G,$C1_B ]"
+    $w,$h,1,1 plasma. {$2+1} n. 0,255 to_rgb. f. "I*[ $C2_R,$C2_G,$C2_B ]"
+    +[-2,-1]
+
+    # Core.
+    $w,$h,1,1 plasma. {$2+0.5} n. 0,255 to_rgb.
+    f. "X = (x - w/2)/(w/2); Y = (y - h/2)/(h/2); I*[ $CC_R,$CC_G,$CC_B ]*exp(-8*norm(X,Y)^2)" +[-2,-1]
+
+    # Mask nebula with dust & apply global fade inline.
+    *. ... rm... f. "X =(x - w/2)/(w/2); Y = (y - h/2)/(h/2); I * exp(-2.5*norm(X,Y)^2)"
+    + # Merge Nebula with Background Stars
+
+    # Foreground Stars
+    $w,$h,1,3,"v = 1000*u^$pow_fg; (v>100 && $13)?v*[ u(0.8,1.2),u(0.8,1.2),u(0.8,1.2) ]:_0"
+    +b. 1.5 *. 0.5 +
+
+    # 8. Giant Stars (Multi-scale Diffraction Spikes)
+    spike_angle=$14
+    repeat 3
+      if !$> prob,rad,spike_size,intensity:=0.000012*$13,0.8,15*$15,1000
+      elif $>==1 prob,rad,spike_size,intensity:=0.000004*$13,1.5,30*$15,2500
+      else prob,rad,spike_size,intensity:=0.000001*$13,2.5,60*$15,5000
+      fi
+
+      if $prob>0
+        $w,$h,1,3,"u<$prob?$intensity*u(0.5,1.5)*[ u(0.8,1.5),u(0.8,1.5),u(0.8,1.5) ]:_0"
+        +b. $rad *. 3 +[-2,-1] # Star body
+
+        # Diffraction spikes.
+        if $spike_size>0
+          . blur_linear. $spike_size,0,$spike_angle,0 blur_linear. $spike_size,0,$spike_angle,0
+          .. blur_linear. $spike_size,0,{$spike_angle+90},0 blur_linear. $spike_size,0,{$spike_angle+90},0
+          +[-2,-1] *. 1.5 +[-2,-1]
+        fi
+
+        +[-2,-1] # Add directly to main composition
+      fi
+    done
+
+    # Optical Bloom and Final Clamp
+    +- 150 max. 0 b. 20 *. 0.4 + c 0,255 => $nm
+  }
+
 #@gui Equation Plot [Parametric] : fx_equation_parametric, fx_equation_parametric
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Plots a parametric curve.
