@@ -62423,17 +62423,18 @@ fx_circle_art :
 # Generate a procedural cosmic nebula.
 #@gui : "}, sep = separator()
 #@gui : note = note("<span color=\"#EE5500\"><b>Gas and Dust:</b></span>")
-#@gui : Gas Scale = float(1.5, 0.5, 5.0)
+#@gui : Gas Scale = float(1.5,0.5,5)
 #@gui : Gas Color 1 = color(25,128,204)
 #@gui : Gas Color 2 = color(204,51,128)
 #@gui : Core Color = color(255,230,178)
-#@gui : Dust Density = float(1.5, 0.5, 3.0)
+#@gui : Dust Density = float(1.5,0.5,3)
 #@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Stars:</b></span>")
-#@gui : Stars Density = float(1.0, 0.0, 5.0)
-#@gui : Spikes Angle = float(45, 0, 90)
-#@gui : Spikes Size = float(1.0, 0.0, 5.0)
+#@gui : Stars Density = float(1,0,5)
+#@gui : Spikes Angle = float(45,0,90)
+#@gui : Spikes Size = float(1,0,5)
+#@gui : Spikes Orientations = int(2,1,8)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/28</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/29</i>.</small>")
 fx_cosmic_nebula :
   C1_R,C1_G,C1_B,C2_R,C2_G,C2_B,CC_R,CC_G,CC_B:=[${2-10}]/255
   pow_bg,pow_fg:=300/max(0.01,$12),2000/max(0.01,$12)
@@ -62466,6 +62467,7 @@ fx_cosmic_nebula :
 
     # Giant Stars (Multi-scale Diffraction Spikes).
     spike_angle=$13
+    nb_orient=$15
     repeat 3
       if !$> prob,rad,spike_size,intensity:=0.000012*$12,0.8,15*$14,1000
       elif $>==1 prob,rad,spike_size,intensity:=0.000004*$12,1.5,30*$14,2500
@@ -62476,11 +62478,18 @@ fx_cosmic_nebula :
         $w,$h,1,3,"u<$prob?$intensity*u(0.5,1.5)*[ u(0.8,1.5),u(0.8,1.5),u(0.8,1.5) ]:_0"
         +b. $rad *. 3 +[-2,-1] # Star body
 
-        # Diffraction spikes.
+        # Diffraction spikes (N orientations, evenly spread over 180 degrees).
         if $spike_size>0
-          . blur_linear. $spike_size,0,$spike_angle,0 blur_linear. $spike_size,0,$spike_angle,0
-          .. blur_linear. $spike_size,0,{$spike_angle+90},0 blur_linear. $spike_size,0,{$spike_angle+90},0
-          +[-2,-1] *. 1.5 +[-2,-1]
+          repeat $nb_orient
+            angle:=$spike_angle+$>*180/$nb_orient
+            # Each spike is computed from the star body, which sits
+            # just below the spikes already generated.
+            +blur_linear[{-1-$>}] $spike_size,0,$angle,0
+            blur_linear. $spike_size,0,$angle,0
+          done
+          +[-$nb_orient--1]         # Sum all spike orientations
+          *. {3/$nb_orient}         # Constant total spike energy (=1.5 for 2 orientations)
+          +[-2,-1]                  # Body + spikes
         fi
 
         +[-2,-1] # Add directly to main composition
