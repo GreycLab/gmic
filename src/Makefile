@@ -489,12 +489,6 @@ gprof: fetch_headers # With optimization enabled, symbols kept and gprof enabled
 
 _cli: gmic$(EXE)
 
-gmic$(EXE): gmic_cli.cpp gmic.o
-	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS)
-
-gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
-	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
-
 # Testing builds.
 #
 cli_sdl3: fetch_headers
@@ -531,6 +525,12 @@ cli_static: fetch_headers
 	$(RM) libgmic.o
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
 	$(STRIP) gmic$(EXE)
+
+gmic$(EXE): gmic_cli.cpp gmic.o
+	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS)
+
+gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
+	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
 
 # libcgmic
 #----------
