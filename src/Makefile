@@ -629,7 +629,7 @@ use_libcgmic_static: use_libcgmic.c gmic_libc.h
 # G'MIC Online
 #--------------
 GMICOL_LIB_PATH ?= /usr/lib/x86_64-linux-gnu/
-GMICOL_MANDATORY_CFLAGS = -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(CHECK_SHARED_IMAGES_CFLAGS) $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
+GMICOL_MANDATORY_CFLAGS = -std=c++11 -pedantic -Wall -Wextra -Wfatal-errors -Werror=unknown-pragmas -Werror=unused-label -Wshadow -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(CHECK_SHARED_IMAGES_CFLAGS) $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
 GMICOL_MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
 GMICOL_CFLAGS = $(GMICOL_MANDATORY_CFLAGS) -Dcimg_display=0 -Dcimg_use_pthread=1 $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(OPENMP_CFLAGS)
 GMICOL_LIBS = $(GMICOL_MANDATORY_LIBS) -lpthread $(PARALLEL_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(OPENMP_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a
