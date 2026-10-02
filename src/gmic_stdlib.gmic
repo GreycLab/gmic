@@ -54520,7 +54520,8 @@ fx_flower_preview :
 # Simulate an optical distortion of the image seen through a glass block door.
 #@gui : "}, sep = separator()
 #@gui : Block Size (px) = int(64,16,256)
-#@gui : Block Shape = choice("Dome","Pyramid")
+#@gui : Block Shape = choice("Dome","Pyramid","Vertical cylinders","Horizontal cylinders","Sphere in cube",\
+# "Spherical dimple in cube")
 #@gui : Flat Top Size (%) = float(30,0,95)
 #@gui : Refractive Index (IOR) = float(2,1,3)
 #@gui : Lens Curvature (% of block) = float(31,0,100)
@@ -54550,7 +54551,13 @@ fx_glass_door :
     # channels = [ displacement_x, displacement_y, mortar_shading, specular_light ].
     100%,100%,1,4,"
       const size = $1;
-      const isdome = !$2;
+      const shape = $2;             # 0 = dome, 1 = pyramid, 2 = vertical cylinders, 3 = horizontal cylinders,
+                                    # 4 = sphere in cube, 5 = spherical dimple in cube.
+      const isdome = shape==0;
+      const iscylv = shape==2;
+      const iscylh = shape==3;
+      const issph = shape>=4;       # Spherical cap, convex (4) or concave (5).
+      const sg = shape==5?-1:1;     # +1 = bump, -1 = dimple.
       const pl = min($3%,0.99);     # Relative size of the flat top.
       const ior = $4;
       const H = $5%*size;           # Block height, relative to the block size.
@@ -54561,6 +54568,13 @@ fx_glass_door :
       const md = $10%;              # Mortar darkness.
       const slope = 2*H/size/(1 - pl);
       const eta = 1/max(ior,1.0001);
+
+      # Spherical cap geometry, in block units (half-block = 1).
+      # The sphere crosses the flat face on the circle of radius 1 inscribed in the block,
+      # with a cap height Hu (limited to a hemisphere).
+      const Hu = cut(2*H/size,0.001,0.999);
+      const Rs = (1 + Hu^2)/(2*Hu);   # Sphere radius.
+      const zc = Hu - Rs;             # Sphere center altitude (below the face for a bump).
 
       # Half-vector H = normalize(L + V), with L = (-0.577,-0.577,0.577) and V = (0,0,1).
       const hx = -0.325;
@@ -54573,25 +54587,43 @@ fx_glass_door :
       au = abs(u);
       av = abs(v);
 
-      # Chebyshev distance to the block center (0 at center, 1 on the borders).
-      m = max(au,av);
+      # Distance to the block center (0 at center, 1 on the borders):
+      # Chebyshev distance for dome/pyramid/sphere, 1D distance across the cylinder axis for cylinders.
+      m = iscylv?au:(iscylh?av:max(au,av));
 
-      # Remapped coordinates for the truncated dome (0 on the flat top, then 0 -> 1).
+      # Remapped coordinates for the truncated dome/cylinder (0 on the flat top, then 0 -> 1).
       uu = sign(u)*max(0,au - pl)/(1 - pl);
       vv = sign(v)*max(0,av - pl)/(1 - pl);
 
-      # Elevation Z(u,v) of the block: (truncated) dome or truncated pyramid.
-      Z = isdome?
-        H*(1 - uu^2)*(1 - vv^2):
-        H*min(1,(1 - m)/(1 - pl));
+      # Squared distance to the center and sphere term (only meaningful inside the circle).
+      r2 = u^2 + v^2;
+      sq = sqrt(max(Rs^2 - r2,1e-6));
+
+      # Height of the spherical cap above the flat face (0 outside the circle).
+      cap = r2<1?zc + sq:0;
+
+      # Elevation Z(u,v) of the block: (truncated) dome, truncated pyramid, (truncated) cylinder,
+      # or spherical cap embedded in a flat cube face (bump, or dimple whose bottom lies at Z = 0).
+      Z = issph?(sg>0?cap:Hu - cap)*size/2:
+        (iscylv?H*(1 - uu^2):
+        (iscylh?H*(1 - vv^2):
+        (isdome?
+          H*(1 - uu^2)*(1 - vv^2):
+          H*min(1,(1 - m)/(1 - pl)))));
 
       # Partial derivatives of Z.
-      dzdx = isdome?
-        -2*slope*uu*(1 - vv^2):
-        m>pl && au>=av?-slope*sign(u):0;
-      dzdy = isdome?
-        -2*slope*vv*(1 - uu^2):
-        m>pl && av>au?-slope*sign(v):0;
+      dzdx = issph?(r2<1?-sg*u/sq:0):
+        (iscylv?-2*slope*uu:
+        (iscylh?0:
+        (isdome?
+          -2*slope*uu*(1 - vv^2):
+          (m>pl && au>=av?-slope*sign(u):0))));
+      dzdy = issph?(r2<1?-sg*v/sq:0):
+        (iscylh?-2*slope*vv:
+        (iscylv?0:
+        (isdome?
+          -2*slope*vv*(1 - uu^2):
+          (m>pl && av>au?-slope*sign(v):0))));
 
       # Surface normal, perturbed by the random micro-relief.
       P = I(#1,x,y);
