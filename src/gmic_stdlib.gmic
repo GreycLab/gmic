@@ -819,6 +819,10 @@ reference : skip "${2=}"
 "on pixel access operators). Its initial default value is '0'."\n\
 "* The last image in the list is always associated to the evaluations of 'expressions', e.g. G'MIC sequence "\
 "\n~~~\n256,128 fill {w}\n~~~\n will create a 256x128 image filled with value 256."\n\
+"* __Note on assignment:__ Predefined variables 'i', 'I', 'R', 'G', 'B', etc. act as _read-only_ values. "\
+"Thus, writing `I = [255,0,0]` or `i = 128` will create (or overwrite) a new local variable 'i' or 'I' "\
+"within the scope of the mathematical parser, and will not modify the actual image buffer. "\
+"To do so, rather use the pixel access operator explicitly, e.g. `I(x,y) = [ 255,0,0 ]` or `i(x,y,z) = 128`."\n\
 "## Vector functions and operators:"\n\
 "The math evaluator is able to work with vector elements. A math function applied to a vector "\
 "argument usually returns a vector with same dimension, where each element of the input vector "\
@@ -17925,7 +17929,7 @@ apply_scales : check "isint($2,1) && ${3=25%}>=0 && ${4=100%}>=0 && ${5=1}>0 && 
 #@cli : - '>' : An increasing image index, starting from 0.
 #@cli : - '<' : A decreasing image index, starting from 'nb_images - 1'.
 #@cli : - '?' : A random image index.
-#@cli : - '!' : A random image index that cannot repeated itself until all image indices have been traversed.
+#@cli : - '!' : A random image index that cannot repeat itself until all image indices have been traversed.
 #@cli : - 'X' : Mirrors what follows horizontally (left-right flip).
 #@cli : - 'Y' : Mirrors what follows vertically (top-bottom flip).
 #@cli : - 'R' : Rotates what follows by 90 degrees clockwise.
@@ -18495,8 +18499,18 @@ extract_region : check ${"is_image_arg $1"}" && isnum(${2=0})"
     rm[1] =>[^] $nm
   } } rm[0]
 
-#@cli mirror : { x | y | z }...{ x | y | z } : (+)
+#@cli mirror : axes={ x | y | z | c }...{ x | y | z | c } : (+)
 #@cli : Mirror selected images along specified axes.
+#@cli :
+#@cli : Each character of 'axes' selects an axis along which the image is flipped:
+#@cli : - 'x' mirrors the image along the horizontal axis (left/right are swapped).
+#@cli : - 'y' mirrors the image along the vertical axis (top/bottom are swapped).
+#@cli : - 'z' mirrors the image along the depth axis (front/back slices are swapped, \
+# only meaningful for 3D images).
+#@cli : - 'c' mirrors the image along the channel axis (channel order is reversed, \
+# only meaningful for multi-channel images).
+#@cli : \nSeveral axes can be given at once, e.g. 'xy' mirrors along both horizontal \
+# and vertical axes.
 #@cli : $ image.jpg +mirror y +mirror[0] c
 #@cli : $ image.jpg +mirror x +mirror y append_tiles 2,2
 
@@ -19167,7 +19181,7 @@ bandpass : skip ${1=0},${2=20%}
 #@cli blur : std_deviation[%]>=0,_boundary_conditions,_kernel : \
 # axes,std_deviation[%]>=0,_boundary_conditions,_kernel : (+)
 #@cli : Blur selected images by a Deriche or gaussian filter (recursive implementation).
-#@cli : (eq. to 'b').\n
+#@cli : (eq. to 'b').
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'kernel' can be { 0:Deriche | 1:Gaussian }.
 #@cli : When specified, argument 'axes' is a sequence of { x | y | z | c }.
@@ -39562,17 +39576,26 @@ path_current :
 #@cli : Return a path to store GIMP configuration files for one user (whose value is OS-dependent).
 path_gimp :
   if !narg({'$_path_gimp'})
-    if narg({'${GIMP2_DIRECTORY}'}) _path_gimp=${GIMP2_DIRECTORY}
+    if narg({'${GIMP3_DIRECTORY}'}) _path_gimp=${GIMP3_DIRECTORY}
+    elif narg({'${GIMP2_DIRECTORY}'}) _path_gimp=${GIMP2_DIRECTORY}
     elif narg({'${USERPROFILE}'}) _path_gimp=${USERPROFILE}
     elif narg({'${HOME}'}) _path_gimp=${HOME}
     fi
     if ${-is_windows} sep={`92`} else sep=/ fi
-    if isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.10}'])
+    if isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}3.2}'])
+      _path_gimp=$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}3.2${sep}
+    elif isdir(['{/$_path_gimp${sep}.config${sep}GIMP${sep}3.2}'])
+      _path_gimp=$_path_gimp${sep}.config${sep}GIMP${sep}3.2${sep}
+    elif isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}3.0}'])
+      _path_gimp=$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}3.0${sep}
+    elif isdir(['{/$_path_gimp${sep}.config${sep}GIMP${sep}3.0}'])
+      _path_gimp=$_path_gimp${sep}.config${sep}GIMP${sep}3.0${sep}
+    elif isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.10}'])
       _path_gimp=$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.10${sep}
-    elif isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.8}'])
-      _path_gimp=$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.8${sep}
     elif isdir(['{/$_path_gimp${sep}.config${sep}GIMP${sep}2.10}'])
       _path_gimp=$_path_gimp${sep}.config${sep}GIMP${sep}2.10${sep}
+    elif isdir(['{/$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.8}'])
+      _path_gimp=$_path_gimp${sep}AppData${sep}Roaming${sep}GIMP${sep}2.8${sep}
     elif isdir(['{/$_path_gimp${sep}.gimp-2.8}'])
       _path_gimp=$_path_gimp${sep}.gimp-2.8${sep}
     elif isdir(['{/$_path_gimp${sep}.gimp-2.6}'])
@@ -62301,6 +62324,56 @@ fx_ball_preview :
   fx_ball ${1-10}
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
+#@gui Chladni Figures : fx_chladni, fx_chladni_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# This filter replaces the active layer with a generated Chladni figure.
+#@gui : "}, sep = separator()
+#@gui : Frequency X (n) = int(5, 1, 20)
+#@gui : Frequency Y (m) = int(2, 1, 20)
+#@gui : Sharpness (%) = float(15, 1, 100)
+#@gui : Granularity (%) = float(8,0,100)
+#@gui : Colormap = choice(4,"Autumn","Cool","Cube","Gray","Hot","HSV","Ice","Jet","Parula","Rainbow",\
+# "Spring","Summer","Winter")
+#@gui : Previous X-Center = value(50)
+#@gui : Previous Y-Center = value(50)
+#@gui : Center = point(50,50,0,1,0,255,0)
+#@gui : Zoom = point(75,50,0,1,255,0,255)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/27</i>.</small>")
+__fx_chladni :
+  freq_n,freq_m,sharpness,granularity,colormap,pcenter_x,pcenter_y,center_x,center_y,zoom_x,zoom_y=${1-11}
+
+fx_chladni :
+  __$0 $*
+  foreach {
+    {M=max(w,h);[M,M]},1,1,"begin(
+        const m1 = max(w,h) - 1;
+        const granularity = $granularity%;
+        const vu = ($zoom_x - $center_x)%;
+        const vv = ($zoom_y - $center_y)%;
+        const ang = atan2(vv,vu);
+        const zoom = 0.25/norm(vu,vv)^1.25;
+        R = zoom*rot(-ang);
+      );
+      XY = R*[ x/(w - 1) - $center_x%, y/(h - 1) - $center_y% ];
+      V = abs(cos($freq_n*pi*XY[0])*cos($freq_m*pi*XY[1]) - cos($freq_m*pi*XY[0])*cos($freq_n*pi*XY[1]));
+      density = exp(-$sharpness*V);
+      noise = 1 + granularity*(u - 1);
+      density*noise"
+    k. b 0.5 n 0,255
+    map ${"arg0 "$colormap",autumn,cool,cube,gray,hot,hsv,ice,jet,parula,rainbow,spring,summer,winter"}
+  }
+
+fx_chladni_preview :
+  __fx_chladni $*
+  zoom_x,zoom_y+=$center_x-$pcenter_x,$center_y-$pcenter_y
+  fx_chladni $freq_n,$freq_m,$sharpness,$granularity,$colormap,$pcenter_x,$pcenter_y,$center_x,$center_y,$zoom_x,$zoom_y
+  rs {min($_preview_area_width,$_preview_area_height)}
+  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0x0F0F0F0F,0
+  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0xF0F0F0F0,255
+  u "{"$freq_n"}{"$freq_m"}{"$sharpness"}{"$granularity"}{"$colormap"}"\
+    "{"$center_x"}{"$center_y"}{"$center_x,$center_y"}{"$zoom_x,$zoom_y"}"
+
 #@gui Circle Art : fx_circle_art, fx_circle_art
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Abstract rendering of spiraled circles.
@@ -62363,6 +62436,93 @@ fx_circle_art :
   rm.
   n 0,255
   if $5 r 50%,50%,1,100%,2 fi
+
+#@gui Cosmic Nebula : fx_cosmic_nebula, fx_cosmic_nebula(1)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Generate a procedural cosmic nebula.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color=\"#EE5500\"><b>Gas and Dust:</b></span>")
+#@gui : Gas Scale = float(1.5, 0.5, 5.0)
+#@gui : Gas Color 1 = color(25,128,204)
+#@gui : Gas Color 2 = color(204,51,128)
+#@gui : Core Color = color(255,230,178)
+#@gui : Dust Density = float(1.5, 0.5, 3.0)
+#@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Stars:</b></span>")
+#@gui : Stars Density = float(1.0, 0.0, 5.0)
+#@gui : Spikes Angle = float(45, 0, 90)
+#@gui : Spikes Size = float(1.0, 0.0, 5.0)
+#@gui : Spikes Orientations = int(2, 1, 8)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/29</i>.</small>")
+fx_cosmic_nebula :
+  C1_R,C1_G,C1_B,C2_R,C2_G,C2_B,CC_R,CC_G,CC_B:=[${2-10}]/255
+  pow_bg,pow_fg:=300/max(0.01,$12),2000/max(0.01,$12)
+
+  foreach {
+    w,h:=w,h nm={n} rm
+
+    # Dust map.
+    $w,$h,1,1 plasma. $1 n. 0,1 pow. $11 to_rgb.
+
+    # Background stars.
+    $w,$h,1,3,">v = 350*u^$pow_bg; $12 && v>5?v*[ u(0.5,1.2),u(0.5,1.2),u(0.7,1.5) ]:_0" *. ..
+
+    # Nebula (Gas 1 + Gas 2).
+    $w,$h,1,1 plasma. $1 n. 0,255 to_rgb. f. "I*[ $C1_R,$C1_G,$C1_B ]"
+    $w,$h,1,1 plasma. {$1+1} n. 0,255 to_rgb. f. "I*[ $C2_R,$C2_G,$C2_B ]"
+    +[-2,-1]
+
+    # Core.
+    $w,$h,1,1 plasma. {$1+0.5} n. 0,255 to_rgb.
+    f. "XY = lerp(-1,1,[ x/w,y/h ]); I*[ $CC_R,$CC_G,$CC_B ]*exp(-8*norm(XY)^2)" +[-2,-1]
+
+    # Mask nebula with dust & apply global fade inline.
+    *. ... rm... f. "XY = lerp(-1,1,[ x/w,y/h ]); I*exp(-2.5*norm(XY)^2)"
+    + # Merge Nebula with Background Stars
+
+    # Foreground Stars.
+    $w,$h,1,3,"v = 1000*u^$pow_fg; (v>100 && $12)?v*[ u(0.8,1.2),u(0.8,1.2),u(0.8,1.2) ]:_0"
+    +b. 1.5 *. 0.5 +
+
+    # Giant Stars (Multi-scale Diffraction Spikes).
+    spike_angle=$13
+    nb_orient=$15
+    repeat 3
+      if !$> prob,rad,spike_size,intensity:=0.000012*$12,0.8,15*$14,1000
+      elif $>==1 prob,rad,spike_size,intensity:=0.000004*$12,1.5,30*$14,2500
+      else prob,rad,spike_size,intensity:=0.000001*$12,2.5,60*$14,5000
+      fi
+
+      if $prob>0
+        $w,$h,1,3,"u<$prob?$intensity*u(0.5,1.5)*[ u(0.8,1.5),u(0.8,1.5),u(0.8,1.5) ]:_0"
+        +b. $rad *. 3 +[-2,-1] # Star body
+
+        # Diffraction spikes : one analytic PSF + one FFT convolution.
+        if $spike_size>0
+          R:=int(ceil($spike_size))
+          {2*$R+1},{2*$R+1},1,1,"
+            X = x - $R; Y = y - $R; v = 0;
+            for (k = 0, k<$nb_orient, ++k,
+              a = ($spike_angle + k*180/$nb_orient)*pi/180;
+              t = X*cos(a) + Y*sin(a);
+              d = -X*sin(a) + Y*cos(a);
+              v += exp(-d*d/0.5)*max(0,1 - abs(t)/$spike_size);
+            );
+            v"
+          /. {is}                     # Normalize kernel (sum=1)...
+          *. {1.5*$nb_orient}         # ...then constant energy PER orientation (1.5 each, as in the original)
+          +convolve_fft[-2] [-1]      # Star body * PSF
+          rm[-2]                      # Remove kernel
+          +[-2,-1]                    # Body + spikes
+        fi
+
+        +[-2,-1] # Add directly to main composition
+      fi
+    done
+
+    # Optical Bloom and Final Clamp.
+    +- 150 max. 0 b. 20 *. 0.4 + c 0,255 => $nm
+  }
 
 #@gui Equation Plot [Parametric] : fx_equation_parametric, fx_equation_parametric
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -64515,7 +64675,7 @@ fx_twisted_rays :
 # "Top Right → Bottom Right","Top Right → Top Left",\
 # "Bottom Right → Bottom Left","Bottom Right → Top Right",\
 # "Bottom Left → Top Left","Bottom Left → Bottom Right")
-#@gui : Connection Type = choice("Free","H/V Only")
+#@gui : Connection Type = choice(1,"Free","H/V Only")
 #@gui : Coarsest Level = int(5,0,16)
 #@gui : Finest Level = int(16,0,16)
 #@gui : Level Switching Step = int(2,1,16)
@@ -64572,24 +64732,7 @@ fx_vdhc : skip "${14=}"
       l = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
       while (x<w#l,
         P = [ i(#l,x,0,0,0),i(#l,x,0,0,1) ];
-        !$curve_connection_type || !x?da_push(P):(
-          pP = da_back();
-          siz = da_size();
-          bP = siz>1?I[siz - 2]:pP;
-          dot = dot(pP - bP,P - pP);
-          pP[0]==P[0] || pP[1]==P[1]?(
-            dot<0?da_remove(-1);
-          ):(
-            bP[1]==pP[1]?( # Previous segment was horizontal
-              dot>=0?(I[siz - 1] = [ P[0],pP[1] ]; 0): # Forward
-              da_push([ pP[0],P[1] ]); # Backward
-            ):bP[0]==pP[0]?( # Previous segment was vertical
-              dot>=0?(I[siz - 1] = [ pP[0],P[1] ]; 0): # Forward
-              da_push([ P[0],pP[1] ]); # Backward
-            );
-          );
-          da_push(P);
-        );
+        da_push(P);
         !(x%$level_switching_step)?( # Wait for a starting or ending vertex in a cell
           nl = i(#$levelmap,round(P[0]*w#$levelmap),round(P[1]*h#$levelmap));
           nl>l?(nl = l + 1):nl<l?(nl = l - 1); # Only jump one level up or down
@@ -64597,8 +64740,43 @@ fx_vdhc : skip "${14=}"
         );
         ++x;
       ); da_freeze()"
-    => coords
     k[$nb_levels--1]
+
+    # Filter curve coordinates if H/V constraint is enabled.
+    if $curve_connection_type
+      1,1,1,2
+      eval.. ">const boundary = 1;
+        P = I; pP = J[-1];
+        V = unitnorm(P - pP);
+        abs(V[0])<1e-10 || abs(V[1])<1e-10?da_push(P):( # Segment [pP,P] is already H/V
+          bP = J[-2]; nP = J[1];
+          U = unitnorm(pP - bP);
+          W = unitnorm(nP - P);
+          C = lerp(pP,P,0.5);
+          P0 = [ P[0],pP[1] ];
+          P1 = [ pP[0],P[1] ];
+          dpPP0 = dot(unitnorm(P0 - pP),U); dpPP0<0?(dpPP0 = -inf);
+          dpPP1 = dot(unitnorm(P1 - pP),U); dpPP1<0?(dpPP1 = -inf);
+          dP0P = dot(unitnorm(P - P0),W); dP0P<0?(dP0P = -inf);
+          dP1P = dot(unitnorm(P - P1),W); dP1P<0?(dP1P = -inf);
+          score0 = dpPP0 + dP0P;
+          score1 = dpPP1 + dP1P;
+          score2 = dpPP0 + dP1P;
+          score3 = dpPP1 + dP0P;
+          max_score = max(score0,score1,score2,score3);
+          max_score>=0?(
+            score0>=max_score?da_push(P0):
+            score1>=max_score?da_push(P1):
+            score2>=max_score?da_push([ C[0],pP[1] ],[ C[0],P[1] ]):
+                              da_push([ pP[0],C[1] ],[ P[0],C[1] ]);
+            da_push(P);
+          ):(I[y] = pP; 0);
+        );
+        end(da_freeze()); P"
+      rm..
+    fi
+    => coords
+
     if $curve_smoothness r[coords] 1,400%,1,2,3 b[coords] y,$curve_smoothness fi
 
     # Generate SVG output.

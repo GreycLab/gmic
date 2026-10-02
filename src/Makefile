@@ -489,12 +489,6 @@ gprof: fetch_headers # With optimization enabled, symbols kept and gprof enabled
 
 _cli: gmic$(EXE)
 
-gmic$(EXE): gmic_cli.cpp gmic.o
-	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS)
-
-gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
-	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
-
 # Testing builds.
 #
 cli_sdl3: fetch_headers
@@ -531,6 +525,12 @@ cli_static: fetch_headers
 	$(RM) libgmic.o
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STATIC_CLI_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMIC_STATIC_CLI_LIBS) $(OPT_LIBS)" libgmic.o _cli
 	$(STRIP) gmic$(EXE)
+
+gmic$(EXE): gmic_cli.cpp gmic.o
+	$(CXX) -o gmic$(EXE) gmic_cli.cpp $(CFLAGS) $(LIBS)
+
+gmic.o: gmic.cpp gmic.h gmic_stdlib_community.h CImg.h
+	$(CXX) -o gmic.o -c gmic.cpp -Dgmic_core $(CFLAGS)
 
 # libcgmic
 #----------
@@ -629,11 +629,13 @@ use_libcgmic_static: use_libcgmic.c gmic_libc.h
 # G'MIC Online
 #--------------
 GMICOL_LIB_PATH ?= /usr/lib/x86_64-linux-gnu/
-GMICOL_CFLAGS = $(MANDATORY_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) -Dcimg_display=0 # $(OPENMP_CFLAGS)
-GMICOL_LIBS = $(MANDATORY_LIBS) $(PARALLEL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a # $(OPENMP_LIBS)
+GMICOL_MANDATORY_CFLAGS = -std=c++11 -pedantic -Wall -Wextra -Wfatal-errors -Werror=unknown-pragmas -Werror=unused-label -Wshadow -Dcimg_date=\\\"\\\" -Dcimg_time=\\\"\\\" -Dcimg_use_zlib -I. $(CHECK_SHARED_IMAGES_CFLAGS) $(ZLIB_CFLAGS) $(PRERELEASE_CFLAGS) $(EXTRA_CFLAGS)
+GMICOL_MANDATORY_LIBS = $(ZLIB_LIBS) $(EXTRA_LIBS)
+GMICOL_CFLAGS = $(GMICOL_MANDATORY_CFLAGS) -Dcimg_display=0 -Dcimg_use_pthread=1 $(ABORT_CFLAGS) $(PARALLEL_CFLAGS) $(FFTW_CFLAGS) $(CURL_CFLAGS) $(PNG_CFLAGS) $(JPEG_CFLAGS) $(OPENMP_CFLAGS)
+GMICOL_LIBS = $(GMICOL_MANDATORY_LIBS) -lpthread $(PARALLEL_LIBS) $(CURL_LIBS) $(PNG_LIBS) $(JPEG_LIBS) $(OPENMP_LIBS) $(GMICOL_LIB_PATH)/libfftw3.a $(GMICOL_LIB_PATH)/libfftw3_threads.a
 
 gmicol: fetch_headers
-	$(MAKE) --no-print-directory "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=$(GMICOL_LIBS) $(OPT_LIBS)" _cli
+	$(MAKE) --no-print-directory "CFLAGS+=$(GMICOL_CFLAGS) $(OPT_CFLAGS)" "LIBS+=gmic.o $(GMICOL_LIBS) $(OPT_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
 # G'MIC-Qt
