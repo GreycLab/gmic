@@ -12192,6 +12192,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Deformations/Euclidean - Polar",\
   "Deformations/Fish-Eye",\
   "Deformations/Flower",\
+  "Deformations/Glass Door",\
   "Deformations/Kaleidoscope [Blended]",\
   "Deformations/Kaleidoscope [Polar]",\
   "Deformations/Kaleidoscope [Reptorian-Polar]",\
@@ -12413,8 +12414,10 @@ _update_gmicol : # Keep only a subset of existing filters
   "Rendering/3D Random Objects",\
   "Rendering/Algorithm A",\
   "Rendering/Ball",\
+  "Rendering/Chladni Figures",\
   "Rendering/Circle Art",\
   "Rendering/Construction Material Texture",\
+  "Rendering/Cosmic Nebula",\
   "Rendering/Disco",\
   "Rendering/Equation Plot [Parametric]",\
   "Rendering/Equation Plot [Y=f(X)]",\
@@ -54595,15 +54598,17 @@ fx_glass_door :
       uu = sign(u)*max(0,au - pl)/(1 - pl);
       vv = sign(v)*max(0,av - pl)/(1 - pl);
 
-      # Squared distance to the center and sphere term (only meaningful inside the circle).
-      r2 = u^2 + v^2;
-      sq = sqrt(max(Rs^2 - r2,1e-6));
+      # Radial coordinates for the spherical shapes: 'rho' is the distance to the block center,
+      # 'rr' is the remapped radius (0 on the circular flat top, then 0 -> 1 up to the inscribed circle).
+      rho = sqrt(u^2 + v^2);
+      rr = max(0,rho - pl)/(1 - pl);
+      sq = sqrt(max(Rs^2 - rr^2,1e-6));
 
       # Height of the spherical cap above the flat face (0 outside the circle).
-      cap = r2<1?zc + sq:0;
+      cap = rho<1?zc + sq:0;
 
       # Elevation Z(u,v) of the block: (truncated) dome, truncated pyramid, (truncated) cylinder,
-      # or spherical cap embedded in a flat cube face (bump, or dimple whose bottom lies at Z = 0).
+      # or (truncated) spherical cap embedded in a flat cube face (bump, or dimple whose bottom lies at Z = 0).
       Z = issph?(sg>0?cap:Hu - cap)*size/2:
         (iscylv?H*(1 - uu^2):
         (iscylh?H*(1 - vv^2):
@@ -54612,13 +54617,14 @@ fx_glass_door :
           H*min(1,(1 - m)/(1 - pl)))));
 
       # Partial derivatives of Z.
-      dzdx = issph?(r2<1?-sg*u/sq:0):
+      # For the sphere: dZ/dx = -sg * (rr/sq) * (1/(1 - pl)) * (u/rho), which is 0 on the flat top (rr = 0).
+      dzdx = issph?(rho<1?-sg*rr/sq*u/(max(rho,1e-6)*(1 - pl)):0):
         (iscylv?-2*slope*uu:
         (iscylh?0:
         (isdome?
           -2*slope*uu*(1 - vv^2):
           (m>pl && au>=av?-slope*sign(u):0))));
-      dzdy = issph?(r2<1?-sg*v/sq:0):
+      dzdy = issph?(rho<1?-sg*rr/sq*v/(max(rho,1e-6)*(1 - pl)):0):
         (iscylh?-2*slope*vv:
         (iscylv?0:
         (isdome?
