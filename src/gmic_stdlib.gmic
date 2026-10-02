@@ -54523,110 +54523,124 @@ fx_flower_preview :
 #@gui : Block Shape = choice("Dome","Pyramid")
 #@gui : Flat Top Size (%) = float(30,0,95)
 #@gui : Refractive Index (IOR) = float(2,1,3)
-#@gui : Lens Curvature = float(20,0,100)
-#@gui : Base Thickness = float(75,0,100)
+#@gui : Lens Curvature (% of block) = float(31,0,100)
+#@gui : Base Thickness (% of block) = float(117,0,300)
 #@gui : Specular Light = float(50,0,100)
+#@gui : Specular Sharpness = int(40,1,200)
+#@gui : Mortar Width (%) = float(10,0,50)
+#@gui : Mortar Darkness (%) = float(70,0,100)
 #@gui : Mortar Softness (px) = float(2,0,20)
-#@gui : Frosted Glass = float(5,0,10)
+#@gui : Frosted Glass = float(2,0,10)
 #@gui : Surface Irregularity = float(20,0,100)
 #@gui : Texture Grain Size = float(1,0.5,10)
-#@gui : Process Opacity = bool(0)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
 fx_glass_door :
   foreach { nm={n}
-    if !$12 split_opacity fi
-    l[0] {
-      b $9
+    b $12
 
-      # Compute random perturbation of the surface normal.
-      100%,100%,1,1 rand. -1,1 b. $11,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$11*$10%}
+    # Number of color channels (the opacity channel, if any, is warped but not shaded).
+    nc:=s if isin($nc,2,4) nc-=1 fi
 
-      # Compute everything that depends on the block geometry in a single pass:
-      # channels = [ displacement_x, displacement_y, mortar_shading, specular_light ].
-      100%,100%,1,4,"
-        const size = $1;
-        const isdome = !$2;
-        const pl = min($3%,0.99);   # Relative size of the flat top.
-        const ior = $4;
-        const H = $5;
-        const T = $6;
-        const spec_amp = $7%;
-        const slope = 2*H/size/(1 - pl);
+    # Random perturbation of the surface normal, normalized so that
+    # 'Surface Irregularity' is directly the RMS slope perturbation (in %).
+    100%,100%,1,1 rand. -1,1 b. $14,3 f. "(i - ia)/id" g. xy a[-2,-1] c f. "i/id" *. {$13%}
 
-        u = 2*(x%size)/size - 1;
-        v = 2*(y%size)/size - 1;
-        au = abs(u);
-        av = abs(v);
+    # Everything that depends on the block geometry, in a single pass:
+    # channels = [ displacement_x, displacement_y, mortar_shading, specular_light ].
+    100%,100%,1,4,"
+      const size = $1;
+      const isdome = !$2;
+      const pl = min($3%,0.99);     # Relative size of the flat top.
+      const ior = $4;
+      const H = $5%*size;           # Block height, relative to the block size.
+      const Th = $6%*size;          # Glass base thickness, relative to the block size.
+      const spec_amp = $7%;
+      const shine = $8;
+      const mw = $9%;               # Relative width of the mortar ramp.
+      const md = $10%;              # Mortar darkness.
+      const slope = 2*H/size/(1 - pl);
+      const eta = 1/max(ior,1.0001);
 
-        # Chebyshev distance to the block center (0 at center, 1 on the borders).
-        m = max(au,av);
+      # Half-vector H = normalize(L + V), with L = (-0.577,-0.577,0.577) and V = (0,0,1).
+      const hx = -0.325;
+      const hy = -0.325;
+      const hz = 0.888;
 
-        # Remapped coordinates for the truncated dome (0 on the flat top, then 0 -> 1).
-        uu = sign(u)*max(0,au - pl)/(1 - pl);
-        vv = sign(v)*max(0,av - pl)/(1 - pl);
+      # Block coordinates in [-1,1], symmetric around the block center.
+      u = 2*(x%size + 0.5)/size - 1;
+      v = 2*(y%size + 0.5)/size - 1;
+      au = abs(u);
+      av = abs(v);
 
-        # Elevation Z(u,v) of the block: (truncated) dome or truncated pyramid.
-        Z = isdome?
-          H*(1 - uu^2)*(1 - vv^2):
-          H*min(1,(1 - m)/(1 - pl));
+      # Chebyshev distance to the block center (0 at center, 1 on the borders).
+      m = max(au,av);
 
-        # Partial derivatives of Z.
-        dzdx = isdome?
-          -2*slope*uu*(1 - vv^2):
-          m>pl && au>=av?-slope*sign(u):0;
-        dzdy = isdome?
-          -2*slope*vv*(1 - uu^2):
-          m>pl && av>au?-slope*sign(v):0;
+      # Remapped coordinates for the truncated dome (0 on the flat top, then 0 -> 1).
+      uu = sign(u)*max(0,au - pl)/(1 - pl);
+      vv = sign(v)*max(0,av - pl)/(1 - pl);
 
-        # Surface normal, perturbed by the random micro-relief.
-        P = I(#1,x,y);
-        nx = -dzdx + P[0];
-        ny = -dzdy + P[1];
-        nz = 1;
-        L = sqrt(nx^2 + ny^2 + nz^2);
-        Nx = nx/L;
-        Ny = ny/L;
-        Nz = nz/L;
+      # Elevation Z(u,v) of the block: (truncated) dome or truncated pyramid.
+      Z = isdome?
+        H*(1 - uu^2)*(1 - vv^2):
+        H*min(1,(1 - m)/(1 - pl));
 
-        # Snell-Descartes Refraction formula
-        # View ray from camera I = (0, 0, -1).
-        eta = 1/max(ior, 1.0001);
-        c = Nz;                          # Dot product (-I . N)
-        k = 1 - eta^2*(1 - c^2);
-        f = eta*c - sqrt(max(0, k));     # Bending factor.
+      # Partial derivatives of Z.
+      dzdx = isdome?
+        -2*slope*uu*(1 - vv^2):
+        m>pl && au>=av?-slope*sign(u):0;
+      dzdy = isdome?
+        -2*slope*vv*(1 - uu^2):
+        m>pl && av>au?-slope*sign(v):0;
 
-        # Refracted ray vector T = (Tx,Ty,Tz).
-        Tx = f*Nx;
-        Ty = f*Ny;
-        Tz = -eta + f*Nz;
+      # Surface normal, perturbed by the random micro-relief.
+      P = I(#1,x,y);
+      nx = -dzdx + P[0];
+      ny = -dzdy + P[1];
+      L = sqrt(nx^2 + ny^2 + 1);
+      Nx = nx/L;
+      Ny = ny/L;
+      Nz = 1/L;
 
-        # Intersect the ray with the back of the glass block.
-        travel = Z + T;
-        disp_x = travel*Tx/-Tz;
-        disp_y = travel*Ty/-Tz;
+      # Snell-Descartes refraction, view ray from camera I = (0,0,-1).
+      cs = Nz;                               # Dot product (-I . N)
+      kk = 1 - eta^2*(1 - cs^2);
+      bend = eta*cs - sqrt(max(0,kk));       # Bending factor
 
-        # Mortar shading (darkens the borders of each block).
-        mortar = m > 0.90 ? 0.3 + 0.7*(1-m)/0.1 : 1;
+      # Refracted ray vector (Rx,Ry,Rz).
+      Rx = bend*Nx;
+      Ry = bend*Ny;
+      Rz = -eta + bend*Nz;
 
-        # Specular highlight (light from top-left) modulated by spec_amp.
-        lx = -0.577; ly = -0.577; lz = 0.577;
-        dot = max(0, Nx*lx + Ny*ly + Nz*lz);
-        spec = 255*(dot^10)*spec_amp;
+      # Intersect the ray with the back of the glass block.
+      travel = Z + Th;
+      disp_x = travel*Rx/(-Rz);
+      disp_y = travel*Ry/(-Rz);
 
-        [ disp_x,disp_y,mortar,spec ]"
+      # Mortar shading: smooth ramp over the outer 'mw' fraction of the block.
+      ramp = mw>0?cut((1 - m)/mw,0,1):1;
+      mortar = 1 - md*(1 - ramp*ramp*(3 - 2*ramp));
 
-      # Remove the micro-relief image, then split the result:
-      # [1] = disp_x, [2] = disp_y, [3] = mortar, [4] = specular.
-      rm.. s. c a[1,2] c    # Now: [1] = displacement field, [2] = mortar, [3] = specular.
+      # Blinn-Phong specular highlight (light from top-left).
+      nh = max(0,Nx*hx + Ny*hy + Nz*hz);
+      spec = 255*nh^shine*spec_amp;
 
-      # Soften the mortar shading for smoother transitions between blocks.
-      b.. $8
+      [ disp_x,disp_y,mortar,spec ]"
 
-      # Warp the image, then apply shading and lighting.
-      warp[0] [1],1,2,3 rm... *... [1] +... . k... c 0,255
-    }
-    a c => $nm
+    # Remove the micro-relief image, then split the result:
+    # [1] = disp_x, [2] = disp_y, [3] = mortar, [4] = specular.
+    rm[1] s[1] c a[1,2] c  # Now: [1] = displacement field, [2] = mortar, [3] = specular.
+
+    # Soften the mortar shading for smoother transitions between blocks.
+    b[2] $11
+
+    # Warp the image (all channels, opacity included).
+    warp[0] [1],1,1,3
+
+    # Add the specular highlight first, then apply the mortar shading,
+    # on the color channels only.
+    f[0] "c<$nc?cut((i + i(#3,x,y,0,0))*i(#2,x,y,0,0),0,255):i" k[0]
+    => $nm
   }
 
 #@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
