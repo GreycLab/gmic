@@ -54515,7 +54515,6 @@ fx_flower_preview :
   line $1%,$2%,$3%,$4%,1,0xF0F0F0F0,0
   line $1%,$2%,$3%,$4%,1,0x0F0F0F0F,255
 
-
 #@gui Glass Door : fx_glass_door,fx_glass_door(0)
 #@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
 # Simulate an optical distortion of the image seen through a glass block door.
@@ -54527,6 +54526,7 @@ fx_flower_preview :
 #@gui : Lens Curvature = float(20,0,100)
 #@gui : Base Thickness = float(75,0,100)
 #@gui : Specular Light = float(50,0,100)
+#@gui : Mortar Softness (px) = float(2,0,20)
 #@gui : Frosted Glass = float(5,0,10)
 #@gui : Surface Irregularity = float(20,0,100)
 #@gui : Texture Grain Size = float(1,0.5,10)
@@ -54534,52 +54534,54 @@ fx_flower_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
 fx_glass_door :
   foreach {
-    b $8
+    b $9
 
-    # Compute random perturbation of the surface normal.
-    100%,100%,1,1 rand. -1,1 b. $10,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$10*$9%}
+    # Compute random perturbation of the surface normal (image [1]).
+    100%,100%,1,1 rand. -1,1 b. $11,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$11*$10%}
 
-    # Compute displacement field and warp image.
-    100%,100%,1,2,"
+    # Compute everything that depends on the block geometry in a single pass:
+    # channels = [ displacement_x, displacement_y, mortar_shading, specular_light ].
+    100%,100%,1,4,"
       const size = $1;
       const isdome = ($2 == 0);
-      const pl = min($3/100,0.99);   # Relative size of the flat top (dome and pyramid).
+      const pl = min($3/100,0.99);   # Relative size of the flat top.
       const ior = $4;
       const H = $5;
       const T = $6;
+      const spec_amp = $7%;
+      const slope = 2*H/size/(1 - pl);
 
       u = 2*(x%size)/size - 1;
       v = 2*(y%size)/size - 1;
+      au = abs(u);
+      av = abs(v);
 
       # Chebyshev distance to the block center (0 at center, 1 on the borders).
-      m = max(abs(u),abs(v));
+      m = max(au,av);
 
-      # Remapped coordinates for the truncated dome: 0 on the flat top, then 0 -> 1 up to the borders.
-      uu = sign(u)*max(0,abs(u) - pl)/(1 - pl);
-      vv = sign(v)*max(0,abs(v) - pl)/(1 - pl);
+      # Remapped coordinates for the truncated dome (0 on the flat top, then 0 -> 1).
+      uu = sign(u)*max(0,au - pl)/(1 - pl);
+      vv = sign(v)*max(0,av - pl)/(1 - pl);
 
       # Elevation Z(u,v) of the block: (truncated) dome or truncated pyramid.
       Z = isdome ?
         H*(1 - uu^2)*(1 - vv^2) :
         H*min(1,(1 - m)/(1 - pl));
 
-      # Random micro-relief of the surface at this pixel.
-      P = I(#1,x,y);
-
-      # Partial derivatives to calculate the surface normal.
+      # Partial derivatives of Z.
       dzdx = isdome ?
-        (2*H/size)*(-2*uu*(1 - vv^2))/(1 - pl) :
-        ((m>pl && abs(u)>=abs(v)) ? -(2*H/size)*sign(u)/(1 - pl) : 0);
+        -2*slope*uu*(1 - vv^2) :
+        ((m>pl && au>=av) ? -slope*sign(u) : 0);
       dzdy = isdome ?
-        (2*H/size)*(-2*vv*(1 - uu^2))/(1 - pl) :
-        ((m>pl && abs(v)>abs(u)) ? -(2*H/size)*sign(v)/(1 - pl) : 0);
+        -2*slope*vv*(1 - uu^2) :
+        ((m>pl && av>au) ? -slope*sign(v) : 0);
 
+      # Surface normal, perturbed by the random micro-relief.
+      P = I(#1,x,y);
       nx = -dzdx + P[0];
       ny = -dzdy + P[1];
       nz = 1;
       L = sqrt(nx^2 + ny^2 + nz^2);
-
-      # Normalized Normal vector (Nx,Ny,Nz).
       Nx = nx/L;
       Ny = ny/L;
       Nz = nz/L;
@@ -54587,72 +54589,39 @@ fx_glass_door :
       # Snell-Descartes Refraction formula
       # View ray from camera I = (0, 0, -1).
       eta = 1/max(ior, 1.0001);
-      c = Nz; # Dot product (-I . N)
+      c = Nz;                          # Dot product (-I . N)
       k = 1 - eta^2*(1 - c^2);
-
-      # Bending factor.
-      f = eta*c - sqrt(max(0, k));
+      f = eta*c - sqrt(max(0, k));     # Bending factor.
 
       # Refracted ray vector T = (Tx,Ty,Tz).
       Tx = f*Nx;
       Ty = f*Ny;
       Tz = -eta + f*Nz;
 
-      # Intersect the ray with the back of the glass block
-      # Distance to travel along the Z axis is (Z + T).
+      # Intersect the ray with the back of the glass block.
       travel = Z + T;
-
-      # Optical displacement on the 2D image plane.
       disp_x = travel*Tx/-Tz;
       disp_y = travel*Ty/-Tz;
 
-      [ disp_x,disp_y ]"
-    warp... .,1,2,3 rm.
-
-    # Add specular lighting.
-    f.. "
-      const size = $1;
-      const isdome = ($2 == 0);
-      const pl = min($3/100,0.99);
-      const H = $5;
-      const spec_amp = $7%;
-
-      u = 2*(x%size)/size - 1;
-      v = 2*(y%size)/size - 1;
-
       # Mortar shading (darkens the borders of each block).
-      m = max(abs(u), abs(v));
       mortar = m > 0.90 ? 0.3 + 0.7*(1-m)/0.1 : 1;
-
-      # Remapped coordinates for the truncated dome.
-      uu = sign(u)*max(0,abs(u) - pl)/(1 - pl);
-      vv = sign(v)*max(0,abs(v) - pl)/(1 - pl);
-
-      # Same micro-relief as for the refraction.
-      P = I(#1,x,y);
-
-      # Recompute normals for lighting.
-      dzdx = isdome ?
-        (2*H/size)*(-2*uu*(1 - vv^2))/(1 - pl) :
-        ((m>pl && abs(u)>=abs(v)) ? -(2*H/size)*sign(u)/(1 - pl) : 0);
-      dzdy = isdome ?
-        (2*H/size)*(-2*vv*(1 - uu^2))/(1 - pl) :
-        ((m>pl && abs(v)>abs(u)) ? -(2*H/size)*sign(v)/(1 - pl) : 0);
-
-      nx = -dzdx + P[0]; ny = -dzdy + P[1]; nz = 1;
-      L = sqrt(nx^2 + ny^2 + nz^2);
-      Nx = nx/L; Ny = ny/L; Nz = nz/L;
 
       # Specular highlight (light from top-left) modulated by spec_amp.
       lx = -0.577; ly = -0.577; lz = 0.577;
       dot = max(0, Nx*lx + Ny*ly + Nz*lz);
       spec = 255*(dot^10)*spec_amp;
 
-      # Modify current pixel vector 'I'
-      I*mortar + spec"
+      [ disp_x,disp_y,mortar,spec ]"
 
-    c[0] 0,255
-    rm[1]
+    # Remove the micro-relief image, then split the result:
+    # [1] = disp_x, [2] = disp_y, [3] = mortar, [4] = specular.
+    rm.. s. c a[1,2] c    # Now: [1] = displacement field, [2] = mortar, [3] = specular.
+
+    # Soften the mortar shading for smoother transitions between blocks.
+    b.. $8
+
+    # Warp the image, then apply shading and lighting.
+    warp[0] [1],1,2,3 rm... *... [1] +... . k... c 0,255
   }
 
 #@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
