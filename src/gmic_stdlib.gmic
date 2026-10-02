@@ -54521,6 +54521,8 @@ fx_flower_preview :
 # Simulate an optical distortion of the image seen through a glass block door.
 #@gui : "}, sep = separator()
 #@gui : Block Size (px) = int(64,16,256)
+#@gui : Block Shape = choice("Dome","Pyramid")
+#@gui : Flat Top Size (%) = float(30,0,95)
 #@gui : Refractive Index (IOR) = float(2,1,3)
 #@gui : Lens Curvature = float(20,0,100)
 #@gui : Base Thickness = float(75,0,100)
@@ -54529,33 +54531,48 @@ fx_flower_preview :
 #@gui : Surface Irregularity = float(20,0,100)
 #@gui : Texture Grain Size = float(1,0.5,10)
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
 fx_glass_door :
   foreach {
-    b $6
+    b $8
 
     # Compute random perturbation of the surface normal.
-    100%,100%,1,1 rand. -1,1 b. $8,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$8*$7%}
+    100%,100%,1,1 rand. -1,1 b. $10,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$10*$9%}
 
     # Compute displacement field and warp image.
     100%,100%,1,2,"
       const size = $1;
-      const ior = $2;
-      const H = $3;
-      const T = $4;
+      const isdome = ($2 == 0);
+      const pl = min($3/100,0.99);   # Relative size of the flat top (dome and pyramid).
+      const ior = $4;
+      const H = $5;
+      const T = $6;
 
       u = 2*(x%size)/size - 1;
       v = 2*(y%size)/size - 1;
 
-      # Elevation of the glass dome Z(u,v).
-      Z = H*(1 - u^2)*(1 - v^2);
+      # Chebyshev distance to the block center (0 at center, 1 on the borders).
+      m = max(abs(u),abs(v));
+
+      # Remapped coordinates for the truncated dome: 0 on the flat top, then 0 -> 1 up to the borders.
+      uu = sign(u)*max(0,abs(u) - pl)/(1 - pl);
+      vv = sign(v)*max(0,abs(v) - pl)/(1 - pl);
+
+      # Elevation Z(u,v) of the block: (truncated) dome or truncated pyramid.
+      Z = isdome ?
+        H*(1 - uu^2)*(1 - vv^2) :
+        H*min(1,(1 - m)/(1 - pl));
 
       # Random micro-relief of the surface at this pixel.
       P = I(#1,x,y);
 
       # Partial derivatives to calculate the surface normal.
-      dzdx = (2*H/size)*(-2*u*(1 - v^2));
-      dzdy = (2*H/size)*(-2*v*(1 - u^2));
+      dzdx = isdome ?
+        (2*H/size)*(-2*uu*(1 - vv^2))/(1 - pl) :
+        ((m>pl && abs(u)>=abs(v)) ? -(2*H/size)*sign(u)/(1 - pl) : 0);
+      dzdy = isdome ?
+        (2*H/size)*(-2*vv*(1 - uu^2))/(1 - pl) :
+        ((m>pl && abs(v)>abs(u)) ? -(2*H/size)*sign(v)/(1 - pl) : 0);
 
       nx = -dzdx + P[0];
       ny = -dzdy + P[1];
@@ -54595,8 +54612,10 @@ fx_glass_door :
     # Add specular lighting.
     f.. "
       const size = $1;
-      const H = $3;
-      const spec_amp = $5%;
+      const isdome = ($2 == 0);
+      const pl = min($3/100,0.99);
+      const H = $5;
+      const spec_amp = $7%;
 
       u = 2*(x%size)/size - 1;
       v = 2*(y%size)/size - 1;
@@ -54605,12 +54624,20 @@ fx_glass_door :
       m = max(abs(u), abs(v));
       mortar = m > 0.90 ? 0.3 + 0.7*(1-m)/0.1 : 1;
 
+      # Remapped coordinates for the truncated dome.
+      uu = sign(u)*max(0,abs(u) - pl)/(1 - pl);
+      vv = sign(v)*max(0,abs(v) - pl)/(1 - pl);
+
       # Same micro-relief as for the refraction.
       P = I(#1,x,y);
 
       # Recompute normals for lighting.
-      dzdx = (2*H/size)*(-2*u*(1 - v^2));
-      dzdy = (2*H/size)*(-2*v*(1 - u^2));
+      dzdx = isdome ?
+        (2*H/size)*(-2*uu*(1 - vv^2))/(1 - pl) :
+        ((m>pl && abs(u)>=abs(v)) ? -(2*H/size)*sign(u)/(1 - pl) : 0);
+      dzdy = isdome ?
+        (2*H/size)*(-2*vv*(1 - uu^2))/(1 - pl) :
+        ((m>pl && abs(v)>abs(u)) ? -(2*H/size)*sign(v)/(1 - pl) : 0);
 
       nx = -dzdx + P[0]; ny = -dzdy + P[1]; nz = 1;
       L = sqrt(nx^2 + ny^2 + nz^2);
