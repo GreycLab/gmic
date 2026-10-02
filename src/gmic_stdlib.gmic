@@ -54515,6 +54515,119 @@ fx_flower_preview :
   line $1%,$2%,$3%,$4%,1,0xF0F0F0F0,0
   line $1%,$2%,$3%,$4%,1,0x0F0F0F0F,255
 
+
+#@gui Glass Door : fx_glass_door,fx_glass_door(0)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Simulate an optical distortion of the image seen through a glass block door.
+#@gui : "}, sep = separator()
+#@gui : Block Size (px) = int(64,16,256)
+#@gui : Refractive Index (IOR) = float(2,1,3)
+#@gui : Lens Curvature = float(20,0,100)
+#@gui : Base Thickness = float(75,0,100)
+#@gui : Specular Light = float(50,0,100)
+#@gui : Frosted Glass = float(5,0,10)
+#@gui : Surface Irregularity = float(20,0,100)
+#@gui : Texture Grain Size = float(1,0.5,10)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
+fx_glass_door :
+  foreach {
+    b $6
+
+    # Compute random perturbation of the surface normal.
+    100%,100%,1,1 rand. -1,1 b. $8,3 f. "(i - ia)/id" g. xy a[-2,-1] c *. {0.7*$8*$7%}
+
+    # Compute displacement field and warp image.
+    100%,100%,1,2,"
+      const size = $1;
+      const ior = $2;
+      const H = $3;
+      const T = $4;
+
+      u = 2*(x%size)/size - 1;
+      v = 2*(y%size)/size - 1;
+
+      # Elevation of the glass dome Z(u,v).
+      Z = H*(1 - u^2)*(1 - v^2);
+
+      # Random micro-relief of the surface at this pixel.
+      P = I(#1,x,y);
+
+      # Partial derivatives to calculate the surface normal.
+      dzdx = (2*H/size)*(-2*u*(1 - v^2));
+      dzdy = (2*H/size)*(-2*v*(1 - u^2));
+
+      nx = -dzdx + P[0];
+      ny = -dzdy + P[1];
+      nz = 1;
+      L = sqrt(nx^2 + ny^2 + nz^2);
+
+      # Normalized Normal vector (Nx,Ny,Nz).
+      Nx = nx/L;
+      Ny = ny/L;
+      Nz = nz/L;
+
+      # Snell-Descartes Refraction formula
+      # View ray from camera I = (0, 0, -1).
+      eta = 1/max(ior, 1.0001);
+      c = Nz; # Dot product (-I . N)
+      k = 1 - eta^2*(1 - c^2);
+
+      # Bending factor.
+      f = eta*c - sqrt(max(0, k));
+
+      # Refracted ray vector T = (Tx,Ty,Tz).
+      Tx = f*Nx;
+      Ty = f*Ny;
+      Tz = -eta + f*Nz;
+
+      # Intersect the ray with the back of the glass block
+      # Distance to travel along the Z axis is (Z + T).
+      travel = Z + T;
+
+      # Optical displacement on the 2D image plane.
+      disp_x = travel*Tx/-Tz;
+      disp_y = travel*Ty/-Tz;
+
+      [ disp_x,disp_y ]"
+    warp... .,1,2,3 rm.
+
+    # Add specular lighting.
+    f.. "
+      const size = $1;
+      const H = $3;
+      const spec_amp = $5%;
+
+      u = 2*(x%size)/size - 1;
+      v = 2*(y%size)/size - 1;
+
+      # Mortar shading (darkens the borders of each block).
+      m = max(abs(u), abs(v));
+      mortar = m > 0.90 ? 0.3 + 0.7*(1-m)/0.1 : 1;
+
+      # Same micro-relief as for the refraction.
+      P = I(#1,x,y);
+
+      # Recompute normals for lighting.
+      dzdx = (2*H/size)*(-2*u*(1 - v^2));
+      dzdy = (2*H/size)*(-2*v*(1 - u^2));
+
+      nx = -dzdx + P[0]; ny = -dzdy + P[1]; nz = 1;
+      L = sqrt(nx^2 + ny^2 + nz^2);
+      Nx = nx/L; Ny = ny/L; Nz = nz/L;
+
+      # Specular highlight (light from top-left) modulated by spec_amp.
+      lx = -0.577; ly = -0.577; lz = 0.577;
+      dot = max(0, Nx*lx + Ny*ly + Nz*lz);
+      spec = 255*(dot^10)*spec_amp;
+
+      # Modify current pixel vector 'I'
+      I*mortar + spec"
+
+    c[0] 0,255
+    rm[1]
+  }
+
 #@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Applies a geometric warp by projecting the image onto a 3D heightfield surface.
