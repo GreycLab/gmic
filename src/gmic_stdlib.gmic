@@ -30015,7 +30015,8 @@ nn_lib :
 
     nn_crop_init_backward(OUT,IN) = (
       OUT#_is_backward_unfold?(
-        # Define offset maps for correctly handling boundary conditions in backprop.
+
+        # Define offset maps used to correctly handle boundary conditions in backprop.
         OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
                           OUT#_x0,OUT#_width,OUT#_boundary_conditions);
         OUT#_map_y = crop(expr('y',1,IN#_height,1,1),1,IN#_height,1,1,
@@ -30024,31 +30025,47 @@ nn_lib :
                           0,0,OUT#_z0,1,1,OUT#_depth,OUT#_boundary_conditions);
         OUT#_map_c = crop(expr('c',1,1,1,IN#_spectrum),1,1,1,IN#_spectrum,
                           0,0,0,OUT#_c0,1,1,1,OUT#_spectrum,OUT#_boundary_conditions);
+
+        # Retrieve list of out-of-bounds offsets in OUT and their corresponding source offsets in IN.
+        const OUT#_nb_fold = size(OUT#) -
+                             max(0,min(OUT#_x0 + OUT#_width,IN#_width) - max(OUT#_x0,0))*
+                             max(0,min(OUT#_y0 + OUT#_height,IN#_height) - max(OUT#_y0,0))*
+                             max(0,min(OUT#_z0 + OUT#_depth,IN#_depth) - max(OUT#_z0,0))*
+                             max(0,min(OUT#_c0 + OUT#_spectrum,IN#_spectrum) - max(OUT#_c0,0));
+        OUT#_fold_src = vector(OUT#_nb_fold);
+        OUT#_fold_dst = vector(OUT#_nb_fold);
+        _nn_n = _nn_off = 0;
+        repeat (OUT#_spectrum,_nn_c,
+          repeat (OUT#_depth,_nn_z,
+            repeat (OUT#_height,_nn_y,
+              repeat (OUT#_width,_nn_x,
+                _nn_ox = OUT#_x0 + _nn_x; _nn_oy = OUT#_y0 + _nn_y;
+                _nn_oz = OUT#_z0 + _nn_z; _nn_oc = OUT#_c0 + _nn_c;
+                (_nn_ox<0 || _nn_ox>=IN#_width || _nn_oy<0 || _nn_oy>=IN#_height ||
+                  _nn_oz<0 || _nn_oz>=IN#_depth || _nn_oc<0 || _nn_oc>=IN#_spectrum)?(
+                  OUT#_fold_src[_nn_n] = _nn_off;
+                  OUT#_fold_dst[_nn_n] = OUT#_map_x[_nn_x] + IN#_width*(OUT#_map_y[_nn_y] +
+                    IN#_height*(OUT#_map_z[_nn_z] + IN#_depth*OUT#_map_c[_nn_c]));
+                  ++_nn_n;
+                );
+                ++_nn_off;
+              );
+            );
+          );
+        );
       );
     );
 
     nn_crop_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_is_backward_unfold?(
-        _nn_off = 0;
-        repeat (OUT#_spectrum,_nn_c,
-          repeat (OUT#_depth,_nn_z,
-            repeat (OUT#_height,_nn_y,
-              repeat (OUT#_width,_nn_x,
-                X = OUT#_map_x[_nn_x];
-                Y = OUT#_map_y[_nn_y];
-                Z = OUT#_map_z[_nn_z];
-                C = OUT#_map_c[_nn_c];
-                d#IN[X + IN#_width*(Y + IN#_height*(Z + IN#_depth*C))]+=d#OUT[_nn_off++];
-              );
-            );
-          );
+      d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                 -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
+                 IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                 0);
+      OUT#_is_backward_unfold?( # Add gradient coming from out-of-bounds values.
+        repeat (OUT#_nb_fold,_nn_k,
+          d#IN[OUT#_fold_dst[_nn_k]]+=d#OUT[OUT#_fold_src[_nn_k]];
         );
-      ):( # Dirichlet boundary conditions
-        d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                   -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
-                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                   0);
       );
     );
 
