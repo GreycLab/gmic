@@ -11028,7 +11028,7 @@ _sample :
 #@cli : Input set of uniformly distributed spectrum-d points in [0,1]^spectrum.
 #@cli : $ uniform_distribution 64,3 * 255 +distribution3d circles3d[-1] 10
 +uniform_distribution : check "isint($1,1) && isint($2,1)"
-  e[^1] "Input set of $1 uniformly distributed $2-d points in [0,1]^$2."
+  e[^-1] "Input set of $1 uniformly distributed $2-d points in [0,1]^$2."
   l[] {
     dim=$2
     (0;1^$1;0)
@@ -31625,18 +31625,19 @@ nn_lib :
       const OUT#_height = OUT#_axis && OUT#_axis!=_'y'?IN#_height:1;
       const OUT#_depth = OUT#_axis && OUT#_axis!=_'z'?IN#_depth:1;
       const OUT#_spectrum = OUT#_axis && OUT#_axis!=_'c'?IN#_spectrum:1;
-      const OUT#_fact = is_average?1:size(IN#)/(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      const OUT#_fact_fwd = is_average?1:size(IN#)/(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      const OUT#_fact_bwd = is_average?(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum)/size(IN#):1;
     );
 
     nn_sum_forward(OUT,IN) = (
       OUT# = (resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,2)*=OUT#_fact);
+                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,2)*=OUT#_fact_fwd);
     );
 
     nn_sum_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN#+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,1)*=OUT#_fact);
+                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,1)*=OUT#_fact_bwd);
     );
 
     # tmmul: Matrix multiplication IN0^t.IN1.
@@ -32319,7 +32320,7 @@ nn_crop : check "isvarname(['$1']) && # out
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$net"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$net"', with input '"$in"', "\
         "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=crop,
