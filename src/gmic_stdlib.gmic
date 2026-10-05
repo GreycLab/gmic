@@ -29992,7 +29992,7 @@ nn_lib :
     # crop : Crop layer.
     #--------------------
     nn_crop_init_forward(OUT,IN,x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions) = (
-      const OUT#_x0 = x0; # Note: coordinates (x0,y0,z0,c0)-(x1,y1,z1,c1) are already sorted here
+      const OUT#_x0 = x0; # Note: coordinates (x0,y0,z0,c0) - (x1,y1,z1,c1) are already sorted here
       const OUT#_y0 = y0;
       const OUT#_z0 = z0;
       const OUT#_c0 = c0;
@@ -30011,21 +30011,42 @@ nn_lib :
     );
 
     nn_crop_init_backward(OUT,IN) = (
-      # Define offset maps for correctly handling boundary conditions in backprop.
-      OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
-                        OUT#_x0,OUT#_width,OUT#_boundary_conditions);
-      OUT#_map_y = crop(expr('y',1,IN#_height,1,1),1,IN#_height,1,1,
-                        0,OUT#_y0,1,OUT#_height,OUT#_boundary_conditions);
-      OUT#_map_z = crop(expr('z',1,1,IN#_depth,1),1,1,IN#_depth,1,
-                        0,0,OUT#_z0,1,1,OUT#_depth,OUT#_boundary_conditions);
+      OUT#_boundary_conditions?( # Non Dirichlet boundary conditions
+        # Define offset maps for correctly handling boundary conditions in backprop.
+        OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
+                          OUT#_x0,OUT#_width,OUT#_boundary_conditions);
+        OUT#_map_y = crop(expr('y',1,IN#_height,1,1),1,IN#_height,1,1,
+                          0,OUT#_y0,1,OUT#_height,OUT#_boundary_conditions);
+        OUT#_map_z = crop(expr('z',1,1,IN#_depth,1),1,1,IN#_depth,1,
+                          0,0,OUT#_z0,1,1,OUT#_depth,OUT#_boundary_conditions);
+        OUT#_map_c = crop(expr('c',1,1,1,IN#_spectrum),1,1,1,IN#_spectrum,
+                          0,0,0,OUT#_c0,1,1,1,OUT#_spectrum,OUT#_boundary_conditions);
+      );
     );
 
     nn_crop_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                 -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
-                 IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                 0);
+      OUT#_boundary_conditions?( # Non-Dirichlet boundary conditions
+        _nn_off = 0;
+        repeat (OUT#_spectrum,_nn_c,
+          repeat (OUT#_depth,_nn_z,
+            repeat (OUT#_height,_nn_y,
+              repeat (OUT#_width,_nn_x,
+                X = OUT#_map_x[_nn_x];
+                Y = OUT#_map_y[_nn_y];
+                Z = OUT#_map_z[_nn_z];
+                C = OUT#_map_c[_nn_c];
+                d#IN[X + IN#_width*(Y + IN#_height*(Z + IN#_depth*C))]+=d#OUT[_nn_off++];
+              );
+            );
+          );
+        );
+      ):( # Dirichlet boundary conditions
+        d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                   -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
+                   IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                   0);
+      );
     );
 
     # div: Element-wise division.
