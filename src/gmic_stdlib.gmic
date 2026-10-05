@@ -29608,7 +29608,7 @@ nn_lib :
     );
 
     nn_columnpatch2d_init_backward(OUT,IN) = (
-      OUT#_map_backward_src = expr('c2o([x,y,0,c])',OUT#_width,OUT#_height,1,OUT#_spectrum);
+      OUT#_map_backward_src = expr('c2o(x,y,0,c)',OUT#_width,OUT#_height,1,OUT#_spectrum);
       OUT#_map_backward = vector(##IN#_width*IN#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
@@ -30008,6 +30008,16 @@ nn_lib :
                   OUT#_x0,OUT#_y0,OUT#_z0,OUT#_c0,
                   OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                   OUT#_boundary_conditions);
+    );
+
+    nn_crop_init_backward(OUT,IN) = (
+      # Define offset maps for correctly handling boundary conditions in backprop.
+      OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
+                        OUT#_x0,OUT#_width,OUT#_boundary_conditions);
+      OUT#_map_y = crop(expr('y',1,IN#_height,1,1),1,IN#_height,1,1,
+                        0,OUT#_y0,1,OUT#_height,OUT#_boundary_conditions);
+      OUT#_map_z = crop(expr('z',1,1,IN#_depth,1),1,1,IN#_depth,1,
+                        0,0,OUT#_z0,1,1,OUT#_depth,OUT#_boundary_conditions);
     );
 
     nn_crop_backward(OUT,IN) = (
@@ -31149,7 +31159,7 @@ nn_lib :
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
 
-      OUT#_map_forward_src = expr('c2o([x,y,0,c])',IN#_width,IN#_height,1,IN#_spectrum);
+      OUT#_map_forward_src = expr('c2o(x,y,0,c)',IN#_width,IN#_height,1,IN#_spectrum);
       OUT#_map_forward = vector(##OUT#_width*OUT#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
@@ -32280,7 +32290,8 @@ nn_crop : check "isvarname(['$1']) && # out
   _${nout}_properties="coordinates=("$x0,$y0,$z0,$c0")x("$x1,$y1,$z1,$c1")"
   _${nout}_forward="begin(nn_crop_init_forward("$nout,$nin,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1,$boundary_conditions"));"\
                    "nn_crop_forward("$nout,$nin");"
-  _${nout}_backward="nn_crop_backward("$nout,$nin");"
+  _${nout}_backward="begin(nn_crop_init_backward("$nout,$nin"));"\
+                    "nn_crop_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
