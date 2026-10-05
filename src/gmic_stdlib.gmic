@@ -30924,10 +30924,10 @@ nn_lib :
     #----------------------------------------
     nn_normp(X,p) = (p>0?normp(X,p):norm2(X)^2);
     nn_dnormp(X,normX,p) = (
-      p==0?2*X:
+      p==0?2*X: # Convention 'p==0' -> 'mse'
       p==1?sign(X):
       p==2?X/(normX + nn_eps):
-      (abs(X) + nn_eps)^(p - 1)*sign(X)*normX^(1 - p);
+      (abs(X) + nn_eps)^(p - 1)*sign(X)*(normX + nn_eps)^(1 - p);
     );
 
     nn_norm_init_forward(OUT,IN,p,axis) = (
@@ -31833,7 +31833,7 @@ nn_lib :
 
     nn_loss_lp_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(abs(OUT#_delta) + nn_eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+      d#IN+=nn_dnormp(OUT#_delta,OUT#_single,OUT#_p)*OUT#_weight;
     );
 
     # mse : Mean-squared error.
@@ -33193,7 +33193,7 @@ nn_noise : check "isvarname(['$1']) && # out
   _nn_previous_layer=$out
 
 #@cli nn_norm : out,in,p>=0,_axis={ 0 | x | y | z | c }
-#@cli : Add a 'norm' layer (Lp norm computation) to the current network.
+#@cli : Add a 'norm' layer (Lp-norm computation) to the current network.
 #@cli : 'p' can be { 0:Squared norm | >0:Lp-norm }.
 #@cli : Default values: 'p=2' and 'axis=0'.
 nn_norm : check "isvarname(['$1']) && # out
