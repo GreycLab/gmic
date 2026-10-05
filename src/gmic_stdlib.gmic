@@ -30001,6 +30001,9 @@ nn_lib :
       const OUT#_depth = z1 - z0 + 1;
       const OUT#_spectrum = c1 - c0 + 1;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_is_backward_unfold = OUT#_boundary_conditions && (
+        x0<0 || y0<0 || z0<0 || c0<0 ||
+        x1>=IN#_width || y1>=IN#_height || z1>=IN#_depth || c1>=IN#_depth);
     );
 
     nn_crop_forward(OUT,IN) = (
@@ -30011,7 +30014,7 @@ nn_lib :
     );
 
     nn_crop_init_backward(OUT,IN) = (
-      OUT#_boundary_conditions?( # Non Dirichlet boundary conditions
+      OUT#_is_backward_unfold?(
         # Define offset maps for correctly handling boundary conditions in backprop.
         OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
                           OUT#_x0,OUT#_width,OUT#_boundary_conditions);
@@ -30026,7 +30029,7 @@ nn_lib :
 
     nn_crop_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_boundary_conditions?( # Non-Dirichlet boundary conditions
+      OUT#_is_backward_unfold?(
         _nn_off = 0;
         repeat (OUT#_spectrum,_nn_c,
           repeat (OUT#_depth,_nn_z,
