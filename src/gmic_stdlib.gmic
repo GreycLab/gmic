@@ -32750,7 +32750,7 @@ nn_loss_add : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_bce : out,in,ground_truth,_weight
 #@cli : Add a 'bce' loss to the current network (binary cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value.
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_bce : check "isvarname(['$1']) && # out
                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -32760,7 +32760,7 @@ nn_loss_bce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32780,17 +32780,17 @@ nn_loss_bce : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_ce : out,in,ground_truth,_weight
 #@cli : Add a 'ce' loss to the current network (cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_ce : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32808,19 +32808,19 @@ nn_loss_ce : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_l1 : out,in,_ground_truth,_weight
+#@cli nn_loss_l1 : out,in,ground_truth,_weight
 #@cli : Add a 'l1' loss to the current network (L1-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_l1 : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32838,19 +32838,19 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_l2 : out,in,_ground_truth,_weight
+#@cli nn_loss_l2 : out,in,ground_truth,_weight
 #@cli : Add a 'l2' loss to the current network (L2-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_l2 : check "isvarname(['$1']) && # out
                     (s2 = ['$2'];  isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32868,20 +32868,20 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_lp : out,in,_ground_truth,_p>0,_weight
+#@cli nn_loss_lp : out,in,ground_truth,_p>0,_weight
 #@cli : Add a 'lp' loss to the current network (Lp-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'p=1.5' and 'weight=1'.
 nn_loss_lp : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     ${4=1.5}>0 && # p
                     isnum(${5=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,p,weight=${3-5}
+  ground_truth,p,weight=${nn_varname\ $3},${4-5}
 
   e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
@@ -32899,19 +32899,19 @@ nn_loss_lp : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_mse : out,in,_ground_truth,_weight
+#@cli nn_loss_mse : out,in,ground_truth,_weight
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_mse : check "isvarname(['$1']) && # out
                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                     (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                     (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
                      "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32931,18 +32931,18 @@ nn_loss_mse : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_sigmoid_bce : out,in,ground_truth,_weight
 #@cli : Add a 'sigmoid_bce' loss to the current network (sigmoid followed by binary cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0). \
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value. \
 # Its value correspond to the desired probability (so, after the sigmoid).
 #@cli : Default value: 'weight=1'.
 nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
                              (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                             (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                             (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                              isnum(${4=1}) # weight
                              "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add sigmoid + binary cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
@@ -32960,19 +32960,19 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_smoothl1 : out,in,_ground_truth,_weight
+#@cli nn_loss_smoothl1 : out,in,ground_truth,_weight
 #@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_smoothl1 : check "isvarname(['$1']) && # out
                           (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                          (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                          (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                           isnum(${4=1}) # weight
                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32992,17 +32992,17 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_softmax_ce : out,in,ground_truth,_weight
 #@cli : Add a 'softmax_ce' loss to the current network (softmax followed by cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_softmax_ce : check "isvarname(['$1']) && # out
                             (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                            (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                            (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                             isnum(${4=1}) # weight
                             "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3},$4
 
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
