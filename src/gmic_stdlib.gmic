@@ -29217,28 +29217,28 @@ nn_lib :
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,5] = L# - i[##T#_ind,2]; i[##T#_ind,2] = L#; # loss
+      i[##T#_ind,5] = nn_iteration?L# - i[##T#_ind,2]:0; i[##T#_ind,2] = L#; # loss
       L#<i[##T#_ind,3]?(i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration); # New best loss
       L#<i[##T#_ind,4]*T#_loss_eps?( # New significant loss
         i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,8],0.9):L#; # Short-term loss
-      i[##T#_ind,11] = T#_loss - i[##T#_ind,8]; i[##T#_ind,8] = T#_loss;
+      i[##T#_ind,11] = nn_iteration?(T#_loss - i[##T#_ind,8]):0; i[##T#_ind,8] = T#_loss;
       T#_loss<i[##T#_ind,9]?(i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration); # New best short-term loss
       T#_loss<i[##T#_ind,10]*T#_loss_eps?( # New significant short-term loss
         i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,14],0.95):L#; # Mid-term loss
-      i[##T#_ind,17] = T#_loss - i[##T#_ind,14]; i[##T#_ind,14] = T#_loss;
+      i[##T#_ind,17] = nn_iteration?(T#_loss - i[##T#_ind,14]):0; i[##T#_ind,14] = T#_loss;
       T#_loss<i[##T#_ind,15]?(i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration); # New best mid-term loss
       T#_loss<i[##T#_ind,16]*T#_loss_eps?( # New significant mid-term loss
         i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration;
       );
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,20],0.99):L#; # Long-term loss
-      i[##T#_ind,23] = T#_loss - i[##T#_ind,20]; i[##T#_ind,20] = T#_loss;
+      i[##T#_ind,23] = nn_iteration?(T#_loss - i[##T#_ind,20]):0; i[##T#_ind,20] = T#_loss;
       T#_loss<i[##T#_ind,21]?(i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration); # New best long-term loss
       T#_loss<i[##T#_ind,22]*T#_loss_eps?( # New significant long-term loss
         i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration;
@@ -33180,7 +33180,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 # normalize_l2 | normalize_l2_x | normalize_l2_y | normalize_l2_z | normalize_l2_c | \
 # relu | sigmoid | sin | sinc | \
 # softmax | softmax_x | softmax_y | softmax_z | softmax_c | \
-# sqr | sqrt | swish | tanh | z2 | z3 }.
+# sqr | sqrt | swish | tanh | tanhz3 | z2 | z3 | zpsinz }.
 #@cli : Default value: 'activation=leakyrelu'.
 nn_nl : check "isvarname(['$1']) && # out
                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -34115,7 +34115,7 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli nn_trainer : out,loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { adam | adamax | rmsprop | sgd }.
-#@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
+#@cli : 'scheduler' can be { constant | adaptive }.
 #@cli : - Value of 'optimizer_params' depends on the chosen optimizer:
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
 #@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
