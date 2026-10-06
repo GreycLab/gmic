@@ -32021,6 +32021,7 @@ nn_add : check "isvarname(['$1']) && # out
   if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
   e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$nins"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
@@ -32058,6 +32059,7 @@ nn_append : check "isvarname(['$1']) && # out
   }
 
   e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs "$nins" and axis '"$axis"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=append,
   _${nout}_size=$out_size
@@ -32092,6 +32094,7 @@ nn_clone : check "isvarname(['$1']) && # out0
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
+
   _${net}_layer_names.=$out0,$out1,
   _${net}_layer_types.=clone,clone,
   _${nout0}_size=${_${nin}_size}
@@ -32122,13 +32125,14 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'columnpatch2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "output size "($out_width,$out_height)", patch size "$patch_size" and overlap "$overlap"."
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=columnpatch2d,
-  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,ceil(s[1]/$patch_size^2)]
+
   if s=[${_${nin}_size}];s[2,2]!=[1,1]
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Invalid input size ("${_${nin}_size}")."
   fi
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=columnpatch2d,
+  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,ceil(s[1]/$patch_size^2)]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
   _${nout}_forward="begin(nn_columnpatch2d_init_forward("$nout,$nin,$out_width,$out_height,$patch_size,$overlap"));"\
@@ -32181,6 +32185,7 @@ nn_conv : check "isvarname(['$1']) && # out
          $nb_channels" channels, kernel size ("$kernel_width,$kernel_height,$kernel_depth"), "\
          "strides ("$stride_x,$stride_y,$stride_z"), dilations ("$dilation_x,$dilation_y,$dilation_z"), "\
          "border shrinks ("$shrink_x,$shrink_y,$shrink_z") and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$stride_x)-2*$shrink_x,int(s[1]/$stride_y)-2*$shrink_y,\
@@ -32255,6 +32260,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size "$kernel_size", stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
@@ -32325,6 +32331,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size "$kernel_size", stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
@@ -32382,6 +32389,7 @@ nn_crop : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$net"', with input '"$in"', "\
         "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=crop,
   cmin:=vmin([$x0,$y0,$z0,$c0],[$x1,$y1,$z1,$c1])
@@ -32418,6 +32426,7 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'div' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
@@ -32443,6 +32452,7 @@ nn_dropout : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "dropout rate "$dropout_rate"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=dropout,
   _${nout}_size=${_${nin}_size}
@@ -32475,6 +32485,7 @@ nn_fc : check "isvarname(['$1']) && # out
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=fc,
   _${nout}_size=1,1,1,$nb_channels
@@ -32544,6 +32555,7 @@ nn_fft : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"', "\
          ${s$is_inverse}" transformation, along "$s_axes"-ax"$s_axes_s"."
+
   if $io_mode&1" && "[${_${nin}_size}][3]%2
     error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
   fi
@@ -32587,6 +32599,7 @@ nn_input : check "isvarname(['$1']) && # out
   width,height,depth,spectrum=${2-5}
 
   e[^-1] "[nn_lib] Add input '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=input,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -32618,6 +32631,7 @@ nn_linear : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
          "and axis '"$axis"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=linear,
   _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
@@ -32663,7 +32677,9 @@ nn_linear : check "isvarname(['$1']) && # out
                   isbool(${2=1}) # include_trainer_data
                   "
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
+
   l[] {
     "$1" run {t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
@@ -32699,6 +32715,7 @@ nn_loss_add : check "isvarname(['$1']) && # out
   }
 
   e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
@@ -32724,6 +32741,7 @@ nn_loss_bce : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_bce,
   _${nout}_size=1,1,1,1
@@ -32753,6 +32771,7 @@ nn_loss_ce : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_ce,
   _${nout}_size=1,1,1,1
@@ -32782,6 +32801,7 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_l1,
   _${nout}_size=1,1,1,1
@@ -32811,6 +32831,7 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_l2,
   _${nout}_size=1,1,1,1
@@ -32841,6 +32862,7 @@ nn_loss_lp : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_lp,
   _${nout}_size=1,1,1,1
@@ -32870,6 +32892,7 @@ nn_loss_mse : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_mse,
   _${nout}_size=1,1,1,1
@@ -32900,6 +32923,7 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add sigmoid + binary cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_sigmoid_bce,
   _${nout}_size=1,1,1,1
@@ -32929,6 +32953,7 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_smoothl1,
   _${nout}_size=1,1,1,1
@@ -32958,6 +32983,7 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_softmax_ce,
   _${nout}_size=1,1,1,1
@@ -32987,6 +33013,7 @@ nn_maxpool2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "patch size "$patch_size$s_maxabs"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
@@ -33016,6 +33043,7 @@ nn_maxpool3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "patch size "$patch_size$s_maxabs"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
@@ -33042,6 +33070,7 @@ nn_mmul : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'mmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmul,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
@@ -33072,6 +33101,7 @@ nn_mmult : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'mmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmult,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
@@ -33112,9 +33142,10 @@ nn_mul : check "isvarname(['$1']) && # out
     fi
     nins.=$sep${nin$>} sep=,
   }
-  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
   e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs "$nins"."
+
+  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mul,
   _${nout}_size=$out_size
@@ -33161,6 +33192,7 @@ nn_nl : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'nl' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and '"$activation"' activation."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=nl,
   _${nout}_size=${_${nin}_size}
@@ -33237,8 +33269,10 @@ nn_noise : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
   amplitude,noise_type,training_only=${3-5}
   s0,s1,s2,s3,s4=gaussian,uniform,salt&pepper,poisson,rice
+
   e[^-1] "[nn_lib] Add 'noise' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "amplitude "$amplitude" and "${s$noise_type}" noise."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=noise,
   _${nout}_size=${_${nin}_size}
@@ -33269,6 +33303,7 @@ nn_norm : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'norm' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "'p="$p"'"$s_axis.
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=norm,
   _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
@@ -33318,6 +33353,7 @@ nn_normalize : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
@@ -33374,6 +33410,7 @@ nn_parameters : check "isvarname(['$1']) && # out
   width,height,depth,spectrum,learning_mode,weight_decay,initialization=${2-8}
 
   e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")".
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=parameters,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33421,13 +33458,14 @@ nn_patchcolumn2d : check "isvarname(['$1']) && # out
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,overlap=${3-4}
+
+  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "patch size "$patch_size" and overlap "$overlap"."
+
   if s=[${_${nin}_size}];s[2]!=1
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Size of input layer '"$nin"' ("${_${nin}_size}") is incompatible with patch size "$patch_size"."
   fi
-
-  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size" and overlap "$overlap"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchcolumn2d,
   _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;[ceil(s[0]/po)*ceil(s[1]/po),s[3]*$patch_size^2,1,1]
@@ -33455,6 +33493,11 @@ nn_patchdown2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchdown2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[0]%$patch_size" || "s[1]%$patch_size
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Size of input layer '"$nin"' ("${_${nin}_size}") is not a multiple of patch size "$patch_size"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchdown2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2],s[3]*$patch_size^2]
@@ -33487,6 +33530,11 @@ nn_patchdown3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchdown3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[0]%$patch_size" || "s[1]%$patch_size" || "s[2]%$patch_size
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Size of input layer '"$nin"' ("${_${nin}_size}") is not a multiple of patch size "$patch_size"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchdown3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]*$patch_size^3]
@@ -33519,6 +33567,12 @@ nn_patchup2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[3]%($patch_size^2)
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of channels of input layer '"$nin"' ("{[${_${nin}_size}][3]}") is not a "\
+                "multiple of "{$patch_size^2}"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchup2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]*$patch_size),s[2],s[3]/$patch_size^2]
@@ -33547,6 +33601,13 @@ nn_patchup3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[3]%($patch_size^3)
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of channels of input layer '"$nin"' ("{[${_${nin}_size}][3]}") is not a "\
+                "multiple of "{$patch_size^3}"."
+  fi
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchup3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]*$patch_size),s[3]/$patch_size^3]
@@ -33583,6 +33644,7 @@ nn_permute : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'permute' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and permutation '"$permutation"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=permute,
   _${nout}_size:=s=[${_${nin}_size}];mode='$permutation';res=vector4();\
@@ -33604,6 +33666,7 @@ nn_print :
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
 
   e[^-1] "[nn_lib] Print info on network '"$net"'."
+
   v 0 e " * Network name: "$b$net$n
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -33649,6 +33712,7 @@ nn_rename : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=rename,
   _${nout}_size=${_${nin}_size}
@@ -33677,6 +33741,7 @@ nn_reshape : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and size ("$width,$height,$depth,$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=reshape,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33716,6 +33781,7 @@ nn_resize : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'resize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "output size ("$width","$height","$depth","$spectrum")."
+
   _${net}_layer_names.=$1,
   _${net}_layer_types.=resize,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33750,6 +33816,7 @@ nn_run : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'run' layer '"$out"' to network '"$net"', with input '"$in"', command '"$command"' "\
          "and output size ("$width","$height","$depth","$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=run,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33772,7 +33839,9 @@ nn_save : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
                  "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
+
   __nn_store $2 o[$sel,-1] "$1" rm.
   is_change 0
 
@@ -33780,7 +33849,9 @@ nn_save : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
   net=${-nn_network}
+
   e[^-1] "[nn_lib] Return size of network '"$net"'."
+
   siz=0
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -33823,13 +33894,14 @@ nn_split : check "$#>=4"
       break
     fi
   }
+
+  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
+         "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
+
   if si=[${_${nin}_size}];ss=[$sizes];min(ss)<=0" || "sum(ss)!=si[$ind_axis]
     error[0--3] "Command '$0': Cannot split input layer '"$in"' ("${_${nin}_size}") in "$nb_outputs" blocks "\
                 "with sizes ("$sizes")."
   fi
-
-  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
-         "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
   repeat $nb_outputs {
     _${net}_layer_names.=${out$>},
     _${net}_layer_types.=split,
@@ -33853,7 +33925,9 @@ nn_split : check "$#>=4"
                    "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+
   __nn_store $2 +store[$sel,-1] "$1" rm.
 
 nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
@@ -33861,7 +33935,9 @@ nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
                   "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+
   __nn_store $2 store[$sel,-1] "$1"
 
 __nn_store :
@@ -33901,6 +33977,7 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
   e[^-1] "[nn_lib] Add 'sub' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=sub,
   _${nout}_size=$out_size
@@ -33930,6 +34007,7 @@ nn_sum : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'sum' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $s$3"averaging"$s_axis.
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=sum,
   _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
@@ -33956,6 +34034,7 @@ nn_tmmul : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'tmmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=tmmul,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
@@ -33986,6 +34065,7 @@ nn_tmmult : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'tmmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=tmmult,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
@@ -34013,6 +34093,7 @@ nn_transpose : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'transpose' layer '"$out"' to network '"$net"', with input '"$in"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=transpose,
   _${nout}_size:=s=[${_${nin}_size}];[s[1],s[0],s[2],s[3]]
@@ -34136,6 +34217,7 @@ nn_trainer : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
          ($s_optimizer_params)" and '"$scheduler"' scheduler "($s_scheduler_params)"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
