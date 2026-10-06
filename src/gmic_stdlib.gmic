@@ -29776,7 +29776,8 @@ nn_lib :
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (input image for convolve()).
-      boundary_conditions?(
+      const OUT#_is_padded = boundary_conditions>0;
+      OUT#_is_padded?(
         const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
         nn_crop_init_forward(OUT#_padded,IN#,
                              -OUT#_padding,-OUT#_padding,0,0,
@@ -29793,7 +29794,7 @@ nn_lib :
     );
 
     nn_conv2d_forward(OUT,IN) = (
-      OUT#_boundary_conditions?(
+      OUT#_is_padded?(
         nn_crop_forward(OUT#_padded,IN#);
       ):(
         ref(IN#,OUT#_padded);
@@ -29818,6 +29819,7 @@ nn_lib :
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      OUT#_is_padded?nn_crop_init_backward(OUT#_padded,IN#);
     );
 
     nn_conv2d_backward(OUT,IN) = (
