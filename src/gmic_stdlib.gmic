@@ -31484,14 +31484,15 @@ nn_lib :
         (!OUT#_is_downscale && isin(OUT#_interpolation,1,2,3,5,6))?size(OUT#)/size(IN#):1;
       d#IN+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                    IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                   arg0(OUT#_interpolation,
+                   arg0(1 + OUT#_interpolation,
+                     -1, # None
                      0, # Zero padding
                      OUT#_is_downscale?4:2, # Nearest neighbor
                      OUT#_is_downscale?1:2, # Moving average (downscale) / nearest-neighbor (upscale)
                      OUT#_is_downscale?1:2, # Moving average (downscale) / linear (upscale)
                      4, # Grid
                      OUT#_is_downscale?1:2, # Moving average / cubic
-                     OUT#_is_downscale?1:2); # Moving average / lanczos
+                     OUT#_is_downscale?1:2) # Moving average / lanczos
                    )*=OUT#_fact);
     );
 
@@ -33782,6 +33783,10 @@ nn_resize : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'resize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "output size ("$width","$height","$depth","$spectrum")."
 
+  if $interpolation>0" && "s=[${_${nin}_size}];o=[$width,$height,$depth,$spectrum];!min(o>=s)" && "!min(o<=s)
+    error[0--3] "Command '$0', layer '"$nout"': Mixed upscale/downscale axes are not supported "\
+                "with interpolation "$interpolation"."
+  fi
   _${net}_layer_names.=$1,
   _${net}_layer_types.=resize,
   _${nout}_size=$width,$height,$depth,$spectrum
