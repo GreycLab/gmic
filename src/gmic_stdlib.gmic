@@ -31802,8 +31802,8 @@ nn_lib :
 
     # ce : Cross-entropy.
     #--------------------
-    nn_loss_ce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_ce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight*IN#_spectrum/size(IN#); # Sum over classes, mean over pixels
       batch_#OUT = 0;
     );
 
@@ -31972,8 +31972,8 @@ nn_lib :
 
     # softmax_ce : Softmax + Cross entropy.
     #--------------------------------------
-    nn_loss_softmax_ce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_softmax_ce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight*IN#_spectrum/size(IN#); # Sum over classes, mean over pixels
       batch_#OUT = 0;
     );
 
@@ -32778,7 +32778,7 @@ nn_loss_ce : check "isvarname(['$1']) && # out
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_ce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_ce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_ce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_ce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_ce_backward("$nout,$nin,$ground_truth");"
@@ -32990,7 +32990,7 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_softmax_ce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_softmax_ce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_softmax_ce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_softmax_ce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_softmax_ce_backward("$nout,$nin,$ground_truth");"
