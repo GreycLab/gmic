@@ -29027,7 +29027,7 @@ nn_lib :
       const nn_optimizer_adamax = 1;
       const nn_optimizer_rmsprop = 2;
       const nn_optimizer_sgd = 3;
-      nn_is_training = 0;
+      const nn_is_training = 0;
     );
 
     begin_t(
@@ -29204,7 +29204,8 @@ nn_lib :
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
       const T#_loss_eps = 1 - 1e-4;
-      nn_is_training = 1;
+      unref(nn_is_training);
+      const nn_is_training = 1;
       nn_clip_gradient_min = 0;
       nn_clip_gradient_max = inf;
       nn_iteration = max(0,i[##T#_ind,0]);
@@ -29776,7 +29777,7 @@ nn_lib :
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_is_padded = boundary_conditions!=0;
+      const OUT#_is_padded = nn_is_training && boundary_conditions!=0;
       OUT#_is_padded?(
         const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
         nn_crop_init_forward(OUT#_padded,IN#,
