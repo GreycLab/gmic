@@ -30552,7 +30552,7 @@ nn_lib :
     nn_mmult_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=mul(d#OUT,IN1#,IN1#_width);
-      d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
+      d#IN1+=mul(transpose(d#OUT,OUT#_width),IN0#,IN0#_width);
     );
 
     # mul: Element-wise multiplication.
@@ -31120,15 +31120,14 @@ nn_lib :
 
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
+      OUT#_gtilde = d#OUT*OUT#_gamma_whds;
       OUT#_normalization_type?( # RMS-normalization
-        OUT#_avg_g_hat = resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+        OUT#_avg_g_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
         OUT#_avg_g_hat_whds = resize(OUT#_avg_g_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        d#IN+=(d#OUT - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
-
+        d#IN+=(OUT#_gtilde - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
       ):( # Avg_std-normalization
-        OUT#_gtilde = d#OUT*OUT#_gamma_whds;
         OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
         OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
@@ -32117,7 +32116,7 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
   out_width,out_height,patch_size,overlap=${3-6}
 
-  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'columnpatch2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "output size "($out_width,$out_height)", patch size "$patch_size" and overlap "$overlap"."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=columnpatch2d,
@@ -32414,7 +32413,7 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'div' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
@@ -33303,7 +33302,7 @@ nn_normalize : check "isvarname(['$1']) && # out
                       isint(${5=0},0) && # group_x
                       isint(${6=0},0) && # group_y
                       isint(${7=0},0) && # group_z
-                      isint(${8=0},0) && # group_x
+                      isint(${8=0},0) && # group_c
                       isint(${9=3},0,3) # learning_mode
                       "
   net,out=${-nn_network},$1
@@ -33897,7 +33896,7 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'sub' layer '"$net/$out"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'sub' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
   _${net}_layer_names.=$out,
   _${net}_layer_types.=sub,
   _${nout}_size=$out_size
