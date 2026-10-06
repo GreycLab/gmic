@@ -34125,7 +34125,7 @@ nn_transpose : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_trainer : out,loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
+#@cli nn_trainer : out,_loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
 #@cli : 'optimizer' can be { adam | adamax | rmsprop | sgd }.
 #@cli : 'scheduler' can be { constant | adaptive }.
@@ -34137,10 +34137,10 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'constant' : (none).
 #@cli : 'adaptive' : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
 # patience_up,factor_up ).
-#@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
+#@cli : Default values: 'loss=.', 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
-                    (s2 = ['$2']; s2=='.' || isvarname(s2)) && # in
+                    (s2 = ['${2=.}']; s2=='.' || isvarname(s2)) && # in
                     (s3 = ['${3=adam}']; isvarname(s3) &&
                      isin(s3,'adam','adamax','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
@@ -34148,7 +34148,7 @@ nn_trainer : check "isvarname(['$1']) && # out
                     "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
-  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
+  if ['$2']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
   nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
