@@ -33777,10 +33777,10 @@ nn_reshape : check "isvarname(['$1']) && # out
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
 nn_resize : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                   $3>0 && # width
-                   ${4=100%}>0 && # height
-                   ${5=100%}>0 && # depth
-                   ${6=100%}>0 && # spectrum
+                   (ispercentage($3) || isint($3,1)) && $3>0 && # width
+                   (ispercentage(${4=100%}) || isint($4,1)) && $4>0 && # height
+                   (ispercentage(${5=100%}) || isint($5,1)) && $5>0 && # depth
+                   (ispercentage(${6=100%}) || isint($6,1)) && $6>0 && # spectrum
                    isint(${7=3},-1,6) # interpolation
                    "
   net,out=${-nn_network},$1
@@ -33817,10 +33817,10 @@ nn_resize : check "isvarname(['$1']) && # out
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
 nn_run : check "isvarname(['$1']) && # out
                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                ${4=100%}>0 && # width
-                ${5=100%}>0 && # height
-                ${6=100%}>0 && # depth
-                ${7=100%}>0 # spectrum
+                (ispercentage(${4=100%}) || isint($4,1)) && $4>0 && # width
+                (ispercentage(${5=100%}) || isint($5,1)) && $5>0 && # height
+                (ispercentage(${6=100%}) || isint($6,1)) && $6>0 && # depth
+                (ispercentage(${7=100%}) || isint($7,1)) && $7>0 && # spectrum
                 "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
@@ -33839,7 +33839,7 @@ nn_run : check "isvarname(['$1']) && # out
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
   _${nout}_properties="command='"$command"'"
-  _${nout}_forward="begin(nn_run_init_forward("$nout,$nin,'$command',$width,$height,$depth,$spectrum"));"\
+  _${nout}_forward="begin(nn_run_init_forward("$nout,$nin,['$command'],$width,$height,$depth,$spectrum"));"\
                    "nn_run_forward("$nout,$nin");"
   _${nout}_backward="nn_run_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -33897,9 +33897,15 @@ nn_split : check "$#>=4"
       nin=${nn_varname\ $in}
       axis=${arg$i} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c') # axis
       repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
+      if $#-$i>$nb_outputs
+        error[0--3] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
+      fi
       break
     fi
   }
+  if !$nb_outputs
+    error[0--3] "Command '$0': Missing or invalid axis (must be one of 'x', 'y', 'z' or 'c')."
+  fi
   sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size}) first_unknown=0
   repeat $nb_outputs {
     i=$> nb_remaining:=1+$<
