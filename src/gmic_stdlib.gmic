@@ -29793,15 +29793,20 @@ nn_lib :
     );
 
     nn_conv2d_forward(OUT,IN) = (
-      OUT# = convolve(IN#,
-                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_boundary_conditions?(
+        nn_crop_forward(OUT#_padded,IN#);
+      ):(
+        ref(IN#,OUT#_padded);
+      );
+      OUT# = convolve(OUT#_padded,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                       OUT#_params,
-                      OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum*OUT#_spectrum,
-                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum*OUT#_spectrum,
+                      0,0,2,
                       OUT#_kernel_center,OUT#_kernel_center,0,
                       OUT#_stride,OUT#_stride,1,
                       OUT#_dilation,OUT#_dilation,1,
-                      OUT#_shrink_stride,OUT#_shrink_stride,0,
+                      OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,0,
                       OUT#_width,OUT#_height,OUT#_depth);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
