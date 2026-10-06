@@ -30391,7 +30391,7 @@ nn_lib :
         ref(d#OUT,d#OUT#_S2);
       d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
       OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
-        ref(d#IN,d#OUT#_S1);
+        (d#IN+=d#OUT#_S1);
       d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
       d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
@@ -30985,7 +30985,7 @@ nn_lib :
     #----------------------------------------
     nn_normp(X,p) = (p>0?normp(X,p):norm2(X)^2);
     nn_dnormp(X,normX,p) = (
-      p==0?2*X: # Convention 'p==0' -> 'mse'
+      p==0?2*X: # Convention 'p==0' -> 'sum of squares'
       p==1?sign(X):
       p==2?X/(normX + nn_eps):
       (abs(X) + nn_eps)^(p - 1)*sign(X)*(normX + nn_eps)^(1 - p);
@@ -33294,7 +33294,7 @@ nn_noise : check "isvarname(['$1']) && # out
 
 #@cli nn_norm : out,in,p>=0,_axis={ 0 | x | y | z | c }
 #@cli : Add a 'norm' layer (Lp-norm computation) to the current network.
-#@cli : 'p' can be { 0:Squared norm | >0:Lp-norm }.
+#@cli : 'p' can be { 0:Sum of squares | >0:Lp-norm }.
 #@cli : Default values: 'p=2' and 'axis=0'.
 nn_norm : check "isvarname(['$1']) && # out
                  (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
