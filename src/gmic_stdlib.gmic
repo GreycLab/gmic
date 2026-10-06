@@ -29055,8 +29055,8 @@ nn_lib :
 
     # elu: Exponential Linear Unit.
     #------------------------------
-    nn_activation_elu(z) = lerp(exp(vmin(z,0)) - 1,z,z>=0);
-    nn_activation_d_elu(z) = lerp(exp(vmin(z,0)),1,z>=0);
+    nn_activation_elu(z) = (vmax(z,0) + exp(vmin(z,0)) - 1);
+    nn_activation_d_elu(z) = exp(vmin(z,0));
 
     # gelu: Gaussian Error Linear Unit.
     #----------------------------------
@@ -29065,8 +29065,8 @@ nn_lib :
 
     # leakyrelu: Leaky Rectified Linear Unit.
     #----------------------------------------
-    nn_activation_leakyrelu(z) = (lerp(0.01,1,z>=0)*z);
-    nn_activation_d_leakyrelu(z) = lerp(0.01,1,z>=0);
+    nn_activation_leakyrelu(z) = (vmax(z,0) + 0.01*vmin(z,0));
+    nn_activation_d_leakyrelu(z) = (0.01 + 0.99*(z>=0));
 
     # linear: Identity function.
     #---------------------------
@@ -29577,13 +29577,12 @@ nn_lib :
       const OUT#_height = out_height;
       const OUT#_depth = 1;
       const OUT#_spectrum = ceil(IN#_height/OUT#_patch_size^2);
-      const OUT#_nb_cols = ceil(OUT#_width/OUT#_p_o);
-      const OUT#_nb_rows = ceil(OUT#_height/OUT#_p_o);
+      const OUT#_nb_cols = max(1,ceil((OUT#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((OUT#_height - overlap)/OUT#_p_o));
 
       # Pre-compute OUT#_count (local counting of overlapping patch pixels).
       OUT#_count = vector(##OUT#_width*OUT#_height);
       OUT#_one = vector(##OUT#_patch_size^2,1);
-      _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           draw(OUT#_count,OUT#_width,OUT#_height,1,1,OUT#_one,
@@ -31252,8 +31251,8 @@ nn_lib :
     nn_patchcolumn2d_init_forward(OUT,IN,patch_size,overlap) = (
       const OUT#_patch_size = patch_size;
       const OUT#_p_o = OUT#_patch_size - overlap;
-      const OUT#_nb_cols = ceil(IN#_width/OUT#_p_o);
-      const OUT#_nb_rows = ceil(IN#_height/OUT#_p_o);
+      const OUT#_nb_cols = max(1,ceil((IN#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((IN#_height - overlap)/OUT#_p_o));
       const OUT#_width = OUT#_nb_cols*OUT#_nb_rows;
       const OUT#_height = patch_size^2*IN#_spectrum;
       const OUT#_depth = 1;
