@@ -29609,22 +29609,24 @@ nn_lib :
     );
 
     nn_columnpatch2d_init_backward(OUT,IN) = (
-      OUT#_map_backward_src = expr('c2o(x,y,0,c)',OUT#_width,OUT#_height,1,OUT#_spectrum);
+      OUT#_map_backward_src = expr('c2o(x,y,0,c) + 1',OUT#_width,OUT#_height,1,OUT#_spectrum);
       OUT#_map_backward = vector(##IN#_width*IN#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,1,OUT#_spectrum,
                             _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,3);
+                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,0);
           draw(OUT#_map_backward,IN#_width,IN#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
         );
       );
+      OUT#_valid = OUT#_map_backward>0;
+      OUT#_map_backward = vmax(OUT#_map_forward - 1,0);
     );
 
     nn_columnpatch2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds);
+      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds)*OUT#_valid;
     );
 
     # conv: Generic 1D/2D/3D convolutional layer.
@@ -31254,21 +31256,23 @@ nn_lib :
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
 
-      OUT#_map_forward_src = expr('c2o(x,y,0,c)',IN#_width,IN#_height,1,IN#_spectrum);
+      OUT#_map_forward_src = expr('c2o(x,y,0,c) + 1',IN#_width,IN#_height,1,IN#_spectrum);
       OUT#_map_forward = vector(##OUT#_width*OUT#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           OUT#_patch = crop(OUT#_map_forward_src,IN#_width,IN#_height,1,IN#_spectrum,
                             _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,3);
+                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,0);
           draw(OUT#_map_forward,OUT#_width,OUT#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
         );
       );
+      OUT#_valid = OUT#_map_forward>0;
+      OUT#_map_forward = vmax(OUT#_map_forward - 1,0);
     );
 
     nn_patchcolumn2d_forward(OUT,IN) = (
-      OUT# = map(OUT#_map_forward,IN#);
+      OUT# = map(OUT#_map_forward,IN#)*OUT#_valid;
     );
 
     nn_patchcolumn2d_backward(OUT,IN) = (
