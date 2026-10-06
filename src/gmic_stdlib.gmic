@@ -29774,6 +29774,22 @@ nn_lib :
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+
+      # Define geometry of OUT#_padded (input image for convolve()).
+      boundary_conditions?(
+        const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
+        nn_crop_init_forward(OUT#_padded,IN#,
+                             -OUT#_padding,-OUT#_padding,0,0,
+                             IN#_width - 1 + OUT#_padding,IN#_height - 1 + OUT#_padding,
+                             IN#_depth - 1,IN#_spectrum - 1,OUT#_boundary_conditions);
+      ):(
+        const OUT#_padding = 0;
+        const OUT#_padded_width = IN#_width;
+        const OUT#_padded_height = IN#_height;
+        const OUT#_padded_depth = IN#_depth;
+        const OUT#_padded_spectrum = IN#_spectrum;
+      );
+      const OUT#_padded_shrink_stride = OUT#_shrink_stride + OUT#_padding;
     );
 
     nn_conv2d_forward(OUT,IN) = (
