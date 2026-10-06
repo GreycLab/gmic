@@ -29834,7 +29834,8 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
-      nn_define_backward(OUT#_padded);
+      nn_define_backward(IN#);
+      OUT#_is_padded?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
       repeat (OUT#_padded_spectrum,_nn_k,
         draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
@@ -29849,9 +29850,9 @@ nn_lib :
                        -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
                        OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
              0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
-             1); # Overwrite d#OUT_padded as it's an internal-only buffer
+             -1); # Add to d#OUT_padded
       );
-      OUT#_is_padded?nn_crop_backward(OUT#_padded,IN#):(nn_define_backward(IN#); d#IN+=d#OUT#_padded);
+      OUT#_is_padded?nn_crop_backward(OUT#_padded,IN#);
 
       # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
