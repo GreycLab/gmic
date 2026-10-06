@@ -29777,7 +29777,7 @@ nn_lib :
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_is_padded = nn_is_training && boundary_conditions!=0;
+      const OUT#_is_padded = nn_is_training && boundary_conditions;
       OUT#_is_padded?(
         const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
         nn_crop_init_forward(OUT#_padded,IN#,
@@ -29911,7 +29911,7 @@ nn_lib :
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_is_padded = nn_is_training && boundary_conditions!=0;
+      const OUT#_is_padded = nn_is_training && boundary_conditions;
       OUT#_is_padded?(
         const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
         nn_crop_init_forward(OUT#_padded,IN#,
@@ -30134,7 +30134,7 @@ nn_lib :
     );
 
     nn_dropout_forward(OUT,IN) = (
-      OUT#_dropout_rate && nn_is_training?(
+      nn_is_training && OUT#_dropout_rate?(
         OUT#_dropout_channels = vector(##OUT#_spectrum);
         fill(OUT#_dropout_channels,u>=OUT#_dropout_rate);
         OUT#_dropout_fact = 1/(1 - OUT#_dropout_rate);
@@ -30149,7 +30149,7 @@ nn_lib :
 
     nn_dropout_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_dropout_rate && nn_is_training?(
+      nn_is_training && OUT#_dropout_rate?(
         d#IN+=d#OUT*OUT#_dropout_mask;
       ):(
         d#IN+=d#OUT;
@@ -30944,7 +30944,7 @@ nn_lib :
     );
 
     nn_noise_forward(OUT,IN) = (
-      OUT#_training_only && !nn_is_training?(
+      !nn_is_training && OUT#_training_only?(
         OUT# = IN#;
       ):(
         srand();
