@@ -29775,8 +29775,8 @@ nn_lib :
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
-      # Define geometry of OUT#_padded (input image for convolve()).
-      const OUT#_is_padded = boundary_conditions>0;
+      # Define geometry of OUT#_padded (that is the input image for convolve()).
+      const OUT#_is_padded = boundary_conditions!=0;
       OUT#_is_padded?(
         const OUT#_padding = OUT#_dilation*int(OUT#_kernel_size/2);
         nn_crop_init_forward(OUT#_padded,IN#,
@@ -29832,10 +29832,10 @@ nn_lib :
                                    OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,4);
       );
 
-      # Compute dLOSS/dIN.
-      nn_define_backward(IN#);
-      repeat (IN#_spectrum,_nn_k,
-        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
+      nn_define_backward(OUT#_padded);
+      repeat (OUT#_padded_spectrum,_nn_k,
+        draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
                        crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
@@ -29845,10 +29845,14 @@ nn_lib :
                        OUT#_kernel_center,OUT#_kernel_center,0,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
-                       IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
-             -1); # Add to d#IN
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+             0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
+             1); # Overwrite d#OUT_padded as it's an internal-only buffer
+      );
+      OUT#_is_padded?nn_crop_backward(OUT#_padded,IN#):(
+        nn_define_backward(IN#);
+        d#IN+=d#OUT#_padded
       );
 
       # Compute dLOSS/dbiases (do not apply weight decay on biases!).
@@ -29861,21 +29865,21 @@ nn_lib :
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
-             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*IN#_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*OUT#_padded_spectrum,
              correlate(crop(d#OUT#_prestrided,
                             OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
                             0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth,1),
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth,1,
-                       IN#,
-                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       OUT#_padded,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,0,
                        OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually dilation
                        1,1,1,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
                        OUT#_kernel_size,OUT#_kernel_size,1),
-             0,0,0,_nn_k*IN#_spectrum,
-             OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
+             0,0,0,_nn_k*OUT#_padded_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum);
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
