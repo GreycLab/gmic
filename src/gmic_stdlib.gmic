@@ -29367,7 +29367,7 @@ nn_lib :
       T#_factor_down = i(##T#_ind,6,2);
       T#_patience_up = i(##T#_ind,7,2);
       T#_factor_up = i(##T#_ind,8,2);
-      !nn_iteration?(i[##T#_ind,1] = T#_lr_max);
+      !nn_iteration?(i[##T#_ind,1] = T#_nb_warmup_iterations>0?T#_lr_min:T#_lr_max);
 
       # Note : i(##T#_ind,9,2) is used to store last iteration where a lr change occurred.
     );
@@ -29376,7 +29376,7 @@ nn_lib :
 
       # Warmup phase.
       nn_iteration<T#_nb_warmup_iterations?(
-        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/max(1,T#_nb_warmup_iterations-1));
+        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,(nn_iteration + 1)/T#_nb_warmup_iterations);
 
       # Check that cooldown passed.
       ):nn_iteration>i(##T#_ind,9,2) + T#_nb_cooldown_iterations?(
