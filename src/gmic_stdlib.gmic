@@ -33527,10 +33527,6 @@ nn_patchdown2d : check "isvarname(['$1']) && # out
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2],s[3]*$patch_size^2]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size
-  if !min(${_${nout}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Specified patch size "$patch_size" is higher than input size ("${_${nin}_size}")."
-  fi
   _${nout}_forward="begin(nn_patchdown2d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_patchdown2d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchdown2d_init_backward("$nout,$nin,$patch_size"));"\
@@ -33564,10 +33560,6 @@ nn_patchdown3d : check "isvarname(['$1']) && # out
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]*$patch_size^3]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size
-  if !min(${_${nout}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Specified patch size "$patch_size" is higher than input size ("${_${nin}_size}")."
-  fi
   _${nout}_forward="begin(nn_patchdown3d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_patchdown3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchdown3d_init_backward("$nout,$nin,$patch_size"));"\
@@ -33889,7 +33881,8 @@ nn_size :
 
 #@cli nn_split : out0,out1,_out2,_out3,in,axis={ x | y | z | c },_size_out0>0,_size_out1>0,_size_out2>0,_size_out3>0
 #@cli : Add a 'split' layer to the current network.
-#@cli : Default values: 'size2=size1=size0'.
+#@cli : Default values: unspecified sizes split equally the remaining size along 'axis'
+#@cli : (the remainder, if any, is added to the first unspecified output).
 nn_split : check "$#>=4"
   net=${-nn_network}
   $=arg nb_outputs=0 nouts,sep=
@@ -33968,8 +33961,8 @@ nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
 __nn_store :
   net=${-nn_network}
   repeat narg(${_${net}_layer_names})-1 {
-    type=${"arg0 $>,"${_${net}_layer_types}}
-    name=${"arg0 $>,"${_${net}_layer_names}}
+    type=${arg0\ $>,${_${net}_layer_types}}
+    name=${arg0\ $>,${_${net}_layer_names}}
     if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
