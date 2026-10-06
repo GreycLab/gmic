@@ -32760,7 +32760,7 @@ nn_loss_bce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32790,7 +32790,7 @@ nn_loss_ce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32820,7 +32820,7 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32850,7 +32850,7 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32881,7 +32881,7 @@ nn_loss_lp : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,p,weight=${nn_varname\ $3},${4-5}
+  ground_truth,p,weight=${nn_varname\ $3,1},${4-5}
 
   e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
@@ -32911,7 +32911,7 @@ nn_loss_mse : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -32942,7 +32942,7 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add sigmoid + binary cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
@@ -32972,7 +32972,7 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
@@ -33002,7 +33002,7 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${nn_varname\ $3},$4
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
@@ -34281,13 +34281,14 @@ nn_trainer : check "isvarname(['$1']) && # out
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nloss,$optimizer,$scheduler"));"
 
-#@cli nn_varname : layer_name
+#@cli nn_varname : layer_name,_accept_nonlayer_variable_name={ 0:False | 1:True }
 #@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
-nn_varname :
+#@cli : Default value: 'accept_nonlayer_variable_name=0'.
+nn_varname : check "isbool(${2=0})"
   if isvarname(['"${1=}"'])
     net=${-nn_network}
     if narg(${_${net}_$1_size}) u ${net}_$1
-    elif narg(${_$1_size}) u $1
+    elif narg(${_$1_size})" || "$2 u $1
     else error[0--3] "Command '$0': Layer with name '$1' does not exist."
     fi
   else u "$1"
