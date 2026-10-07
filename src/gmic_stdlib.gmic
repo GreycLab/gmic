@@ -29206,7 +29206,7 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
-      const T#_loss_eps = 1 - 1e-4;
+      const T#_loss_eps = 1e-4;
       unref(nn_is_training);
       const nn_is_training = 1;
       nn_clip_gradient_min = 0;
@@ -29222,30 +29222,26 @@ nn_lib :
     nn_trainer_update(T,L,O,S) = (
       i[##T#_ind,5] = nn_iteration?L# - i[##T#_ind,2]:0; i[##T#_ind,2] = L#; # loss
       L#<i[##T#_ind,3]?(i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration); # New best loss
-      L#<i[##T#_ind,4]*T#_loss_eps?( # New significant loss
-        i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,4]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      L#<T#_sig?(i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration); # New significant loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,8],0.9):L#; # Short-term loss
       i[##T#_ind,11] = nn_iteration?(T#_loss - i[##T#_ind,8]):0; i[##T#_ind,8] = T#_loss;
       T#_loss<i[##T#_ind,9]?(i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration); # New best short-term loss
-      T#_loss<i[##T#_ind,10]*T#_loss_eps?( # New significant short-term loss
-        i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,10]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration); # New significant short-term loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,14],0.95):L#; # Mid-term loss
       i[##T#_ind,17] = nn_iteration?(T#_loss - i[##T#_ind,14]):0; i[##T#_ind,14] = T#_loss;
       T#_loss<i[##T#_ind,15]?(i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration); # New best mid-term loss
-      T#_loss<i[##T#_ind,16]*T#_loss_eps?( # New significant mid-term loss
-        i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,16]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration); # New significant mid-term loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,20],0.99):L#; # Long-term loss
       i[##T#_ind,23] = nn_iteration?(T#_loss - i[##T#_ind,20]):0; i[##T#_ind,20] = T#_loss;
       T#_loss<i[##T#_ind,21]?(i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration); # New best long-term loss
-      T#_loss<i[##T#_ind,22]*T#_loss_eps?( # New significant long-term loss
-        i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,22]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration); # New significant long-term loss
 
       nn_scheduler_#S#_update(#T);
       i[##T#_ind,0] = ++nn_iteration;
