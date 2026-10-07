@@ -29086,7 +29086,10 @@ nn_lib :
     # sigmoid : Sigmoid (i.e. Logistic).
     #------------------------------------
     nn_activation_sigmoid(z) = sigmoid(z);
-    nn_activation_d_sigmoid(z) = (ref(sigmoid(z),_nn_sigmoid); _nn_sigmoid*(1 - _nn_sigmoid));
+    nn_activation_d_sigmoid(z) = (
+      ref(sigmoid(z),_nn_sigmoid);
+      _nn_sigmoid*(1 - _nn_sigmoid)
+    );
 
     # sin: Sine.
     #-----------
@@ -31429,6 +31432,24 @@ nn_lib :
       d#IN+=permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,'inv_permutation#');
     );
 
+    # rename: Rename input.
+    #----------------------
+    nn_rename_init_forward(OUT,IN) = (
+      const OUT#_width = IN#_width;
+      const OUT#_height = IN#_height;
+      const OUT#_depth = IN#_depth;
+      const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_rename_forward(OUT,IN) = (
+      ref(IN#,OUT#);
+    );
+
+    nn_rename_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=d#OUT;
+    );
+
     # reshape: Reshape input to output with compatible size.
     #-------------------------------------------------------
     nn_reshape_init_forward(OUT,IN,w,h,d,s) = (
@@ -31439,7 +31460,7 @@ nn_lib :
     );
 
     nn_reshape_forward(OUT,IN) = (
-      OUT# = IN#;
+      ref(IN#,OUT#);
     );
 
     nn_reshape_backward(OUT,IN) = (
@@ -33701,6 +33722,28 @@ nn_print :
     fi
   }
   e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
+
+#@cli nn_rename : out,in
+#@cli : Add a 'rename' layer to the current network.
+nn_rename : check "isvarname(['$1']) && # out
+                   (s2 = ['$2']; isvarname(s2) || s2=='.') # in
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
+  nout,nin=${net}_$out,${nn_varname\ $in}
+
+  e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
+
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=rename,
+  _${nout}_size=${_${nin}_size}
+  _${nout}_input=$in
+  _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"
+  _${nout}_backward="nn_rename_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 ${1--1}\n"
+  _nn_previous_layer=$out
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
