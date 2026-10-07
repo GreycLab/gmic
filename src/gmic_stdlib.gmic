@@ -11028,7 +11028,7 @@ _sample :
 #@cli : Input set of uniformly distributed spectrum-d points in [0,1]^spectrum.
 #@cli : $ uniform_distribution 64,3 * 255 +distribution3d circles3d[-1] 10
 +uniform_distribution : check "isint($1,1) && isint($2,1)"
-  e[^1] "Input set of $1 uniformly distributed $2-d points in [0,1]^$2."
+  e[^-1] "Input set of $1 uniformly distributed $2-d points in [0,1]^$2."
   l[] {
     dim=$2
     (0;1^$1;0)
@@ -12192,6 +12192,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Deformations/Euclidean - Polar",\
   "Deformations/Fish-Eye",\
   "Deformations/Flower",\
+  "Deformations/Glass Door",\
   "Deformations/Kaleidoscope [Blended]",\
   "Deformations/Kaleidoscope [Polar]",\
   "Deformations/Kaleidoscope [Reptorian-Polar]",\
@@ -12375,6 +12376,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Patterns/Pills",\
   "Patterns/Plaid",\
   "Patterns/Polka Dots",\
+  "Patterns/Penrose Tiling",\
   "Patterns/Random Color Ellipses",\
   "Patterns/Random Pattern",\
   "Patterns/Random Rectangles",\
@@ -12413,8 +12415,10 @@ _update_gmicol : # Keep only a subset of existing filters
   "Rendering/3D Random Objects",\
   "Rendering/Algorithm A",\
   "Rendering/Ball",\
+  "Rendering/Chladni Figures",\
   "Rendering/Circle Art",\
   "Rendering/Construction Material Texture",\
+  "Rendering/Cosmic Nebula",\
   "Rendering/Disco",\
   "Rendering/Equation Plot [Parametric]",\
   "Rendering/Equation Plot [Y=f(X)]",\
@@ -13065,6 +13069,7 @@ upload_filters :
                   'david_tschumperle.gmic',
                   'jerome_boulanger.gmic',
                   'kristian_jarventaus.gmic',
+                  'llm_assisted.gmic',
                   'mathew_callaghan.gmic',
                   'martin_souphead.gmic',
                   'tom_keil.gmic')"
@@ -29020,10 +29025,9 @@ nn_lib :
       const nn_eps = 1e-8;
       const nn_optimizer_adam = 0;
       const nn_optimizer_adamax = 1;
-      const nn_optimizer_dtschump = 2;
+      const nn_optimizer_rmsprop = 2;
       const nn_optimizer_sgd = 3;
-      const nn_optimizer_rmsprop = 4;
-      nn_is_training = 0;
+      const nn_is_training = 0;
     );
 
     begin_t(
@@ -29051,8 +29055,8 @@ nn_lib :
 
     # elu: Exponential Linear Unit.
     #------------------------------
-    nn_activation_elu(z) = lerp(exp(z) - 1,z,z>=0);
-    nn_activation_d_elu(z) = lerp(exp(z),1,z>=0);
+    nn_activation_elu(z) = (vmax(z,0) + exp(vmin(z,0)) - 1);
+    nn_activation_d_elu(z) = exp(vmin(z,0));
 
     # gelu: Gaussian Error Linear Unit.
     #----------------------------------
@@ -29061,8 +29065,8 @@ nn_lib :
 
     # leakyrelu: Leaky Rectified Linear Unit.
     #----------------------------------------
-    nn_activation_leakyrelu(z) = (lerp(0.01,1,z>=0)*z);
-    nn_activation_d_leakyrelu(z) = lerp(0.01,1,z>=0);
+    nn_activation_leakyrelu(z) = (vmax(z,0) + 0.01*vmin(z,0));
+    nn_activation_d_leakyrelu(z) = (0.01 + 0.99*(z>=0));
 
     # linear: Identity function.
     #---------------------------
@@ -29082,7 +29086,10 @@ nn_lib :
     # sigmoid : Sigmoid (i.e. Logistic).
     #------------------------------------
     nn_activation_sigmoid(z) = sigmoid(z);
-    nn_activation_d_sigmoid(z) = (ref(sigmoid(z),_nn_sigmoid); _nn_sigmoid*(1 - _nn_sigmoid));
+    nn_activation_d_sigmoid(z) = (
+      ref(sigmoid(z),_nn_sigmoid);
+      _nn_sigmoid*(1 - _nn_sigmoid)
+    );
 
     # sin: Sine.
     #-----------
@@ -29092,7 +29099,7 @@ nn_lib :
     # sinc: Sinc.
     #------------
     nn_activation_sinc(z) = sinc(z);
-    nn_activation_d_sinc(z) = ((cos(z) - sinc(z))/abscut(z,nn_eps));
+    nn_activation_d_sinc(z) = (z*(cos(z) - sinc(z))/(z^2 + nn_eps^2));
 
     # sqr: Square.
     #-------------
@@ -29102,7 +29109,7 @@ nn_lib :
     # sqrt: sqrt(|z|).
     #-----------------
     nn_activation_sqrt(z) = (sqrt(abs(z)));
-    nn_activation_d_sqrt(z) = (0.5*sign(x)/sqrt(abs(z) + nn_eps));
+    nn_activation_d_sqrt(z) = (0.5*sign(z)/sqrt(abs(z) + nn_eps));
 
     # swish.
     #--------
@@ -29121,7 +29128,7 @@ nn_lib :
     # tanhz3.
     #--------
     nn_activation_tanhz3(z) = (tanh(z^3/10));
-    nn_activation_d_tanhz3(z) = (3*(1 - tanh(z^3/10))*z^2/10);
+    nn_activation_d_tanhz3(z) = (3*z^2/10*(1 - tanh(z^3/10)^2));
 
     # waves.
     #-------
@@ -29151,7 +29158,7 @@ nn_lib :
     nn_activation_waves2(z) = nn_activation_waves(z,-4,0,2); # Waves 2
     nn_activation_d_waves2(z) = nn_activation_d_waves(z,-4,0,2);
 
-    nn_activation_waves3(z) = nn_activation_waves(z,-2,-3,3); # Waves 2
+    nn_activation_waves3(z) = nn_activation_waves(z,-2,-3,3); # Waves 3
     nn_activation_d_waves3(z) = nn_activation_d_waves(z,-2,-3,3);
 
     nn_activation_waves4(z) = nn_activation_waves(z,0,-6,4); # Waves 4
@@ -29199,45 +29206,42 @@ nn_lib :
     #---------
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
-      const T#_loss_eps = 1 - 1e-4;
-      nn_is_training = 1;
+      const T#_loss_eps = 1e-4;
+      unref(nn_is_training);
+      const nn_is_training = 1;
+      nn_clip_gradient_min = 0;
+      nn_clip_gradient_max = inf;
       nn_iteration = max(0,i[##T#_ind,0]);
       nn_optimizer_#O#_init(#T);
       nn_scheduler_#S#_init(#T);
       nn_learning_rate = i[##T#_ind,1];
-      nn_clip_gradient_min = 0;
-      nn_clip_gradient_max = inf;
       !nn_iteration?(nn_momentum = 0);
-      nn_is_clip_gradient = nn_clip_gradient_min>0 && !isinf(nn_clip_gradient_max);
+      nn_is_clip_gradient = nn_clip_gradient_min>0 || !isinf(nn_clip_gradient_max);
     );
 
     nn_trainer_update(T,L,O,S) = (
-      i[##T#_ind,5] = L# - i[##T#_ind,2]; i[##T#_ind,2] = L#; # loss
+      i[##T#_ind,5] = nn_iteration?L# - i[##T#_ind,2]:0; i[##T#_ind,2] = L#; # loss
       L#<i[##T#_ind,3]?(i[##T#_ind,3] = L#; i[##T#_ind,6] = nn_iteration); # New best loss
-      L#<i[##T#_ind,4]*T#_loss_eps?( # New significant loss
-        i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,4]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      L#<T#_sig?(i[##T#_ind,4] = L#; i[##T#_ind,7] = nn_iteration); # New significant loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,8],0.9):L#; # Short-term loss
-      i[##T#_ind,11] = T#_loss - i[##T#_ind,8]; i[##T#_ind,8] = T#_loss;
+      i[##T#_ind,11] = nn_iteration?(T#_loss - i[##T#_ind,8]):0; i[##T#_ind,8] = T#_loss;
       T#_loss<i[##T#_ind,9]?(i[##T#_ind,9] = T#_loss; i[##T#_ind,12] = nn_iteration); # New best short-term loss
-      T#_loss<i[##T#_ind,10]*T#_loss_eps?( # New significant short-term loss
-        i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,10]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,10] = T#_loss; i[##T#_ind,13] = nn_iteration); # New significant short-term loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,14],0.95):L#; # Mid-term loss
-      i[##T#_ind,17] = T#_loss - i[##T#_ind,18]; i[##T#_ind,14] = T#_loss;
+      i[##T#_ind,17] = nn_iteration?(T#_loss - i[##T#_ind,14]):0; i[##T#_ind,14] = T#_loss;
       T#_loss<i[##T#_ind,15]?(i[##T#_ind,15] = T#_loss; i[##T#_ind,18] = nn_iteration); # New best mid-term loss
-      T#_loss<i[##T#_ind,16]*T#_loss_eps?( # New significant mid-term loss
-        i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,16]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,16] = T#_loss; i[##T#_ind,19] = nn_iteration); # New significant mid-term loss
 
       T#_loss = nn_iteration?lerp(L#,i[##T#_ind,20],0.99):L#; # Long-term loss
-      i[##T#_ind,23] = T#_loss - i[##T#_ind,20]; i[##T#_ind,20] = T#_loss;
+      i[##T#_ind,23] = nn_iteration?(T#_loss - i[##T#_ind,20]):0; i[##T#_ind,20] = T#_loss;
       T#_loss<i[##T#_ind,21]?(i[##T#_ind,21] = T#_loss; i[##T#_ind,24] = nn_iteration); # New best long-term loss
-      T#_loss<i[##T#_ind,22]*T#_loss_eps?( # New significant long-term loss
-        i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration;
-      );
+      T#_sig = i[##T#_ind,22]; T#_sig = isinf(T#_sig)?inf:T#_sig - T#_loss_eps*abs(T#_sig);
+      T#_loss<T#_sig?(i[##T#_ind,22] = T#_loss; i[##T#_ind,25] = nn_iteration); # New significant long-term loss
 
       nn_scheduler_#S#_update(#T);
       i[##T#_ind,0] = ++nn_iteration;
@@ -29271,8 +29275,8 @@ nn_lib :
       nn_clip_gradient_max = i(##T#_ind,6,1);
 
       # Corrected LR factor to avoid biases towards zero for the first iterations.
-      nn_adam_beta1_t = nn_iteration>200?0:nn_adam_beta1^(nn_iteration + 1);
-      nn_adam_beta2_t = nn_iteration>200?0:nn_adam_beta2^(nn_iteration + 1);
+      nn_adam_beta1_t = nn_adam_beta1^(nn_iteration + 1);
+      nn_adam_beta2_t = nn_adam_beta2^(nn_iteration + 1);
       nn_adam_alpha_t = sqrt(1 - nn_adam_beta2_t)/(1 - nn_adam_beta1_t);
     );
 
@@ -29280,7 +29284,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adam_beta1);
       d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_adam_beta2);
-      P#-=nn_learning_rate*nn_adam_alpha_t*d#P#_m/sqrt(d#P#_m2 + nn_eps);
+      P#-=nn_learning_rate*nn_adam_alpha_t*d#P#_m/(sqrt(d#P#_m2) + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29295,31 +29299,14 @@ nn_lib :
       nn_clip_gradient_max = i(##T#_ind,6,1);
 
       # Corrected LR factor to avoid biases towards zero for the first iterations.
-      nn_adamax_ombeta1_t = nn_iteration>200?1:(1 - nn_adamax_beta1^(nn_iteration + 1));
+      nn_adamax_ombeta1_t = 1 - nn_adamax_beta1^(nn_iteration + 1);
     );
 
     nn_optimizer_adamax_update(P,weight_decay) = (
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_adamax_beta1);
       d#P#_m2 = vmax(abs(batch_d#P),nn_adamax_beta2*d#P#_m2);
-      P#-=(nn_learning_rate/nn_adamax_ombeta1_t)*d#P#_m/sqrt(d#P#_m2 + nn_eps);
-      weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
-    );
-
-    # dtschump.
-    #----------
-    nn_optimizer_dtschump_init(T) = (
-      !nn_iteration?(i[##T#_ind,1] = i(##T#_ind,1,1)); # Set default learning rate
-      nn_momentum = i(##T#_ind,2,1);
-      nn_weight_decay = i(##T#_ind,3,1);
-      nn_clip_gradient_min = i(##T#_ind,4,1);
-      nn_clip_gradient_max = i(##T#_ind,5,1);
-    );
-
-    nn_optimizer_dtschump_update(P,weight_decay) = (
-      nn_optimizer_clip_gradient(#P);
-      d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
-      P#-=(nn_learning_rate/abs(maxabs(nn_eps,d#P#_m)))*d#P#_m;
+      P#-=(nn_learning_rate/nn_adamax_ombeta1_t)*d#P#_m/(d#P#_m2 + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29338,7 +29325,7 @@ nn_lib :
       nn_optimizer_clip_gradient(#P);
       d#P#_m = lerp(batch_d#P,d#P#_m,nn_momentum);
       d#P#_m2 = lerp(batch_d#P^2,d#P#_m2,nn_rmsprop_beta);
-      P#-=nn_learning_rate*d#P#_m/sqrt(d#P#_m2 + nn_eps);
+      P#-=nn_learning_rate*d#P#_m/(sqrt(d#P#_m2) + nn_eps);
       weight_decay>0?(P#-=(nn_learning_rate*weight_decay)*P#);
     );
 
@@ -29379,7 +29366,7 @@ nn_lib :
       T#_factor_down = i(##T#_ind,6,2);
       T#_patience_up = i(##T#_ind,7,2);
       T#_factor_up = i(##T#_ind,8,2);
-      !nn_iteration?(i[##T#_ind,1] = T#_lr_max);
+      !nn_iteration?(i[##T#_ind,1] = T#_nb_warmup_iterations>0?T#_lr_min:T#_lr_max);
 
       # Note : i(##T#_ind,9,2) is used to store last iteration where a lr change occurred.
     );
@@ -29388,7 +29375,7 @@ nn_lib :
 
       # Warmup phase.
       nn_iteration<T#_nb_warmup_iterations?(
-        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,nn_iteration/max(1,T#_nb_warmup_iterations-1));
+        i[##T#_ind,1] = lerp(T#_lr_min,T#_lr_max,(nn_iteration + 1)/T#_nb_warmup_iterations);
 
       # Check that cooldown passed.
       ):nn_iteration>i(##T#_ind,9,2) + T#_nb_cooldown_iterations?(
@@ -29589,13 +29576,12 @@ nn_lib :
       const OUT#_height = out_height;
       const OUT#_depth = 1;
       const OUT#_spectrum = ceil(IN#_height/OUT#_patch_size^2);
-      const OUT#_nb_cols = ceil(OUT#_width/OUT#_p_o);
-      const OUT#_nb_rows = ceil(OUT#_height/OUT#_p_o);
+      const OUT#_nb_cols = max(1,ceil((OUT#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((OUT#_height - overlap)/OUT#_p_o));
 
       # Pre-compute OUT#_count (local counting of overlapping patch pixels).
       OUT#_count = vector(##OUT#_width*OUT#_height);
       OUT#_one = vector(##OUT#_patch_size^2,1);
-      _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           draw(OUT#_count,OUT#_width,OUT#_height,1,1,OUT#_one,
@@ -29621,22 +29607,24 @@ nn_lib :
     );
 
     nn_columnpatch2d_init_backward(OUT,IN) = (
-      OUT#_map_backward_src = expr('c2o([x,y,0,c])',OUT#_width,OUT#_height,1,OUT#_spectrum);
+      OUT#_map_backward_src = expr('c2o(x,y,0,c) + 1',OUT#_width,OUT#_height,1,OUT#_spectrum);
       OUT#_map_backward = vector(##IN#_width*IN#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,1,OUT#_spectrum,
                             _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,3);
+                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,0);
           draw(OUT#_map_backward,IN#_width,IN#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
         );
       );
+      OUT#_valid = OUT#_map_backward>0;
+      OUT#_map_backward = vmax(OUT#_map_backward - 1,0);
     );
 
     nn_columnpatch2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds);
+      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds)*OUT#_valid;
     );
 
     # conv: Generic 1D/2D/3D convolutional layer.
@@ -29670,21 +29658,40 @@ nn_lib :
       const OUT#_shrink_stride_z = OUT#_shrink_z*OUT#_stride_z;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+
+      # Define geometry of OUT#_padded (that is the input image for convolve()).
+      const OUT#_padding_x = nn_is_training && boundary_conditions!=0?OUT#_dilation_x*int(OUT#_kernel_width/2):0;
+      const OUT#_padding_y = nn_is_training && boundary_conditions!=0?OUT#_dilation_y*int(OUT#_kernel_height/2):0;
+      const OUT#_padding_z = nn_is_training && boundary_conditions!=0?OUT#_dilation_z*int(OUT#_kernel_depth/2):0;
+      const OUT#_is_padded = OUT#_padding_x || OUT#_padding_y ||OUT#_padding_z;
+      OUT#_is_padded?(
+        nn_crop_init_forward(OUT#_padded,IN#,
+                             -OUT#_padding_x,-OUT#_padding_y,-OUT#_padding_z,0,
+                             IN#_width - 1 + OUT#_padding_x,IN#_height - 1 + OUT#_padding_y,
+                             IN#_depth - 1 + OUT#_padding_z,IN#_spectrum - 1,OUT#_boundary_conditions);
+      ):(
+        const OUT#_padded_width = IN#_width;
+        const OUT#_padded_height = IN#_height;
+        const OUT#_padded_depth = IN#_depth;
+        const OUT#_padded_spectrum = IN#_spectrum;
+      );
+      const OUT#_padded_shrink_stride_x = OUT#_shrink_stride_x + OUT#_padding_x;
+      const OUT#_padded_shrink_stride_y = OUT#_shrink_stride_y + OUT#_padding_y;
+      const OUT#_padded_shrink_stride_z = OUT#_shrink_stride_z + OUT#_padding_z;
     );
 
     nn_conv_forward(OUT,IN) = (
-      OUT# = convolve(IN#,
-                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_is_padded?nn_crop_forward(OUT#_padded,IN#):ref(IN#,OUT#_padded);
+      OUT# = convolve(OUT#_padded,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                       OUT#_params,
-                      OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum*OUT#_spectrum,
-                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_padded_spectrum*OUT#_spectrum,
+                      OUT#_is_padded?0:OUT#_boundary_conditions,0,2,
                       OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
                       OUT#_stride_x,OUT#_stride_y,OUT#_stride_z,
                       OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
-                      OUT#_shrink_stride_x,OUT#_shrink_stride_y,OUT#_shrink_stride_z,
-                      IN#_width/OUT#_stride_x - 2*OUT#_shrink_x,
-                      IN#_height/OUT#_stride_y - 2*OUT#_shrink_y,
-                      IN#_depth/OUT#_stride_z - 2*OUT#_shrink_z);
+                      OUT#_padded_shrink_stride_x,OUT#_padded_shrink_stride_y,OUT#_padded_shrink_stride_z,
+                      OUT#_width,OUT#_height,OUT#_depth);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
@@ -29697,22 +29704,24 @@ nn_lib :
       const OUT#_kernel_whd = OUT#_kernel_width*OUT#_kernel_height*OUT#_kernel_depth;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      OUT#_is_padded?nn_crop_init_backward(OUT#_padded,IN#);
     );
 
     nn_conv_backward(OUT,IN) = (
 
       # Handle strided convolution case.
-      max(OUT#_stride_x==1,OUT#_stride_y==1,OUT#_stride_z)==1?(
+      OUT#_stride_x==1 && OUT#_stride_y==1 && OUT#_stride_z==1?(
         ref(d#OUT,d#OUT#_prestrided);
       ):(
         d#OUT#_prestrided = resize(d#OUT#,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                    OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,4);
       );
 
-      # Compute dLOSS/dIN.
+      # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      repeat (IN#_spectrum,_nn_k,
-        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_is_padded?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      repeat (OUT#_padded_spectrum,_nn_k,
+        draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
                        OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
                        crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
@@ -29722,11 +29731,12 @@ nn_lib :
                        OUT#_kernel_center_x,OUT#_kernel_center_y,OUT#_kernel_center_z,
                        1,1,1,
                        OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z,
-                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
-                       IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
-             -1); # Add to d#IN
+                       -OUT#_padded_shrink_stride_x,-OUT#_padded_shrink_stride_y,-OUT#_padded_shrink_stride_z,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+             0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
+             -1); # Add to dOUT_padded
       );
+      OUT#_is_padded?nn_crop_backward(OUT#_padded,IN#);
 
       # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
@@ -29740,21 +29750,21 @@ nn_lib :
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
-             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum*IN#_spectrum,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_spectrum*OUT#_padded_spectrum,
              correlate(crop(d#OUT#_prestrided,
                             OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,OUT#_spectrum,
                             0,0,0,_nn_k,OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1),
                        OUT#_width_stride_x,OUT#_height_stride_y,OUT#_depth_stride_z,1,
-                       IN#,
-                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       OUT#_padded,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                        0,0,1,
                        OUT#_dkc_x,OUT#_dkc_y,OUT#_dkc_z,
                        OUT#_dilation_x,OUT#_dilation_y,OUT#_dilation_z, # Correct stride value is actually dilation
                        1,1,1,
-                       -OUT#_shrink_stride_x,-OUT#_shrink_stride_y,-OUT#_shrink_stride_z,
+                       -OUT#_padded_shrink_stride_x,-OUT#_padded_shrink_stride_y,-OUT#_padded_shrink_stride_z,
                        OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth),
-             0,0,0,_nn_k*IN#_spectrum,
-             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,IN#_spectrum);
+             0,0,0,_nn_k*OUT#_padded_spectrum,
+             OUT#_kernel_width,OUT#_kernel_height,OUT#_kernel_depth,OUT#_padded_spectrum);
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
@@ -29789,21 +29799,35 @@ nn_lib :
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+
+      # Define geometry of OUT#_padded (that is the input image for convolve()).
+      const OUT#_padding = nn_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
+      OUT#_padding?(
+        nn_crop_init_forward(OUT#_padded,IN#,
+                             -OUT#_padding,-OUT#_padding,0,0,
+                             IN#_width - 1 + OUT#_padding,IN#_height - 1 + OUT#_padding,
+                             IN#_depth - 1,IN#_spectrum - 1,OUT#_boundary_conditions);
+      ):(
+        const OUT#_padded_width = IN#_width;
+        const OUT#_padded_height = IN#_height;
+        const OUT#_padded_depth = IN#_depth;
+        const OUT#_padded_spectrum = IN#_spectrum;
+      );
+      const OUT#_padded_shrink_stride = OUT#_shrink_stride + OUT#_padding;
     );
 
     nn_conv2d_forward(OUT,IN) = (
-      OUT# = convolve(IN#,
-                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_padding?nn_crop_forward(OUT#_padded,IN#):ref(IN#,OUT#_padded);
+      OUT# = convolve(OUT#_padded,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                       OUT#_params,
-                      OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum*OUT#_spectrum,
-                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum*OUT#_spectrum,
+                      OUT#_padding?0:OUT#_boundary_conditions,0,2,
                       OUT#_kernel_center,OUT#_kernel_center,0,
                       OUT#_stride,OUT#_stride,1,
                       OUT#_dilation,OUT#_dilation,1,
-                      OUT#_shrink_stride,OUT#_shrink_stride,0,
-                      IN#_width/OUT#_stride - 2*OUT#_shrink,
-                      IN#_height/OUT#_stride - 2*OUT#_shrink,
-                      IN#_depth);
+                      OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,0,
+                      OUT#_width,OUT#_height,OUT#_depth);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
@@ -29814,6 +29838,7 @@ nn_lib :
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      OUT#_padding?nn_crop_init_backward(OUT#_padded,IN#);
     );
 
     nn_conv2d_backward(OUT,IN) = (
@@ -29826,10 +29851,11 @@ nn_lib :
                                    OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,4);
       );
 
-      # Compute dLOSS/dIN.
+      # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      repeat (IN#_spectrum,_nn_k,
-        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_padding?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      repeat (OUT#_padded_spectrum,_nn_k,
+        draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
                        crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
@@ -29839,11 +29865,12 @@ nn_lib :
                        OUT#_kernel_center,OUT#_kernel_center,0,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,1,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
-                       IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
-             -1); # Add to d#IN
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+             0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
+             -1); # Add to dOUT_padded
       );
+      OUT#_padding?nn_crop_backward(OUT#_padded,IN#);
 
       # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
@@ -29855,21 +29882,21 @@ nn_lib :
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
-             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*IN#_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*OUT#_padded_spectrum,
              correlate(crop(d#OUT#_prestrided,
                             OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
                             0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth,1),
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth,1,
-                       IN#,
-                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       OUT#_padded,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,0,
                        OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually dilation
                        1,1,1,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,0,
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
                        OUT#_kernel_size,OUT#_kernel_size,1),
-             0,0,0,_nn_k*IN#_spectrum,
-             OUT#_kernel_size,OUT#_kernel_size,1,IN#_spectrum);
+             0,0,0,_nn_k*OUT#_padded_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum);
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
@@ -29904,21 +29931,35 @@ nn_lib :
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
+
+      # Define geometry of OUT#_padded (that is the input image for convolve()).
+      const OUT#_padding = nn_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
+      OUT#_padding?(
+        nn_crop_init_forward(OUT#_padded,IN#,
+                             -OUT#_padding,-OUT#_padding,-OUT#_padding,0,
+                             IN#_width - 1 + OUT#_padding,IN#_height - 1 + OUT#_padding,IN#_depth - 1 + OUT#_padding,
+                             IN#_spectrum - 1,OUT#_boundary_conditions);
+      ):(
+        const OUT#_padded_width = IN#_width;
+        const OUT#_padded_height = IN#_height;
+        const OUT#_padded_depth = IN#_depth;
+        const OUT#_padded_spectrum = IN#_spectrum;
+      );
+      const OUT#_padded_shrink_stride = OUT#_shrink_stride + OUT#_padding;
     );
 
     nn_conv3d_forward(OUT,IN) = (
-      OUT# = convolve(IN#,
-                      IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_padding?nn_crop_forward(OUT#_padded,IN#):ref(IN#,OUT#_padded);
+      OUT# = convolve(OUT#_padded,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                       OUT#_params,
-                      OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum*OUT#_spectrum,
-                      OUT#_boundary_conditions,0,2,
+                      OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,OUT#_padded_spectrum*OUT#_spectrum,
+                      OUT#_padding?0:OUT#_boundary_conditions,0,2,
                       OUT#_kernel_center,OUT#_kernel_center,OUT#_kernel_center,
                       OUT#_stride,OUT#_stride,OUT#_stride,
                       OUT#_dilation,OUT#_dilation,OUT#_dilation,
-                      OUT#_shrink_stride,OUT#_shrink_stride,OUT#_shrink_stride,
-                      IN#_width/OUT#_stride - 2*OUT#_shrink,
-                      IN#_height/OUT#_stride - 2*OUT#_shrink,
-                      IN#_depth/OUT#_stride - 2*OUT#_shrink);
+                      OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,
+                      OUT#_width,OUT#_height,OUT#_depth);
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
@@ -29930,6 +29971,7 @@ nn_lib :
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
+      OUT#_padding?nn_crop_init_backward(OUT#_padded,IN#);
     );
 
     nn_conv3d_backward(OUT,IN) = (
@@ -29942,10 +29984,11 @@ nn_lib :
                                    OUT#_width_stride,OUT#_height_stride,OUT#_depth_stride,OUT#_spectrum,4);
       );
 
-      # Compute dLOSS/dIN.
+      # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      repeat (IN#_spectrum,_nn_k,
-        draw(d#IN,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+      OUT#_padding?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      repeat (OUT#_padded_spectrum,_nn_k,
+        draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth_stride,OUT#_spectrum,
                        crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
@@ -29955,11 +29998,12 @@ nn_lib :
                        OUT#_kernel_center,OUT#_kernel_center,OUT#_kernel_center,
                        1,1,1,
                        OUT#_dilation,OUT#_dilation,OUT#_dilation,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
-                       IN#_width,IN#_height,IN#_depth),
-             0,0,0,_nn_k,IN#_width,IN#_height,IN#_depth,1,
-             -1); # Add to d#IN
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+             0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
+             -1); # Add to dOUT_padded
       );
+      OUT#_padding?nn_crop_backward(OUT#_padded,IN#);
 
       # Compute dLOSS/dbiases (do not apply weight decay on biases!).
       d#OUT#_biases = vector(#size(OUT#_biases));
@@ -29971,21 +30015,21 @@ nn_lib :
       d#OUT#_params = vector(#size(OUT#_params));
       repeat (OUT#_spectrum,_nn_k,
         draw(d#OUT#_params,
-             OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,OUT#_spectrum*IN#_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,OUT#_spectrum*OUT#_padded_spectrum,
              correlate(crop(d#OUT#_prestrided,
                             OUT#_width_stride,OUT#_height_stride,OUT#_depth_stride,OUT#_spectrum,
                             0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth_stride,1),
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth_stride,1,
-                       IN#,
-                       IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                       OUT#_padded,
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
                        0,0,1,
                        OUT#_dkc,OUT#_dkc,OUT#_dkc,
                        OUT#_dilation,OUT#_dilation,OUT#_dilation, # Correct stride value is actually dilation
                        1,1,1,
-                       -OUT#_shrink_stride,-OUT#_shrink_stride,-OUT#_shrink_stride,
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,
                        OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size),
-             0,0,0,_nn_k*IN#_spectrum,
-             OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,IN#_spectrum);
+             0,0,0,_nn_k*OUT#_padded_spectrum,
+             OUT#_kernel_size,OUT#_kernel_size,OUT#_kernel_size,OUT#_padded_spectrum);
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
@@ -30005,7 +30049,7 @@ nn_lib :
     # crop : Crop layer.
     #--------------------
     nn_crop_init_forward(OUT,IN,x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions) = (
-      const OUT#_x0 = x0; # Note: coordinates (x0,y0,z0,c0)-(x1,y1,z1,c1) are already sorted here
+      const OUT#_x0 = x0; # Note: coordinates (x0,y0,z0,c0) - (x1,y1,z1,c1) are already sorted here
       const OUT#_y0 = y0;
       const OUT#_z0 = z0;
       const OUT#_c0 = c0;
@@ -30014,6 +30058,9 @@ nn_lib :
       const OUT#_depth = z1 - z0 + 1;
       const OUT#_spectrum = c1 - c0 + 1;
       const OUT#_boundary_conditions = boundary_conditions;
+      const OUT#_is_backward_unfold = OUT#_boundary_conditions && (
+        x0<0 || y0<0 || z0<0 || c0<0 ||
+        x1>=IN#_width || y1>=IN#_height || z1>=IN#_depth || c1>=IN#_spectrum);
     );
 
     nn_crop_forward(OUT,IN) = (
@@ -30023,12 +30070,58 @@ nn_lib :
                   OUT#_boundary_conditions);
     );
 
+    nn_crop_init_backward(OUT,IN) = (
+      OUT#_is_backward_unfold?(
+
+        # Define offset maps used to correctly handle boundary conditions in backprop.
+        OUT#_map_x = crop(expr('x',IN#_width,1,1,1),IN#_width,1,1,1,
+                          OUT#_x0,OUT#_width,OUT#_boundary_conditions);
+        OUT#_map_y = crop(expr('y',1,IN#_height,1,1),1,IN#_height,1,1,
+                          0,OUT#_y0,1,OUT#_height,OUT#_boundary_conditions);
+        OUT#_map_z = crop(expr('z',1,1,IN#_depth,1),1,1,IN#_depth,1,
+                          0,0,OUT#_z0,1,1,OUT#_depth,OUT#_boundary_conditions);
+        OUT#_map_c = crop(expr('c',1,1,1,IN#_spectrum),1,1,1,IN#_spectrum,
+                          0,0,0,OUT#_c0,1,1,1,OUT#_spectrum,OUT#_boundary_conditions);
+
+        # Retrieve list of out-of-bounds offsets in OUT and their corresponding source offsets in IN.
+        const OUT#_nb_fold = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum -
+                             max(0,min(OUT#_x0 + OUT#_width,IN#_width) - max(OUT#_x0,0))*
+                             max(0,min(OUT#_y0 + OUT#_height,IN#_height) - max(OUT#_y0,0))*
+                             max(0,min(OUT#_z0 + OUT#_depth,IN#_depth) - max(OUT#_z0,0))*
+                             max(0,min(OUT#_c0 + OUT#_spectrum,IN#_spectrum) - max(OUT#_c0,0));
+        OUT#_fold_src = vector(##OUT#_nb_fold);
+        OUT#_fold_dst = vector(##OUT#_nb_fold);
+        _nn_n = _nn_off = 0;
+        repeat (OUT#_spectrum,_nn_c,
+          repeat (OUT#_depth,_nn_z,
+            repeat (OUT#_height,_nn_y,
+              repeat (OUT#_width,_nn_x,
+                _nn_ox = OUT#_x0 + _nn_x; _nn_oy = OUT#_y0 + _nn_y;
+                _nn_oz = OUT#_z0 + _nn_z; _nn_oc = OUT#_c0 + _nn_c;
+                (_nn_ox<0 || _nn_ox>=IN#_width || _nn_oy<0 || _nn_oy>=IN#_height ||
+                  _nn_oz<0 || _nn_oz>=IN#_depth || _nn_oc<0 || _nn_oc>=IN#_spectrum)?(
+                  OUT#_fold_src[_nn_n] = _nn_off;
+                  OUT#_fold_dst[_nn_n] = OUT#_map_x[_nn_x] + IN#_width*(OUT#_map_y[_nn_y] +
+                    IN#_height*(OUT#_map_z[_nn_z] + IN#_depth*OUT#_map_c[_nn_c]));
+                  ++_nn_n;
+                );
+                ++_nn_off;
+              );
+            );
+          );
+        );
+      );
+    );
+
     nn_crop_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=crop(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                  -OUT#_x0,-OUT#_y0,-OUT#_z0,-OUT#_c0,
                  IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                  0);
+      OUT#_is_backward_unfold?( # Add gradient coming from out-of-bounds values.
+        repeat (OUT#_nb_fold,_nn_k, d#IN[OUT#_fold_dst[_nn_k]]+=d#OUT[OUT#_fold_src[_nn_k]]);
+      );
     );
 
     # div: Element-wise division.
@@ -30061,7 +30154,7 @@ nn_lib :
     );
 
     nn_dropout_forward(OUT,IN) = (
-      OUT#_dropout_rate && nn_is_training?(
+      nn_is_training && OUT#_dropout_rate?(
         OUT#_dropout_channels = vector(##OUT#_spectrum);
         fill(OUT#_dropout_channels,u>=OUT#_dropout_rate);
         OUT#_dropout_fact = 1/(1 - OUT#_dropout_rate);
@@ -30070,17 +30163,13 @@ nn_lib :
         OUT#_dropout_mask*=OUT#_dropout_fact;
         OUT# = IN#*OUT#_dropout_mask;
       ):(
-        OUT# = IN#; # Can't use 'ref()' here as condition unknown at compile time
+        ref(IN#,OUT#);
       );
     );
 
     nn_dropout_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_dropout_rate && nn_is_training?(
-        d#IN+=d#OUT*OUT#_dropout_mask;
-      ):(
-        d#IN+=d#OUT;
-      );
+      d#IN+=nn_is_training && OUT#_dropout_rate?d#OUT*OUT#_dropout_mask:d#OUT;
     );
 
     # fc: Fully-connected layer.
@@ -30124,7 +30213,7 @@ nn_lib :
     );
 
     nn_fc_update(P,O,learning_mode) = (
-      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
+      isin(nn_optimizer_#O,nn_optimizer_sgd)?( # sgd
         const P#_ind_m = $""P#_m;
         learning_mode&1?(
           d#P#_params_m = crop(##P#_ind_m,0,0,w##P#_ind - 1,h##P#_ind);
@@ -30167,15 +30256,15 @@ nn_lib :
       const OUT#_depth = IN#_depth;
       const OUT#_io_mode = io_mode;
       const OUT#_spectrum = IN#_spectrum*arg0(io_mode,1,0.5,2,1);
-      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,1); # Number of channels of each real/imaginary part
+      const OUT#_channels = IN#_spectrum*arg0(io_mode,1,0.5,1,0.5); # Number of channels of each real/imaginary part
       const OUT#_is_inverse = is_inverse;
       OUT#_axes = ind_axes#==0?0:
                   ind_axes#==1?'x':
                   ind_axes#==2?'y':
                   ind_axes#==3?'z':
                   ind_axes#==4?'xy':
-                  ind_axes#==4?'xz':
-                  ind_axes#==5?'yz':'xyz';
+                  ind_axes#==5?'xz':
+                  ind_axes#==6?'yz':'xyz';
       const OUT#_fact = (isin(ind_axes#,0,7)?OUT#_width*OUT#_height*OUT#_depth:
                          ind_axes#==1?OUT#_width:
                          ind_axes#==2?OUT#_height:
@@ -30235,11 +30324,15 @@ nn_lib :
       const OUT#_height = h;
       const OUT#_depth = d;
       const OUT#_spectrum = s;
+    );
+
+    nn_input_forward(OUT,IN) = (
       ref(IN#,OUT#);
     );
 
     nn_input_backward(OUT,IN) = (
-      ref(d#OUT,d#IN);
+      nn_define_backward(IN#);
+      d#IN+=d#OUT;
     );
 
     # linear: Linear transform.
@@ -30259,7 +30352,7 @@ nn_lib :
       OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
       OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
         OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'yzcx');
-        OUT#_inv_permute(X,w,d,h,s) = permute(X,h,d,s,w,'cxyz');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,h,d,s,w,'cxyz');
         const OUT#_is_permutation = 1;
       ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
         OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xzcy');
@@ -30297,7 +30390,7 @@ nn_lib :
         ref(d#OUT,d#OUT#_S2);
       d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
       OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
-        ref(d#IN,d#OUT#_S1);
+        (d#IN+=d#OUT#_S1);
       d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
       d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
@@ -30376,7 +30469,7 @@ nn_lib :
       const OUT#_depth = int(IN#_depth/patch_size);
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
-      const OUT#_is_maxabs = is_maxabs
+      const OUT#_is_maxabs = is_maxabs;
     );
 
     nn_maxpool3d_forward(OUT,IN) = (
@@ -30459,7 +30552,7 @@ nn_lib :
     nn_mmult_backward(OUT,IN0,IN1) = (
       nn_define_backward(IN0#); nn_define_backward(IN1#);
       d#IN0+=mul(d#OUT,IN1#,IN1#_width);
-      d#IN1+=mul(transpose(IN0#,IN0#_width),d#OUT,OUT#_width);
+      d#IN1+=mul(transpose(d#OUT,OUT#_width),IN0#,IN0#_width);
     );
 
     # mul: Element-wise multiplication.
@@ -30521,13 +30614,13 @@ nn_lib :
 
     # Special case: 'normalize_l1'
     nn_nl_normalize_l1_forward(OUT,IN) = (
-      OUT#_epsiloned = max(norm1(IN#),nn_eps);
+      OUT#_epsiloned = sqrt(norm1(IN#)^2 + nn_eps^2);
       OUT# = IN#/OUT#_epsiloned;
     );
 
     nn_nl_normalize_l1_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=(d#OUT - sign(OUT#)*dot(d#OUT,OUT#))/OUT#_epsiloned;
+      d#IN+=(d#OUT - sign(OUT#)*dot(d#OUT,OUT#)*norm1(OUT#))/OUT#_epsiloned;
     );
 
     # Special case: 'normalize_l1_x'.
@@ -30537,7 +30630,7 @@ nn_lib :
       repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
         OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
-        _nn_N = OUT#_epsiloned[_nn_l] = max(norm1(OUT#_crop),nn_eps);
+        _nn_N = OUT#_epsiloned[_nn_l] = sqrt(norm1(OUT#_crop)^2 + nn_eps^2);
         copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
              OUT#_width);
       );
@@ -30551,7 +30644,8 @@ nn_lib :
         d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
         _nn_N = OUT#_epsiloned[_nn_l];
         copy(d#IN[OUT#_off],
-             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_l],
+             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop)*norm1(OUT#_crop))/
+             OUT#_epsiloned[_nn_l],
              OUT#_width,1,1,-1);
       );
     );
@@ -30564,7 +30658,7 @@ nn_lib :
         repeat (OUT#_width,_nn_k,
           OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
-          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = max(norm1(OUT#_crop),nn_eps);
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = sqrt(norm1(OUT#_crop)^2 + nn_eps^2);
           copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
                OUT#_height,OUT#_width,1);
         );
@@ -30579,7 +30673,8 @@ nn_lib :
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_height,OUT#_width];
           copy(d#IN[OUT#_off],
-               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_l*OUT#_width + _nn_k],
+               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop)*norm1(OUT#_crop))/
+               OUT#_epsiloned[_nn_l*OUT#_width + _nn_k],
                OUT#_height,OUT#_width,1,-1);
         );
       );
@@ -30593,7 +30688,7 @@ nn_lib :
         repeat (OUT#_width*OUT#_height,_nn_k,
           OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
-          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = max(norm1(OUT#_crop),nn_eps);
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = sqrt(norm1(OUT#_crop)^2 + nn_eps^2);
           copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
                OUT#_depth,OUT#_width*OUT#_height,1);
         );
@@ -30608,7 +30703,7 @@ nn_lib :
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           d#OUT#_crop = d#OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
           copy(d#IN[OUT#_off],
-               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/
+               (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop)*norm1(OUT#_crop))/
                  OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k],
                OUT#_depth,OUT#_width*OUT#_height,1,-1);
         );
@@ -30621,7 +30716,7 @@ nn_lib :
       OUT# = IN#;
       repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
         OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        _nn_N = OUT#_epsiloned[_nn_k] = max(norm1(OUT#_crop),nn_eps);
+        _nn_N = OUT#_epsiloned[_nn_k] = sqrt(norm1(OUT#_crop)^2 + nn_eps^2);
         copy(OUT#[_nn_k],OUT#_crop/_nn_N,
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
       );
@@ -30633,14 +30728,15 @@ nn_lib :
         OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
         d#OUT#_crop = d#OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
         copy(d#IN[_nn_k],
-             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop))/OUT#_epsiloned[_nn_k],
+             (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop)*norm1(OUT#_crop))/
+             OUT#_epsiloned[_nn_k],
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1,-1);
       );
     );
 
     # Special case: 'normalize_l2'
     nn_nl_normalize_l2_forward(OUT,IN) = (
-      OUT#_epsiloned = max(norm(IN#),nn_eps);
+      OUT#_epsiloned = sqrt(norm(IN#)^2 + nn_eps^2);
       OUT# = IN#/OUT#_epsiloned;
     );
 
@@ -30656,7 +30752,7 @@ nn_lib :
       repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l,
         OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
-        _nn_N = OUT#_epsiloned[_nn_l] = max(norm(OUT#_crop),nn_eps);
+        _nn_N = OUT#_epsiloned[_nn_l] = sqrt(norm(OUT#_crop)^2 + nn_eps^2);
         copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
              OUT#_width);
       );
@@ -30681,7 +30777,7 @@ nn_lib :
         repeat (OUT#_width,_nn_k,
           OUT#_off = _nn_l*OUT#_width*OUT#_height + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_height,OUT#_width];
-          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = max(norm(OUT#_crop),nn_eps);
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width + _nn_k] = sqrt(norm(OUT#_crop)^2 + nn_eps^2);
           copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
                OUT#_height,OUT#_width,1);
         );
@@ -30710,7 +30806,7 @@ nn_lib :
         repeat (OUT#_width*OUT#_height,_nn_k,
           OUT#_off = _nn_l*OUT#_width*OUT#_height*OUT#_depth + _nn_k;
           OUT#_crop = OUT#[OUT#_off,OUT#_depth,OUT#_width*OUT#_height];
-          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = max(norm(OUT#_crop),nn_eps);
+          _nn_N = OUT#_epsiloned[_nn_l*OUT#_width*OUT#_height + _nn_k] = sqrt(norm(OUT#_crop)^2 + nn_eps^2);
           copy(OUT#[OUT#_off],OUT#_crop/_nn_N,
                OUT#_depth,OUT#_width*OUT#_height,1);
         );
@@ -30738,7 +30834,7 @@ nn_lib :
       OUT# = IN#;
       repeat (OUT#_width*OUT#_height*OUT#_depth,_nn_k,
         OUT#_crop = OUT#[_nn_k,OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth];
-        _nn_N = OUT#_epsiloned[_nn_k] = max(norm(OUT#_crop),nn_eps);
+        _nn_N = OUT#_epsiloned[_nn_k] = sqrt(norm(OUT#_crop)^2 + nn_eps^2);
         copy(OUT#[_nn_k],OUT#_crop/_nn_N,
              OUT#_spectrum,OUT#_width*OUT#_height*OUT#_depth,1);
       );
@@ -30871,7 +30967,7 @@ nn_lib :
     );
 
     nn_noise_forward(OUT,IN) = (
-      OUT#_training_only && !nn_is_training?(
+      !nn_is_training && OUT#_training_only?(
         OUT# = IN#;
       ):(
         srand();
@@ -30888,10 +30984,10 @@ nn_lib :
     #----------------------------------------
     nn_normp(X,p) = (p>0?normp(X,p):norm2(X)^2);
     nn_dnormp(X,normX,p) = (
-      p==0?2*X:
+      p==0?2*X: # Convention 'p==0' -> 'sum of squares'
       p==1?sign(X):
-      p==2?X/(normX + eps):
-      (abs(X) + eps)^(p - 1)*sign(X)*normX^(1 - p);
+      p==2?X/(normX + nn_eps):
+      (abs(X) + nn_eps)^(p - 1)*sign(X)*(normX + nn_eps)^(1 - p);
     );
 
     nn_norm_init_forward(OUT,IN,p,axis) = (
@@ -31027,15 +31123,14 @@ nn_lib :
 
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
+      OUT#_gtilde = d#OUT*OUT#_gamma_whds;
       OUT#_normalization_type?( # RMS-normalization
-        OUT#_avg_g_hat = resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+        OUT#_avg_g_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
         OUT#_avg_g_hat_whds = resize(OUT#_avg_g_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        d#IN+=(d#OUT - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
-
+        d#IN+=(OUT#_gtilde - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
       ):( # Avg_std-normalization
-        OUT#_gtilde = d#OUT*OUT#_gamma_whds;
         OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
         OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
@@ -31046,9 +31141,6 @@ nn_lib :
                                           OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                           OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
         d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
-
-        batch_d#OUT#_gamma+=(resize(d#OUT*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
         batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
       );
@@ -31066,7 +31158,7 @@ nn_lib :
     );
 
     nn_normalize_update(P,O,learning_mode) = (
-      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
+      isin(nn_optimizer_#O,nn_optimizer_sgd)?( # sgd
         const P#_ind_m = $""P#_m;
         learning_mode&1?(
           d#P#_gamma_m = crop(##P#_ind_m,0,1);
@@ -31132,7 +31224,7 @@ nn_lib :
     );
 
     nn_parameters_update(P,O,learning_mode) = (
-      isin(nn_optimizer_#O,nn_optimizer_dtschump,nn_optimizer_sgd)?( # dtschump / sgd
+      isin(nn_optimizer_#O,nn_optimizer_sgd)?( # sgd
         const P#_ind_m = $""P#_m;
         learning_mode?(
           d#P#_params_m = crop(##P#_ind_m);
@@ -31146,7 +31238,7 @@ nn_lib :
           d#P#_params_m = crop(##P#_ind_m);
           d#P#_params_m2 = crop(##P#_ind_m2);
           nn_optimizer_#O#_update(P#_params,nn_weight_decay);
-          draw(##P#_ind_m,d#P#_params);
+          draw(##P#_ind_m,d#P#_params_m);
           draw(##P#_ind_m2,d#P#_params_m2);
         );
       );
@@ -31158,28 +31250,30 @@ nn_lib :
     nn_patchcolumn2d_init_forward(OUT,IN,patch_size,overlap) = (
       const OUT#_patch_size = patch_size;
       const OUT#_p_o = OUT#_patch_size - overlap;
-      const OUT#_nb_cols = ceil(IN#_width/OUT#_p_o);
-      const OUT#_nb_rows = ceil(IN#_height/OUT#_p_o);
+      const OUT#_nb_cols = max(1,ceil((IN#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((IN#_height - overlap)/OUT#_p_o));
       const OUT#_width = OUT#_nb_cols*OUT#_nb_rows;
       const OUT#_height = patch_size^2*IN#_spectrum;
       const OUT#_depth = 1;
       const OUT#_spectrum = 1;
 
-      OUT#_map_forward_src = expr('c2o([x,y,0,c])',IN#_width,IN#_height,1,IN#_spectrum);
+      OUT#_map_forward_src = expr('c2o(x,y,0,c) + 1',IN#_width,IN#_height,1,IN#_spectrum);
       OUT#_map_forward = vector(##OUT#_width*OUT#_height);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
           OUT#_patch = crop(OUT#_map_forward_src,IN#_width,IN#_height,1,IN#_spectrum,
                             _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,3);
+                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,0);
           draw(OUT#_map_forward,OUT#_width,OUT#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
         );
       );
+      OUT#_valid = OUT#_map_forward>0;
+      OUT#_map_forward = vmax(OUT#_map_forward - 1,0);
     );
 
     nn_patchcolumn2d_forward(OUT,IN) = (
-      OUT# = map(OUT#_map_forward,IN#);
+      OUT# = map(OUT#_map_forward,IN#)*OUT#_valid;
     );
 
     nn_patchcolumn2d_backward(OUT,IN) = (
@@ -31344,11 +31438,15 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
+    );
+
+    nn_rename_forward(OUT,IN) = (
       ref(IN#,OUT#);
     );
 
     nn_rename_backward(OUT,IN) = (
-      ref(d#OUT,d#IN);
+      nn_define_backward(IN#);
+      d#IN+=d#OUT;
     );
 
     # reshape: Reshape input to output with compatible size.
@@ -31358,11 +31456,15 @@ nn_lib :
       const OUT#_height = h;
       const OUT#_depth = d;
       const OUT#_spectrum = s;
+    );
+
+    nn_reshape_forward(OUT,IN) = (
       ref(IN#,OUT#);
     );
 
-    nn_reshape_init_backward(OUT,IN) = (
-      ref(d#OUT,d#IN);
+    nn_reshape_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      d#IN+=d#OUT;
     );
 
     # resize: Resize input.
@@ -31391,14 +31493,15 @@ nn_lib :
         (!OUT#_is_downscale && isin(OUT#_interpolation,1,2,3,5,6))?size(OUT#)/size(IN#):1;
       d#IN+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                    IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                   arg0(OUT#_interpolation,
+                   arg0(1 + OUT#_interpolation,
+                     -1, # None
                      0, # Zero padding
                      OUT#_is_downscale?4:2, # Nearest neighbor
                      OUT#_is_downscale?1:2, # Moving average (downscale) / nearest-neighbor (upscale)
                      OUT#_is_downscale?1:2, # Moving average (downscale) / linear (upscale)
                      4, # Grid
                      OUT#_is_downscale?1:2, # Moving average / cubic
-                     OUT#_is_downscale?1:2); # Moving average / lanczos
+                     OUT#_is_downscale?1:2) # Moving average / lanczos
                    )*=OUT#_fact);
     );
 
@@ -31592,18 +31695,19 @@ nn_lib :
       const OUT#_height = OUT#_axis && OUT#_axis!=_'y'?IN#_height:1;
       const OUT#_depth = OUT#_axis && OUT#_axis!=_'z'?IN#_depth:1;
       const OUT#_spectrum = OUT#_axis && OUT#_axis!=_'c'?IN#_spectrum:1;
-      const OUT#_fact = is_average?1:size(IN#)/(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      const OUT#_fact_fwd = is_average?1:size(IN#)/(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
+      const OUT#_fact_bwd = is_average?(OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum)/size(IN#):1;
     );
 
     nn_sum_forward(OUT,IN) = (
       OUT# = (resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,2)*=OUT#_fact);
+                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,2)*=OUT#_fact_fwd);
     );
 
     nn_sum_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN#+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,1)*=OUT#_fact);
+                     IN#_width,IN#_height,IN#_depth,IN#_spectrum,1)*=OUT#_fact_bwd);
     );
 
     # tmmul: Matrix multiplication IN0^t.IN1.
@@ -31680,10 +31784,26 @@ nn_lib :
       OUT# = IN0# + IN1# + IN2# + IN3#;
     );
 
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2,IN3,IN4) = (
+      OUT# = IN0# + IN1# + IN2# + IN3# + IN4#;
+    );
+
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2,IN3,IN4,IN5) = (
+      OUT# = IN0# + IN1# + IN2# + IN3# + IN4# + IN5#;
+    );
+
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2,IN3,IN4,IN5,IN6) = (
+      OUT# = IN0# + IN1# + IN2# + IN3# + IN4# + IN5# + IN6#;
+    );
+
+    nn_loss_add_end_forward(OUT,IN0,IN1,IN2,IN3,IN4,IN5,IN6,IN7) = (
+      OUT# = IN0# + IN1# + IN2# + IN3# + IN4# + IN5# + IN6# + IN7#;
+    );
+
     # bce : Binary cross-entropy.
     #----------------------------
     nn_loss_bce_init_forward(OUT,IN,weight) = (
-      const OUT#_weight = weight/size(IN#);
+      const OUT#_weight = weight/size(IN#); # Mean over all independent binary elements
       batch_#OUT = 0;
     );
 
@@ -31707,8 +31827,8 @@ nn_lib :
 
     # ce : Cross-entropy.
     #--------------------
-    nn_loss_ce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_ce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight; # Single distribution over the entire vector (no spatial averaging)
       batch_#OUT = 0;
     );
 
@@ -31799,7 +31919,7 @@ nn_lib :
 
     nn_loss_lp_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(abs(OUT#_delta) + eps)^(OUT#_p - 1)*sign(OUT#_delta)*(OUT#_p*OUT#_weight);
+      d#IN+=nn_dnormp(OUT#_delta,OUT#_single,OUT#_p)*OUT#_weight;
     );
 
     # mse : Mean-squared error.
@@ -31834,7 +31954,7 @@ nn_lib :
     );
 
     nn_loss_sigmoid_bce_forward(OUT,IN,TRUTH) = (
-      OUT#_single = sum(vmax(IN#,0) - IN*TRUTH + log(1 + exp(-abs(IN#))));
+      OUT#_single = sum(vmax(IN#,0) - IN#*TRUTH# + log(1 + exp(-abs(IN#))));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31877,8 +31997,8 @@ nn_lib :
 
     # softmax_ce : Softmax + Cross entropy.
     #--------------------------------------
-    nn_loss_softmax_ce_init_forward(OUT,weight) = (
-      const OUT#_weight = weight;
+    nn_loss_softmax_ce_init_forward(OUT,IN,weight) = (
+      const OUT#_weight = weight; # Single distribution over the entire vector (no spatial averaging)
       batch_#OUT = 0;
     );
 
@@ -31927,6 +32047,7 @@ nn_add : check "isvarname(['$1']) && # out
   if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
   e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs "$nins"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
@@ -31964,6 +32085,7 @@ nn_append : check "isvarname(['$1']) && # out
   }
 
   e[^-1] "[nn_lib] Add 'append' layer '"$out"' to network '"$net"', with inputs "$nins" and axis '"$axis"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=append,
   _${nout}_size=$out_size
@@ -31994,10 +32116,11 @@ nn_clone : check "isvarname(['$1']) && # out0
                   "
   net,out0,out1=${-nn_network},${1,2}
   if '$3'=='.' in=$_nn_previous_layer else in=$3 fi nn_check_layer $in
-  nout0,nout1,nin=${net}_$out0,${net}_$out1,${net}_$in
+  nout0,nout1,nin=${net}_$out0,${net}_$out1,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
          "outputs '"$out0"' and '"$out1"'."
+
   _${net}_layer_names.=$out0,$out1,
   _${net}_layer_types.=clone,clone,
   _${nout0}_size=${_${nin}_size}
@@ -32011,7 +32134,7 @@ nn_clone : check "isvarname(['$1']) && # out0
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out0
 
-#@cli nn_columnpatch2d : out,in,out_width>0,out_height>0,patch_size>0,_overlap>0
+#@cli nn_columnpatch2d : out,in,out_width>0,out_height>0,patch_size>0,0<=_overlap<patch_size
 #@cli : Add a 'columnpatch2d' layer (rearrangement of matrix columns as image patches) to the current network.
 #@cli : Default values: 'overlap=0'.
 nn_columnpatch2d : check "isvarname(['$1']) && # out
@@ -32019,22 +32142,26 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
                           isint($3,1) && # out_width
                           isint($4,1) && # out_height
                           isint($5,1) && # patch_size
-                          isint(${6=0},0) # overlap
+                          isint(${6=0},0) && $6<$5 # overlap
                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   out_width,out_height,patch_size,overlap=${3-6}
 
-  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
+  e[^-1] "[nn_lib] Add 'columnpatch2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "output size "($out_width,$out_height)", patch size "$patch_size" and overlap "$overlap"."
+
+  nb_patches:=max(1,ceil(($out_width-$overlap)/($patch_size-$overlap)))*\
+              max(1,ceil(($out_height-$overlap)/($patch_size-$overlap)))
+  if s=[${_${nin}_size}];s[2,2]!=[1,1]||s[0]!=$nb_patches||s[1]%($patch_size^2)
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Invalid input size ("${_${nin}_size}"). Expected a matrix of width "$nb_patches\
+                " and height multiple of "{$patch_size^2}"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=columnpatch2d,
   _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,ceil(s[1]/$patch_size^2)]
-  if s=[${_${nin}_size}];s[2,2]!=[1,1]
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Invalid input size ("${_${nin}_size}")."
-  fi
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
   _${nout}_forward="begin(nn_columnpatch2d_init_forward("$nout,$nin,$out_width,$out_height,$patch_size,$overlap"));"\
@@ -32083,10 +32210,11 @@ nn_conv : check "isvarname(['$1']) && # out
     shrink_x,shrink_y,shrink_z,boundary_conditions,learning_mode,weight_decay,initialization=${3-19}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'conv' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size ("$kernel_width,$kernel_height,$kernel_depth"), "\
          "strides ("$stride_x,$stride_y,$stride_z"), dilations ("$dilation_x,$dilation_y,$dilation_z"), "\
          "border shrinks ("$shrink_x,$shrink_y,$shrink_z") and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$stride_x)-2*$shrink_x,int(s[1]/$stride_y)-2*$shrink_y,\
@@ -32106,8 +32234,9 @@ nn_conv : check "isvarname(['$1']) && # out
     fi
   else
     $whds
-    if $initialization==1
-      f. "const siz = "$kernel_size"^2; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
+    if $initialization==1 # Identity
+      f. "const siz = $kernel_width*$kernel_height*$kernel_depth;
+          int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
     elif $initialization==2 # Lecun-initialization
       f. "x==w - 1?0:g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -32160,6 +32289,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size "$kernel_size", stride "$stride", dilation "$dilation", "\
          "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
@@ -32230,6 +32360,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'conv3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size "$kernel_size", stride "$stride", "\
          "dilation "$dilation", border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
@@ -32285,18 +32416,20 @@ nn_crop : check "isvarname(['$1']) && # out
   x0,y0,z0,c0,x1,y1,z1,c1,boundary_conditions=${3-11}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
 
-  e[^1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$net"', with input '"$in"', "\
+  e[^-1] "[nn_lib] Add 'crop' layer '"$out"' to network '"$net"', with input '"$in"', "\
         "coordinates ("$x0,$y0,$z0,$c0" - "$x1,$y1,$z1,$c1") and "${s$boundary_conditions}" boundary conditions."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=crop,
   cmin:=vmin([$x0,$y0,$z0,$c0],[$x1,$y1,$z1,$c1])
   cmax:=vmax([$x0,$y0,$z0,$c0],[$x1,$y1,$z1,$c1])
   _${nout}_size:=[$cmax]-[$cmin]+1
   _${nout}_input=$in
-  _${nout}_properties="coordinates=("$x0,$y0,$z0,$c0")x("$x1,$y1,$z1,$c1")"
-  _${nout}_forward="begin(nn_crop_init_forward("$nout,$nin,$x0,$y0,$z0,$c0,$x1,$y1,$z1,$c1,$boundary_conditions"));"\
+  _${nout}_properties="coordinates=("$cmin")x("$cmax")"
+  _${nout}_forward="begin(nn_crop_init_forward("$nout,$nin,$cmin,$cmax,$boundary_conditions"));"\
                    "nn_crop_forward("$nout,$nin");"
-  _${nout}_backward="nn_crop_backward("$nout,$nin");"
+  _${nout}_backward="begin(nn_crop_init_backward("$nout,$nin"));"\
+                    "nn_crop_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -32321,7 +32454,8 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !$isnum0" && "!$isnum1 check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'div' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
@@ -32347,6 +32481,7 @@ nn_dropout : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "dropout rate "$dropout_rate"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=dropout,
   _${nout}_size=${_${nin}_size}
@@ -32363,7 +32498,7 @@ nn_dropout : check "isvarname(['$1']) && # out
 #@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'fc' layer (fully connected layer) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_fc : check "isvarname(['$1']) && # out
@@ -32379,6 +32514,7 @@ nn_fc : check "isvarname(['$1']) && # out
   nb_channels,learning_mode,weight_decay,initialization=${3-6}
 
   e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=fc,
   _${nout}_size=1,1,1,$nb_channels
@@ -32416,7 +32552,7 @@ nn_fc : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_fft : out,in,io_mode,_is_inverse={ 0:No | 1:Yes },_axes.
+#@cli nn_fft : out,in,io_mode,_is_inverse={ 0:No | 1:Yes },_axes
 #@cli : Add a 'fft' layer (Fourier Transform) to the current network.
 #@cli : Argument 'io_mode' tells about the meaning of input/output data. \
 # It can be { 0:real → real | 1:(real,imag) → real | 2:real → (real,imag) | 3:(real,imag) → (real,imag) }
@@ -32446,10 +32582,11 @@ nn_fft : check "isvarname(['$1']) && # out
   fi
   s_axes_s={`size(['$s_axes'])>1?'es':'is'`}
 
-  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with inputs '"$in"', "\
+  e[^-1] "[nn_lib] Add 'fft' layer '"$out"' to network '"$net"', with input '"$in"', "\
          ${s$is_inverse}" transformation, along "$s_axes"-ax"$s_axes_s"."
+
   if $io_mode&1" && "[${_${nin}_size}][3]%2
-    error[0--3] "Command '$0': Input layer '"$nin"' have an odd number ("{[${_${nin}_size}][3]}") of channels."
+    error[0--3] "Command '$0': Input layer '"$in"' has an odd number ("{[${_${nin}_size}][3]}") of channels."
   fi
   out_size:=s=[${_${nin}_size}];[s[0,3],s[3]*arg0($io_mode,1,0.5,2,1)]
   _${net}_layer_names.=$out,
@@ -32468,9 +32605,10 @@ nn_fft : check "isvarname(['$1']) && # out
 #@cli nn_init : _network_name
 #@cli : Initialize new network with specified name, and select it as the current one.
 #@cli : Default value: 'network_name=nn'.
-nn_init : check "isvarname(['$1'])"
-  e[^-1] "[nn_lib] Initialize new network '$1'."
-  _nn_init $1
+nn_init :
+  if isvarname(['${1=nn}']) name=$1 else name=nn noarg fi
+  e[^-1] "[nn_lib] Initialize new network '"$name"'."
+  _nn_init $name
 
 _nn_init : # Init new network
   _nn_network=$1
@@ -32491,20 +32629,22 @@ nn_input : check "isvarname(['$1']) && # out
   width,height,depth,spectrum=${2-5}
 
   e[^-1] "[nn_lib] Add input '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=input,
   _${nout}_size=$width,$height,$depth,$spectrum
-  _${nout}_forward="begin(nn_input_init_forward("$nout,$out,$width,$height,$depth,$spectrum"));"
+  _${nout}_forward="begin(nn_input_init_forward("$nout,$out,$width,$height,$depth,$spectrum"));"\
+                   "nn_input_forward("$nout,$out");"
   _${nout}_backward="nn_input_backward("$nout,$out");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_linear : out,in,nb_channels>0,_axis={ x | y | z | c},_learning_mode,_weight_decay>=0,_initialization
+#@cli nn_linear : out,in,nb_channels>0,axis={ x | y | z | c},_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'linear' layer to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
 nn_linear : check "isvarname(['$1']) && # out
@@ -32522,6 +32662,7 @@ nn_linear : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
          "and axis '"$axis"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=linear,
   _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
@@ -32563,11 +32704,13 @@ nn_linear : check "isvarname(['$1']) && # out
 #@cli : Load and initialize network (saved as a .gmz file).
 #@cli : Network files can be only loaded in '.gmz' format.
 #@cli : Default value: 'include_trainer_data=1'.
-+nn_load : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
++nn_load : check "(s1 = lowercase(['$1']); p = find(s1,'.gmz',size(s1) - 1,-1); p>0 && p==size(s1) - 4) && # filename
                   isbool(${2=1}) # include_trainer_data
                   "
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
+
   l[] {
     "$1" run {t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
@@ -32589,24 +32732,25 @@ nn_linear : check "isvarname(['$1']) && # out
 #@cli nn_loss_add : out,in0,in1,...
 #@cli : Add a 'add' loss to the current network (sum of losses).
 nn_loss_add : check "isvarname(['$1']) && # out
-                     isint($#-1,2,4) # nb_inputs
+                     isint($#-1,2,8) # nb_inputs
                      "
   net,out=${-nn_network},$1
   nout=${net}_$out
-  $=arg nb_inputs:=$#-1 nins,sep=
+  $=arg nb_inputs:=$#-1 ins,nins,sep=
   repeat $nb_inputs {
     arg=${arg{2+$>}}
     check "s = ['"$arg"']; isvarname(s) || s=='.'"
     if '$arg'=='.' in$>=$_nn_previous_layer else in$>=$arg fi
     nin$>=${nn_varname\ ${in$>}} nn_check_layer ${nin$>}
-    nins.=$sep${nin$>} sep=,
+    nins.=$sep${nin$>} ins.=$sep${in$>} sep=,
   }
 
-  e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add sum of losses '"$out"' to network '"$net"', with inputs '"$ins"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
-  _${nout}_input=$in0,$in1
+  _${nout}_input=$ins
   _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nins"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
@@ -32614,7 +32758,7 @@ nn_loss_add : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_bce : out,in,ground_truth,_weight
 #@cli : Add a 'bce' loss to the current network (binary cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_bce : check "isvarname(['$1']) && # out
                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -32624,10 +32768,11 @@ nn_loss_bce : check "isvarname(['$1']) && # out
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add binary cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_bce,
   _${nout}_size=1,1,1,1
@@ -32643,26 +32788,27 @@ nn_loss_bce : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_ce : out,in,ground_truth,_weight
 #@cli : Add a 'ce' loss to the current network (cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_ce : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add cross entropy loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_ce,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_ce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_ce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_ce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_ce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_ce_backward("$nout,$nin,$ground_truth");"
@@ -32670,22 +32816,23 @@ nn_loss_ce : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_l1 : out,in,_ground_truth,_weight
+#@cli nn_loss_l1 : out,in,ground_truth,_weight
 #@cli : Add a 'l1' loss to the current network (L1-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_l1 : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_l1,
   _${nout}_size=1,1,1,1
@@ -32699,22 +32846,23 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_l2 : out,in,_ground_truth,_weight
+#@cli nn_loss_l2 : out,in,ground_truth,_weight
 #@cli : Add a 'l2' loss to the current network (L2-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_l2 : check "isvarname(['$1']) && # out
                     (s2 = ['$2'];  isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     isnum(${4=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add L2 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_l2,
   _${nout}_size=1,1,1,1
@@ -32728,23 +32876,24 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_lp : out,in,_ground_truth,_p>0,_weight
+#@cli nn_loss_lp : out,in,ground_truth,_p>0,_weight
 #@cli : Add a 'lp' loss to the current network (Lp-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'p=1.5' and 'weight=1'.
 nn_loss_lp : check "isvarname(['$1']) && # out
                     (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                    (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                    (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                     ${4=1.5}>0 && # p
                     isnum(${5=1}) # weight
                     "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,p,weight=${3-5}
+  ground_truth,p,weight=${nn_varname\ $3,1},${4-5}
 
   e[^-1] "[nn_lib] Add Lp loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"', p = "$p" and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_lp,
   _${nout}_size=1,1,1,1
@@ -32758,22 +32907,23 @@ nn_loss_lp : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_mse : out,in,_ground_truth,_weight
+#@cli nn_loss_mse : out,in,ground_truth,_weight
 #@cli : Add a 'mse' loss to the current network (mean-squared error).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_mse : check "isvarname(['$1']) && # out
                      (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                     (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                     (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                      isnum(${4=1}) # weight
                      "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add MSE loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_mse,
   _${nout}_size=1,1,1,1
@@ -32789,21 +32939,22 @@ nn_loss_mse : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_sigmoid_bce : out,in,ground_truth,_weight
 #@cli : Add a 'sigmoid_bce' loss to the current network (sigmoid followed by binary cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0). \
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value. \
 # Its value correspond to the desired probability (so, after the sigmoid).
 #@cli : Default value: 'weight=1'.
 nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
                              (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                             (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                             (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                              isnum(${4=1}) # weight
                              "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add sigmoid + binary cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_sigmoid_bce,
   _${nout}_size=1,1,1,1
@@ -32817,22 +32968,23 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
   _${net}_backward..=${_${nout}_backward}
   _nn_previous_layer=$out
 
-#@cli nn_loss_smoothl1 : out,in,_ground_truth,_weight
+#@cli nn_loss_smoothl1 : out,in,ground_truth,_weight
 #@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_smoothl1 : check "isvarname(['$1']) && # out
                           (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                          (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                          (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                           isnum(${4=1}) # weight
                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
          "ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_smoothl1,
   _${nout}_size=1,1,1,1
@@ -32848,26 +33000,27 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
 
 #@cli nn_loss_softmax_ce : out,in,ground_truth,_weight
 #@cli : Add a 'softmax_ce' loss to the current network (softmax followed by cross entropy).
-#@cli : 'ground_truth' can be a layer output name or a scalar value (default: 0).
+#@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
 #@cli : Default value: 'weight=1'.
 nn_loss_softmax_ce : check "isvarname(['$1']) && # out
                             (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                            (s3 = ['${3=0}']; isvarname(s3) || isnum($3)) && # ground_truth
+                            (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
                             isnum(${4=1}) # weight
                             "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  ground_truth,weight=${3-4}
+  ground_truth,weight=${nn_varname\ $3,1},$4
 
   e[^-1] "[nn_lib] Add softmax + cross entropy loss '"$out"' to network '"$net"', "\
          "with input '"$in"', ground truth '"$ground_truth"' and weight "$weight"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_softmax_ce,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
   _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_softmax_ce_init_forward("$nout,$weight"));"\
+  _${nout}_loss="begin(nn_loss_softmax_ce_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_softmax_ce_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_softmax_ce_end_forward("$nout"));"
   _${nout}_backward="nn_loss_softmax_ce_backward("$nout,$nin,$ground_truth");"
@@ -32891,6 +33044,7 @@ nn_maxpool2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "patch size "$patch_size$s_maxabs"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
@@ -32920,6 +33074,7 @@ nn_maxpool3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "patch size "$patch_size$s_maxabs"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
@@ -32946,13 +33101,14 @@ nn_mmul : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'mmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmul,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
                  s0[2]==1&&s0[3]==1&&s1[1]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[0],s0[1],1,1]:vector4(-1);
   if min(${_${nout}_size})<0
-    error[^-1] "Command '$0', layer '"$nout"': "\
-               "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_mmul_init_forward("$nout,$nin0,$nin1"));"\
@@ -32976,13 +33132,14 @@ nn_mmult : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'mmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmult,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
                  s0[2]==1&&s0[3]==1&&s1[0]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[1],s0[1],1,1]:vector4(-1);
   if min(${_${nout}_size})<0
-    error[^-1] "Command '$0', layer '"$nout"': "\
-               "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_mmult_init_forward("$nout,$nin0,$nin1"));"\
@@ -33016,9 +33173,10 @@ nn_mul : check "isvarname(['$1']) && # out
     fi
     nins.=$sep${nin$>} sep=,
   }
-  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
   e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs "$nins"."
+
+  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mul,
   _${nout}_size=$out_size
@@ -33052,7 +33210,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 # normalize_l2 | normalize_l2_x | normalize_l2_y | normalize_l2_z | normalize_l2_c | \
 # relu | sigmoid | sin | sinc | \
 # softmax | softmax_x | softmax_y | softmax_z | softmax_c | \
-# sqr | sqrt | swish | tanh | z2 | z3 }.
+# sqr | sqrt | swish | tanh | tanhz3 | z2 | z3 | zpsinz }.
 #@cli : Default value: 'activation=leakyrelu'.
 nn_nl : check "isvarname(['$1']) && # out
                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -33065,6 +33223,7 @@ nn_nl : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'nl' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and '"$activation"' activation."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=nl,
   _${nout}_size=${_${nin}_size}
@@ -33141,8 +33300,10 @@ nn_noise : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
   amplitude,noise_type,training_only=${3-5}
   s0,s1,s2,s3,s4=gaussian,uniform,salt&pepper,poisson,rice
+
   e[^-1] "[nn_lib] Add 'noise' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "amplitude "$amplitude" and "${s$noise_type}" noise."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=noise,
   _${nout}_size=${_${nin}_size}
@@ -33157,8 +33318,8 @@ nn_noise : check "isvarname(['$1']) && # out
   _nn_previous_layer=$out
 
 #@cli nn_norm : out,in,p>=0,_axis={ 0 | x | y | z | c }
-#@cli : Add a 'norm' layer (Lp norm computation) to the current network.
-#@cli : 'p' can be { 0:Squared norm | >0:Lp-norm }.
+#@cli : Add a 'norm' layer (Lp-norm computation) to the current network.
+#@cli : 'p' can be { 0:Sum of squares | >0:Lp-norm }.
 #@cli : Default values: 'p=2' and 'axis=0'.
 nn_norm : check "isvarname(['$1']) && # out
                  (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
@@ -33169,10 +33330,11 @@ nn_norm : check "isvarname(['$1']) && # out
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   p,axis=${3-4} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
-  if $ind_axis s_axis=" and axis '"$axis"'" fi
+  if $ind_axis>=0 s_axis=" and axis '"$axis"'" fi
 
   e[^-1] "[nn_lib] Add 'norm' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "'p="$p"'"$s_axis.
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=norm,
   _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
@@ -33192,7 +33354,7 @@ nn_norm : check "isvarname(['$1']) && # out
 #@cli : This normalization layer is generic and can simulate the behavior of \
 # a Layernorm, an InstanceNorm, a GroupNorm, or a RMSNorm.
 #@cli : 'axes' defines the shape used to compute the mean/std of the normalization.
-#@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | xyz | xyc | xzc | yzc | xyzc }.
+#@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
 #@cli : \nFor instance :
 #@cli : - 'axes=c' means the vector-valued pixels of the input image are normalized independently, \
 # according to the channel values.
@@ -33204,13 +33366,13 @@ nn_norm : check "isvarname(['$1']) && # out
 #@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
 nn_normalize : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                      isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc',
+                      isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc','zc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
                       isbool(${4=0}) && # normalization_type
                       isint(${5=0},0) && # group_x
                       isint(${6=0},0) && # group_y
                       isint(${7=0},0) && # group_z
-                      isint(${8=0},0) && # group_x
+                      isint(${8=0},0) && # group_c
                       isint(${9=3},0,3) # learning_mode
                       "
   net,out=${-nn_network},$1
@@ -33222,6 +33384,7 @@ nn_normalize : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
@@ -33278,13 +33441,14 @@ nn_parameters : check "isvarname(['$1']) && # out
   width,height,depth,spectrum,learning_mode,weight_decay,initialization=${2-8}
 
   e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")".
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=parameters,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
-  whds:=$width,$height,$depth,$spectrum
+  whds=$width,$height,$depth,$spectrum
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -33313,7 +33477,7 @@ nn_parameters : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_patchcolumn2d : out,in,patch_size>0,_overlap>=0
+#@cli nn_patchcolumn2d : out,in,patch_size>0,0<=_overlap<patch_size
 #@cli : Add a 'patchcolumn2d' layer (rearrangement of image patches as matrix columns) to the current network.
 #@cli : Default value: 'overlap=0'.
 nn_patchcolumn2d : check "isvarname(['$1']) && # out
@@ -33325,16 +33489,18 @@ nn_patchcolumn2d : check "isvarname(['$1']) && # out
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   patch_size,overlap=${3-4}
-  if s=[${_${nin}_size}];s[2]!=1
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Size of input layer '"$nin"' ("${_${nin}_size}") is incompatible with patch size "$patch_size"."
-  fi
 
   e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "patch size "$patch_size" and overlap "$overlap"."
+
+  if s=[${_${nin}_size}];s[2]!=1
+    error[0--3] "Command '$0', layer '"$nout"': "\
+            "Input layer '"$nin"' must be 2D (depth=1), but its size is ("${_${nin}_size}")."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchcolumn2d,
-  _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;[ceil(s[0]/po)*ceil(s[1]/po),s[3]*$patch_size^2,1,1]
+  _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;\
+                 [max(1,ceil((s[0]-$overlap)/po))*max(1,ceil((s[1]-$overlap)/po)),s[3]*$patch_size^2,1,1]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
   _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,$overlap"));"\
@@ -33359,15 +33525,16 @@ nn_patchdown2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchdown2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[0]%$patch_size" || "s[1]%$patch_size
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Size of input layer '"$nin"' ("${_${nin}_size}") is not a multiple of patch size "$patch_size"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchdown2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2],s[3]*$patch_size^2]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size
-  if !min(${_${nout}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Specified patch size "$patch_size" is higher than input size ("${_${nin}_size}")."
-  fi
   _${nout}_forward="begin(nn_patchdown2d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_patchdown2d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchdown2d_init_backward("$nout,$nin,$patch_size"));"\
@@ -33391,15 +33558,16 @@ nn_patchdown3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchdown3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[0]%$patch_size" || "s[1]%$patch_size" || "s[2]%$patch_size
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Size of input layer '"$nin"' ("${_${nin}_size}") is not a multiple of patch size "$patch_size"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchdown3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]*$patch_size^3]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size
-  if !min(${_${nout}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Specified patch size "$patch_size" is higher than input size ("${_${nin}_size}")."
-  fi
   _${nout}_forward="begin(nn_patchdown3d_init_forward("$nout,$nin,$patch_size"));"\
                    "nn_patchdown3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchdown3d_init_backward("$nout,$nin,$patch_size"));"\
@@ -33423,6 +33591,12 @@ nn_patchup2d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchup2d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[3]%($patch_size^2)
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of channels of input layer '"$nin"' ("{[${_${nin}_size}][3]}") is not a "\
+                "multiple of "{$patch_size^2}"."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchup2d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]*$patch_size),s[2],s[3]/$patch_size^2]
@@ -33451,6 +33625,13 @@ nn_patchup3d : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'patchup3d' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and patch size "$patch_size"."
+
+  if s=[${_${nin}_size}];s[3]%($patch_size^3)
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of channels of input layer '"$nin"' ("{[${_${nin}_size}][3]}") is not a "\
+                "multiple of "{$patch_size^3}"."
+  fi
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchup3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]*$patch_size),s[3]/$patch_size^3]
@@ -33487,6 +33668,7 @@ nn_permute : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'permute' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and permutation '"$permutation"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=permute,
   _${nout}_size:=s=[${_${nin}_size}];mode='$permutation';res=vector4();\
@@ -33508,6 +33690,7 @@ nn_print :
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r b=$_vt100_b
 
   e[^-1] "[nn_lib] Print info on network '"$net"'."
+
   v 0 e " * Network name: "$b$net$n
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -33528,7 +33711,7 @@ nn_print :
       s={`find(['$input'],_',')>0?_'s':0`}
       e "       * Input"$s": "$str_input" → Output: "$c$name$n" ("${_${net}_${name}_size}")"
     else
-      e "       * Output"$s": "$c$name$n" ("${_${net}_${name}_size}")"
+      e "       * Output: "$c$name$n" ("${_${net}_${name}_size}")"
     fi
     if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       e "       * Parameters: "$c{${net}_${name},whds}$n
@@ -33536,9 +33719,6 @@ nn_print :
     if ['$properties']!=0
       ies={`find(['$properties'],_',')>0?'ies':[_'y',0,0]`}
       e "       * Propert"$ies": "$c$properties$n
-    fi
-    if isint(${$name})
-      e "       * Parameters: "$c{$name,whds}$n
     fi
   }
   e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
@@ -33553,11 +33733,13 @@ nn_rename : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'rename' layer '"$out"' to network '"$net"', with input '"$in"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=rename,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
-  _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"
+  _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"\
+                   "nn_rename_forward("$nout,$nin");"
   _${nout}_backward="nn_rename_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
@@ -33581,6 +33763,7 @@ nn_reshape : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and size ("$width,$height,$depth,$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=reshape,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33589,8 +33772,9 @@ nn_reshape : check "isvarname(['$1']) && # out
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Cannot reshape input ("${_${nin}_size}") to output ("${_${nout}_size}")."
   fi
-  _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"
-  _${nout}_backward="begin(nn_reshape_init_backward("$nout,$nin"));"
+  _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"\
+                   "nn_reshape_forward("$nout,$nin");"
+  _${nout}_backward="nn_reshape_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 ${1--1}\n"
@@ -33599,20 +33783,20 @@ nn_reshape : check "isvarname(['$1']) && # out
 #@cli nn_resize : out,in,width[%]>0,_height[%]>0,_depth[%]>0,_spectrum[%]>0,_interpolation
 #@cli : Add a 'resize' layer to the current network.
 #@cli : 'interpolation' can be { -1:None (memory content) | 0:None | 1:Nearest | 2:Average | 3:Linear | \
-# 4=Grid | 5=Bicubic | 6=Lanczos }.
+# 4:Grid | 5:Bicubic | 6:Lanczos }.
 #@cli : Default values: 'height=depth=spectrum=100%' and 'interpolation=3'.
 nn_resize : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                   $3>0 && # width
-                   ${4=100%}>0 && # height
-                   ${5=100%}>0 && # depth
-                   ${6=100%}>0 && # spectrum
+                   (ispercentage($3) || isint($3,1)) && $3>0 && # width
+                   (ispercentage(${4=100%}) || isint($4,1)) && $4>0 && # height
+                   (ispercentage(${5=100%}) || isint($5,1)) && $5>0 && # depth
+                   (ispercentage(${6=100%}) || isint($6,1)) && $6>0 && # spectrum
                    isint(${7=3},-1,6) # interpolation
                    "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
-  if ispercentage($3) width:=max(1,round([${_${nin}_size}][1]*$3)) else width=$3 fi
+  if ispercentage($3) width:=max(1,round([${_${nin}_size}][0]*$3)) else width=$3 fi
   if ispercentage($4) height:=max(1,round([${_${nin}_size}][1]*$4)) else height=$4 fi
   if ispercentage($5) depth:=max(1,round([${_${nin}_size}][2]*$5)) else depth=$5 fi
   if ispercentage($6) spectrum:=max(1,round([${_${nin}_size}][3]*$6)) else spectrum=$6 fi
@@ -33620,6 +33804,11 @@ nn_resize : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'resize' layer '"$out"' to network '"$net"', with input '"$in"' and "\
          "output size ("$width","$height","$depth","$spectrum")."
+
+  if $interpolation>0" && "(s=[${_${nin}_size}];o=[$width,$height,$depth,$spectrum];!min(o>=s)" && "!min(o<=s))
+    error[0--3] "Command '$0', layer '"$nout"': Mixed upscale/downscale axes are not supported "\
+                "with interpolation "$interpolation"."
+  fi
   _${net}_layer_names.=$1,
   _${net}_layer_types.=resize,
   _${nout}_size=$width,$height,$depth,$spectrum
@@ -33638,10 +33827,10 @@ nn_resize : check "isvarname(['$1']) && # out
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
 nn_run : check "isvarname(['$1']) && # out
                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                ${4=100%}>0 && # width
-                ${5=100%}>0 && # height
-                ${6=100%}>0 && # depth
-                ${7=100%}>0 # spectrum
+                (ispercentage(${4=100%}) || isint($4,1)) && $4>0 && # width
+                (ispercentage(${5=100%}) || isint($5,1)) && $5>0 && # height
+                (ispercentage(${6=100%}) || isint($6,1)) && $6>0 && # depth
+                (ispercentage(${7=100%}) || isint($7,1)) && $7>0 && # spectrum
                 "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
@@ -33654,12 +33843,13 @@ nn_run : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add 'run' layer '"$out"' to network '"$net"', with input '"$in"', command '"$command"' "\
          "and output size ("$width","$height","$depth","$spectrum")."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=run,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
   _${nout}_properties="command='"$command"'"
-  _${nout}_forward="begin(nn_run_init_forward("$nout,$nin,'$command',$width,$height,$depth,$spectrum"));"\
+  _${nout}_forward="begin(nn_run_init_forward("$nout,$nin,['$command'],$width,$height,$depth,$spectrum"));"\
                    "nn_run_forward("$nout,$nin");"
   _${nout}_backward="nn_run_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -33671,12 +33861,14 @@ nn_run : check "isvarname(['$1']) && # out
 #@cli : Save current network as a .gmz file.
 #@cli : `.gmz` is mandatory extension, specifying another file extension will throw an error.
 #@cli : Default value: 'include_trainer_data=1'.
-nn_save : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
-                 isbool(${2=1}) # include_trainer_data
-                 "
+nn_save : check "(s1 = lowercase(['$1']); p = find(s1,'.gmz',size(s1) - 1,-1); p>0 && p==size(s1) - 4) && # filename
+                  isbool(${2=1}) # include_trainer_data
+                  "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Save network '"$net"' as file '$1'"$s$2"."
+
   __nn_store $2 o[$sel,-1] "$1" rm.
   is_change 0
 
@@ -33684,7 +33876,9 @@ nn_save : check "(s1 = ['$1']; find(s1,'.gmz')==size(s1) - 4) && # filename
 #@cli: Return size of the current network (i.e. number of stored parameters).
 nn_size :
   net=${-nn_network}
+
   e[^-1] "[nn_lib] Return size of network '"$net"'."
+
   siz=0
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
@@ -33697,7 +33891,8 @@ nn_size :
 
 #@cli nn_split : out0,out1,_out2,_out3,in,axis={ x | y | z | c },_size_out0>0,_size_out1>0,_size_out2>0,_size_out3>0
 #@cli : Add a 'split' layer to the current network.
-#@cli : Default values: 'size2=size1=size0'.
+#@cli : Default values: unspecified sizes split equally the remaining size along 'axis'
+#@cli : (the remainder, if any, is added to the first unspecified output).
 nn_split : check "$#>=4"
   net=${-nn_network}
   $=arg nb_outputs=0 nouts,sep=
@@ -33712,9 +33907,15 @@ nn_split : check "$#>=4"
       nin=${nn_varname\ $in}
       axis=${arg$i} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c') # axis
       repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
+      if $#-$i>$nb_outputs
+        error[0--3] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
+      fi
       break
     fi
   }
+  if !$nb_outputs
+    error[0--3] "Command '$0': Missing or invalid axis (must be one of 'x', 'y', 'z' or 'c')."
+  fi
   sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size}) first_unknown=0
   repeat $nb_outputs {
     i=$> nb_remaining:=1+$<
@@ -33727,13 +33928,14 @@ nn_split : check "$#>=4"
       break
     fi
   }
+
+  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
+         "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
+
   if si=[${_${nin}_size}];ss=[$sizes];min(ss)<=0" || "sum(ss)!=si[$ind_axis]
     error[0--3] "Command '$0': Cannot split input layer '"$in"' ("${_${nin}_size}") in "$nb_outputs" blocks "\
                 "with sizes ("$sizes")."
   fi
-
-  e[^-1] "[nn_lib] Add 'split' layer to network '"$net"', with input '"$in"', "\
-         "outputs '"$nouts"', axis '"$axis"' and block sizes ("$sizes")."
   repeat $nb_outputs {
     _${net}_layer_names.=${out$>},
     _${net}_layer_types.=split,
@@ -33757,7 +33959,9 @@ nn_split : check "$#>=4"
                    "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+
   __nn_store $2 +store[$sel,-1] "$1" rm.
 
 nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
@@ -33765,14 +33969,16 @@ nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
                   "
   net=${-nn_network}
   s0,s1=""," (include training data)"
+
   e[^-1] "[nn_lib] Store network '"$net"' into variable '$1'"$s$2"."
+
   __nn_store $2 store[$sel,-1] "$1"
 
 __nn_store :
   net=${-nn_network}
   repeat narg(${_${net}_layer_names})-1 {
-    type=${"arg0 $>,"${_${net}_layer_types}}
-    name=${"arg0 $>,"${_${net}_layer_names}}
+    type=${arg0\ $>,${_${net}_layer_types}}
+    name=${arg0\ $>,${_${net}_layer_names}}
     if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
@@ -33804,7 +34010,8 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   if !$isnum1 nn_check_layer $in1 out_size=${_${nin1}_size} else nin1=$in1 fi
   if !isnum($in0)" && "!isnum($in1) check [${_${nin0}_size}]==[${_${nin1}_size}] fi
 
-  e[^-1] "[nn_lib] Add 'sub' layer '"$net/$out"', with inputs '"$in0"' and '"$in1"'."
+  e[^-1] "[nn_lib] Add 'sub' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=sub,
   _${nout}_size=$out_size
@@ -33829,11 +34036,12 @@ nn_sum : check "isvarname(['$1']) && # out
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi nn_check_layer $in
   nout,nin=${net}_$out,${nn_varname\ $in}
   is_average,axis=${3-4} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c')
-  if $ind_axis s_axis=" and axis '"$axis"'" fi
-  s0,s1="No",""
+  if $ind_axis>=0 s_axis=" and axis '"$axis"'" fi
+  s0,s1="no ",""
 
   e[^-1] "[nn_lib] Add 'sum' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $s$3"averaging"$s_axis.
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=sum,
   _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
@@ -33860,13 +34068,14 @@ nn_tmmul : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'tmmul' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=tmmul,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
                  s0[2]==1&&s0[3]==1&&s1[1]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[0],s0[0],1,1]:vector4(-1);
   if min(${_${nout}_size})<0
-    error[^-1] "Command '$0', layer '"$nout"': "\
-               "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
@@ -33890,13 +34099,14 @@ nn_tmmult : check "isvarname(['$1']) && # out
   nout,nin0,nin1=${net}_$out,${nn_varname\ $in0},${nn_varname\ $in1}
 
   e[^-1] "[nn_lib] Add 'tmmult' layer '"$out"' to network '"$net"', with inputs '"$in0"' and '"$in1"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=tmmult,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
                  s0[2]==1&&s0[3]==1&&s1[0]==s0[1]&&s1[2]==1&&s1[3]==1?[s1[1],s0[0],1,1]:vector4(-1);
   if min(${_${nout}_size})<0
-    error[^-1] "Command '$0', layer '"$nout"': "\
-               "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
   _${nout}_forward="begin(nn_tmmult_init_forward("$nout,$nin0,$nin1"));"\
@@ -33917,6 +34127,7 @@ nn_transpose : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
 
   e[^-1] "[nn_lib] Add 'transpose' layer '"$out"' to network '"$net"', with input '"$in"'."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=transpose,
   _${nout}_size:=s=[${_${nin}_size}];[s[1],s[0],s[2],s[3]]
@@ -33930,31 +34141,30 @@ nn_transpose : check "isvarname(['$1']) && # out
   _${net}_init.="$0 ${1--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_trainer : out,loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
+#@cli nn_trainer : out,_loss,_optimizer,_"optimizer_params",_scheduler,_"scheduler_params"
 #@cli : Add a network trainer to the current network, with specified optimizer and scheduler.
-#@cli : 'optimizer' can be { adam | adamax | dtschump | sgd | rmsprop }.
-#@cli : 'scheduler' can be { constant | linear | exponential | adaptive }.
+#@cli : 'optimizer' can be { adam | adamax | rmsprop | sgd }.
+#@cli : 'scheduler' can be { constant | adaptive }.
 #@cli : - Value of 'optimizer_params' depends on the chosen optimizer:
 #@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
-#@cli : 'dtschump': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'sgd': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : - Value of 'scheduler_params' depends on the chosen scheduler:
 #@cli : 'constant' : (none).
 #@cli : 'adaptive' : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
 # patience_up,factor_up ).
-#@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
+#@cli : Default values: 'loss=.', 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
-                    (s2 = ['$2']; s2=='.' || isvarname(s2)) && # in
+                    (s2 = ['${2=.}']; s2=='.' || isvarname(s2)) && # in
                     (s3 = ['${3=adam}']; isvarname(s3) &&
-                     isin(s3,'adam','adamax','dtschump','rmsprop','sgd')) && # optimizer
+                     isin(s3,'adam','adamax','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
                       isin(s5,'constant','adaptive'))
                     "
              skip "${4=},${6=}"
   net,out=${-nn_network},$1
-  if ['${2=.}']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
+  if ['$2']=='.' loss=$_nn_previous_layer else loss=$2 fi nn_check_layer $loss
   nout,nloss=${net}_$out,${nn_varname\ $loss}
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
@@ -33991,7 +34201,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   #   [24]: iteration_best_loss_longterm
   #   [25]: iteration_last_significantly_improved_loss_longterm;
   #
-  #   optimizer_ind={ 0:adam | 1:adamax | 2:dtschump | 3:rmsprop | 4:sgd }, optimizer_params...;
+  #   optimizer_ind={ 0:adam | 1:adamax | 2:rmsprop | 3:sgd }, optimizer_params...;
   #
   #   scheduler_ind={ 0:constant | 1:adaptive }, scheduler_params...
   #
@@ -34010,8 +34220,8 @@ nn_trainer : check "isvarname(['$1']) && # out
   nout_ind=${$nout}
 
   # Define optimizer and scheduler parameters.
-  =[$nout] {"s = ['"$optimizer"']; s==indexof('adam','adamax','dtschump','rmsprop','sgd')"},0,1
-  if isin('$optimizer','dtschump','sgd')
+  =[$nout] {"indexof('"$optimizer"','adam','adamax','rmsprop','sgd')"},0,1
+  if isin('$optimizer','sgd')
     s_optimizer_params=learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max
     default_optimizer_params=5e-4,0.9,0.01,0,inf
   elif '$optimizer'=='rmsprop'
@@ -34041,6 +34251,7 @@ nn_trainer : check "isvarname(['$1']) && # out
 
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
          ($s_optimizer_params)" and '"$scheduler"' scheduler "($s_scheduler_params)"."
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
@@ -34067,7 +34278,7 @@ nn_trainer : check "isvarname(['$1']) && # out
         _${net}_trainer_data.=${net}_${name}_m,
         if isin('$optimizer','rmsprop','adam','adamax')
           if !isint(${${net}_${name}_m2}) +f[${net}_$name] 0 => ${net}_${name}_m2 fi
-          _${net}_trainer_data.=${net}_${name}_m,${net}_${name}_m2,
+          _${net}_trainer_data.=${net}_${name}_m2,
         fi
       fi
     fi
@@ -34076,13 +34287,14 @@ nn_trainer : check "isvarname(['$1']) && # out
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nloss,$optimizer,$scheduler"));"
 
-#@cli nn_varname : layer_name
+#@cli nn_varname : layer_name,_accept_nonlayer_variable_name={ 0:False | 1:True }
 #@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
-nn_varname :
+#@cli : Default value: 'accept_nonlayer_variable_name=0'.
+nn_varname : check "isbool(${2=0})"
   if isvarname(['"${1=}"'])
     net=${-nn_network}
     if narg(${_${net}_$1_size}) u ${net}_$1
-    elif narg(${_$1_size}) u $1
+    elif narg(${_$1_size})" || "$2 u $1
     else error[0--3] "Command '$0': Layer with name '$1' does not exist."
     fi
   else u "$1"
@@ -46260,8 +46472,7 @@ fx_send_feedback : skip "${1=},${3=}"
 #@gui : Removed Filters = text(1,"")_0
 #@gui : Got it! = button(0.5)_0+
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.
-#@gui :       Latest Update: <i>2021/01/18</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/01/18</i>.</small>")
 fx_whatsnew_preview : skip "$*"
   file=${-path_cache}whatsnew.txt
   l[] {
@@ -50264,8 +50475,7 @@ fx_channels2layers_preview :
 #@gui : re-apply to a bunch of other images.
 #@gui : "}
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.
-#@gui : Latest Update: <i>2019/08/27</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/08/27</i>.</small>")
 fx_clut_from_ab : skip "${4=},${5=}"
   if $!<2 error "At least two input layers are needed to run this filter." fi
   repeat $!-1 { l[$<,-1] {
@@ -51180,8 +51390,8 @@ fx_balance_gamma :
 
 #@gui : sep = value(0)_2+
 #@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.
-#@gui :         Latest Update: <i>2023/06/01</i>.</small>")
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.\
+#         Latest Update: <i>2023/06/01</i>.</small>")
 fx_color_presets :
   category=${arg0\ $1,abigailgonzalez,alexjordan,berat,cinematic,cinematic_travel,creative,debrup_travel_films,\
                       editingcorp,ericellerbrock,filtergrade,hollywood,inavision,jtsemple,kylerholland,lutifyme,\
@@ -62324,56 +62534,6 @@ fx_ball_preview :
   fx_ball ${1-10}
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
-#@gui Chladni Figures : fx_chladni, fx_chladni_preview(0)
-#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
-# This filter replaces the active layer with a generated Chladni figure.
-#@gui : "}, sep = separator()
-#@gui : Frequency X (n) = int(5, 1, 20)
-#@gui : Frequency Y (m) = int(2, 1, 20)
-#@gui : Sharpness (%) = float(15, 1, 100)
-#@gui : Granularity (%) = float(8,0,100)
-#@gui : Colormap = choice(4,"Autumn","Cool","Cube","Gray","Hot","HSV","Ice","Jet","Parula","Rainbow",\
-# "Spring","Summer","Winter")
-#@gui : Previous X-Center = value(50)
-#@gui : Previous Y-Center = value(50)
-#@gui : Center = point(50,50,0,1,0,255,0)
-#@gui : Zoom = point(75,50,0,1,255,0,255)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/27</i>.</small>")
-__fx_chladni :
-  freq_n,freq_m,sharpness,granularity,colormap,pcenter_x,pcenter_y,center_x,center_y,zoom_x,zoom_y=${1-11}
-
-fx_chladni :
-  __$0 $*
-  foreach {
-    {M=max(w,h);[M,M]},1,1,"begin(
-        const m1 = max(w,h) - 1;
-        const granularity = $granularity%;
-        const vu = ($zoom_x - $center_x)%;
-        const vv = ($zoom_y - $center_y)%;
-        const ang = atan2(vv,vu);
-        const zoom = 0.25/norm(vu,vv)^1.25;
-        R = zoom*rot(-ang);
-      );
-      XY = R*[ x/(w - 1) - $center_x%, y/(h - 1) - $center_y% ];
-      V = abs(cos($freq_n*pi*XY[0])*cos($freq_m*pi*XY[1]) - cos($freq_m*pi*XY[0])*cos($freq_n*pi*XY[1]));
-      density = exp(-$sharpness*V);
-      noise = 1 + granularity*(u - 1);
-      density*noise"
-    k. b 0.5 n 0,255
-    map ${"arg0 "$colormap",autumn,cool,cube,gray,hot,hsv,ice,jet,parula,rainbow,spring,summer,winter"}
-  }
-
-fx_chladni_preview :
-  __fx_chladni $*
-  zoom_x,zoom_y+=$center_x-$pcenter_x,$center_y-$pcenter_y
-  fx_chladni $freq_n,$freq_m,$sharpness,$granularity,$colormap,$pcenter_x,$pcenter_y,$center_x,$center_y,$zoom_x,$zoom_y
-  rs {min($_preview_area_width,$_preview_area_height)}
-  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0x0F0F0F0F,0
-  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0xF0F0F0F0,255
-  u "{"$freq_n"}{"$freq_m"}{"$sharpness"}{"$granularity"}{"$colormap"}"\
-    "{"$center_x"}{"$center_y"}{"$center_x,$center_y"}{"$zoom_x,$zoom_y"}"
-
 #@gui Circle Art : fx_circle_art, fx_circle_art
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Abstract rendering of spiraled circles.
@@ -62436,93 +62596,6 @@ fx_circle_art :
   rm.
   n 0,255
   if $5 r 50%,50%,1,100%,2 fi
-
-#@gui Cosmic Nebula : fx_cosmic_nebula, fx_cosmic_nebula(1)
-#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
-# Generate a procedural cosmic nebula.
-#@gui : "}, sep = separator()
-#@gui : note = note("<span color=\"#EE5500\"><b>Gas and Dust:</b></span>")
-#@gui : Gas Scale = float(1.5, 0.5, 5.0)
-#@gui : Gas Color 1 = color(25,128,204)
-#@gui : Gas Color 2 = color(204,51,128)
-#@gui : Core Color = color(255,230,178)
-#@gui : Dust Density = float(1.5, 0.5, 3.0)
-#@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Stars:</b></span>")
-#@gui : Stars Density = float(1.0, 0.0, 5.0)
-#@gui : Spikes Angle = float(45, 0, 90)
-#@gui : Spikes Size = float(1.0, 0.0, 5.0)
-#@gui : Spikes Orientations = int(2, 1, 8)
-#@gui : sep = separator()
-#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/29</i>.</small>")
-fx_cosmic_nebula :
-  C1_R,C1_G,C1_B,C2_R,C2_G,C2_B,CC_R,CC_G,CC_B:=[${2-10}]/255
-  pow_bg,pow_fg:=300/max(0.01,$12),2000/max(0.01,$12)
-
-  foreach {
-    w,h:=w,h nm={n} rm
-
-    # Dust map.
-    $w,$h,1,1 plasma. $1 n. 0,1 pow. $11 to_rgb.
-
-    # Background stars.
-    $w,$h,1,3,">v = 350*u^$pow_bg; $12 && v>5?v*[ u(0.5,1.2),u(0.5,1.2),u(0.7,1.5) ]:_0" *. ..
-
-    # Nebula (Gas 1 + Gas 2).
-    $w,$h,1,1 plasma. $1 n. 0,255 to_rgb. f. "I*[ $C1_R,$C1_G,$C1_B ]"
-    $w,$h,1,1 plasma. {$1+1} n. 0,255 to_rgb. f. "I*[ $C2_R,$C2_G,$C2_B ]"
-    +[-2,-1]
-
-    # Core.
-    $w,$h,1,1 plasma. {$1+0.5} n. 0,255 to_rgb.
-    f. "XY = lerp(-1,1,[ x/w,y/h ]); I*[ $CC_R,$CC_G,$CC_B ]*exp(-8*norm(XY)^2)" +[-2,-1]
-
-    # Mask nebula with dust & apply global fade inline.
-    *. ... rm... f. "XY = lerp(-1,1,[ x/w,y/h ]); I*exp(-2.5*norm(XY)^2)"
-    + # Merge Nebula with Background Stars
-
-    # Foreground Stars.
-    $w,$h,1,3,"v = 1000*u^$pow_fg; (v>100 && $12)?v*[ u(0.8,1.2),u(0.8,1.2),u(0.8,1.2) ]:_0"
-    +b. 1.5 *. 0.5 +
-
-    # Giant Stars (Multi-scale Diffraction Spikes).
-    spike_angle=$13
-    nb_orient=$15
-    repeat 3
-      if !$> prob,rad,spike_size,intensity:=0.000012*$12,0.8,15*$14,1000
-      elif $>==1 prob,rad,spike_size,intensity:=0.000004*$12,1.5,30*$14,2500
-      else prob,rad,spike_size,intensity:=0.000001*$12,2.5,60*$14,5000
-      fi
-
-      if $prob>0
-        $w,$h,1,3,"u<$prob?$intensity*u(0.5,1.5)*[ u(0.8,1.5),u(0.8,1.5),u(0.8,1.5) ]:_0"
-        +b. $rad *. 3 +[-2,-1] # Star body
-
-        # Diffraction spikes : one analytic PSF + one FFT convolution.
-        if $spike_size>0
-          R:=int(ceil($spike_size))
-          {2*$R+1},{2*$R+1},1,1,"
-            X = x - $R; Y = y - $R; v = 0;
-            for (k = 0, k<$nb_orient, ++k,
-              a = ($spike_angle + k*180/$nb_orient)*pi/180;
-              t = X*cos(a) + Y*sin(a);
-              d = -X*sin(a) + Y*cos(a);
-              v += exp(-d*d/0.5)*max(0,1 - abs(t)/$spike_size);
-            );
-            v"
-          /. {is}                     # Normalize kernel (sum=1)...
-          *. {1.5*$nb_orient}         # ...then constant energy PER orientation (1.5 each, as in the original)
-          +convolve_fft[-2] [-1]      # Star body * PSF
-          rm[-2]                      # Remove kernel
-          +[-2,-1]                    # Body + spikes
-        fi
-
-        +[-2,-1] # Add directly to main composition
-      fi
-    done
-
-    # Optical Bloom and Final Clamp.
-    +- 150 max. 0 b. 20 *. 0.4 + c 0,255 => $nm
-  }
 
 #@gui Equation Plot [Parametric] : fx_equation_parametric, fx_equation_parametric
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
