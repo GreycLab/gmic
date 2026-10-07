@@ -32712,7 +32712,7 @@ nn_linear : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Load network from file '$1'"$s$2"."
 
   l[] {
-    "$1" run {t} rm. net=${-nn_network}
+    "$1" _nn_include_trainer_data=$2 run {t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
       type=${"arg0 $>,"${_${net}_layer_types}}
       name=${"arg0 $>,"${_${net}_layer_names}}
@@ -33998,7 +33998,8 @@ __nn_store :
       sel.=${c}${net}_$name c=,
     fi
   }
-  ('${_${net}_init}':y) autocrop. {'" "'} => ${net}__init__
+  ('${_${net}_init}"if 0$_nn_include_trainer_data\n"${_${net}_init_training}"fi"':y)
+  autocrop. {'" "'} => ${net}__init__
 
 #@cli nn_sub : out,in0,in1
 #@cli : Add a 'sub' layer (element-wise subtraction) to the current network.
@@ -34295,7 +34296,7 @@ nn_trainer : check "isvarname(['$1']) && # out
 
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nloss,$optimizer,$scheduler"));"
-  _${net}_init_training.="$0 "$out,$loss,"${3--1}\n"
+  _${net}_init_training.="$0 "$out,$loss,$optimizer,"\""$optimizer_params"\"",$scheduler,"\""$scheduler_params"\"\n"
 
 #@cli nn_varname : layer_name,_accept_nonlayer_variable_name={ 0:False | 1:True }
 #@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
