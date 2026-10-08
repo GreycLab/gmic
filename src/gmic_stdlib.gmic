@@ -29643,9 +29643,9 @@ nn_lib :
       const OUT#_kernel_width = kernel_width;
       const OUT#_kernel_height = kernel_height;
       const OUT#_kernel_depth = kernel_depth;
-      const OUT#_kernel_center_x = OUT#_kernel_width - 1 - int(OUT#_kernel_width/2);
-      const OUT#_kernel_center_y = OUT#_kernel_height - 1 - int(OUT#_kernel_height/2);
-      const OUT#_kernel_center_z = OUT#_kernel_depth - 1 - int(OUT#_kernel_depth/2);
+      const OUT#_kernel_center_x = int(OUT#_kernel_width/2);
+      const OUT#_kernel_center_y = int(OUT#_kernel_height/2);
+      const OUT#_kernel_center_z = int(OUT#_kernel_depth/2);
       const OUT#_stride_x = stride_x;
       const OUT#_stride_y = stride_y;
       const OUT#_stride_z = stride_z;
@@ -29792,7 +29792,7 @@ nn_lib :
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
       const OUT#_kernel_size = kernel_size;
-      const OUT#_kernel_center = OUT#_kernel_size - 1 - int(OUT#_kernel_size/2);
+      const OUT#_kernel_center = int(OUT#_kernel_size/2);
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
@@ -29924,7 +29924,7 @@ nn_lib :
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
       const OUT#_kernel_size = kernel_size;
-      const OUT#_kernel_center = OUT#_kernel_size - 1 - int(OUT#_kernel_size/2);
+      const OUT#_kernel_center = int(OUT#_kernel_size/2);
       const OUT#_stride = stride;
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
@@ -32387,7 +32387,8 @@ nn_conv3d : check "isvarname(['$1']) && # out
   else
     $whds
     if $initialization==1
-      f. "const siz = "$kernel_size"^3; int(x/siz)==y%"{[${_${nin}_size}][3]}" && x%siz==int(siz/2)"
+      f. "const s = "$kernel_size"; const s2 = int(s/2); "\
+         "int(x/s^3)==y%"{[${_${nin}_size}][3]}" && x%s^3==s2*(s^2 + s + 1)"
     elif $initialization==2 # Lecun-initialization
       f. "g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
