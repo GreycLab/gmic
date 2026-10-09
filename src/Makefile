@@ -473,6 +473,10 @@ dev: fetch_headers # Without optimizations enabled, used for quick compile
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) -Dcimg_verbosity=3" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 	$(STRIP) gmic$(EXE)
 
+odev: fetch_headers # Optimized with architecture-specific flags, with OpenCV support
+	$(MAKE) --no-print-directory "OPT_CFLAGS=-O3 -march=native -mtune=native -funroll-loops -fno-math-errno -Dcimg_verbosity=3" opencv
+	$(STRIP) gmic$(EXE)
+
 debug: fetch_headers # With sanitize-address enabled and symbols kept, to track bugs
 	$(MAKE) --no-print-directory "CFLAGS+=$(GMIC_STD_CFLAGS) $(DEBUG_CFLAGS)" "LIBS+=gmic.o $(GMIC_STD_LIBS)" gmic.o _cli
 
