@@ -31983,8 +31983,9 @@ nn_lib :
 
     nn_loss_smoothl1_forward(OUT,IN,TRUTH) = (
       OUT#_delta = IN# - TRUTH#;
-      OUT#_sqrt_delta2_beta2 = sqrt(OUT#_delta^2 + OUT#_beta^2);
-      OUT#_single = sum(OUT#_sqrt_delta2_beta2);
+      OUT#_abs_delta = abs(OUT#_delta);
+      OUT#_a = vmin(OUT#_abs_delta,OUT#_beta);
+      OUT#_single = sum(OUT#_a*(OUT#_abs_delta - 0.5*OUT#_a))/OUT#_beta;
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31996,7 +31997,7 @@ nn_lib :
 
     nn_loss_smoothl1_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
+      d#IN+=vmin(vmax(OUT#_delta/OUT#_beta,-1),1)*OUT#_weight;
     );
 
     # softmax_ce : Softmax + Cross entropy.
