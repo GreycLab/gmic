@@ -7565,7 +7565,7 @@ parse_gmd :
     semiblank(pc) && (
       c==_'\\' && nc==_'G' && ac==_'\'' && j[3]==_'M' && j[4]==_'I' && j[5]==_'C' && semiblank(j[6])
     ) || (
-      res[ym1]!=s_gmic && c==_'G' && nc==_'\'' && ac==_'M' && j[3]==_'I' && j[4]==_'C' && semiblank(j[5])
+      ym1>=0 && res[ym1]!=s_gmic && c==_'G' && nc==_'\'' && ac==_'M' && j[3]==_'I' && j[4]==_'C' && semiblank(j[5])
     )?(
       res[y] = s_gmic;
       c==_'\\'?(copy(res[y1],0,4,1,0); res[y + 5] = e_gmic):(copy(res[y1],0,3,1,0); res[y + 4] = e_gmic);
@@ -7656,6 +7656,7 @@ parse_gmd :
 
     end(copy(i[0],res))"
   discard 0
+
 
 #@cli gmd2html : _include_default_header_footer={ 0:None | 1:Reference | 2:Tutorial | 3:News } : (no arg)
 #@cli : Convert selected gmd-formatted text images to html format.
@@ -8464,19 +8465,19 @@ parse_gui : skip "${1=print},${2=*}"
   e ""
   e "\r  > Extract filter chunks."
   macros="
-    is_blank(p) = ((_c=source[p])<=_' ' && _c!=_'\n');
-    skip_blank(p) = (while (is_blank(p), ++p));
+    is_blank(p) = ((_c = source[p])<=_' ' && _c!=_'\n');
+    skip_blank(p) = (while (p<size(source) && is_blank(p), ++p));
     clean(name) = (
       _l = find(name,0);
       _l>0?(
         _p = 0; while (1,
           _p = find(name,_'<',_p);
           _p<0 || _p>=_l?break();
-          isin(name[_p+1],_'b',_'i') && name[_p+2]==_'>'?( # Opening tag
-            copy(name[_p],name[_p+3],_l-_p-2);
+          isin(name[_p + 1],_'b',_'i') && name[_p + 2]==_'>'?( # Opening tag
+            copy(name[_p],name[_p + 3],_l - _p - 2);
             _l-=3;
-          ):name[_p+1]==_'/' && isin(name[_p+2],_'b',_'i') && name[_p+3]==_'>'?( # Closing tag
-            copy(name[_p],name[_p+4],_l-_p-3);
+          ):name[_p + 1]==_'/' && isin(name[_p + 2],_'b',_'i') && name[_p + 3]==_'>'?( # Closing tag
+            copy(name[_p],name[_p + 4],_l - _p - 3);
             _l-=4;
           ):++_p;
         );
@@ -8506,7 +8507,7 @@ parse_gui : skip "${1=print},${2=*}"
       !p || (p>0 && source[p - 1]==_'\n')?( # Found line starting with '#@gui'
         p0 = p; # Remember starting position of line
         p+=5;
-        source[p]==_'_' && (l = find(source,_' ',++p))>=0?(p = l + 1); # Skip locale
+        p<size(source) && source[p]==_'_' && (l = find(source,_' ',++p))>=0?(p = l + 1); # Skip locale
 
         # Detect new filter, folder or hide() directive.
         #-----------------------------------------------
@@ -8520,31 +8521,32 @@ parse_gui : skip "${1=print},${2=*}"
 
             # Definition of a new folder.
             #----------------------------
-            r0 = r; while (is_blank(--r),0);
-            copy(name,source[p],r-p+1); name[r-p+1] = 0;
+            r0 = r; while (r>=0 && is_blank(--r),0);
+            copy(name,source[p],r - p + 1); name[r - p + 1] = 0;
             for (levelup = 0, name[levelup]==_'_', ++levelup);
             levelup?(
-              copy(name,name[levelup],r-p+2-levelup); # Clean folder name
+              copy(name,name[levelup],r - p + 2 - levelup); # Clean folder name
               while (levelup--, # Update path
-                lp = find(path,0); l = max(0,find(path,_'/',lp-1,0)); path[l] = 0;
+                lp = find(path,0); l = max(0,find(path,_'/',lp - 1,0)); path[l] = 0;
               );
             );
             clean(name);
             name[0]?(
               ln = find(name,0); # Update path
               lp = find(path,0);
-              lp?(path[lp] = _'/'; copy(path[lp+1],name,ln); path[lp+ln+1] = 0):(copy(path,name,ln); path[ln] = 0);
+              lp?(path[lp] = _'/'; copy(path[lp + 1],name,ln); path[lp + ln + 1] = 0):
+                 (copy(path,name,ln); path[ln] = 0);
             );
-            copy(i[#0,p0],-1,r0-p0+1,1,0); # Discard folder definition line (will be removed later)
+            copy(i[#0,p0],-1,r0 - p0 + 1,1,0); # Discard folder definition line (will be removed later)
             p = r0 + 1;
           ):!is_hide?(
 
             # Definition of a new filter.
             #----------------------------
             while (is_blank(--q),0);
-            copy(name,source[p],q-p+1); name[q-p+1] = 0;
+            copy(name,source[p],q - p + 1); name[q - p + 1] = 0;
             clean(name);
-            store_block(prev_p0,p0-1,prev_path,prev_name,prev_hide);
+            store_block(prev_p0,p0 - 1,prev_path,prev_name,prev_hide);
 
             prev_p0 = p0;
             prev_path = path;
@@ -8557,15 +8559,15 @@ parse_gui : skip "${1=print},${2=*}"
             #--------------------------
             l0 = l + 5; l = find(source,_')',l0);
             l<r?(
-              copy(hide,source[l0],l-l0); hide[l-l0] = 0;
-              copy(i[#0,p0],-1,r-p0+1,1,0);
+              copy(hide,source[l0],l - l0); hide[l - l0] = 0;
+              copy(i[#0,p0],-1,r - p0 + 1,1,0);
             );
             p = r + 1;
           )
         )
       ):++p
     );
-    prev_p0!=p0?store_block(prev_p0,size(source)-1,prev_path,prev_name,prev_hide) # Insert last block
+    prev_p0!=p0?store_block(prev_p0,size(source) - 1,prev_path,prev_name,prev_hide) # Insert last block
     "
   rm[0]
 
@@ -8665,16 +8667,15 @@ parse_gui : skip "${1=print},${2=*}"
         name = vector256();
         type = vector256();
         argument = vector65536();
-
         p = nb_params = 0;
         while (p<size(source),
           q = find(source,_'=',p)%size(source);
           source[q]==_'='?( # Found new parameter
             skip_blank(p);
             r = q + 1; skip_blank(r);
-            while (is_blank(--q),0);
-            copy(name,source[p],q-p+1); name[q-p+1] = 0; # Parameter name
-            store('tmparg',name,q-p+1);
+            while (q>0 && is_blank(--q),0);
+            copy(name,source[p],q - p +1); name[q - p +1] = 0; # Parameter name
+            store('tmparg',name,q - p +1);
             p = r;
             q = min(find(source,_'(',p)%size(source),
                     find(source,_'{',p)%size(source),
@@ -8685,9 +8686,9 @@ parse_gui : skip "${1=print},${2=*}"
 
             responsivity = 1; randomizable = 0;
             source[p]==_'_'?(responsivity = 0; ++p);
-            source[p]==_'~'?(randomizable = 1; ++p);
-            responsivity && source[p]==_'_'?(responsivity = 0; ++p);
-            copy(type,source[p],q-p+1); type[q-p+1] = 0; # Parameter type
+            p<size(source) && source[p]==_'~'?(randomizable = 1; ++p);
+            responsivity && p<size(source) && source[p]==_'_'?(responsivity = 0; ++p);
+            p<size(source)?copy(type,source[p],q - p +1); type[q - p +1] = 0; # Parameter type
             for (i = 0, type[i], ++i, type[i] = lowercase(type[i])); # Force lowercase
             run('$tmparg _f"${f}"_p',nb_params,'_name={t} rm.',
                 ' _f"${f}"_p',nb_params,'_type=',type,
@@ -8711,8 +8712,8 @@ parse_gui : skip "${1=print},${2=*}"
                 skip_blank(p);
                 pe = r;
                 while (is_blank(--pe),0);
-                copy(argument,source[p],pe-p+1); argument[pe-p+1] = 0; # Parameter argument
-                store('tmparg',argument,1,pe-p+1); run('$tmparg _f"${f}"_p',nb_params,'_a0={t} rm.');
+                copy(argument,source[p],pe - p + 1); argument[pe - p + 1] = 0; # Parameter argument
+                store('tmparg',argument,1,pe - p + 1); run('$tmparg _f"${f}"_p',nb_params,'_a0={t} rm.');
                 nbargs = 1;
               ):(argument[0] = 0);
               p = r + 1;
@@ -8721,8 +8722,8 @@ parse_gui : skip "${1=print},${2=*}"
                 skip_blank(p);
                 pe = q = min(r,find(source,_',',p)%size(source));
                 while (is_blank(--pe),0);
-                copy(argument,source[p],pe-p+1); argument[pe-p+1] = 0; # Parameter argument
-                store('tmparg',argument,1,pe-p+1); run('$tmparg _f"${f}"_p',nb_params,'_a',nbargs,'={t} rm.');
+                copy(argument,source[p],pe - p + 1); argument[pe - p + 1] = 0; # Parameter argument
+                store('tmparg',argument,1,pe - p + 1); run('$tmparg _f"${f}"_p',nb_params,'_a',nbargs,'={t} rm.');
                 ++nbargs;
                 p = q + 1;
               );
@@ -8731,15 +8732,18 @@ parse_gui : skip "${1=print},${2=*}"
 
             # Extract visibility state.
             p = r + 1;
-            p<size(source) && source[p]==_'_' && isin(source[p+1],_'0',_'1',_'2')?(
+            p<size(source) - 1 && source[p]==_'_' && isin(source[p + 1],_'0',_'1',_'2')?(
               r = p + 1;
-              run('_f"${f}"_p',nb_params,'_visibility=',source[r]-_'0');
-              isin(source[r+1],_'+',_'-',_'*')?run('_f"${f}"_p',nb_params,'_propagation=',[source[++r]]);
+              run('_f"${f}"_p',nb_params,'_visibility=',source[r] - _'0');
+              r + 1<size(source) && isin(source[r + 1],_'+',_'-',_'*')?
+                run('_f"${f}"_p',nb_params,'_propagation=',[source[++r]]);
             );
 
             p = r + 1;
-            skip_blank(p);
-            source[p]==_','?++p;
+            p<size(source)?(
+              skip_blank(p);
+              p<size(source)?(source[p]==_','?++p);
+            );
             ++nb_params;
           ):++p;
         );
@@ -9026,7 +9030,7 @@ parse_gui_update :
           !eoc || command[eoc-1]!=_'_'?(copy(command[eoc],'#@gui '); eoc+=6);
           is_italic = (is_testing && find(dest,'Testing/',p)<0) || is_about;
           copy(command[eoc],is_italic?'<i>':'<b>');
-          copy(command[eoc + 3],dest[p],q-p);
+          copy(command[eoc + 3],dest[p],q - p);
           copy(command[eoc + 3 + q - p],is_italic?'</i>\n':'</b>\n');
           p = q + 1;
         ); command"`}
@@ -18071,7 +18075,7 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
         curr = new;
       ):inrange(c,_'0',_'9') || c==_'-'?( # New image (leaf)
         img = s2v(str,k++)%$nb_images;
-        while (inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
+        while (k<size(str) && inrange(c = str[k],_'0',_'9') || c==_'-', ++k); --k;
         new = da_size();
         da_push([ _'I',-1,img,-1,w#img,h#img ]);
         set_child(new);
@@ -19381,7 +19385,7 @@ closing_circ : check "$1>=0 && isbool(${2=0})"
 # (e.g. specifying 'xoffset' without also specifying 'yoffset' and 'zoffset' is invalid).
 #@cli : Default values: 'boundary_conditions=1', 'is_normalized=0', 'channel_mode=1', \
 # 'xcenter=ycenter=zcenter=(undefined)', 'xstride=ystride=zstride=1', 'xdilation=ydilation=zdilation=1',\
-# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=(input_size/stride)'.
+# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=ceil(input_size/stride)'.
 #@cli : $ image.jpg (0,1,0;1,-4,1;0,1,0) convolve[-2] [-1] keep[-2]
 #@cli : $ image.jpg (0,1,0) resize[-1] 130,1,1,1,3 +convolve[0] [1]
 #@cli : $$ https://gmic.eu/oldtutorial/_convolve
@@ -19420,7 +19424,7 @@ convolve_fft : check ${is_image_arg\ $1}" && isin(${2=2},0,1,2,3)"
 # (e.g. specifying 'xoffset' without also specifying 'yoffset' and 'zoffset' is invalid).
 #@cli : Default values: 'boundary_conditions=1', 'is_normalized=0', 'channel_mode=1', \
 # 'xcenter=ycenter=zcenter=-1', 'xstride=ystride=zstride=1', 'xdilation=ydilation=zdilation=1',\
-# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=(input_size/stride)'.
+# 'xoffset=yoffset=zoffset=0' and 'xsize=ysize=zsize=ceil(input_size/stride)'.
 #@cli : $ image.jpg (0,1,0;1,-4,1;0,1,0) correlate[-2] [-1] keep[-2]
 #@cli : $ image.jpg +crop 40%,40%,60%,60% +correlate[0] [-1],0,1
 
@@ -25418,7 +25422,7 @@ meigen : check "isint($1,1)"
   e[^-1] "Compute $1 largest eigen-values of matri"$s"$?."
   foreach {
     nm={n}
-    if w!=h" || "d!=1" || "s!=1 v 1 error[0--5] "Command '$0': Image '"$nm"' is not a square matrix." fi
+    if w!=h" || "d!=1" || "s!=1 error[0--5] "Command '$0': Image '"$nm"' is not a square matrix." fi
     eval ${-math_lib}" store('val',meig(crop(),$1,h),1,min($1,h))" $val k. => $nm
   }
 
@@ -29053,6 +29057,11 @@ nn_lib :
     #--------------------------------------
     # Activation functions **must work** with vector-valued arguments.
 
+    # z: Identity.
+    #--------------
+    nn_activation_z(z) = z;
+    nn_activation_d_z(z) = 1;
+
     # elu: Exponential Linear Unit.
     #------------------------------
     nn_activation_elu(z) = (vmax(z,0) + exp(vmin(z,0)) - 1);
@@ -29075,8 +29084,8 @@ nn_lib :
 
     # log: Logarithm.
     #----------------
-    nn_activation_log(z) = log(z);
-    nn_activation_d_log(z) = (1/z);
+    nn_activation_log(z) = log(vmax(z,nn_eps));
+    nn_activation_d_log(z) = ((z>nn_eps)/vmax(z,nn_eps));
 
     # relu: Rectified Linear Unit.
     #-----------------------------
@@ -29381,12 +29390,12 @@ nn_lib :
       ):nn_iteration>i(##T#_ind,9,2) + T#_nb_cooldown_iterations?(
 
         # Test for LR down : Short-term loss has not improved for a long time?
-        nn_iteration - i[##T#_ind,13]>T#_patience_down && i[##T#_ind,11]>=0?(
+        nn_iteration - max(i[##T#_ind,13],i(##T#_ind,9,2))>T#_patience_down && i[##T#_ind,11]>=0?(
           i[##T#_ind,1] = cut(T#_factor_down*i[##T#_ind,1],T#_lr_min,T#_lr_max);
           i(##T#_ind,9,2) = nn_iteration;
 
         # Test for LR up : Negative long-term variation?
-        ):nn_iteration - i[##T#_ind,25]>T#_patience_up && i[##T#_ind,23]<0?(
+        ):nn_iteration - max(i[##T#_ind,25],i(##T#_ind,9,2))>T#_patience_up && i[##T#_ind,23]<0?(
           i[##T#_ind,1] = cut(T#_factor_up*i[##T#_ind,1],T#_lr_min,T#_lr_max);
           i(##T#_ind,9,2) = nn_iteration;
         );
@@ -29635,9 +29644,9 @@ nn_lib :
       const OUT#_shrink_x = shrink_x;
       const OUT#_shrink_y = shrink_y;
       const OUT#_shrink_z = shrink_z;
-      const OUT#_width = int(IN#_width/stride_x) - 2*OUT#_shrink_x;
-      const OUT#_height = int(IN#_height/stride_y) - 2*OUT#_shrink_y;
-      const OUT#_depth = int(IN#_depth/stride_z) - 2*OUT#_shrink_z;
+      const OUT#_width = int((IN#_width - 1)/stride_x) + 1 - 2*OUT#_shrink_x;
+      const OUT#_height = int((IN#_height - 1)/stride_y) + 1 - 2*OUT#_shrink_y;
+      const OUT#_depth = int((IN#_depth - 1)/stride_z) + 1 - 2*OUT#_shrink_z;
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
       const OUT#_kernel_width = kernel_width;
@@ -29786,8 +29795,8 @@ nn_lib :
     nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $""#OUT;
       const OUT#_shrink = shrink;
-      const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
-      const OUT#_height = int(IN#_height/stride) - 2*OUT#_shrink;
+      const OUT#_width = int((IN#_width - 1)/stride) + 1 - 2*OUT#_shrink;
+      const OUT#_height = int((IN#_height - 1)/stride) + 1 - 2*OUT#_shrink;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
@@ -29918,9 +29927,9 @@ nn_lib :
     nn_conv3d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
       const OUT#_ind = $""#OUT;
       const OUT#_shrink = shrink;
-      const OUT#_width = int(IN#_width/stride) - 2*OUT#_shrink;
-      const OUT#_height = int(IN#_height/stride) - 2*OUT#_shrink;
-      const OUT#_depth = int(IN#_depth/stride) - 2*OUT#_shrink;
+      const OUT#_width = int((IN#_width - 1)/stride) + 1 - 2*OUT#_shrink;
+      const OUT#_height = int((IN#_height - 1)/stride) + 1 - 2*OUT#_shrink;
+      const OUT#_depth = int((IN#_depth - 1)/stride) + 1 - 2*OUT#_shrink;
       const OUT#_spectrum = h##OUT#_ind;
       const OUT#_whd = OUT#_width*OUT#_height*OUT#_depth;
       const OUT#_kernel_size = kernel_size;
@@ -31060,8 +31069,8 @@ nn_lib :
       ):(d#IN+=nn_dnormp(IN#,OUT#,OUT#_p)*d#OUT);
     );
 
-    # normalize: Variance/mean or RMS normalization.
-    #-----------------------------------------------
+    # normalize: Variance/mean, RMS normalization, or simple affine/linear transform.
+    #---------------------------------------------------------------------------------
     nn_normalize_init_forward(OUT,IN,normalization_type,ca_w,ca_h,ca_d,ca_s) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = IN#_width;
@@ -31069,7 +31078,10 @@ nn_lib :
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_whds = OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum;
-      const OUT#_normalization_type = normalization_type; # 0: Avg_std, 1:RMS
+      # 0: Avg_std, 1: RMS, 2: Affine (gamma+beta, no normalization), 3: Linear (gamma only, no normalization)
+      const OUT#_normalization_type = normalization_type;
+      const OUT#_normalize = normalization_type<2;   # Is a normalization applied?
+      const OUT#_has_beta = !(normalization_type&1); # Is a beta (shift) parameter used?
 
       # Dimensions of complementary axes.
       const OUT#_ca_width = ca_w;
@@ -31083,7 +31095,7 @@ nn_lib :
       OUT#_gamma = crop(##OUT#_ind,0,1);
       OUT#_gamma_whds = resize(OUT#_gamma,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-      !normalization_type?(
+      OUT#_has_beta?(
         OUT#_beta = crop(##OUT#_ind,1,1);
         OUT#_beta_whds = resize(OUT#_beta,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
                                 OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
@@ -31091,29 +31103,33 @@ nn_lib :
     );
 
     nn_normalize_forward(OUT,IN) = (
-      OUT#_normalization_type?( # RMS-normalization
-        OUT#_norm = sqrt(resize(IN#^2,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                                OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
-        OUT#_norm_whds = resize(OUT#_norm,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        OUT#_hat = IN#/OUT#_norm_whds;
-        OUT# = OUT#_hat*OUT#_gamma_whds;
-
-      ):( # Avg_std-normalization
-        OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
-                          OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-        OUT#_avg_whds = resize(OUT#_avg,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        OUT#_hat = IN# - OUT#_avg_whds;
-        OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
-                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                               OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
-        OUT#_std_whds = resize(OUT#_std,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                               OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        OUT#_hat/=OUT#_std_whds;
-        OUT# = OUT#_hat*OUT#_gamma_whds;
-        OUT#+=OUT#_beta_whds;
+      OUT#_normalize?(
+        OUT#_normalization_type?( # RMS-normalization
+          OUT#_norm = sqrt(resize(IN#^2,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
+          OUT#_norm_whds = resize(OUT#_norm,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                  OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          OUT#_hat = IN#/OUT#_norm_whds;
+          OUT# = OUT#_hat*OUT#_gamma_whds;
+        ):( # Avg_std-normalization
+          OUT#_avg = resize(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
+                            OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+          OUT#_avg_whds = resize(OUT#_avg,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                 OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          OUT#_hat = IN# - OUT#_avg_whds;
+          OUT#_std = sqrt(resize(OUT#_hat^2, # average of squared differences with the input mean
+                                 OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)+=nn_eps);
+          OUT#_std_whds = resize(OUT#_std,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                 OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          OUT#_hat/=OUT#_std_whds;
+          OUT# = OUT#_hat*OUT#_gamma_whds;
+        );
+      ):( # No normalization (affine or linear transform only)
+        ref(IN#,OUT#_hat);
+        OUT# = IN#*OUT#_gamma_whds;
       );
+      OUT#_has_beta?(OUT#+=OUT#_beta_whds);
     );
 
     nn_normalize_init_backward(OUT,IN) = (
@@ -31124,23 +31140,29 @@ nn_lib :
     nn_normalize_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_gtilde = d#OUT*OUT#_gamma_whds;
-      OUT#_normalization_type?( # RMS-normalization
-        OUT#_avg_g_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-        OUT#_avg_g_hat_whds = resize(OUT#_avg_g_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                                     OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        d#IN+=(OUT#_gtilde - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
-      ):( # Avg_std-normalization
-        OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                 OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-        OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                                      OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        OUT#_avg_gtilde_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
-                                     OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
-        OUT#_avg_gtilde_hat_whds = resize(OUT#_avg_gtilde_hat,
-                                          OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
-                                          OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
-        d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
+      OUT#_normalize?(
+        OUT#_normalization_type?( # RMS-normalization
+          OUT#_avg_g_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                  OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+          OUT#_avg_g_hat_whds = resize(OUT#_avg_g_hat,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                       OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          d#IN+=(OUT#_gtilde - OUT#_avg_g_hat_whds*OUT#_hat)/OUT#_norm_whds;
+        ):( # Avg_std-normalization
+          OUT#_avg_gtilde = resize(OUT#_gtilde,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                   OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+          OUT#_avg_gtilde_whds = resize(OUT#_avg_gtilde,OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                        OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          OUT#_avg_gtilde_hat = resize(OUT#_gtilde*OUT#_hat,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
+                                       OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2);
+          OUT#_avg_gtilde_hat_whds = resize(OUT#_avg_gtilde_hat,
+                                            OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,
+                                            OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,1);
+          d#IN+=(OUT#_gtilde - OUT#_avg_gtilde_whds - OUT#_hat*OUT#_avg_gtilde_hat_whds)/OUT#_std_whds;
+        );
+      ):( # No normalization : y = gamma*x (+ beta)
+        d#IN+=OUT#_gtilde;
+      );
+      OUT#_has_beta?(
         batch_d#OUT#_beta+=(resize(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum,
                                    OUT#_ca_width,OUT#_ca_height,OUT#_ca_depth,OUT#_ca_spectrum,2)*=OUT#_f_whds);
       );
@@ -31151,7 +31173,7 @@ nn_lib :
     nn_normalize_end_backward(OUT) = (
       merge(batch_d#OUT#_gamma,+);
       batch_d#OUT#_gamma/=nn_batch_size;
-      !OUT#_normalization_type?(
+      OUT#_has_beta?(
         merge(batch_d#OUT#_beta,+);
         batch_d#OUT#_beta/=nn_batch_size;
       );
@@ -31810,7 +31832,7 @@ nn_lib :
     nn_loss_bce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_epsiloned1 = vmax(1 - IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1));
+      OUT#_single = -sum(TRUTH#*log(OUT#_epsiloned) + (1 - TRUTH#)*log(OUT#_epsiloned1));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31822,7 +31844,7 @@ nn_lib :
 
     nn_loss_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
+      d#IN+=(IN# - TRUTH#)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
     );
 
     # ce : Cross-entropy.
@@ -31834,7 +31856,7 @@ nn_lib :
 
     nn_loss_ce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned));
+      OUT#_single = -sum(TRUTH#*log(OUT#_epsiloned));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31846,7 +31868,7 @@ nn_lib :
 
     nn_loss_ce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
+      d#IN+=-TRUTH#/OUT#_epsiloned*OUT#_weight;
     );
 
     # l1 : L1-norm.
@@ -31857,7 +31879,7 @@ nn_lib :
     );
 
     nn_loss_l1_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm1(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31868,7 +31890,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_l1_backward(OUT,IN,TRUTH) = (
+    nn_loss_l1_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=sign(OUT#_delta)*OUT#_weight;
     );
@@ -31881,7 +31903,7 @@ nn_lib :
     );
 
     nn_loss_l2_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31892,7 +31914,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_l2_backward(OUT,IN,TRUTH) = (
+    nn_loss_l2_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
     );
@@ -31906,7 +31928,7 @@ nn_lib :
     );
 
     nn_loss_lp_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm#OUT#_p(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31917,7 +31939,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_lp_backward(OUT,IN,TRUTH) = (
+    nn_loss_lp_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=nn_dnormp(OUT#_delta,OUT#_single,OUT#_p)*OUT#_weight;
     );
@@ -31930,7 +31952,7 @@ nn_lib :
     );
 
     nn_loss_mse_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm(OUT#_delta)^2;
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31941,7 +31963,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_mse_backward(OUT,IN,TRUTH) = (
+    nn_loss_mse_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta*(2*OUT#_weight);
     );
@@ -31966,7 +31988,7 @@ nn_lib :
 
     nn_loss_sigmoid_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(sigmoid(IN#) - TRUTH)*OUT#_weight;
+      d#IN+=(sigmoid(IN#) - TRUTH#)*OUT#_weight;
     );
 
     # smoothl1 : Smooth L1-norm.
@@ -31978,9 +32000,10 @@ nn_lib :
     );
 
     nn_loss_smoothl1_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
-      OUT#_sqrt_delta2_beta2 = sqrt(OUT#_delta^2 + OUT#_beta^2);
-      OUT#_single = sum(OUT#_sqrt_delta2_beta2);
+      OUT#_delta = IN# - TRUTH#;
+      OUT#_abs_delta = abs(OUT#_delta);
+      OUT#_a = vmin(OUT#_abs_delta,OUT#_beta);
+      OUT#_single = sum(OUT#_a*(OUT#_abs_delta - 0.5*OUT#_a))/OUT#_beta;
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31990,9 +32013,9 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_smoothl1_backward(OUT,IN,TRUTH) = (
+    nn_loss_smoothl1_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
+      d#IN+=vmin(vmax(OUT#_delta/OUT#_beta,-1),1)*OUT#_weight;
     );
 
     # softmax_ce : Softmax + Cross entropy.
@@ -32004,7 +32027,7 @@ nn_lib :
 
     nn_loss_softmax_ce_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_softmax));
+      OUT#_single = -sum(TRUTH#*log(OUT#_softmax));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -32016,7 +32039,7 @@ nn_lib :
 
     nn_loss_softmax_ce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
+      d#IN+=(OUT#_softmax - TRUTH#)*OUT#_weight;
     );"
   fi
   u $_nn_lib
@@ -32177,9 +32200,9 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_conv : out,in,nb_channels>0,_kernel_width>0,_kernel_height>0,_kernel_depth>0,\
-# _stride_x>0,_stride_y>0,_stride_z>0,_dilation_x,_dilation_y,_dilation_z,_shrink_x>=0,_shrink_y>=0_,_shrink_z>=0,\
-# boundary_conditions,_learning_mode,_weight_decay>=0,_initialization
+#@cli nn_conv : out,in,nb_channels>0,kernel_width>0,kernel_height>0,kernel_depth>0,\
+# _stride_x>0,_stride_y>0,_stride_z>0,_dilation_x>0,_dilation_y>0,_dilation_z>0,\
+# _shrink_x>=0,_shrink_y>=0,_shrink_z>=0,_boundary_conditions,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv' layer (generic 1D/2D/3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
@@ -32196,9 +32219,9 @@ nn_conv : check "isvarname(['$1']) && # out
                  isint(${7=1},1) && # stride_x
                  isint(${8=1},1) && # stride_y
                  isint(${9=1},1) && # stride_z
-                 isint(${10=1}) && # dilation_x
-                 isint(${11=1}) && # dilation_y
-                 isint(${12=1}) && # dilation_z
+                 isint(${10=1},1) && # dilation_x
+                 isint(${11=1},1) && # dilation_y
+                 isint(${12=1},1) && # dilation_z
                  isint(${13=0},0) && # shrink_x
                  isint(${14=0},0) && # shrink_y
                  isint(${15=0},0) && # shrink_z
@@ -32222,8 +32245,9 @@ nn_conv : check "isvarname(['$1']) && # out
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0]/$stride_x)-2*$shrink_x,int(s[1]/$stride_y)-2*$shrink_y,\
-                                      int(s[2]/$stride_z)-2*$shrink_z,$nb_channels]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0]-1)/$stride_x)+1-2*$shrink_x,\
+                                      int((s[1]-1)/$stride_y)+1-2*$shrink_y,\
+                                      int((s[2]-1)/$stride_z)+1-2*$shrink_z,$nb_channels]
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel_size=("$kernel_width,$kernel_height,$kernel_depth"), "\
@@ -32241,7 +32265,7 @@ nn_conv : check "isvarname(['$1']) && # out
     $whds
     if $initialization==1 # Identity
       f. "const sx = "$kernel_width"; const sy = "$kernel_height"; const sz = "$kernel_depth"; const sss = sx*sy*sz; "\
-         "const sx2 = sx/2; const sy2 = sy/2; const sz2 = sz/2; "\
+         "const sx2 = int(sx/2); const sy2 = int(sy/2); const sz2 = int(sz/2); "\
          "int(x/sss)==y%"{[${_${nin}_size}][3]}" && x%sss==sx2 + sx*(sy2 + sy*sz2)"
     elif $initialization==2 # Lecun-initialization
       f. "g*sqrt(1/(w - 1))"
@@ -32265,7 +32289,7 @@ nn_conv : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
+#@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
@@ -32279,7 +32303,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
                    isint($3,1) && # nb_channels
                    isint(${4=3},1) && # kernel_size
                    isint(${5=1},1) && # stride
-                   isint(${6=1}) && # dilation
+                   isint(${6=1},1) && # dilation
                    isint(${7=0},0) && # shrink
                    isint(${8=0},0,3) && # boundary_conditions
                    isint(${9=3},0,3) && # learning_mode
@@ -32299,7 +32323,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$stride)-2*$shrink,s[2],$nb_channels]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,2]-1)/$stride)+1-2*$shrink,s[2],$nb_channels]
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel_size="$kernel_size", stride="$stride", dilation="$dilation", "\
@@ -32338,7 +32362,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation,_shrink>=0,_boundary_conditions,\
+#@cli nn_conv3d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
 # _learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'conv3d' layer (3D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
@@ -32352,7 +32376,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
                    isint($3,1) && # nb_channels
                    isint(${4=3},1) && # kernel_size
                    isint(${5=1},1) && # stride
-                   isint(${6=1}) && # dilation
+                   isint(${6=1},1) && # dilation
                    isint(${7=0},0) && # shrink
                    isint(${8=0},0,3) && # boundary_conditions
                    isint(${9=3},0,3) && # learning_mode
@@ -32372,7 +32396,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$stride)-2*$shrink,$nb_channels]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,3]-1)/$stride)+1-2*$shrink,$nb_channels]
   _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
   _${nout}_properties="kernel_size="$kernel_size", stride="$stride", "\
@@ -32626,7 +32650,7 @@ nn_init :
 
 _nn_init : # Init new network
   _nn_network=$1
-  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update=
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_init_training=
   _$1_init="nn_init $1\n"
   if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
 
@@ -32729,8 +32753,8 @@ nn_linear : check "isvarname(['$1']) && # out
   l[] {
     "$1" run "is_training=$2 "{t} rm. net=${-nn_network}
     repeat narg(${_${net}_layer_names})-1 {
-      type=${"arg0 $>,"${_${net}_layer_types}}
-      name=${"arg0 $>,"${_${net}_layer_names}}
+      type=${arg0\ $>,${_${net}_layer_types}}
+      name=${arg0\ $>,${_${net}_layer_names}}
       if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
         sel.=${c}${net}_$name c=,
         if $2
@@ -32862,7 +32886,7 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_l1_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_l1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_l1_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_l1_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_l1_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32894,7 +32918,7 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_l2_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_l2_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_l2_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_l2_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_l2_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32927,7 +32951,7 @@ nn_loss_lp : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_lp_init_forward("$nout,$nin,$p,$weight"));"\
                 "nn_loss_lp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_lp_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_lp_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_lp_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32959,7 +32983,7 @@ nn_loss_mse : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_mse_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -33024,7 +33048,7 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_smoothl1_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -33390,8 +33414,7 @@ nn_norm : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_normalization_type={ 0:Avg_std | 1:RMS },\
-# _group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
+#@cli nn_normalize : out,in,axes,_normalization_type,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
 # a Layernorm, an InstanceNorm, a GroupNorm, or a RMSNorm.
@@ -33402,7 +33425,14 @@ nn_norm : check "isvarname(['$1']) && # out
 # according to the channel values.
 #@cli : - 'axes=xyz' means each input channel of the input image is normalized independently, \
 # according to all (x,y,z) pixel values.
-#@cli : When different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
+#@cli : \n'normalization_type' can be { 0:Avg_std | 1:RMS | 2:Affine | 3:Linear } :
+#@cli : - 0: Normalization by mean/std, followed by the affine transform 'gamma*x + beta'.
+#@cli : - 1: RMS normalization, followed by the linear transform 'gamma*x'.
+#@cli : - 2: No normalization, only the affine transform 'gamma*x + beta' is applied.
+#@cli : - 3: No normalization, only the linear transform 'gamma*x' is applied.
+#@cli : For types 2 and 3, 'axes' (and 'group_*') only define along which dimensions \
+# the 'gamma' (and 'beta') parameters are shared.
+#@cli : \nWhen different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
 # 'N' groups.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
 #@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
@@ -33410,7 +33440,7 @@ nn_normalize : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc','zc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
-                      isbool(${4=0}) && # normalization_type
+                      isint(${4=0},0,3) && # normalization_type
                       isint(${5=0},0) && # group_x
                       isint(${6=0},0) && # group_y
                       isint(${7=0},0) && # group_z
@@ -33422,11 +33452,12 @@ nn_normalize : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
   axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
-  if $normalization_type learning_mode&=1 fi # Disable Beta when RMS-normalization is enabled
-  s0,s1=avg_std,rms
+  has_beta:=!($normalization_type&1) # Types 0 (Avg_std) and 2 (Affine) have a Beta
+  if !$has_beta learning_mode&=1 fi # Disable Beta when RMS-normalization or linear transform is selected
+  s0,s1,s2,s3=avg_std-normalization,rms-normalization,affine-transform,linear-transform
 
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "axes '"$axes"', "${s$normalization_type}"-normalization and groups ("$group_x,$group_y,$group_z,$group_c")."
+         "axes '"$axes"', "${s$normalization_type}" and groups ("$group_x,$group_y,$group_z,$group_c")."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
@@ -33443,15 +33474,15 @@ nn_normalize : check "isvarname(['$1']) && # out
       find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
       find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
 
-  whds={$normalization_type?1:2},{$ca_w*$ca_h*$ca_d*$ca_s},1,1
+  whds:=$has_beta?2:1,$ca_w*$ca_h*$ca_d*$ca_s,1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
                   "should be ("$whds")."
     fi
   else
-    if $normalization_type (1) else (1,0) fi
-    r. $whds # gamma,beta (avg/std) or gamma (rms)
+    if $has_beta (1,0) else (1) fi
+    r. $whds # gamma,beta (types 0,2) or gamma only (types 1,3)
     => $nout
   fi
   _${nout}_forward="begin(nn_normalize_init_forward("$nout,$nin,$normalization_type,$ca_w,$ca_h,$ca_d,$ca_s"));"\
@@ -33483,7 +33514,7 @@ nn_parameters : check "isvarname(['$1']) && # out
   nout=${net}_$out
   width,height,depth,spectrum,learning_mode,weight_decay,initialization=${2-8}
 
-  e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")".
+  e[^-1] "[nn_lib] Add 'parameters' layer '"$out"' to network '"$net"', with size ("$width,$height,$depth,$spectrum")."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=parameters,
@@ -33861,7 +33892,7 @@ nn_resize : check "isvarname(['$1']) && # out
     error[0--3] "Command '$0', layer '"$nout"': Mixed upscale/downscale axes are not supported "\
                 "with interpolation "$interpolation"."
   fi
-  _${net}_layer_names.=$1,
+  _${net}_layer_names.=$out,
   _${net}_layer_types.=resize,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
@@ -33879,10 +33910,11 @@ nn_resize : check "isvarname(['$1']) && # out
 #@cli : Default values: 'width=height=depth=spectrum=100%'.
 nn_run : check "isvarname(['$1']) && # out
                 (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                size(['$3'])>0 && # command
                 (ispercentage(${4=100%}) || isint($4,1)) && $4>0 && # width
                 (ispercentage(${5=100%}) || isint($5,1)) && $5>0 && # height
                 (ispercentage(${6=100%}) || isint($6,1)) && $6>0 && # depth
-                (ispercentage(${7=100%}) || isint($7,1)) && $7>0 && # spectrum
+                (ispercentage(${7=100%}) || isint($7,1)) && $7>0 # spectrum
                 "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
@@ -33969,6 +34001,9 @@ nn_split : check "$#>=4"
   }
   if !$nb_outputs
     error[0--3] "Command '$0': Missing or invalid axis (must be one of 'x', 'y', 'z' or 'c')."
+  fi
+  if !inrange($nb_outputs,2,4)
+    error[0--3] "Command '$0': Number of outputs must be between 2 and 4."
   fi
   sizes,sep= remaining_size:=arg0($ind_axis,${_${nin}_size}) first_unknown=0
   repeat $nb_outputs {
@@ -67235,6 +67270,11 @@ fx_solve_maze_preview :
 
 #@cli _gallery_deformations
 #@cli : This entry defines some examples of deformation filters for the G'MIC gallery page.
+#@cli : $ image.jpg fx_glass_door 64,4,30,2,31,117,50,40,10,70,2,2,13.8,4.082 _label="Glass~Door"
+#@cli : $ image.jpg fx_heightfield_warp 0,"0.25*cos(3*pi*x)*sin(3*pi*y)",100,0,1,1.108,-9.45406,-5.1051,70.5,\
+# 20,11.6,149.2,9.61,20,1,"50,50",50,50,75,50 _label="Heightfield~Warp"
+#@cli : $ image.jpg fx_page_curl 0,42.1922,58.5586,22.294,0,0,255,247,238,89,100,60,60,30,50,255,255,255,0 \
+# _label="Page~Curl"
 #@cli : $ image.jpg animate "flower","30,10,0,0","30,10,0,360",10 rm. _fps=6 _label="flower"
 #@cli : $ image.jpg fx_conformal_maps 8,1,0,"((1.1 + i*z/6)/(1.04 - i*z/6))^6.2",0,0,0,0,0,3,0,0,"1024","1024" \
 # _label="Conformal~maps"
@@ -67269,6 +67309,11 @@ fx_solve_maze_preview :
 
 #@cli _gallery_patterns
 #@cli : This entry defines some examples of pattern filters for the G'MIC gallery page.
+#@cli : $ image.jpg fx_boxfitting 3,0,0.25,2,0 _label="Box~Fitting"
+#@cli : $ 400,400,1,3 fx_organic_fibers 20,20,3,15,15,3,15,30,1,19,10,24,50,0,33 _label="Organic~Fibers"
+#@cli : $ image.jpg fx_pack_ellipses 3,20,0,30,100,6,1,3,0,0,0,255,0,0 _label="Pack~Ellipses"
+#@cli : $ 400,400,1,3 fx_penrose_tiling 0,"50","50",50,50,75,50,110,170,240,255,240,150,60,255,0.3,4,20,20,20,255,1 \
+# _label="Penrose~Tiling"
 #@cli : $ image.jpg fx_rain 65,10,50,0.1,1,1,0 gui_merge_layers _label="Rain~&amp;~snow"
 #@cli : $ 400,400,1,3 fx_camouflage 9,12,100,30,46,33,75,90,65,179,189,117,255,246,158 _label="Camouflage"
 #@cli : $ image.jpg jeje_clouds 50,0.5 _label="Clouds"
