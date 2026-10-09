@@ -31814,7 +31814,7 @@ nn_lib :
     nn_loss_bce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
       OUT#_epsiloned1 = vmax(1 - IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned) + (1 - TRUTH)*log(OUT#_epsiloned1));
+      OUT#_single = -sum(TRUTH#*log(OUT#_epsiloned) + (1 - TRUTH#)*log(OUT#_epsiloned1));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31826,7 +31826,7 @@ nn_lib :
 
     nn_loss_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(IN# - TRUTH)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
+      d#IN+=(IN# - TRUTH#)/(OUT#_epsiloned*OUT#_epsiloned1)*OUT#_weight;
     );
 
     # ce : Cross-entropy.
@@ -31838,7 +31838,7 @@ nn_lib :
 
     nn_loss_ce_forward(OUT,IN,TRUTH) = (
       OUT#_epsiloned = vmax(IN#,nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_epsiloned));
+      OUT#_single = -sum(TRUTH#*log(OUT#_epsiloned));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -31850,7 +31850,7 @@ nn_lib :
 
     nn_loss_ce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=-TRUTH/OUT#_epsiloned*OUT#_weight;
+      d#IN+=-TRUTH#/OUT#_epsiloned*OUT#_weight;
     );
 
     # l1 : L1-norm.
@@ -31861,7 +31861,7 @@ nn_lib :
     );
 
     nn_loss_l1_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm1(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31872,7 +31872,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_l1_backward(OUT,IN,TRUTH) = (
+    nn_loss_l1_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=sign(OUT#_delta)*OUT#_weight;
     );
@@ -31885,7 +31885,7 @@ nn_lib :
     );
 
     nn_loss_l2_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31896,7 +31896,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_l2_backward(OUT,IN,TRUTH) = (
+    nn_loss_l2_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta*(OUT#_weight/(OUT#_single + nn_eps));
     );
@@ -31910,7 +31910,7 @@ nn_lib :
     );
 
     nn_loss_lp_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm#OUT#_p(OUT#_delta);
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31921,7 +31921,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_lp_backward(OUT,IN,TRUTH) = (
+    nn_loss_lp_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=nn_dnormp(OUT#_delta,OUT#_single,OUT#_p)*OUT#_weight;
     );
@@ -31934,7 +31934,7 @@ nn_lib :
     );
 
     nn_loss_mse_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_single = norm(OUT#_delta)^2;
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
@@ -31945,7 +31945,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_mse_backward(OUT,IN,TRUTH) = (
+    nn_loss_mse_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta*(2*OUT#_weight);
     );
@@ -31970,7 +31970,7 @@ nn_lib :
 
     nn_loss_sigmoid_bce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(sigmoid(IN#) - TRUTH)*OUT#_weight;
+      d#IN+=(sigmoid(IN#) - TRUTH#)*OUT#_weight;
     );
 
     # smoothl1 : Smooth L1-norm.
@@ -31982,7 +31982,7 @@ nn_lib :
     );
 
     nn_loss_smoothl1_forward(OUT,IN,TRUTH) = (
-      OUT#_delta = IN# - TRUTH;
+      OUT#_delta = IN# - TRUTH#;
       OUT#_sqrt_delta2_beta2 = sqrt(OUT#_delta^2 + OUT#_beta^2);
       OUT#_single = sum(OUT#_sqrt_delta2_beta2);
       batch_#OUT+=OUT#_single*OUT#_weight;
@@ -31994,7 +31994,7 @@ nn_lib :
       OUT# = batch_#OUT;
     );
 
-    nn_loss_smoothl1_backward(OUT,IN,TRUTH) = (
+    nn_loss_smoothl1_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=OUT#_delta/OUT#_sqrt_delta2_beta2*OUT#_weight;
     );
@@ -32008,7 +32008,7 @@ nn_lib :
 
     nn_loss_softmax_ce_forward(OUT,IN,TRUTH) = (
       OUT#_softmax = vmax(softmax(IN#),nn_eps);
-      OUT#_single = -sum(TRUTH*log(OUT#_softmax));
+      OUT#_single = -sum(TRUTH#*log(OUT#_softmax));
       batch_#OUT+=OUT#_single*OUT#_weight;
     );
 
@@ -32020,7 +32020,7 @@ nn_lib :
 
     nn_loss_softmax_ce_backward(OUT,IN,TRUTH) = (
       nn_define_backward(IN#);
-      d#IN+=(OUT#_softmax - TRUTH)*OUT#_weight;
+      d#IN+=(OUT#_softmax - TRUTH#)*OUT#_weight;
     );"
   fi
   u $_nn_lib
@@ -32867,7 +32867,7 @@ nn_loss_l1 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_l1_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_l1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_l1_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_l1_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_l1_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32899,7 +32899,7 @@ nn_loss_l2 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_l2_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_l2_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_l2_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_l2_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_l2_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32932,7 +32932,7 @@ nn_loss_lp : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_lp_init_forward("$nout,$nin,$p,$weight"));"\
                 "nn_loss_lp_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_lp_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_lp_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_lp_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -32964,7 +32964,7 @@ nn_loss_mse : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_mse_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_mse_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_mse_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_mse_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_mse_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
@@ -33029,7 +33029,7 @@ nn_loss_smoothl1 : check "isvarname(['$1']) && # out
   _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
                 "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_smoothl1_end_forward("$nout"));"
-  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin,$ground_truth");"
+  _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin");"
   _${net}_loss.=${_${nout}_loss}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
