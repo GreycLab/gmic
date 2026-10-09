@@ -29028,7 +29028,7 @@ nn_lib :
       const nn_optimizer_adamax = 1;
       const nn_optimizer_rmsprop = 2;
       const nn_optimizer_sgd = 3;
-      const nn_is_training = 0;
+      const nn_is_training = isnan($_nn_is_training)?0:$_nn_is_training;
     );
 
     begin_t(
@@ -29213,8 +29213,6 @@ nn_lib :
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
       const T#_loss_eps = 1e-4;
-      unref(nn_is_training);
-      const nn_is_training = 1;
       nn_clip_gradient_min = 0;
       nn_clip_gradient_max = inf;
       nn_iteration = max(0,i[##T#_ind,0]);
@@ -30976,7 +30974,6 @@ nn_lib :
       !nn_is_training && OUT#_training_only?(
         OUT# = IN#;
       ):(
-        srand();
         OUT# = noise(IN#,OUT#_amplitude,OUT#_noise_type);
       );
     );
@@ -32646,7 +32643,7 @@ nn_init :
   _nn_init $name
 
 _nn_init : # Init new network
-  _nn_network=$1
+  _nn_network=$1 _nn_is_training=
   _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_init_training=
   _$1_init="nn_init $1\n"
   if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
@@ -34383,6 +34380,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   # That should be the very last thing happening 'end()'!
   _${net}_update.="nn_trainer_update("$nout,$nloss,$optimizer,$scheduler"));"
   _${net}_init_training.="$0 "$out,$loss,$optimizer,"\""$optimizer_params"\"",$scheduler,"\""$scheduler_params"\"\n"
+  _nn_is_training=1
 
 #@cli nn_varname : layer_name,_accept_nonlayer_variable_name={ 0:False | 1:True }
 #@cli : Return the variable name used in the math evaluator to store the output of the specified network layer.
