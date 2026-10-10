@@ -33865,14 +33865,14 @@ nn_reshape : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and size ("$width,$height,$depth,$spectrum")."
 
+  if $width*$height*$depth*$spectrum!=prod(${_${nin}_size})
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Cannot reshape input ("${_${nin}_size}") to output ("$width,$height,$depth,$spectrum")."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=reshape,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
-  if prod(${_${nout}_size})!=prod(${_${nin}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Cannot reshape input ("${_${nin}_size}") to output ("${_${nout}_size}")."
-  fi
   _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"\
                    "nn_reshape_forward("$nout,$nin");"
   _${nout}_backward="nn_reshape_backward("$nout,$nin");"
