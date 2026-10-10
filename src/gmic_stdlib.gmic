@@ -29048,7 +29048,7 @@ nn_lib :
     nn_display(L) = display(L#,L#_width,L#_height,L#_depth,L#_spectrum);
     nn_display(L,M) = display(L#,M#_width,M#_height,M#_depth,M#_spectrum);
     nn_store(N,L) = store(N#,L#,L#_width,L#_height,L#_depth,L#_spectrum);
-    nn_train(OUT) = !isvar(OUT#_is_training)?(const OUT#_is_training = 1);
+    nn_set_training(OUT) = !isvar(OUT#_is_training)?(const OUT#_is_training = 1);
 
     #--------------------------------------
     # Activation functions and derivatives.
@@ -32287,7 +32287,7 @@ nn_conv : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv_backward("$nout,$nin");"\
                     "end(nn_conv_end_backward("$nout"));"
-  _${net}_train.="nn_train("$nout");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32361,7 +32361,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
                     "end(nn_conv2d_end_backward("$nout"));"
-  _${net}_train.="nn_train("$nout");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32435,7 +32435,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv3d_backward("$nout,$nin");"\
                     "end(nn_conv3d_end_backward("$nout"));"
-  _${net}_train.="nn_train("$nout");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32532,7 +32532,7 @@ nn_dropout : check "isvarname(['$1']) && # out
   _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate"));"\
                    "nn_dropout_forward("$nout,$nin");"
   _${nout}_backward="nn_dropout_backward("$nout,$nin");"
-  _${net}_train.="nn_train("$nout");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32657,7 +32657,7 @@ nn_init :
 
 _nn_init : # Init new network
   _nn_network=$1
-  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_train,_$1_forward,_$1_loss,_$1_backward,_$1_update,\
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_training,_$1_forward,_$1_loss,_$1_backward,_$1_update,\
     _$1_init_training=
   _$1_init="nn_init $1\n"
   if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
@@ -33385,7 +33385,7 @@ nn_noise : check "isvarname(['$1']) && # out
   _${nout}_forward="begin(nn_noise_init_forward("$nout,$nin,$amplitude,$noise_type,$training_only"));"\
                    "nn_noise_forward("$nout,$nin");"
   _${nout}_backward="nn_noise_backward("$nout,$nin");"
-  _${net}_train.="nn_train("$nout");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
