@@ -34001,7 +34001,9 @@ nn_size :
 #@cli : Add a 'split' layer to the current network.
 #@cli : Default values: unspecified sizes split equally the remaining size along 'axis'
 #@cli : (the remainder, if any, is added to the first unspecified output).
-nn_split : check "$#>=4"
+nn_split : check "isvarname(['$1']) && # out
+                  $#>=4
+                  "
   net=${-nn_network}
   $=arg nb_outputs=0 nouts,sep=
   repeat $#-3 {
@@ -34384,6 +34386,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   if ['$s_scheduler_params']!=0 _${nout}_properties.=", "$s_scheduler_params fi
 
   # Generate code for updating network weights.
+  _${net}_trainer_data=
   _${net}_update="begin(nn_trainer_init("$nout,$nloss,$optimizer,$scheduler"));"\
                  "end("
   repeat narg(${_${net}_layer_names})-1 {
