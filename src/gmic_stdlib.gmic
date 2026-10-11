@@ -32008,9 +32008,9 @@ nn_lib :
 
     # smoothl1 : Smooth L1-norm.
     #---------------------------
-    nn_loss_smoothl1_init_forward(OUT,IN,weight) = (
+    nn_loss_smoothl1_init_forward(OUT,IN,beta,weight) = (
       const OUT#_weight = weight/size(IN#);
-      const OUT#_beta = 1e-3;
+      const OUT#_beta = beta;
       batch_#OUT = 0;
     );
 
@@ -33042,30 +33042,31 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_loss_smoothl1 : out,in,ground_truth,_weight
+#@cli nn_loss_smoothl1 : out,in,ground_truth,_beta,_weight
 #@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
 #@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
-#@cli : Default value: 'weight=1'.
+#@cli : Default values: 'beta=0.1' and 'weight=1'.
 nn_loss_smoothl1 : check "isvarname(['$1']) && # out
                           (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                           (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
-                          isnum(${4=1}) # weight
+                          ${4=0.1}>0 && # beta
+                          isnum(${5=1}) # weight
                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  ground_truth,weight=${nn_varname\ $3,1},$4
+  ground_truth,beta,weight=${nn_varname\ $3,1},${4-5}
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
-         "ground truth '"$ground_truth"' and weight "$weight"."
+         "ground truth '"$ground_truth"', beta "$beta" and weight "$weight"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_smoothl1,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
-  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
+  _${nout}_properties="ground_truth="$ground_truth", beta = "$beta", weight="$weight
+  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$beta,$weight"));"\
                 "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_smoothl1_end_forward("$nout"));"
   _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin");"
