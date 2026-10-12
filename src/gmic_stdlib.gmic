@@ -33467,7 +33467,8 @@ nn_norm : check "isvarname(['$1']) && # out
 #@cli : For types 2 and 3, 'axes' (and 'group_*') only define along which dimensions \
 # the 'gamma' (and 'beta') parameters are shared.
 #@cli : \nWhen different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
-# 'N' groups.
+# 'N' groups. 'N' must divide the corresponding input dimension, and a 'group_*' argument cannot be set \
+# for an axis that is already listed in 'axes'.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
 #@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
 nn_normalize : check "isvarname(['$1']) && # out
@@ -33493,6 +33494,12 @@ nn_normalize : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}" and groups ("$group_x,$group_y,$group_z,$group_c")."
 
+  if "axes = ['"$axes"']; (find(axes,_'x')>=0 && $group_x) || (find(axes,_'y')>=0 && $group_y) ||
+                          (find(axes,_'z')>=0 && $group_z) || (find(axes,_'c')>=0 && $group_c)"
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Invalid number of specified groups ("$group_x,$group_y,$group_z,$group_c") for axes '"$axes"'."
+  fi
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
@@ -33501,14 +33508,20 @@ nn_normalize : check "isvarname(['$1']) && # out
   _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
                       "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
 
-  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; # Dimensions of complementary axes
-    dim = ["${_${nout}_size}"];
-    [ find(axes,_'x')>=0?1:$group_x?min($group_x,dim[0]):dim[0],
-      find(axes,_'y')>=0?1:$group_y?min($group_y,dim[1]):dim[1],
-      find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
-      find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
+  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; dim = ["${_${nout}_size}"]; # Get dimensions of complementary axes
+    [ find(axes,_'x')>=0?1:$group_x?$group_x:dim[0],
+      find(axes,_'y')>=0?1:$group_y?$group_y:dim[1],
+      find(axes,_'z')>=0?1:$group_z?$group_z:dim[2],
+      find(axes,_'c')>=0?1:$group_c?$group_c:dim[3] ]"
+
+  if max([${_${nout}_size}]%[$ca_w,$ca_h,$ca_d,$ca_s])
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of specified groups ("$group_x,$group_y,$group_z,$group_c") must divide the corresponding "\
+                "input dimensions ("${_${nout}_size}")."
+  fi
 
   whds:=$has_beta?2:1,$ca_w*$ca_h*$ca_d*$ca_s,1,1
+
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
