@@ -30357,9 +30357,9 @@ nn_lib :
       d#IN+=d#OUT;
     );
 
-    # linear: Linear transform.
-    #--------------------------
-    nn_linear_init_forward(OUT,IN,axis) = (
+    # affine: Affine or linear transform.
+    #-------------------------------------
+    nn_affine_init_forward(OUT,IN,axis) = (
       const OUT#_ind = $""#OUT;
       const OUT#_rows = h##OUT#_ind;
       const OUT#_cols = w##OUT#_ind - 1;
@@ -30391,7 +30391,7 @@ nn_lib :
       );
     );
 
-    nn_linear_forward(OUT,IN) = (
+    nn_affine_forward(OUT,IN) = (
       OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
         ref(IN#,OUT#_S1);
       OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
@@ -30400,13 +30400,13 @@ nn_lib :
         ref(OUT#_S2,OUT#);
     );
 
-    nn_linear_init_backward(OUT,IN,weight_decay) = (
+    nn_affine_init_backward(OUT,IN,weight_decay) = (
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
 
-    nn_linear_backward(OUT,IN) = (
+    nn_affine_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
         ref(d#OUT,d#OUT#_S2);
@@ -30420,14 +30420,14 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
     );
 
-    nn_linear_end_backward(OUT) = (
+    nn_affine_end_backward(OUT) = (
       merge(batch_d#OUT#_params,+);
       merge(batch_d#OUT#_biases,+);
       batch_d#OUT#_params/=nn_batch_size;
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
-    nn_linear_update(P,O,learning_mode) = (
+    nn_affine_update(P,O,learning_mode) = (
       nn_fc_update(#P,#O,#learning_mode);
     );
 
@@ -32702,13 +32702,13 @@ nn_input : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,"${2--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_linear : out,in,nb_channels>0,axis={ x | y | z | c },_learning_mode,_weight_decay>=0,_initialization
+#@cli nn_affine : out,in,nb_channels>0,axis={ x | y | z | c },_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'linear' layer to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_linear : check "isvarname(['$1']) && # out
+nn_affine : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
                    isin(_'$4',_'x',_'y',_'z',_'c') && # axis
@@ -32752,11 +32752,11 @@ nn_linear : check "isvarname(['$1']) && # out
     1,100% j.. .,100% rm. # Always set biases to 0
     => $nout
   fi
-  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin,$axis"));"\
-                   "nn_linear_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_linear_init_backward("$nout,$nin,$weight_decay"));"\
-                    "nn_linear_backward("$nout,$nin");"\
-                    "end(nn_linear_end_backward("$nout"));"
+  _${nout}_forward="begin(nn_affine_init_forward("$nout,$nin,$axis"));"\
+                   "nn_affine_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_affine_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_affine_backward("$nout,$nin");"\
+                    "end(nn_affine_end_backward("$nout"));"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
