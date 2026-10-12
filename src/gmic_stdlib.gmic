@@ -30434,13 +30434,14 @@ nn_lib :
 
     # maxpool2d : 2D max pooling.
     #----------------------------
-    nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
+    nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs,is_ceil) = (
+      const OUT#_width = int((IN#_width + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_height = int((IN#_height + is_ceil*(patch_size - 1))/patch_size);
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
+      const OUT#_is_ceil = is_ceil;
     );
 
     nn_maxpool2d_forward(OUT,IN) = (
@@ -30454,7 +30455,7 @@ nn_lib :
             repeat (OUT#_width,_nn_x,
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_z,_nn_c,
-                                OUT#_patch_size,OUT#_patch_size,1,1);
+                                OUT#_patch_size,OUT#_patch_size,1,1,1); # Neumann boundary
               _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
@@ -30474,9 +30475,11 @@ nn_lib :
             _nn_yp = _nn_y*OUT#_patch_size;
             repeat (OUT#_width,_nn_x,
               _nn_from = OUT#_from[_nn_offOUT];
-              _nn_from_x = _nn_from%OUT#_patch_size;
-              _nn_from_y = int(_nn_from/OUT#_patch_size);
-              _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x + IN#_width*(_nn_yp + _nn_from_y);
+              _nn_xp = _nn_x*OUT#_patch_size;
+              # Clamp inside the image (matters only for partial patches in 'ceil' mode).
+              _nn_from_x = min(_nn_from%OUT#_patch_size,IN#_width - 1 - _nn_xp);
+              _nn_from_y = min(int(_nn_from/OUT#_patch_size),IN#_height - 1 - _nn_yp);
+              _nn_offIN = _nn_offIN0 + _nn_xp + _nn_from_x + IN#_width*(_nn_yp + _nn_from_y);
               d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
           );
@@ -30486,13 +30489,14 @@ nn_lib :
 
     # maxpool3d : 3D max pooling.
     #----------------------------
-    nn_maxpool3d_init_forward(OUT,IN,patch_size,is_maxabs) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
-      const OUT#_depth = int(IN#_depth/patch_size);
+    nn_maxpool3d_init_forward(OUT,IN,patch_size,is_maxabs,is_ceil) = (
+      const OUT#_width = int((IN#_width + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_height = int((IN#_height + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_depth = int((IN#_depth + is_ceil*(patch_size - 1))/patch_size);
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
+      const OUT#_is_ceil = is_ceil;
     );
 
     nn_maxpool3d_forward(OUT,IN) = (
@@ -30507,7 +30511,7 @@ nn_lib :
             repeat (OUT#_width,_nn_x,
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_zp,_nn_c,
-                                OUT#_patch_size,OUT#_patch_size,OUT#_patch_size,1);
+                                OUT#_patch_size,OUT#_patch_size,OUT#_patch_size,1,1); # Neumann boundary
               _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
@@ -30528,10 +30532,12 @@ nn_lib :
             _nn_yp = _nn_y*OUT#_patch_size;
             repeat (OUT#_width,_nn_x,
               _nn_from = OUT#_from[_nn_offOUT];
-              _nn_from_x = _nn_from%OUT#_patch_size;
-              _nn_from_y = int(_nn_from/OUT#_patch_size)%OUT#_patch_size;
-              _nn_from_z = int(_nn_from/OUT#_patch_size^2);
-              _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x +
+              _nn_xp = _nn_x*OUT#_patch_size;
+              # Clamp inside the image (matters only for partial patches in 'ceil' mode).
+              _nn_from_x = min(_nn_from%OUT#_patch_size,IN#_width - 1 - _nn_xp);
+              _nn_from_y = min(int(_nn_from/OUT#_patch_size)%OUT#_patch_size,IN#_height - 1 - _nn_yp);
+              _nn_from_z = min(int(_nn_from/OUT#_patch_size^2),IN#_depth - 1 - _nn_zp);
+              _nn_offIN = _nn_offIN0 + _nn_xp + _nn_from_x +
                           IN#_width*(_nn_yp + _nn_from_y + IN#_height*(_nn_zp + _nn_from_z));
               d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
@@ -33105,30 +33111,34 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
+#@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes },_is_ceil={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
-#@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
+#@cli : If 'is_ceil=1', partial patches at the image borders are pooled too (output size = ceil(size/patch_size)),
+#@cli : otherwise they are dropped (output size = floor(size/patch_size)).
+#@cli : Default values: 'patch_size=2', 'is_maxabs=0' and 'is_ceil=0'.
 nn_maxpool2d : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
-                      isbool(${4=0}) # is_maxabs
+                      isbool(${4=0}) && # is_maxabs
+                      isbool(${5=0}) # is_ceil
                       "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  patch_size,is_maxabs=${3-4}
+  patch_size,is_maxabs,is_ceil=${3-5}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
+  if $is_ceil s_ceil=" and 'ceil' mode" fi
 
   e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size$s_maxabs"."
+         "patch size "$patch_size$s_maxabs$s_ceil"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool2d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,2]+$is_ceil*($patch_size-1))/$patch_size),s[2,2]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
-  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
+  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs", is_ceil="$is_ceil
+  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs,$is_ceil"));"\
                    "nn_maxpool2d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -33136,30 +33146,34 @@ nn_maxpool2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
+#@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes },_is_ceil={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
-#@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
+#@cli : If 'is_ceil=1', partial patches at the volume borders are pooled too (output size = ceil(size/patch_size)),
+#@cli : otherwise they are dropped (output size = floor(size/patch_size)).
+#@cli : Default values: 'patch_size=2', 'is_maxabs=0' and 'is_ceil=0'.
 nn_maxpool3d : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
-                      isbool(${4=0}) # is_maxabs
+                      isbool(${4=0}) && # is_maxabs
+                      isbool(${5=0}) # is_ceil
                       "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  patch_size,is_maxabs=${3-4}
+  patch_size,is_maxabs,is_ceil=${3-5}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
+  if $is_ceil s_ceil=" and 'ceil' mode" fi
 
   e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size$s_maxabs"."
+         "patch size "$patch_size$s_maxabs$s_ceil"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool3d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,3]+$is_ceil*($patch_size-1))/$patch_size),s[3]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
-  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
+  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs", is_ceil="$is_ceil
+  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size,$is_maxabs,$is_ceil"));"\
                    "nn_maxpool3d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
