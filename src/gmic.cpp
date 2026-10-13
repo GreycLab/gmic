@@ -2445,9 +2445,6 @@ static void *gmic_parallel(void *arg) {
     st.exception._command.assign(e._command);
     st.exception._message.assign(e._message);
   }
-#if defined(gmic_is_parallel) && defined(gmic_parallel_use_pthread)
-  pthread_exit(0);
-#endif // #if defined(gmic_is_parallel) && defined(gmic_parallel_use_pthread)
   return 0;
 }
 
