@@ -84,14 +84,11 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
 
     if [ "$MODE" == "final" ]; then
         SUFFIX="";
-        sed "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile > /tmp/Makefile
-        mv /tmp/Makefile Makefile
-        sed "s/PRERELEASE = /NO_PRERELEASE = /" Makefile > /tmp/Makefile
-        mv /tmp/Makefile Makefile
+        sed -i "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile
+        sed -i "s/PRERELEASE = /NO_PRERELEASE = /" Makefile
     else SUFFIX=_pre;
     fi
-    sed "s/rm -rf CImg.h gmic_stdlib_community.h /rm -rf /" Makefile > /tmp/Makefile
-    mv /tmp/Makefile Makefile
+    sed -i 's/rm -rf CImg.h gmic_stdlib_community.h /$(RM) CImg.h gmic_stdlib_community.h /g' Makefile
 
     echo " - Release number : $SVERSION$SUFFIX (GIMP $GIMPVER)."
 
@@ -130,21 +127,17 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
     cd $HOME/gmic-qt && rm -rf .obj
     if [ "$MODE" == "final" ]; then
         qmake COMPILER=clang PRERELEASE= HOST=none gmic_qt.pro && make clean
-        sed "s/-fno-keep-inline-dllexport //" Makefile.Release > /tmp/Makefile
-        mv /tmp/Makefile Makefile.Release
+        sed -i "s/-fno-keep-inline-dllexport //" Makefile.Release
         make -j8 release
         qmake COMPILER=clang PRERELEASE= HOST=gimp gmic_qt.pro
-        sed "s/-fno-keep-inline-dllexport //" Makefile.Release > /tmp/Makefile
-        mv /tmp/Makefile Makefile.Release
+        sed -i "s/-fno-keep-inline-dllexport //" Makefile.Release
         make -j8 release
     else
         qmake COMPILER=clang PRERELEASE=`date +%y%m%d%H` HOST=none gmic_qt.pro && make clean
-        sed "s/-fno-keep-inline-dllexport //" Makefile.Release > /tmp/Makefile
-        mv /tmp/Makefile Makefile.Release
+        sed -i "s/-fno-keep-inline-dllexport //" Makefile.Release
         make -j8 release
         qmake COMPILER=clang PRERELEASE=`date +%y%m%d%H` HOST=gimp gmic_qt.pro
-        sed "s/-fno-keep-inline-dllexport //" Makefile.Release > /tmp/Makefile
-        mv /tmp/Makefile Makefile.Release
+        sed -i "s/-fno-keep-inline-dllexport //" Makefile.Release
         make -j8 release
     fi
 
@@ -258,10 +251,8 @@ if [ "$HOSTNAME" != "C302L-G26P03.png.unicaen.fr" ] &&
     find gmic-${SVERSION}${SUFFIX} -exec touch {} || true
 
     cd $OUTDIR/src
-    sed "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile > /tmp/Makefile
-    mv /tmp/Makefile Makefile;
-    sed "s/\&\& \$(MAKE) clean//g" Makefile > /tmp/Makefile
-    mv /tmp/Makefile Makefile;  # Prevent 'qmake not found' bug when using dpkg-buildpackage, still don't know why.
+    sed -i "s/\$(MAKE) lib cli gimp gmic_qt libc/\$(MAKE) lib cli_shared gimp_shared gmic_qt_shared libc/g" Makefile
+    sed -i "s/\&\& \$(MAKE) clean//g" Makefile
 
     cd /tmp/$OUTDIR
     dpkg-buildpackage -d -j4 -rfakeroot
@@ -423,25 +414,19 @@ cp -Lrf *.qrc translations icons images resources src ui README.md COPYING gmic_
 cd ..
 
 cd $DIR
-sed s\/_gmic_version\/$SVERSION$SUFFIX\/ README > /tmp/README
-mv /tmp/README README
+sed -i s\/_gmic_version\/$SVERSION$SUFFIX\/ README
 
 cd $DIR/debian
-sed s\/_gmic_version\/$SVERSION\/ changelog > /tmp/changelog
-mv /tmp/changelog changelog
+sed -i s\/_gmic_version\/$SVERSION\/ changelog
 
 cd $DIR/src
 if [ "$MODE" == "final" ]; then
-    sed "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile > /tmp/Makefile
-    mv /tmp/Makefile Makefile
-    sed "s/PRERELEASE = /NO_PRERELEASE = /" Makefile > /tmp/Makefile
-    mv /tmp/Makefile Makefile
+    sed -i "s/PRERELEASE_CFLAGS = /NO_PRERELEASE_CFLAGS = /" Makefile
+    sed -i "s/PRERELEASE = /NO_PRERELEASE = /" Makefile
 fi
-sed "s/rm -rf CImg.h gmic_stdlib_community.h /rm -rf /" Makefile > /tmp/Makefile
-mv /tmp/Makefile Makefile
+sed -i 's/$(RM) -rf CImg.h gmic_stdlib_community.h /$(RM) /' Makefile
 for i in *.h *.cpp *.c *.gmic *.scm; do
-    sed -e 's/ *$//' $i >/tmp/gmic_buildpackage$$
-    mv /tmp/gmic_buildpackage$$ $i
+    sed -i -e 's/ *$//' $i
 done
 
 cd $DIR
