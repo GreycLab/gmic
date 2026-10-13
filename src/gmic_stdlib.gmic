@@ -18826,7 +18826,7 @@ scale2x_cnn : check "${1=1.25}>=0"
   repeat $N {
     mv[0] $! rgb2ycbcr. +r. 200%,200%,1,100%,3 channels.. 0
     +img2patches.. 32,8,3 i 64,64,100%
-    1,1,100%,1,:${_nn_lib}"
+    1,1,100%,1,:${-nn_lib}"
       IN = crop(#-2,0,0,z,0,32,32,1,1);"${_s2x_forward}"
       !t?critical(run('progress ',100*z*n/d));
       draw(#-1,s2x_RESIDUAL,0,0,z,0,64,64,1,1)" rm.
@@ -19643,7 +19643,7 @@ denoise_cnn : check "${1=0}>=0 && isint(${2=64},1)"
     if $1 1,1,100%,1,$1 else +l. { s z foreach { (${-std_noise}) k. } a z max 1 } fi # Noise estimation
     $patch_size,$patch_size,100%,3
     $_denoise_cnn
-    1,1,{0,d},1,:${_nn_lib}"
+    1,1,{0,d},1,:${-nn_lib}"
       IN = crop(#0,0,0,z,w#0,h#0,1)/255;
       NL = [ i[#1,z] ];
       "${_denoise_forward}"
@@ -20072,7 +20072,7 @@ heat_flow : skip ${1=10},${2=30},${3=0}
   e[^-1] "Apply $1 iterations of the heat flow to image$?, with time step $2."
   pde_flow $1,$2,laplacian,$3
 
-#@cli hessian : { xx | xy | xz | yy | yz | zz }...{ xx | xy | xz | yy | yz | zz },_boundary_conditions : (no arg) :
+#@cli hessian : { xx | xy | xz | yy | yz | zz }...{ xx | xy | xz | yy | yz | zz },_boundary_conditions : (no arg)
 #@cli : Compute the hessian components (second derivatives) of selected images along specified axes.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : (no arg) compute all significant components.
@@ -29013,9 +29013,10 @@ run :
 #
 #-------------------------
 
-#@cli nn_lib :
+#@cli nn_lib
 #@cli : Define the math functions that have to be included in a math expression, when using 'nn_lib', \
-# the G'MIC neural network library. This command sets string variable '$_nn_lib' and returns its content.
+# the G'MIC neural network library.
+#@cli : Default value: 'mode=0'.
 nn_lib :
   if v=get('_nn_lib',0,1);!v||isnan(v) _nn_lib="
     #---------------------------------------------------------------------------
@@ -29028,7 +29029,6 @@ nn_lib :
       const nn_optimizer_adamax = 1;
       const nn_optimizer_rmsprop = 2;
       const nn_optimizer_sgd = 3;
-      const nn_is_training = 0;
     );
 
     begin_t(
@@ -29048,16 +29048,12 @@ nn_lib :
     nn_display(L) = display(L#,L#_width,L#_height,L#_depth,L#_spectrum);
     nn_display(L,M) = display(L#,M#_width,M#_height,M#_depth,M#_spectrum);
     nn_store(N,L) = store(N#,L#,L#_width,L#_height,L#_depth,L#_spectrum);
+    nn_set_training(OUT) = !isvar(OUT#_is_training)?(const OUT#_is_training = 1);
 
     #--------------------------------------
     # Activation functions and derivatives.
     #--------------------------------------
     # Activation functions **must work** with vector-valued arguments.
-
-    # z: Identity.
-    #--------------
-    nn_activation_z(z) = z;
-    nn_activation_d_z(z) = 1;
 
     # elu: Exponential Linear Unit.
     #------------------------------
@@ -29069,25 +29065,35 @@ nn_lib :
     nn_activation_gelu(z) = (0.5*z*(1 + erf(z/sqrt(2))));
     nn_activation_d_gelu(z) = (0.5 + 0.5*erf(z/sqrt(2)) + z*exp(-z^2/2)/sqrt(2*pi));
 
+    # hardsigmoid (piecewise-linear approximation of sigmoid).
+    #---------------------------------------------------------
+    nn_activation_hardsigmoid(z) = (cut(z + 3,0,6)/6);
+    nn_activation_d_hardsigmoid(z) = ((z>-3)*(z<3)/6);
+
+    # hardswish (piecewise-linear approximation of swish).
+    #-----------------------------------------------------
+    nn_activation_hardswish(z) = (z*cut(z + 3,0,6)/6);
+    nn_activation_d_hardswish(z) = ((z>=-3)*(z<=3)*(z/3 + 0.5) + (z>3));
+
     # leakyrelu: Leaky Rectified Linear Unit.
     #----------------------------------------
     nn_activation_leakyrelu(z) = (vmax(z,0) + 0.01*vmin(z,0));
-    nn_activation_d_leakyrelu(z) = (0.01 + 0.99*(z>=0));
+    nn_activation_d_leakyrelu(z) = (0.01 + 0.99*(z>0));
 
     # linear: Identity function.
     #---------------------------
     nn_activation_linear(z) = z;
     nn_activation_d_linear(z) = 1;
 
-    # log: Logarithm.
-    #----------------
-    nn_activation_log(z) = log(vmax(z,nn_eps));
-    nn_activation_d_log(z) = ((z>nn_eps)/vmax(z,nn_eps));
+    # logabs: Logarithm of absolute value.
+    #-------------------------------------
+    nn_activation_logabs(z) = log(abs(z) + nn_eps);
+    nn_activation_d_logabs(z) = (sign(z)/(abs(z) + nn_eps));
 
     # relu: Rectified Linear Unit.
     #-----------------------------
     nn_activation_relu(z) = vmax(z,0);
-    nn_activation_d_relu(z) = (z>=0);
+    nn_activation_d_relu(z) = (z>0);
 
     # sigmoid : Sigmoid (i.e. Logistic).
     #------------------------------------
@@ -29213,15 +29219,13 @@ nn_lib :
     nn_trainer_init(T,L,O,S) = (
       const T#_ind = $""#T;
       const T#_loss_eps = 1e-4;
-      unref(nn_is_training);
-      const nn_is_training = 1;
       nn_clip_gradient_min = 0;
       nn_clip_gradient_max = inf;
       nn_iteration = max(0,i[##T#_ind,0]);
       nn_optimizer_#O#_init(#T);
+      !nn_iteration?(nn_momentum = 0); # No momentum at the first iteration
       nn_scheduler_#S#_init(#T);
       nn_learning_rate = i[##T#_ind,1];
-      !nn_iteration?(nn_momentum = 0);
       nn_is_clip_gradient = nn_clip_gradient_min>0 || !isinf(nn_clip_gradient_max);
     );
 
@@ -29581,7 +29585,7 @@ nn_lib :
       const OUT#_width = out_width;
       const OUT#_height = out_height;
       const OUT#_depth = 1;
-      const OUT#_spectrum = ceil(IN#_height/OUT#_patch_size^2);
+      const OUT#_spectrum = IN#_height/OUT#_patch_size^2; # Always integer
       const OUT#_nb_cols = max(1,ceil((OUT#_width - overlap)/OUT#_p_o));
       const OUT#_nb_rows = max(1,ceil((OUT#_height - overlap)/OUT#_p_o));
 
@@ -29662,13 +29666,15 @@ nn_lib :
       const OUT#_shrink_stride_x = OUT#_shrink_x*OUT#_stride_x;
       const OUT#_shrink_stride_y = OUT#_shrink_y*OUT#_stride_y;
       const OUT#_shrink_stride_z = OUT#_shrink_z*OUT#_stride_z;
+      !isvar(OUT#_is_training)?(const OUT#_is_training = 0);
+
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_padding_x = nn_is_training && boundary_conditions!=0?OUT#_dilation_x*int(OUT#_kernel_width/2):0;
-      const OUT#_padding_y = nn_is_training && boundary_conditions!=0?OUT#_dilation_y*int(OUT#_kernel_height/2):0;
-      const OUT#_padding_z = nn_is_training && boundary_conditions!=0?OUT#_dilation_z*int(OUT#_kernel_depth/2):0;
+      const OUT#_padding_x = OUT#_is_training && boundary_conditions!=0?OUT#_dilation_x*int(OUT#_kernel_width/2):0;
+      const OUT#_padding_y = OUT#_is_training && boundary_conditions!=0?OUT#_dilation_y*int(OUT#_kernel_height/2):0;
+      const OUT#_padding_z = OUT#_is_training && boundary_conditions!=0?OUT#_dilation_z*int(OUT#_kernel_depth/2):0;
       const OUT#_is_padded = OUT#_padding_x || OUT#_padding_y ||OUT#_padding_z;
       OUT#_is_padded?(
         nn_crop_init_forward(OUT#_padded,IN#,
@@ -29725,7 +29731,8 @@ nn_lib :
 
       # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      OUT#_is_padded?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      OUT#_is_padded?(d#OUT#_padded = vector(#size(OUT#_padded))):ref(d#IN,d#OUT#_padded);
+
       repeat (OUT#_padded_spectrum,_nn_k,
         draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
@@ -29803,11 +29810,13 @@ nn_lib :
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
+      !isvar(OUT#_is_training)?(const OUT#_is_training = 0);
+
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_padding = nn_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
+      const OUT#_padding = OUT#_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
       OUT#_padding?(
         nn_crop_init_forward(OUT#_padded,IN#,
                              -OUT#_padding,-OUT#_padding,0,0,
@@ -29859,7 +29868,8 @@ nn_lib :
 
       # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      OUT#_padding?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      OUT#_padding?(d#OUT#_padded = vector(#size(OUT#_padded))):ref(d#IN,d#OUT#_padded);
+
       repeat (OUT#_padded_spectrum,_nn_k,
         draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
@@ -29935,11 +29945,13 @@ nn_lib :
       const OUT#_dilation = dilation;
       const OUT#_boundary_conditions = boundary_conditions;
       const OUT#_shrink_stride = OUT#_shrink*OUT#_stride;
+      !isvar(OUT#_is_training)?(const OUT#_is_training = 0);
+
       OUT#_params = crop(##OUT#_ind,0,0,w##OUT#_ind - 1,OUT#_spectrum);
       OUT#_biases = crop(##OUT#_ind,w##OUT#_ind - 1,0,1,OUT#_spectrum);
 
       # Define geometry of OUT#_padded (that is the input image for convolve()).
-      const OUT#_padding = nn_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
+      const OUT#_padding = OUT#_is_training && boundary_conditions?OUT#_dilation*int(OUT#_kernel_size/2):0;
       OUT#_padding?(
         nn_crop_init_forward(OUT#_padded,IN#,
                              -OUT#_padding,-OUT#_padding,-OUT#_padding,0,
@@ -29992,7 +30004,8 @@ nn_lib :
 
       # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
       nn_define_backward(IN#);
-      OUT#_padding?nn_define_backward(OUT#_padded):ref(d#IN,d#OUT#_padded);
+      OUT#_padding?(d#OUT#_padded = vector(#size(OUT#_padded))):ref(d#IN,d#OUT#_padded);
+
       repeat (OUT#_padded_spectrum,_nn_k,
         draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
              correlate(d#OUT#_prestrided,
@@ -30140,13 +30153,12 @@ nn_lib :
     );
 
     nn_div_forward(OUT,IN0,IN1) = (
-      OUT#_nonzero_IN1 = abscut(IN1#,nn_eps);
-      OUT# = IN0#/OUT#_nonzero_IN1;
+      OUT# = IN0#/IN1#;
     );
 
     nn_div_backward(OUT,IN0,IN1) = (
-      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT/OUT#_nonzero_IN1);
-      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT*IN0#/OUT#_nonzero_IN1^2);
+      size(IN0#)?(nn_define_backward(IN0#); d#IN0+=d#OUT/IN1#);
+      size(IN1#)?(nn_define_backward(IN1#); d#IN1+=-d#OUT*IN0#/IN1#^2);
     );
 
     # dropout : Spatial dropout (cancel whole channels).
@@ -30156,15 +30168,15 @@ nn_lib :
       const OUT#_height = IN#_height;
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
-      const OUT#_dropout_rate = cut(dropout_rate,0,0.999);
+      !isvar(OUT#_is_training)?(const OUT#_is_training = 0);
+      const OUT#_dropout_rate = OUT#_is_training?cut(dropout_rate,0,0.999):0;
     );
 
     nn_dropout_forward(OUT,IN) = (
-      nn_is_training && OUT#_dropout_rate?(
+      OUT#_dropout_rate?(
         OUT#_dropout_channels = vector(##OUT#_spectrum);
         fill(OUT#_dropout_channels,u>=OUT#_dropout_rate);
         OUT#_dropout_fact = 1/(1 - OUT#_dropout_rate);
-        !sum(OUT#_dropout_channels)?(OUT#_dropout_channels = 1; OUT#_dropout_fact = 1);
         OUT#_dropout_mask = resize(OUT#_dropout_channels,size(IN#),1);
         OUT#_dropout_mask*=OUT#_dropout_fact;
         OUT# = IN#*OUT#_dropout_mask;
@@ -30175,7 +30187,7 @@ nn_lib :
 
     nn_dropout_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=nn_is_training && OUT#_dropout_rate?d#OUT*OUT#_dropout_mask:d#OUT;
+      d#IN+=OUT#_dropout_rate?d#OUT*OUT#_dropout_mask:d#OUT;
     );
 
     # fc: Fully-connected layer.
@@ -30341,9 +30353,9 @@ nn_lib :
       d#IN+=d#OUT;
     );
 
-    # linear: Linear transform.
-    #--------------------------
-    nn_linear_init_forward(OUT,IN,axis) = (
+    # affine: Affine/linear transform.
+    #---------------------------------
+    nn_affine_init_forward(OUT,IN,axis) = (
       const OUT#_ind = $""#OUT;
       const OUT#_rows = h##OUT#_ind;
       const OUT#_cols = w##OUT#_ind - 1;
@@ -30375,7 +30387,7 @@ nn_lib :
       );
     );
 
-    nn_linear_forward(OUT,IN) = (
+    nn_affine_forward(OUT,IN) = (
       OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
         ref(IN#,OUT#_S1);
       OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
@@ -30384,13 +30396,13 @@ nn_lib :
         ref(OUT#_S2,OUT#);
     );
 
-    nn_linear_init_backward(OUT,IN,weight_decay) = (
+    nn_affine_init_backward(OUT,IN,weight_decay) = (
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
 
-    nn_linear_backward(OUT,IN) = (
+    nn_affine_backward(OUT,IN) = (
       nn_define_backward(IN#);
       OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
         ref(d#OUT,d#OUT#_S2);
@@ -30404,26 +30416,27 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
     );
 
-    nn_linear_end_backward(OUT) = (
+    nn_affine_end_backward(OUT) = (
       merge(batch_d#OUT#_params,+);
       merge(batch_d#OUT#_biases,+);
       batch_d#OUT#_params/=nn_batch_size;
       batch_d#OUT#_biases/=nn_batch_size;
     );
 
-    nn_linear_update(P,O,learning_mode) = (
+    nn_affine_update(P,O,learning_mode) = (
       nn_fc_update(#P,#O,#learning_mode);
     );
 
     # maxpool2d : 2D max pooling.
     #----------------------------
-    nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
+    nn_maxpool2d_init_forward(OUT,IN,patch_size,is_maxabs,is_ceil) = (
+      const OUT#_width = int((IN#_width + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_height = int((IN#_height + is_ceil*(patch_size - 1))/patch_size);
       const OUT#_depth = IN#_depth;
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
+      const OUT#_is_ceil = is_ceil;
     );
 
     nn_maxpool2d_forward(OUT,IN) = (
@@ -30437,7 +30450,7 @@ nn_lib :
             repeat (OUT#_width,_nn_x,
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_z,_nn_c,
-                                OUT#_patch_size,OUT#_patch_size,1,1);
+                                OUT#_patch_size,OUT#_patch_size,1,1,1); # Neumann boundary
               _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
@@ -30457,9 +30470,11 @@ nn_lib :
             _nn_yp = _nn_y*OUT#_patch_size;
             repeat (OUT#_width,_nn_x,
               _nn_from = OUT#_from[_nn_offOUT];
-              _nn_from_x = _nn_from%OUT#_patch_size;
-              _nn_from_y = int(_nn_from/OUT#_patch_size);
-              _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x + IN#_width*(_nn_yp + _nn_from_y);
+              _nn_xp = _nn_x*OUT#_patch_size;
+              # Clamp inside the image (matters only for partial patches in 'ceil' mode).
+              _nn_from_x = min(_nn_from%OUT#_patch_size,IN#_width - 1 - _nn_xp);
+              _nn_from_y = min(int(_nn_from/OUT#_patch_size),IN#_height - 1 - _nn_yp);
+              _nn_offIN = _nn_offIN0 + _nn_xp + _nn_from_x + IN#_width*(_nn_yp + _nn_from_y);
               d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
           );
@@ -30469,13 +30484,14 @@ nn_lib :
 
     # maxpool3d : 3D max pooling.
     #----------------------------
-    nn_maxpool3d_init_forward(OUT,IN,patch_size,is_maxabs) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
-      const OUT#_depth = int(IN#_depth/patch_size);
+    nn_maxpool3d_init_forward(OUT,IN,patch_size,is_maxabs,is_ceil) = (
+      const OUT#_width = int((IN#_width + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_height = int((IN#_height + is_ceil*(patch_size - 1))/patch_size);
+      const OUT#_depth = int((IN#_depth + is_ceil*(patch_size - 1))/patch_size);
       const OUT#_spectrum = IN#_spectrum;
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
+      const OUT#_is_ceil = is_ceil;
     );
 
     nn_maxpool3d_forward(OUT,IN) = (
@@ -30490,7 +30506,7 @@ nn_lib :
             repeat (OUT#_width,_nn_x,
               OUT#_patch = crop(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum,
                                 _nn_x*OUT#_patch_size,_nn_yp,_nn_zp,_nn_c,
-                                OUT#_patch_size,OUT#_patch_size,OUT#_patch_size,1);
+                                OUT#_patch_size,OUT#_patch_size,OUT#_patch_size,1,1); # Neumann boundary
               _nn_argmax = OUT#_is_maxabs?argmaxabs(OUT#_patch):argmax(OUT#_patch);
               OUT#[_nn_off] = OUT#_patch[_nn_argmax];
               OUT#_from[_nn_off++] = _nn_argmax;
@@ -30511,10 +30527,12 @@ nn_lib :
             _nn_yp = _nn_y*OUT#_patch_size;
             repeat (OUT#_width,_nn_x,
               _nn_from = OUT#_from[_nn_offOUT];
-              _nn_from_x = _nn_from%OUT#_patch_size;
-              _nn_from_y = int(_nn_from/OUT#_patch_size)%OUT#_patch_size;
-              _nn_from_z = int(_nn_from/OUT#_patch_size^2);
-              _nn_offIN = _nn_offIN0 + _nn_x*OUT#_patch_size + _nn_from_x +
+              _nn_xp = _nn_x*OUT#_patch_size;
+              # Clamp inside the image (matters only for partial patches in 'ceil' mode).
+              _nn_from_x = min(_nn_from%OUT#_patch_size,IN#_width - 1 - _nn_xp);
+              _nn_from_y = min(int(_nn_from/OUT#_patch_size)%OUT#_patch_size,IN#_height - 1 - _nn_yp);
+              _nn_from_z = min(int(_nn_from/OUT#_patch_size^2),IN#_depth - 1 - _nn_zp);
+              _nn_offIN = _nn_offIN0 + _nn_xp + _nn_from_x +
                           IN#_width*(_nn_yp + _nn_from_y + IN#_height*(_nn_zp + _nn_from_z));
               d#IN[_nn_offIN]+=d#OUT[_nn_offOUT++];
             );
@@ -30648,7 +30666,6 @@ nn_lib :
         OUT#_off = _nn_l*OUT#_width;
         OUT#_crop = OUT#[OUT#_off,OUT#_width];
         d#OUT#_crop = d#OUT#[OUT#_off,OUT#_width];
-        _nn_N = OUT#_epsiloned[_nn_l];
         copy(d#IN[OUT#_off],
              (d#OUT#_crop - sign(OUT#_crop)*dot(d#OUT#_crop,OUT#_crop)*norm1(OUT#_crop))/
              OUT#_epsiloned[_nn_l],
@@ -30970,13 +30987,13 @@ nn_lib :
       const OUT#_amplitude = amplitude;
       const OUT#_noise_type = noise_type;
       const OUT#_training_only = training_only;
+      !isvar(OUT#_is_training)?(const OUT#_is_training = 0);
     );
 
     nn_noise_forward(OUT,IN) = (
-      !nn_is_training && OUT#_training_only?(
+      !OUT#_is_training && OUT#_training_only?(
         OUT# = IN#;
       ):(
-        srand();
         OUT# = noise(IN#,OUT#_amplitude,OUT#_noise_type);
       );
     );
@@ -31060,7 +31077,7 @@ nn_lib :
           OUT#_crop = IN#[_nn_k,IN#_spectrum,IN#_width*IN#_height*IN#_depth];
           copy(d#IN[_nn_k],nn_dnormp(OUT#_crop,OUT#[_nn_off],OUT#_p)*d#OUT[_nn_off],
                IN#_spectrum,IN#_width*IN#_height*IN#_depth,1,-1);
-            ++_nn_off;
+          ++_nn_off;
         );
         OUT#;
       ):(d#IN+=nn_dnormp(IN#,OUT#,OUT#_p)*d#OUT);
@@ -31311,10 +31328,10 @@ nn_lib :
     # patchdown2d: 2D downscale by patch.
     #------------------------------------
     nn_patchdown2d_init_forward(OUT,IN,patch_size) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
+      const OUT#_width = IN#_width/patch_size; # Always integer
+      const OUT#_height = IN#_height/patch_size; # Always integer
       const OUT#_depth = IN#_depth;
-      const OUT#_spectrum = IN#_spectrum*patch_size^2;
+      const OUT#_spectrum = IN#_spectrum*patch_size^2; # Always integer
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const p = patch_size; const p2 = p^2;
         fx = p*x + c%p; fy = p*y + int(c/p)%p;
@@ -31342,9 +31359,9 @@ nn_lib :
     # patchdown3d: 3D downscale by patch.
     #------------------------------------
     nn_patchdown3d_init_forward(OUT,IN,patch_size) = (
-      const OUT#_width = int(IN#_width/patch_size);
-      const OUT#_height = int(IN#_height/patch_size);
-      const OUT#_depth = int(IN#_depth/patch_size);
+      const OUT#_width = IN#_width/patch_size; # Always integer
+      const OUT#_height = IN#_height/patch_size; # Always integer
+      const OUT#_depth = IN#_depth/patch_size;
       const OUT#_spectrum = IN#_spectrum*patch_size^3;
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const p = patch_size; const p2 = p^2; const p3 = p^3;
@@ -31376,7 +31393,7 @@ nn_lib :
       const OUT#_width = IN#_width*patch_size;
       const OUT#_height = IN#_height*patch_size;
       const OUT#_depth = IN#_depth;
-      const OUT#_spectrum = IN#_spectrum/patch_size^2;
+      const OUT#_spectrum = IN#_spectrum/patch_size^2; # Always integer
       const OUT#_patch_size = patch_size;
       OUT#_map_forward = expr('const p = patch_size; const p2 = p^2;
         fx = x%p; fy = y%p;
@@ -31990,9 +32007,9 @@ nn_lib :
 
     # smoothl1 : Smooth L1-norm.
     #---------------------------
-    nn_loss_smoothl1_init_forward(OUT,IN,weight) = (
+    nn_loss_smoothl1_init_forward(OUT,IN,beta,weight) = (
       const OUT#_weight = weight/size(IN#);
-      const OUT#_beta = 1e-3;
+      const OUT#_beta = beta;
       batch_#OUT = 0;
     );
 
@@ -32012,7 +32029,7 @@ nn_lib :
 
     nn_loss_smoothl1_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=vmin(vmax(OUT#_delta/OUT#_beta,-1),1)*OUT#_weight;
+      d#IN+=cut(OUT#_delta/OUT#_beta,-1,1)*OUT#_weight;
     );
 
     # softmax_ce : Softmax + Cross entropy.
@@ -32065,20 +32082,83 @@ nn_add : check "isvarname(['$1']) && # out
     fi
     nins.=$sep${nin$>} ins.=$sep${in$>} sep=,
   }
-  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
 
   e[^-1] "[nn_lib] Add 'add' layer '"$out"' to network '"$net"', with inputs '"$ins"'."
 
+  if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_forward="begin(nn_add_init_forward("$nout,$nnin"));"
   _${nout}_forward.="nn_add_forward("$nout,$nins");"
   _${nout}_backward="nn_add_backward("$nout,$nins");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$ins"\n"
+  _nn_previous_layer=$out
+
+#@cli nn_affine : out,in,nb_channels>0,axis={ x | y | z | c },_learning_mode,_weight_decay>=0,_initialization
+#@cli : Add an 'affine' layer to the current network.
+#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
+# 4:Residual He-initialization }.
+#@cli : Note: biases are always allocated; use 'learning_mode=1' (that uses zero-initialized biases) \
+# to get a pure linear layer.
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+nn_affine : check "isvarname(['$1']) && # out
+                   (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                   isint($3,1) && # nb_channels
+                   isin(_'$4',_'x',_'y',_'z',_'c') && # axis
+                   isint(${5=3},0,3) && # learning_mode
+                   ${6=0}>=0 && # weight_decay
+                   isint(${7=3},0,4) # initialization
+                   "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nn_check_layer $nin
+  nb_channels,axis,learning_mode,weight_decay,initialization=${3-7}
+
+  e[^-1] "[nn_lib] Add 'affine' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
+         "and axis '"$axis"'."
+
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=affine,
+  _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
+  _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
+  _${nout}_properties="axis="$axis", learning_mode="$learning_mode", weight_decay="$weight_decay
+
+  whds={k=indexof(_'$axis',_'x',_'y',_'z',_'c');[${_${nin}_size}][k]+1},$nb_channels,1,1
+  if isint(${$nout})
+    if {$nout,[w,h,d,s]!=[$whds]}
+      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
+                  "should be ("$whds")."
+    fi
+  else
+    $whds
+    if $initialization==1 # Identity
+      f. "(x%h)==(y%(w - 1))"
+    elif $initialization==2 # Lecun-initialization
+      f. "g*sqrt(1/(w - 1))"
+    elif $initialization==3 # He-initialization
+      f. "g*sqrt(2/(w - 1))"
+    elif $initialization==4 # Residual He-initialization
+      f. "g*sqrt(0.002/(w - 1))"
+    fi
+    1,100% j.. .,100% rm. # Always set biases to 0
+    => $nout
+  fi
+  _${nout}_forward="begin(nn_affine_init_forward("$nout,$nin,$axis"));"\
+                   "nn_affine_forward("$nout,$nin");"
+  _${nout}_backward="begin(nn_affine_init_backward("$nout,$nin,$weight_decay"));"\
+                    "nn_affine_backward("$nout,$nin");"\
+                    "end(nn_affine_end_backward("$nout"));"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
 #@cli nn_append : out,in0,in1,_in2,_in3,axis={ x | y | z | c }
@@ -32149,6 +32229,7 @@ nn_clone : check "isvarname(['$1']) && # out0
   _${nout0}_size=${_${nin}_size}
   _${nout1}_size=${_${nin}_size}
   _${nout0}_input,_${nout1}_input=$in
+  _${nout0}_properties,_${nout1}_properties=
   _${nout0}_forward="begin(nn_clone_init_forward("$nout0,$nout1,$nin"));"\
                     "nn_clone_forward("$nout0,$nout1,$nin");"
   _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
@@ -32179,13 +32260,13 @@ nn_columnpatch2d : check "isvarname(['$1']) && # out
   nb_patches:=max(1,ceil(($out_width-$overlap)/($patch_size-$overlap)))*\
               max(1,ceil(($out_height-$overlap)/($patch_size-$overlap)))
   if s=[${_${nin}_size}];s[2,2]!=[1,1]||s[0]!=$nb_patches||s[1]%($patch_size^2)
-    error[0--3] "Command '$0', layer '"$nout"': "\
+    error[0--3] "Command '$0', layer '"$out"': "\
                 "Invalid input size ("${_${nin}_size}"). Expected a matrix of width "$nb_patches\
                 " and height multiple of "{$patch_size^2}"."
   fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=columnpatch2d,
-  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,ceil(s[1]/$patch_size^2)]
+  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,s[1]/$patch_size^2]
   _${nout}_input=$in
   _${nout}_properties="patch_size="$patch_size", overlap="$overlap
   _${nout}_forward="begin(nn_columnpatch2d_init_forward("$nout,$nin,$out_width,$out_height,$patch_size,$overlap"));"\
@@ -32281,6 +32362,7 @@ nn_conv : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv_backward("$nout,$nin");"\
                     "end(nn_conv_end_backward("$nout"));"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32354,6 +32436,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
                     "end(nn_conv2d_end_backward("$nout"));"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32394,8 +32477,8 @@ nn_conv3d : check "isvarname(['$1']) && # out
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int((s[0,3]-1)/$stride)+1-2*$shrink,$nb_channels]
-  _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel_size="$kernel_size", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
@@ -32427,6 +32510,7 @@ nn_conv3d : check "isvarname(['$1']) && # out
   _${nout}_backward="begin(nn_conv3d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv3d_backward("$nout,$nin");"\
                     "end(nn_conv3d_end_backward("$nout"));"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32492,6 +32576,7 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_div_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_div_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
@@ -32523,6 +32608,7 @@ nn_dropout : check "isvarname(['$1']) && # out
   _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate"));"\
                    "nn_dropout_forward("$nout,$nin");"
   _${nout}_backward="nn_dropout_backward("$nout,$nin");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -32613,7 +32699,7 @@ nn_fft : check "isvarname(['$1']) && # out
     ind_axes=0
   else
     s_axes=$axes
-    ind_axes:=indexof('$axes','0','x','y','z','xy','xz','yz','xyz');
+    ind_axes:=indexof('$axes','0','x','y','z','xy','xz','yz','xyz')
   fi
   s_axes_s={`size(['$s_axes'])>1?'es':'is'`}
 
@@ -32647,7 +32733,8 @@ nn_init :
 
 _nn_init : # Init new network
   _nn_network=$1
-  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_forward,_$1_loss,_$1_backward,_$1_update,_$1_init_training=
+  _$1_layer_names,_$1_layer_types,_$1_trainer_data,_$1_training,_$1_forward,_$1_loss,_$1_backward,_$1_update,\
+    _$1_init_training=
   _$1_init="nn_init $1\n"
   if v=get('_nn_lib',0,1);!v||isnan(v) nn_lib fi # Make sure variable '$_nn_lib' is set
 
@@ -32676,66 +32763,6 @@ nn_input : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,"${2--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_linear : out,in,nb_channels>0,axis={ x | y | z | c},_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'linear' layer to the current network.
-#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
-# 4:Residual He-initialization }.
-#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
-nn_linear : check "isvarname(['$1']) && # out
-                   (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                   isint($3,1) && # nb_channels
-                   isin(_'$4',_'x',_'y',_'z',_'c') && # axis
-                   isint(${5=3},0,3) && # learning_mode
-                   ${6=0}>=0 && # weight_decay
-                   isint(${7=3},0,4) # initialization
-                   "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  nn_check_layer $nin
-  nb_channels,axis,learning_mode,weight_decay,initialization=${3-7}
-
-  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
-         "and axis '"$axis"'."
-
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=linear,
-  _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
-  _${nout}_input=$in
-  _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="axis="$axis", learning_mode="$learning_mode", weight_decay="$weight_decay
-
-  whds={k=indexof(_'$axis',_'x',_'y',_'z',_'c');[${_${nin}_size}][k]+1},$nb_channels,1,1
-  if isint(${$nout})
-    if {$nout,[w,h,d,s]!=[$whds]}
-      error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
-                  "should be ("$whds")."
-    fi
-  else
-    $whds
-    if $initialization==1 # Identity
-      f. "(x%h)==(y%(w - 1))"
-    elif $initialization==2 # Lecun-initialization
-      f. "g*sqrt(1/(w - 1))"
-    elif $initialization==3 # He-initialization
-      f. "g*sqrt(2/(w - 1))"
-    elif $initialization==4 # Residual He-initialization
-      f. "g*sqrt(0.002/(w - 1))"
-    fi
-    1,100% j.. .,100% rm. # Always set biases to 0
-    => $nout
-  fi
-  _${nout}_forward="begin(nn_linear_init_forward("$nout,$nin,$axis"));"\
-                   "nn_linear_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_linear_init_backward("$nout,$nin,$weight_decay"));"\
-                    "nn_linear_backward("$nout,$nin");"\
-                    "end(nn_linear_end_backward("$nout"));"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 "$out,$in,"${3--1}\n"
-  _nn_previous_layer=$out
-
 #@cli nn_load : 'filename.gmz',_include_trainer_data={ 0:No | 1:Yes }
 #@cli : Load and initialize network (saved as a .gmz file).
 #@cli : Network files can be only loaded in '.gmz' format.
@@ -32752,7 +32779,7 @@ nn_linear : check "isvarname(['$1']) && # out
     repeat narg(${_${net}_layer_names})-1 {
       type=${arg0\ $>,${_${net}_layer_types}}
       name=${arg0\ $>,${_${net}_layer_names}}
-      if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+      if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -32788,6 +32815,7 @@ nn_loss_add : check "isvarname(['$1']) && # out
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nins"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_init_training.="$0 "$out,$ins"\n"
@@ -33019,30 +33047,31 @@ nn_loss_sigmoid_bce : check "isvarname(['$1']) && # out
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_loss_smoothl1 : out,in,ground_truth,_weight
+#@cli nn_loss_smoothl1 : out,in,ground_truth,_beta>0,_weight
 #@cli : Add a 'smoothl1' loss to the current network (smooth L1-norm).
 #@cli : 'ground_truth' can be a layer name, a variable name, or a scalar value.
-#@cli : Default value: 'weight=1'.
+#@cli : Default values: 'beta=0.1' and 'weight=1'.
 nn_loss_smoothl1 : check "isvarname(['$1']) && # out
                           (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                           (s3 = ['$3']; isvarname(s3) || isnum($3)) && # ground_truth
-                          isnum(${4=1}) # weight
+                          ${4=0.1}>0 && # beta
+                          isnum(${5=1}) # weight
                           "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  ground_truth,weight=${nn_varname\ $3,1},$4
+  ground_truth,beta,weight=${nn_varname\ $3,1},${4-5}
 
   e[^-1] "[nn_lib] Add smooth L1 loss '"$out"' to network '"$net"', with input '"$in"', "\
-         "ground truth '"$ground_truth"' and weight "$weight"."
+         "ground truth '"$ground_truth"', beta "$beta" and weight "$weight"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=loss_smoothl1,
   _${nout}_size=1,1,1,1
   _${nout}_input=$in
-  _${nout}_properties="ground_truth="$ground_truth", weight="$weight
-  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$weight"));"\
+  _${nout}_properties="ground_truth="$ground_truth", beta="$beta", weight="$weight
+  _${nout}_loss="begin(nn_loss_smoothl1_init_forward("$nout,$nin,$beta,$weight"));"\
                 "nn_loss_smoothl1_forward("$nout,$nin,$ground_truth");"\
                 "end(nn_loss_smoothl1_end_forward("$nout"));"
   _${nout}_backward="nn_loss_smoothl1_backward("$nout,$nin");"
@@ -33083,30 +33112,34 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
+#@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes },_is_ceil={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
-#@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
+#@cli : If 'is_ceil=1', partial patches at the image borders are pooled too (output size = ceil(size/patch_size)),
+#@cli : otherwise they are dropped (output size = floor(size/patch_size)).
+#@cli : Default values: 'patch_size=2', 'is_maxabs=0' and 'is_ceil=0'.
 nn_maxpool2d : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
-                      isbool(${4=0}) # is_maxabs
+                      isbool(${4=0}) && # is_maxabs
+                      isbool(${5=0}) # is_ceil
                       "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  patch_size,is_maxabs=${3-4}
+  patch_size,is_maxabs,is_ceil=${3-5}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
+  if $is_ceil s_ceil=" and 'ceil' mode" fi
 
   e[^-1] "[nn_lib] Add 'maxpool2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size$s_maxabs"."
+         "patch size "$patch_size$s_maxabs$s_ceil"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool2d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,2]/$patch_size),s[2,2]]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,2]+$is_ceil*($patch_size-1))/$patch_size),s[2,2]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
-  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
+  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs", is_ceil="$is_ceil
+  _${nout}_forward="begin(nn_maxpool2d_init_forward("$nout,$nin,$patch_size,$is_maxabs,$is_ceil"));"\
                    "nn_maxpool2d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool2d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -33114,30 +33147,34 @@ nn_maxpool2d : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes }
+#@cli nn_maxpool3d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes },_is_ceil={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool3d' layer (3d max pooling) to the current network.
-#@cli : Default values: 'patch_size=2' and 'is_maxabs=0'.
+#@cli : If 'is_ceil=1', partial patches at the volume borders are pooled too (output size = ceil(size/patch_size)),
+#@cli : otherwise they are dropped (output size = floor(size/patch_size)).
+#@cli : Default values: 'patch_size=2', 'is_maxabs=0' and 'is_ceil=0'.
 nn_maxpool3d : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isint(${3=2},2) && # patch_size
-                      isbool(${4=0}) # is_maxabs
+                      isbool(${4=0}) && # is_maxabs
+                      isbool(${5=0}) # is_ceil
                       "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  patch_size,is_maxabs=${3-4}
+  patch_size,is_maxabs,is_ceil=${3-5}
   if $is_maxabs s_maxabs=" and 'maxabs' mode" fi
+  if $is_ceil s_ceil=" and 'ceil' mode" fi
 
   e[^-1] "[nn_lib] Add 'maxpool3d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size$s_maxabs"."
+         "patch size "$patch_size$s_maxabs$s_ceil"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=maxpool3d,
-  _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]/$patch_size),s[3]]
+  _${nout}_size:=s=[${_${nin}_size}];[int((s[0,3]+$is_ceil*($patch_size-1))/$patch_size),s[3]]
   _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs
-  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size,$is_maxabs"));"\
+  _${nout}_properties="patch_size="$patch_size", is_maxabs="$is_maxabs", is_ceil="$is_ceil
+  _${nout}_forward="begin(nn_maxpool3d_init_forward("$nout,$nin,$patch_size,$is_maxabs,$is_ceil"));"\
                    "nn_maxpool3d_forward("$nout,$nin");"
   _${nout}_backward="nn_maxpool3d_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
@@ -33163,12 +33200,13 @@ nn_mmul : check "isvarname(['$1']) && # out
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmul,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
-                 s0[2]==1&&s0[3]==1&&s1[1]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[0],s0[1],1,1]:vector4(-1);
+                 s0[2]==1&&s0[3]==1&&s1[1]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[0],s0[1],1,1]:vector4(-1)
   if min(${_${nout}_size})<0
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mmul_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_mmul_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_mmul_backward("$nout,$nin0,$nin1");"
@@ -33195,12 +33233,13 @@ nn_mmult : check "isvarname(['$1']) && # out
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mmult,
   _${nout}_size:=s0=[${_${nin0}_size}];s1=[${_${nin1}_size}];\
-                 s0[2]==1&&s0[3]==1&&s1[0]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[1],s0[1],1,1]:vector4(-1);
+                 s0[2]==1&&s0[3]==1&&s1[0]==s0[0]&&s1[2]==1&&s1[3]==1?[s1[1],s0[1],1,1]:vector4(-1)
   if min(${_${nout}_size})<0
     error[0--3] "Command '$0', layer '"$nout"': "\
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mmult_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_mmult_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_mmult_backward("$nout,$nin0,$nin1");"
@@ -33234,13 +33273,14 @@ nn_mul : check "isvarname(['$1']) && # out
     nins.=$sep${nin$>} ins.=$sep${in$>} sep=,
   }
 
-  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs "$ins"."
+  e[^-1] "[nn_lib] Add 'mul' layer '"$out"' to network '"$net"', with inputs '"$ins"'."
 
   if $is_all_num error[0--3] "Command '$0': All operands '${2--1}' are constant values." fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=mul,
   _${nout}_size=$out_size
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mul_init_forward("$nout,$nnin"));"
   _${nout}_forward.="nn_mul_forward("$nout,$nins");"
   _${nout}_backward="nn_mul_backward("$nout,$nins");"
@@ -33265,7 +33305,7 @@ nn_network : check "s=['${1=}']; s==0 || isvarname(s)"
 
 #@cli nn_nl : out,in,_activation
 #@cli : Add a 'nl' layer (nonlinearity) to the current network.
-#@cli : 'activation' can be { elu | gelu | leakyrelu | linear | log | \
+#@cli : 'activation' can be { elu | gelu | hardsigmoid | hardswish | leakyrelu | linear | logabs | \
 # normalize_l1 | normalize_l1_x | normalize_l1_y | normalize_l1_z | normalize_l1_c | \
 # normalize_l2 | normalize_l2_x | normalize_l2_y | normalize_l2_z | normalize_l2_c | \
 # relu | sigmoid | sin | sinc | \
@@ -33374,6 +33414,7 @@ nn_noise : check "isvarname(['$1']) && # out
   _${nout}_forward="begin(nn_noise_init_forward("$nout,$nin,$amplitude,$noise_type,$training_only"));"\
                    "nn_noise_forward("$nout,$nin");"
   _${nout}_backward="nn_noise_backward("$nout,$nin");"
+  _${net}_training.="nn_set_training("$nout");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -33400,7 +33441,7 @@ nn_norm : check "isvarname(['$1']) && # out
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=norm,
-  _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s);
+  _${nout}_size:=s=[${_${nin}_size}];$ind_axis<0?[1,1,1,1]:(s[$ind_axis]=1;s)
   _${nout}_input=$in
   _${nout}_properties="p="$p", axis="$axis
   _${nout}_forward="begin(nn_norm_init_forward("$nout,$nin,$p,{_'$axis'==_'0'?0:_'$axis'}"));"\
@@ -33414,10 +33455,10 @@ nn_norm : check "isvarname(['$1']) && # out
 #@cli nn_normalize : out,in,axes,_normalization_type,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
-# a Layernorm, an InstanceNorm, a GroupNorm, or a RMSNorm.
+# a LayerNorm, an InstanceNorm, a GroupNorm, or an RMSNorm.
 #@cli : 'axes' defines the shape used to compute the mean/std of the normalization.
 #@cli : 'axes' can be { x | y | z | c | xy | xz | xc | yz | yc | zc | xyz | xyc | xzc | yzc | xyzc }.
-#@cli : \nFor instance :
+#@cli : \nFor instance:
 #@cli : - 'axes=c' means the vector-valued pixels of the input image are normalized independently, \
 # according to the channel values.
 #@cli : - 'axes=xyz' means each input channel of the input image is normalized independently, \
@@ -33430,7 +33471,8 @@ nn_norm : check "isvarname(['$1']) && # out
 #@cli : For types 2 and 3, 'axes' (and 'group_*') only define along which dimensions \
 # the 'gamma' (and 'beta') parameters are shared.
 #@cli : \nWhen different from '0', a 'group_*' argument forces the corresponding complementary axis to be split into \
-# 'N' groups.
+# 'N' groups. 'N' must divide the corresponding input dimension, and a 'group_*' argument cannot be set \
+# for an axis that is already listed in 'axes'.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
 #@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
 nn_normalize : check "isvarname(['$1']) && # out
@@ -33456,6 +33498,12 @@ nn_normalize : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
          "axes '"$axes"', "${s$normalization_type}" and groups ("$group_x,$group_y,$group_z,$group_c")."
 
+  if "axes = ['"$axes"']; (find(axes,_'x')>=0 && $group_x) || (find(axes,_'y')>=0 && $group_y) ||
+                          (find(axes,_'z')>=0 && $group_z) || (find(axes,_'c')>=0 && $group_c)"
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Invalid number of specified groups ("$group_x,$group_y,$group_z,$group_c") for axes '"$axes"'."
+  fi
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=normalize,
   _${nout}_size=${_${nin}_size}
@@ -33464,14 +33512,20 @@ nn_normalize : check "isvarname(['$1']) && # out
   _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
                       "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
 
-  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; # Dimensions of complementary axes
-    dim = ["${_${nout}_size}"];
-    [ find(axes,_'x')>=0?1:$group_x?min($group_x,dim[0]):dim[0],
-      find(axes,_'y')>=0?1:$group_y?min($group_y,dim[1]):dim[1],
-      find(axes,_'z')>=0?1:$group_z?min($group_z,dim[2]):dim[2],
-      find(axes,_'c')>=0?1:$group_c?min($group_c,dim[3]):dim[3] ]"
+  ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; dim = ["${_${nout}_size}"]; # Get dimensions of complementary axes
+    [ find(axes,_'x')>=0?1:$group_x?$group_x:dim[0],
+      find(axes,_'y')>=0?1:$group_y?$group_y:dim[1],
+      find(axes,_'z')>=0?1:$group_z?$group_z:dim[2],
+      find(axes,_'c')>=0?1:$group_c?$group_c:dim[3] ]"
+
+  if max([${_${nout}_size}]%[$ca_w,$ca_h,$ca_d,$ca_s])
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Number of specified groups ("$group_x,$group_y,$group_z,$group_c") must divide the corresponding "\
+                "input dimensions ("${_${nout}_size}")."
+  fi
 
   whds:=$has_beta?2:1,$ca_w*$ca_h*$ca_d*$ca_s,1,1
+
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -33495,7 +33549,7 @@ nn_normalize : check "isvarname(['$1']) && # out
 #@cli nn_parameters : out,width>0,_height>0,_depth>0,_spectrum>0,_learning_mode,_weight_decay>=0,_initialization
 #@cli : Add a 'parameters' layer (4D grid of learnable parameters) to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization \
+#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
 #@cli : Default value: 'height=depth=spectrum=1', 'learning_mode=1', 'weight_decay=0' and 'initialization=3'.
 nn_parameters : check "isvarname(['$1']) && # out
@@ -33707,7 +33761,6 @@ nn_patchup3d : check "isvarname(['$1']) && # out
                 "Number of channels of input layer '"$nin"' ("{[${_${nin}_size}][3]}") is not a "\
                 "multiple of "{$patch_size^3}"."
   fi
-
   _${net}_layer_names.=$out,
   _${net}_layer_types.=patchup3d,
   _${nout}_size:=s=[${_${nin}_size}];[int(s[0,3]*$patch_size),s[3]/$patch_size^3]
@@ -33772,7 +33825,6 @@ nn_print :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    learning_mode=${_${net}_${name}_learning_mode}
     properties=${_${net}_${name}_properties}
     input=${_${net}_${name}_input}
     str_input,sep=
@@ -33790,7 +33842,7 @@ nn_print :
     else
       e "       * Output: "$c$name$n" ("${_${net}_${name}_size}")"
     fi
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     if ['$properties']!=0
@@ -33816,6 +33868,7 @@ nn_rename : check "isvarname(['$1']) && # out
   _${net}_layer_types.=rename,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
+  _${nout}_properties=
   _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"\
                    "nn_rename_forward("$nout,$nin");"
   _${nout}_backward="nn_rename_backward("$nout,$nin");"
@@ -33843,14 +33896,15 @@ nn_reshape : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add 'reshape' layer '"$out"' to network '"$net"', with input '"$in"' "\
          "and size ("$width,$height,$depth,$spectrum")."
 
+  if $width*$height*$depth*$spectrum!=prod(${_${nin}_size})
+    error[0--3] "Command '$0', layer '"$nout"': "\
+                "Cannot reshape input ("${_${nin}_size}") to output ("$width,$height,$depth,$spectrum")."
+  fi
   _${net}_layer_names.=$out,
   _${net}_layer_types.=reshape,
   _${nout}_size=$width,$height,$depth,$spectrum
   _${nout}_input=$in
-  if prod(${_${nout}_size})!=prod(${_${nin}_size})
-    error[0--3] "Command '$0', layer '"$nout"': "\
-                "Cannot reshape input ("${_${nin}_size}") to output ("${_${nout}_size}")."
-  fi
+  _${nout}_properties=
   _${nout}_forward="begin(nn_reshape_init_forward("$nout,$nin,$width,$height,$depth,$spectrum"));"\
                    "nn_reshape_forward("$nout,$nin");"
   _${nout}_backward="nn_reshape_backward("$nout,$nin");"
@@ -33955,7 +34009,7 @@ nn_save : check "(s1 = lowercase(['$1']); p = find(s1,'.gmz',size(s1) - 1,-1); p
   is_change 0
 
 #@cli nn_size
-#@cli: Return size of the current network (i.e. number of stored parameters).
+#@cli : Return size of the current network (i.e. number of stored parameters).
 nn_size :
   net=${-nn_network}
 
@@ -33965,7 +34019,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       siz+={${net}_$name,whds}
     fi
   }
@@ -33975,9 +34029,11 @@ nn_size :
 #@cli : Add a 'split' layer to the current network.
 #@cli : Default values: unspecified sizes split equally the remaining size along 'axis'
 #@cli : (the remainder, if any, is added to the first unspecified output).
-nn_split : check "$#>=4"
+nn_split : check "isvarname(['$1']) && # out
+                  $#>=4
+                  "
   net=${-nn_network}
-  $=arg nb_outputs=0 nouts,sep=
+  $=arg nb_outputs=0 nouts,outs,sep=
   repeat $#-3 {
     i:=$#-$>
     if isin(['${arg$i}'],'x','y','z','c')
@@ -33991,7 +34047,7 @@ nn_split : check "$#>=4"
       axis=${arg$i} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c') # axis
       repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
       if $#-$i>$nb_outputs
-        error[0--3] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
+        error[0--4] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
       fi
       break
     fi
@@ -34062,10 +34118,11 @@ nn_store : check "(s1 = ['$1']; isvarname(s1)) && # variable_name
 
 __nn_store :
   net=${-nn_network}
+  sel,c=
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -34107,6 +34164,7 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _${net}_layer_types.=sub,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
@@ -34171,6 +34229,7 @@ nn_tmmul : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_tmmul_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_tmmul_backward("$nout,$nin0,$nin1");"
@@ -34203,6 +34262,7 @@ nn_tmmult : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_tmmult_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_tmmult_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_tmmult_backward("$nout,$nin0,$nin1");"
@@ -34241,12 +34301,12 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'optimizer' can be { adam | adamax | rmsprop | sgd }.
 #@cli : 'scheduler' can be { constant | adaptive }.
 #@cli : - Value of 'optimizer_params' depends on the chosen optimizer:
-#@cli : 'adam', 'adamax': (learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max).
+#@cli : 'adam', 'adamax': ( learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'rmsprop': ( learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : 'sgd': ( learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max ).
 #@cli : - Value of 'scheduler_params' depends on the chosen scheduler:
-#@cli : 'constant' : (none).
-#@cli : 'adaptive' : ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
+#@cli : 'constant': (none).
+#@cli : 'adaptive': ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
 # patience_up,factor_up ).
 #@cli : Default values: 'loss=.', 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
@@ -34264,7 +34324,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   nn_check_layer $nloss
   optimizer,optimizer_params,scheduler,scheduler_params=$3,"$4",$5,"$6"
 
-  # Trainer matrix has size 26x3, and is organized as follow:
+  # Trainer matrix has size 26x3, and is organized as follows:
   #
   # ( [0]: current_iteration
   #   [1]: current_learning_rate
@@ -34295,7 +34355,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   #   [22]: last_significantly_improved_loss_longterm
   #   [23]: variation_loss_longterm
   #   [24]: iteration_best_loss_longterm
-  #   [25]: iteration_last_significantly_improved_loss_longterm;
+  #   [25]: iteration_last_significantly_improved_loss_longterm
   #
   #   optimizer_ind={ 0:adam | 1:adamax | 2:rmsprop | 3:sgd }, optimizer_params...;
   #
@@ -34319,13 +34379,13 @@ nn_trainer : check "isvarname(['$1']) && # out
   =[$nout] {"indexof('"$optimizer"','adam','adamax','rmsprop','sgd')"},0,1
   if isin('$optimizer','sgd')
     s_optimizer_params=learning_rate,momentum,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.01,0,inf
+    default_optimizer_params=5e-4,0.9,0.05,0,inf
   elif '$optimizer'=='rmsprop'
     s_optimizer_params=learning_rate,momentum,beta,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.9,0.01,0,inf
+    default_optimizer_params=5e-4,0.9,0.9,0.05,0,inf
   elif isin('$optimizer','adam','adamax')
     s_optimizer_params=learning_rate,beta1,beta2,weight_decay,clip_gradient_min,clip_gradient_max
-    default_optimizer_params=5e-4,0.9,0.999,0.01,0,inf
+    default_optimizer_params=5e-4,0.9,0.999,0.05,0,inf
   fi
   if narg($default_optimizer_params) eval "copy(i(#$nout_ind,1,1),["$default_optimizer_params"])" fi
   if narg($optimizer_params) eval "copy(i(#$nout_ind,1,1),["$optimizer_params"])" fi
@@ -34348,6 +34408,14 @@ nn_trainer : check "isvarname(['$1']) && # out
   e[^-1] "[nn_lib] Add trainer '"$out"' for loss '"$nloss"' in network '"$net"', with '"$optimizer"' optimizer "\
          ($s_optimizer_params)" and '"$scheduler"' scheduler "($s_scheduler_params)"."
 
+  if prod(${_${nloss}_size})!=1
+    error[0--3] "Command '$0', trainer '"$nout"': Loss layer '"$nloss"' must be a scalar, "\
+                "but its size is ("${_${nloss}_size}")."
+  fi
+  if find(['${_${net}_layer_types}'],'trainer')>=0
+    error[0--3] "Command '$0', trainer '"$nout"': Network '"$net"' cannot have multiple trainers."
+  fi
+
   _${net}_layer_names.=$out,
   _${net}_layer_types.=trainer,
   _${nout}_size=0,0,0,0
@@ -34358,6 +34426,7 @@ nn_trainer : check "isvarname(['$1']) && # out
   if ['$s_scheduler_params']!=0 _${nout}_properties.=", "$s_scheduler_params fi
 
   # Generate code for updating network weights.
+  _${net}_trainer_data=
   _${net}_update="begin(nn_trainer_init("$nout,$nloss,$optimizer,$scheduler"));"\
                  "end("
   repeat narg(${_${net}_layer_names})-1 {
@@ -34365,7 +34434,7 @@ nn_trainer : check "isvarname(['$1']) && # out
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
@@ -39020,7 +39089,7 @@ math_lib :
     [ e2d_year,e2d_month,e2d_day,e2d_hour,e2d_minute,e2d_second ]
   );
 
-  # Return the 'm' largest eigenvalues of a (large) square matrix A,
+  # Return an approximation of the 'm' largest eigenvalues of a (large) square matrix A,
   # using the Arnoldi iteration method (https://en.wikipedia.org/wiki/Arnoldi_iteration).
   # A larger 'm' goes with better numerical precision.
   meig(A,m,n) = (
@@ -39044,11 +39113,14 @@ math_lib :
         meig_vj-=meig_d*meig_vi;
       );
       meig_nvj = norm(meig_vj);
-      meig_H[meig_j*meig_m + meig_j + 1] = meig_nvj;
+
+      # h_{j+1,j} does not exist for the last column of H (m x m).
+      meig_j + 1<meig_m?(meig_H[meig_j*meig_m + meig_j + 1] = meig_nvj);
+
       meig_nvj<1e-12?break();
       meig_vj/=meig_nvj;
     );
-    eig(meig_H)[0,m];
+    eig(meig_H)[0,meig_m];
   );
 
   # Dichotomic search : Find x in [xmin,xmax] s.a f(x) = target, with a epsilon-precision
@@ -63115,7 +63187,7 @@ fx_gradient_poles_preview :
 #@gui : Color Space = ~choice(0,"sRGB","Linear RGB","Lab")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2015/06/29</i>.</small>")
-fx_radial_gradient : skip ${14=0}
+fx_radial_gradient :
   Rs,Gs,Bs,As,Re,Ge,Be,Ae,swap_colors,fade_start,fade_end,quantization,cx,cy,colorspace=${1-15}
   foreach {
     wh:=w,h rm
