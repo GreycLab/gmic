@@ -32090,6 +32090,7 @@ nn_add : check "isvarname(['$1']) && # out
   _${net}_layer_types.=add,
   _${nout}_size=$out_size
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_forward="begin(nn_add_init_forward("$nout,$nnin"));"
   _${nout}_forward.="nn_add_forward("$nout,$nins");"
   _${nout}_backward="nn_add_backward("$nout,$nins");"
@@ -32166,6 +32167,7 @@ nn_clone : check "isvarname(['$1']) && # out0
   _${nout0}_size=${_${nin}_size}
   _${nout1}_size=${_${nin}_size}
   _${nout0}_input,_${nout1}_input=$in
+  _${nout0}_properties,_${nout1}_properties=
   _${nout0}_forward="begin(nn_clone_init_forward("$nout0,$nout1,$nin"));"\
                     "nn_clone_forward("$nout0,$nout1,$nin");"
   _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
@@ -32413,8 +32415,8 @@ nn_conv3d : check "isvarname(['$1']) && # out
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv3d,
   _${nout}_size:=s=[${_${nin}_size}];[int((s[0,3]-1)/$stride)+1-2*$shrink,$nb_channels]
-  _${nout}_learning_mode=$learning_mode
   _${nout}_input=$in
+  _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel_size="$kernel_size", stride="$stride", "\
                       "dilation="$dilation", shrink="$shrink", "\
                       "boundary_conditions="${s$boundary_conditions}", learning_mode="$learning_mode", "\
@@ -32512,6 +32514,7 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _${net}_layer_types.=div,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_div_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_div_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_div_backward("$nout,$nin0,$nin1");"
@@ -32812,6 +32815,7 @@ nn_loss_add : check "isvarname(['$1']) && # out
   _${net}_layer_types.=loss_add,
   _${nout}_size=1,1,1,1
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_loss="end(nn_loss_add_end_forward("$nout,$nins"));"
   _${net}_loss.=${_${nout}_loss}
   _${net}_init_training.="$0 "$out,$ins"\n"
@@ -33202,6 +33206,7 @@ nn_mmul : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mmul_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_mmul_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_mmul_backward("$nout,$nin0,$nin1");"
@@ -33234,6 +33239,7 @@ nn_mmult : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mmult_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_mmult_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_mmult_backward("$nout,$nin0,$nin1");"
@@ -33274,6 +33280,7 @@ nn_mul : check "isvarname(['$1']) && # out
   _${net}_layer_types.=mul,
   _${nout}_size=$out_size
   _${nout}_input=$ins
+  _${nout}_properties=
   _${nout}_forward="begin(nn_mul_init_forward("$nout,$nnin"));"
   _${nout}_forward.="nn_mul_forward("$nout,$nins");"
   _${nout}_backward="nn_mul_backward("$nout,$nins");"
@@ -33861,6 +33868,7 @@ nn_rename : check "isvarname(['$1']) && # out
   _${net}_layer_types.=rename,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
+  _${nout}_properties=
   _${nout}_forward="begin(nn_rename_init_forward("$nout,$nin"));"\
                    "nn_rename_forward("$nout,$nin");"
   _${nout}_backward="nn_rename_backward("$nout,$nin");"
@@ -34025,7 +34033,7 @@ nn_split : check "isvarname(['$1']) && # out
                   $#>=4
                   "
   net=${-nn_network}
-  $=arg nb_outputs=0 nouts,sep=
+  $=arg nb_outputs=0 nouts,outs,sep=
   repeat $#-3 {
     i:=$#-$>
     if isin(['${arg$i}'],'x','y','z','c')
@@ -34039,7 +34047,7 @@ nn_split : check "isvarname(['$1']) && # out
       axis=${arg$i} ind_axis:=indexof(_'$axis',_'x',_'y',_'z',_'c') # axis
       repeat $#-$i { size$>=${arg{$i+1+$>}} check isint(${size$>},1) } # size_out_k
       if $#-$i>$nb_outputs
-        error[0--3] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
+        error[0--4] "Command '$0': Too many block sizes ("{$#-$i}") for "$nb_outputs" outputs."
       fi
       break
     fi
@@ -34155,6 +34163,7 @@ nn_sub : check "isnum2 = isnum($2); isnum3 = isnum($3);
   _${net}_layer_types.=sub,
   _${nout}_size=$out_size
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_sub_init_forward("$nout,${nin$isnum0}"));"\
                    "nn_sub_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_sub_backward("$nout,$nin0,$nin1");"
@@ -34219,6 +34228,7 @@ nn_tmmul : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_tmmul_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_tmmul_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_tmmul_backward("$nout,$nin0,$nin1");"
@@ -34251,6 +34261,7 @@ nn_tmmult : check "isvarname(['$1']) && # out
                 "Inputs ("${_${nin0}_size}") and ("${_${nin1}_size}") have incompatible dimensions."
   fi
   _${nout}_input=$in0,$in1
+  _${nout}_properties=
   _${nout}_forward="begin(nn_tmmult_init_forward("$nout,$nin0,$nin1"));"\
                    "nn_tmmult_forward("$nout,$nin0,$nin1");"
   _${nout}_backward="nn_tmmult_backward("$nout,$nin0,$nin1");"
