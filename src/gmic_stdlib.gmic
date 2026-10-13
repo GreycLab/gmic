@@ -29055,11 +29055,6 @@ nn_lib :
     #--------------------------------------
     # Activation functions **must work** with vector-valued arguments.
 
-    # z: Identity.
-    #--------------
-    nn_activation_z(z) = z;
-    nn_activation_d_z(z) = 1;
-
     # elu: Exponential Linear Unit.
     #------------------------------
     nn_activation_elu(z) = (vmax(z,0) + exp(vmin(z,0)) - 1);
@@ -30358,8 +30353,8 @@ nn_lib :
       d#IN+=d#OUT;
     );
 
-    # affine: Affine or linear transform.
-    #-------------------------------------
+    # affine: Affine/linear transform.
+    #---------------------------------
     nn_affine_init_forward(OUT,IN,axis) = (
       const OUT#_ind = $""#OUT;
       const OUT#_rows = h##OUT#_ind;
@@ -31082,7 +31077,7 @@ nn_lib :
           OUT#_crop = IN#[_nn_k,IN#_spectrum,IN#_width*IN#_height*IN#_depth];
           copy(d#IN[_nn_k],nn_dnormp(OUT#_crop,OUT#[_nn_off],OUT#_p)*d#OUT[_nn_off],
                IN#_spectrum,IN#_width*IN#_height*IN#_depth,1,-1);
-            ++_nn_off;
+          ++_nn_off;
         );
         OUT#;
       ):(d#IN+=nn_dnormp(IN#,OUT#,OUT#_p)*d#OUT);
@@ -32704,7 +32699,7 @@ nn_input : check "isvarname(['$1']) && # out
   _nn_previous_layer=$out
 
 #@cli nn_affine : out,in,nb_channels>0,axis={ x | y | z | c },_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'linear' layer to the current network.
+#@cli : Add an 'affine' layer to the current network.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
@@ -32725,11 +32720,11 @@ nn_affine : check "isvarname(['$1']) && # out
   nn_check_layer $nin
   nb_channels,axis,learning_mode,weight_decay,initialization=${3-7}
 
-  e[^-1] "[nn_lib] Add 'linear' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
+  e[^-1] "[nn_lib] Add 'affine' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels "\
          "and axis '"$axis"'."
 
   _${net}_layer_names.=$out,
-  _${net}_layer_types.=linear,
+  _${net}_layer_types.=affine,
   _${nout}_size:=s=[${_${nin}_size}];k=indexof(_'$axis',_'x',_'y',_'z',_'c');s[k]=$nb_channels;s
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
@@ -32781,7 +32776,7 @@ nn_affine : check "isvarname(['$1']) && # out
     repeat narg(${_${net}_layer_names})-1 {
       type=${arg0\ $>,${_${net}_layer_types}}
       name=${arg0\ $>,${_${net}_layer_names}}
-      if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+      if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
         sel.=${c}${net}_$name c=,
         if $2
           nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -33840,7 +33835,7 @@ nn_print :
     else
       e "       * Output: "$c$name$n" ("${_${net}_${name}_size}")"
     fi
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       e "       * Parameters: "$c{${net}_${name},whds}$n
     fi
     if ['$properties']!=0
@@ -34016,7 +34011,7 @@ nn_size :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       siz+={${net}_$name,whds}
     fi
   }
@@ -34118,7 +34113,7 @@ __nn_store :
   repeat narg(${_${net}_layer_names})-1 {
     type=${arg0\ $>,${_${net}_layer_types}}
     name=${arg0\ $>,${_${net}_layer_names}}
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       sel.=${c}${net}_$name c=,
       if $1
         nm=${net}_${name}_m if isint(${$nm}) sel.=$c$nm c=, fi
@@ -34423,7 +34418,7 @@ nn_trainer : check "isvarname(['$1']) && # out
     name=${arg0\ $>,${_${net}_layer_names}}
     learning_mode=${_${net}_${name}_learning_mode}
 
-    if isin('$type','conv','conv2d','conv3d','fc','linear','normalize','parameters')
+    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
       _${net}_update.="nn_"${type}"_update("${net}_$name,$optimizer,$learning_mode");"
 
       # Allocate extra data needed by optimizer (moments).
