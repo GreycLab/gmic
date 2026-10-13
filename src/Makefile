@@ -114,7 +114,7 @@ ifneq (,$(wildcard CImg.h))
 CIMG_VERSION := $(shell awk '/cimg_version[[:space:]]/ {print $$3; exit}' CImg.h)
 ifneq ($(VERSION),$(CIMG_VERSION))
 $(info > CImg.h version mismatch, removing...)
-$(RM) CImg.h;
+$(shell $(RM) CImg.h)
 endif
 else
 CIMG_VERSION = $(VERSION)
