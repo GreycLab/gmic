@@ -29446,6 +29446,80 @@ nn_lib :
       size(IN3#)?(nn_define_backward(IN3#); d#IN3+=d#OUT);
     );
 
+    # affine: Affine/linear transform.
+    #---------------------------------
+    nn_affine_init_forward(OUT,IN,axis) = (
+      const OUT#_ind = $""#OUT;
+      const OUT#_rows = h##OUT#_ind;
+      const OUT#_cols = w##OUT#_ind - 1;
+      const OUT#_axis = _'axis#';
+      const OUT#_width = OUT#_axis==_'x'?OUT#_rows:IN#_width;
+      const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
+      const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
+      const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
+
+      OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
+      OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
+      OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
+      OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'yzcx');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,h,d,s,w,'cxyz');
+        const OUT#_is_permutation = 1;
+      ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xzcy');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,d,s,h,'xcyz');
+        const OUT#_is_permutation = 1;
+      ):OUT#_axis==_'z' && IN#_spectrum!=1?(
+        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xycz');
+        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,h,s,d,'xycz');
+        const OUT#_is_permutation = 1;
+      ):(
+        OUT#_permute(X,w,h,d,s) = ();
+        OUT#_inv_permute(X,w,h,d,s) = ();
+        const OUT#_is_permutation = 0;
+      );
+    );
+
+    nn_affine_forward(OUT,IN) = (
+      OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
+        ref(IN#,OUT#_S1);
+      OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
+      OUT#_S2+=OUT#_biases_whds;
+      OUT#_is_permutation?(OUT# = OUT#_inv_permute(OUT#_S2,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
+        ref(OUT#_S2,OUT#);
+    );
+
+    nn_affine_init_backward(OUT,IN,weight_decay) = (
+      const OUT#_weight_decay = weight_decay;
+      batch_d#OUT#_params = vector(#size(OUT#_params));
+      batch_d#OUT#_biases = vector(#size(OUT#_biases));
+    );
+
+    nn_affine_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
+        ref(d#OUT,d#OUT#_S2);
+      d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
+      OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
+        (d#IN+=d#OUT#_S1);
+      d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
+      d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
+      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
+      batch_d#OUT#_params+=d#OUT#_params;
+      batch_d#OUT#_biases+=d#OUT#_biases;
+    );
+
+    nn_affine_end_backward(OUT) = (
+      merge(batch_d#OUT#_params,+);
+      merge(batch_d#OUT#_biases,+);
+      batch_d#OUT#_params/=nn_batch_size;
+      batch_d#OUT#_biases/=nn_batch_size;
+    );
+
+    nn_affine_update(P,O,learning_mode) = (
+      nn_fc_update(#P,#O,#learning_mode);
+    );
+
     # append: Append two inputs as a new output.
     #--------------------------------------------
     nn_append_init_forward(OUT,w,h,d,s,axis) = (
@@ -29575,66 +29649,6 @@ nn_lib :
     nn_clone_backward(OUT0,OUT1,IN) = (
       nn_define_backward(IN#);
       d#IN+=d#OUT0 + d#OUT1;
-    );
-
-    # columnpatch2d: Rearrange matrix columns as image patches.
-    #----------------------------------------------------------
-    nn_columnpatch2d_init_forward(OUT,IN,out_width,out_height,patch_size,overlap) = (
-      const OUT#_patch_size = patch_size;
-      const OUT#_p_o = OUT#_patch_size - overlap;
-      const OUT#_width = out_width;
-      const OUT#_height = out_height;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = IN#_height/OUT#_patch_size^2; # Always integer
-      const OUT#_nb_cols = max(1,ceil((OUT#_width - overlap)/OUT#_p_o));
-      const OUT#_nb_rows = max(1,ceil((OUT#_height - overlap)/OUT#_p_o));
-
-      # Pre-compute OUT#_count (local counting of overlapping patch pixels).
-      OUT#_count = vector(##OUT#_width*OUT#_height);
-      OUT#_one = vector(##OUT#_patch_size^2,1);
-      repeat (OUT#_nb_rows,_nn_n,
-        repeat (OUT#_nb_cols,_nn_m,
-          draw(OUT#_count,OUT#_width,OUT#_height,1,1,OUT#_one,
-               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-               OUT#_patch_size,OUT#_patch_size,1,1,-1);
-        );
-      );
-      OUT#_count_whds = resize(OUT#_count,size(OUT#_count)*OUT#_spectrum,0,2);
-    );
-
-    nn_columnpatch2d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
-      _nn_k = 0;
-      repeat (OUT#_nb_rows,_nn_n,
-        repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(IN#,IN#_width,IN#_height,1,1,_nn_k++,0,0,0,1,IN#_height,1,1);
-          draw(OUT#,OUT#_width,OUT#_height,1,OUT#_spectrum,OUT#_patch,
-               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-               OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,-1);
-        );
-      );
-      OUT#/=OUT#_count_whds;
-    );
-
-    nn_columnpatch2d_init_backward(OUT,IN) = (
-      OUT#_map_backward_src = expr('c2o(x,y,0,c) + 1',OUT#_width,OUT#_height,1,OUT#_spectrum);
-      OUT#_map_backward = vector(##IN#_width*IN#_height);
-      _nn_k = 0;
-      repeat (OUT#_nb_rows,_nn_n,
-        repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(OUT#_map_backward_src,OUT#_width,OUT#_height,1,OUT#_spectrum,
-                            _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,0);
-          draw(OUT#_map_backward,IN#_width,IN#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
-        );
-      );
-      OUT#_valid = OUT#_map_backward>0;
-      OUT#_map_backward = vmax(OUT#_map_backward - 1,0);
-    );
-
-    nn_columnpatch2d_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      d#IN+=map(OUT#_map_backward,d#OUT/OUT#_count_whds)*OUT#_valid;
     );
 
     # conv: Generic 1D/2D/3D convolutional layer.
@@ -30353,78 +30367,71 @@ nn_lib :
       d#IN+=d#OUT;
     );
 
-    # affine: Affine/linear transform.
-    #---------------------------------
-    nn_affine_init_forward(OUT,IN,axis) = (
-      const OUT#_ind = $""#OUT;
-      const OUT#_rows = h##OUT#_ind;
-      const OUT#_cols = w##OUT#_ind - 1;
-      const OUT#_axis = _'axis#';
-      const OUT#_width = OUT#_axis==_'x'?OUT#_rows:IN#_width;
-      const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
-      const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
-      const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
+    # matpatch2d: Rearrange matrix columns/rows as image patches.
+    #------------------------------------------------------------
+    nn_matpatch2d_init_forward(OUT,IN,out_width,out_height,patch_size,overlap,arrangement) = (
+      const OUT#_patch_size = patch_size;
+      const OUT#_p_o = OUT#_patch_size - overlap;
+      const OUT#_arrangement = arrangement;
+      const OUT#_patch_dim = OUT#_arrangement?IN#_width:IN#_height;
+      const OUT#_width = out_width;
+      const OUT#_height = out_height;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = OUT#_patch_dim/OUT#_patch_size^2;
+      const OUT#_nb_cols = max(1,ceil((OUT#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((OUT#_height - overlap)/OUT#_p_o));
 
-      OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
-      OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
-      OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
-      OUT#_axis==_'x' && (IN#_height!=1 || IN#_depth!=1 || IN#_spectrum!=1)?(
-        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'yzcx');
-        OUT#_inv_permute(X,w,h,d,s) = permute(X,h,d,s,w,'cxyz');
-        const OUT#_is_permutation = 1;
-      ):OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
-        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xzcy');
-        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,d,s,h,'xcyz');
-        const OUT#_is_permutation = 1;
-      ):OUT#_axis==_'z' && IN#_spectrum!=1?(
-        OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xycz');
-        OUT#_inv_permute(X,w,h,d,s) = permute(X,w,h,s,d,'xycz');
-        const OUT#_is_permutation = 1;
-      ):(
-        OUT#_permute(X,w,h,d,s) = ();
-        OUT#_inv_permute(X,w,h,d,s) = ();
-        const OUT#_is_permutation = 0;
+      # Gather map (used by the backward): for each matrix entry, index of the image sample it comes from.
+      OUT#_map_src = expr('c2o(x,y,0,c) + 1',OUT#_width,OUT#_height,1,OUT#_spectrum);
+      OUT#_map = vector(##IN#_width*IN#_height);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(OUT#_map_src,OUT#_width,OUT#_height,1,OUT#_spectrum,
+                            _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+                            OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,0);
+          draw(OUT#_map,IN#_width,IN#_height,1,1,OUT#_patch,
+               OUT#_arrangement?0:_nn_k,OUT#_arrangement?_nn_k:0,0,0,
+               OUT#_arrangement?size(OUT#_patch):1,OUT#_arrangement?1:size(OUT#_patch),1,1);
+          ++_nn_k;
+        );
       );
+      OUT#_valid = OUT#_map>0;
+      OUT#_map = vmax(OUT#_map - 1,0);
+
+      # Number of patches covering each pixel (to average overlapping patches).
+      OUT#_count = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+      OUT#_ones = vector(##OUT#_patch_dim) + 1;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          draw(OUT#_count,OUT#_width,OUT#_height,1,OUT#_spectrum,OUT#_ones,
+               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+               OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,-1);
+        );
+      );
+      OUT#_count = vmax(OUT#_count,1);
     );
 
-    nn_affine_forward(OUT,IN) = (
-      OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
-        ref(IN#,OUT#_S1);
-      OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
-      OUT#_S2+=OUT#_biases_whds;
-      OUT#_is_permutation?(OUT# = OUT#_inv_permute(OUT#_S2,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
-        ref(OUT#_S2,OUT#);
+    nn_matpatch2d_forward(OUT,IN) = (
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(IN#,IN#_width,IN#_height,1,1,
+                            OUT#_arrangement?0:_nn_k,OUT#_arrangement?_nn_k:0,0,0,
+                            OUT#_arrangement?IN#_width:1,OUT#_arrangement?1:IN#_height,1,1);
+          draw(OUT#,OUT#_width,OUT#_height,1,OUT#_spectrum,OUT#_patch,
+               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+               OUT#_patch_size,OUT#_patch_size,1,OUT#_spectrum,-1);
+          ++_nn_k;
+        );
+      );
+      OUT# = OUT#/OUT#_count;
     );
 
-    nn_affine_init_backward(OUT,IN,weight_decay) = (
-      const OUT#_weight_decay = weight_decay;
-      batch_d#OUT#_params = vector(#size(OUT#_params));
-      batch_d#OUT#_biases = vector(#size(OUT#_biases));
-    );
-
-    nn_affine_backward(OUT,IN) = (
+    nn_matpatch2d_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
-        ref(d#OUT,d#OUT#_S2);
-      d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
-      OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
-        (d#IN+=d#OUT#_S1);
-      d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
-      d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
-      OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
-      batch_d#OUT#_params+=d#OUT#_params;
-      batch_d#OUT#_biases+=d#OUT#_biases;
-    );
-
-    nn_affine_end_backward(OUT) = (
-      merge(batch_d#OUT#_params,+);
-      merge(batch_d#OUT#_biases,+);
-      batch_d#OUT#_params/=nn_batch_size;
-      batch_d#OUT#_biases/=nn_batch_size;
-    );
-
-    nn_affine_update(P,O,learning_mode) = (
-      nn_fc_update(#P,#O,#learning_mode);
+      d#IN = d#IN + map(OUT#_map,d#OUT/OUT#_count)*OUT#_valid;
     );
 
     # maxpool2d : 2D max pooling.
@@ -31281,50 +31288,6 @@ nn_lib :
       learning_mode?draw(##P#_ind,P#_params);
     );
 
-    # patchcolumn2d: Rearrange image patches as matrix columns.
-    #----------------------------------------------------------
-    nn_patchcolumn2d_init_forward(OUT,IN,patch_size,overlap) = (
-      const OUT#_patch_size = patch_size;
-      const OUT#_p_o = OUT#_patch_size - overlap;
-      const OUT#_nb_cols = max(1,ceil((IN#_width - overlap)/OUT#_p_o));
-      const OUT#_nb_rows = max(1,ceil((IN#_height - overlap)/OUT#_p_o));
-      const OUT#_width = OUT#_nb_cols*OUT#_nb_rows;
-      const OUT#_height = patch_size^2*IN#_spectrum;
-      const OUT#_depth = 1;
-      const OUT#_spectrum = 1;
-
-      OUT#_map_forward_src = expr('c2o(x,y,0,c) + 1',IN#_width,IN#_height,1,IN#_spectrum);
-      OUT#_map_forward = vector(##OUT#_width*OUT#_height);
-      _nn_k = 0;
-      repeat (OUT#_nb_rows,_nn_n,
-        repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(OUT#_map_forward_src,IN#_width,IN#_height,1,IN#_spectrum,
-                            _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,0);
-          draw(OUT#_map_forward,OUT#_width,OUT#_height,1,1,OUT#_patch,_nn_k++,0,0,0,1,size(OUT#_patch),1,1);
-        );
-      );
-      OUT#_valid = OUT#_map_forward>0;
-      OUT#_map_forward = vmax(OUT#_map_forward - 1,0);
-    );
-
-    nn_patchcolumn2d_forward(OUT,IN) = (
-      OUT# = map(OUT#_map_forward,IN#)*OUT#_valid;
-    );
-
-    nn_patchcolumn2d_backward(OUT,IN) = (
-      nn_define_backward(IN#);
-      _nn_k = 0;
-      repeat (OUT#_nb_rows,_nn_n,
-        repeat (OUT#_nb_cols,_nn_m,
-          OUT#_patch = crop(d#OUT,OUT#_width,OUT#_height,1,1,_nn_k++,0,0,0,1,OUT#_height,1,1);
-          draw(d#IN,IN#_width,IN#_height,1,IN#_spectrum,OUT#_patch,
-               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
-               OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,-1);
-        );
-      );
-    );
-
     # patchdown2d: 2D downscale by patch.
     #------------------------------------
     nn_patchdown2d_init_forward(OUT,IN,patch_size) = (
@@ -31385,6 +31348,61 @@ nn_lib :
     nn_patchdown3d_backward(OUT,IN) = (
       nn_define_backward(IN#);
       d#IN+=map(OUT#_map_backward,d#OUT);
+    );
+
+    # patch2dmat: Rearrange image patches as matrix columns/rows.
+    #------------------------------------------------------------
+    nn_patch2dmat_init_forward(OUT,IN,patch_size,overlap,arrangement) = (
+      const OUT#_patch_size = patch_size;
+      const OUT#_p_o = OUT#_patch_size - overlap;
+      const OUT#_arrangement = arrangement;
+      const OUT#_nb_cols = max(1,ceil((IN#_width - overlap)/OUT#_p_o));
+      const OUT#_nb_rows = max(1,ceil((IN#_height - overlap)/OUT#_p_o));
+      const OUT#_nb_patches = OUT#_nb_cols*OUT#_nb_rows;
+      const OUT#_patch_dim = patch_size^2*IN#_spectrum;
+      const OUT#_width = OUT#_arrangement?OUT#_patch_dim:OUT#_nb_patches;
+      const OUT#_height = OUT#_arrangement?OUT#_nb_patches:OUT#_patch_dim;
+      const OUT#_depth = 1;
+      const OUT#_spectrum = 1;
+
+      OUT#_map_forward_src = expr('c2o(x,y,0,c) + 1',IN#_width,IN#_height,1,IN#_spectrum);
+      OUT#_map_forward = vector(##OUT#_width*OUT#_height);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(OUT#_map_forward_src,IN#_width,IN#_height,1,IN#_spectrum,
+                            _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+                            OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,0);
+          _nn_x = OUT#_arrangement?0:_nn_k;
+          _nn_y = OUT#_arrangement?_nn_k:0;
+          draw(OUT#_map_forward,OUT#_width,OUT#_height,1,1,OUT#_patch,
+               _nn_x,_nn_y,0,0,
+               OUT#_arrangement?size(OUT#_patch):1,OUT#_arrangement?1:size(OUT#_patch),1,1);
+          ++_nn_k;
+        );
+      );
+      OUT#_valid = OUT#_map_forward>0;
+      OUT#_map_forward = vmax(OUT#_map_forward - 1,0);
+    );
+
+    nn_patch2dmat_forward(OUT,IN) = (
+      OUT# = map(OUT#_map_forward,IN#)*OUT#_valid;
+    );
+
+    nn_patch2dmat_backward(OUT,IN) = (
+      nn_define_backward(IN#);
+      _nn_k = 0;
+      repeat (OUT#_nb_rows,_nn_n,
+        repeat (OUT#_nb_cols,_nn_m,
+          OUT#_patch = crop(d#OUT,OUT#_width,OUT#_height,1,1,
+                            OUT#_arrangement?0:_nn_k,OUT#_arrangement?_nn_k:0,0,0,
+                            OUT#_arrangement?OUT#_width:1,OUT#_arrangement?1:OUT#_height,1,1);
+          draw(d#IN,IN#_width,IN#_height,1,IN#_spectrum,OUT#_patch,
+               _nn_m*OUT#_p_o,_nn_n*OUT#_p_o,0,0,
+               OUT#_patch_size,OUT#_patch_size,1,IN#_spectrum,-1);
+          ++_nn_k;
+        );
+      );
     );
 
     # patchup2d: 2D upscale by patch.
@@ -32238,46 +32256,6 @@ nn_clone : check "isvarname(['$1']) && # out0
   _${net}_init.="$0 "$out0,$out1,$in"\n"
   _nn_previous_layer=$out0
 
-#@cli nn_columnpatch2d : out,in,out_width>0,out_height>0,patch_size>0,0<=_overlap<patch_size
-#@cli : Add a 'columnpatch2d' layer (rearrangement of matrix columns as image patches) to the current network.
-#@cli : Default values: 'overlap=0'.
-nn_columnpatch2d : check "isvarname(['$1']) && # out
-                          (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                          isint($3,1) && # out_width
-                          isint($4,1) && # out_height
-                          isint($5,1) && # patch_size
-                          isint(${6=0},0) && $6<$5 # overlap
-                          "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  nn_check_layer $nin
-  out_width,out_height,patch_size,overlap=${3-6}
-
-  e[^-1] "[nn_lib] Add 'columnpatch2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "output size "($out_width,$out_height)", patch size "$patch_size" and overlap "$overlap"."
-
-  nb_patches:=max(1,ceil(($out_width-$overlap)/($patch_size-$overlap)))*\
-              max(1,ceil(($out_height-$overlap)/($patch_size-$overlap)))
-  if s=[${_${nin}_size}];s[2,2]!=[1,1]||s[0]!=$nb_patches||s[1]%($patch_size^2)
-    error[0--3] "Command '$0', layer '"$out"': "\
-                "Invalid input size ("${_${nin}_size}"). Expected a matrix of width "$nb_patches\
-                " and height multiple of "{$patch_size^2}"."
-  fi
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=columnpatch2d,
-  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,s[1]/$patch_size^2]
-  _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", overlap="$overlap
-  _${nout}_forward="begin(nn_columnpatch2d_init_forward("$nout,$nin,$out_width,$out_height,$patch_size,$overlap"));"\
-                   "nn_columnpatch2d_forward("$nout,$nin");"
-  _${nout}_backward="begin(nn_columnpatch2d_init_backward("$nout,$nin"));"\
-                    "nn_columnpatch2d_backward("$nout,$nin");"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 "$out,$in,"${3--1}\n"
-  _nn_previous_layer=$out
-
 #@cli nn_conv : out,in,nb_channels>0,kernel_width>0,kernel_height>0,kernel_depth>0,\
 # _stride_x>0,_stride_y>0,_stride_z>0,_dilation_x>0,_dilation_y>0,_dilation_z>0,\
 # _shrink_x>=0,_shrink_y>=0,_shrink_z>=0,_boundary_conditions,_learning_mode,_weight_decay>=0,_initialization
@@ -33112,6 +33090,57 @@ nn_loss_softmax_ce : check "isvarname(['$1']) && # out
   _${net}_init_training.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
+#@cli nn_matpatch2d : out,in,out_width>0,out_height>0,patch_size>0,0<=_overlap<patch_size,\
+# _arrangement={ 0:patch-as-column | 1:patch-as-row }
+#@cli : Add a 'matpatch2d' layer (rearrangement of matrix columns/rows as image patches) to the current network.
+#@cli : This is the inverse of ''nn_patch2dmat''. Overlapping patches are averaged.
+#@cli : See also: ''nn_patch2dmat''.
+#@cli : Default values: 'overlap=0' and 'arrangement=0'.
+nn_matpatch2d : check "isvarname(['$1']) && # out
+                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                       isint($3,1) && # out_width
+                       isint($4,1) && # out_height
+                       isint($5,1) && # patch_size
+                       isint(${6=0},0) && $6<$5 && # overlap
+                       isbool(${7=0}) # arrangement
+                       "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nn_check_layer $nin
+  out_width,out_height,patch_size,overlap,arrangement=${3-7}
+
+  s0,s1=columns,rows
+  e[^-1] "[nn_lib] Add 'matpatch2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "output size "$out_width"x"$out_height", patch size "$patch_size", overlap "$overlap\
+         " and input arrangement as "${s$arrangement}"."
+
+  if s=[${_${nin}_size}];s[2]!=1||s[3]!=1
+    error[0--3] "Command '$0', layer '"$nout"': "\
+            "Input layer '"$nin"' must be a matrix (depth=spectrum=1), but its size is ("${_${nin}_size}")."
+  fi
+  if s=[${_${nin}_size}];po=$patch_size-$overlap;\
+     nb=max(1,ceil(($out_width-$overlap)/po))*max(1,ceil(($out_height-$overlap)/po));\
+     np=$arrangement?s[1]:s[0];pd=$arrangement?s[0]:s[1];\
+     np!=nb||pd%($patch_size^2)!=0
+    error[0--3] "Command '$0', layer '"$nout"': "\
+            "Input matrix of size ("${_${nin}_size}") is not compatible with output size "$out_width"x"$out_height", "\
+            "patch size "$patch_size", overlap "$overlap" and arrangement "${s$arrangement}"."
+  fi
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=matpatch2d,
+  _${nout}_size:=s=[${_${nin}_size}];[$out_width,$out_height,1,($arrangement?s[0]:s[1])/$patch_size^2]
+  _${nout}_input=$in
+  _${nout}_properties="patch_size="$patch_size", overlap="$overlap", arrangement="${s$arrangement}
+  _${nout}_forward="begin(nn_matpatch2d_init_forward("$nout,$nin,$out_width,$out_height,\
+                                                      $patch_size,$overlap,$arrangement"));"\
+                   "nn_matpatch2d_forward("$nout,$nin");"
+  _${nout}_backward="nn_matpatch2d_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 "$out,$in,"${3--1}\n"
+  _nn_previous_layer=$out
+
 #@cli nn_maxpool2d : out,in,_patch_size>1,_is_maxabs={ 0:No | 1:Yes },_is_ceil={ 0:No | 1:Yes }
 #@cli : Add a 'maxpool2d' layer (2D max pooling) to the current network.
 #@cli : If 'is_ceil=1', partial patches at the image borders are pooled too (output size = ceil(size/patch_size)),
@@ -33602,41 +33631,6 @@ nn_parameters : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,"${2--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_patchcolumn2d : out,in,patch_size>0,0<=_overlap<patch_size
-#@cli : Add a 'patchcolumn2d' layer (rearrangement of image patches as matrix columns) to the current network.
-#@cli : Default value: 'overlap=0'.
-nn_patchcolumn2d : check "isvarname(['$1']) && # out
-                          (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
-                          isint($3,1) && # patch_size
-                          isint(${4=0},0) && $4<$3 # overlap
-                          "
-  net,out=${-nn_network},$1
-  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
-  nout,nin=${net}_$out,${nn_varname\ $in}
-  nn_check_layer $nin
-  patch_size,overlap=${3-4}
-
-  e[^-1] "[nn_lib] Add 'patchcolumn2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "patch size "$patch_size" and overlap "$overlap"."
-
-  if s=[${_${nin}_size}];s[2]!=1
-    error[0--3] "Command '$0', layer '"$nout"': "\
-            "Input layer '"$nin"' must be 2D (depth=1), but its size is ("${_${nin}_size}")."
-  fi
-  _${net}_layer_names.=$out,
-  _${net}_layer_types.=patchcolumn2d,
-  _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;\
-                 [max(1,ceil((s[0]-$overlap)/po))*max(1,ceil((s[1]-$overlap)/po)),s[3]*$patch_size^2,1,1]
-  _${nout}_input=$in
-  _${nout}_properties="patch_size="$patch_size", overlap="$overlap
-  _${nout}_forward="begin(nn_patchcolumn2d_init_forward("$nout,$nin,$patch_size,$overlap"));"\
-                   "nn_patchcolumn2d_forward("$nout,$nin");"
-  _${nout}_backward="nn_patchcolumn2d_backward("$nout,$nin");"
-  _${net}_forward.=${_${nout}_forward}
-  _${net}_backward..=${_${nout}_backward}
-  _${net}_init.="$0 "$out,$in,"${3--1}\n"
-  _nn_previous_layer=$out
-
 #@cli nn_patchdown2d : out,in,_patch_size>1
 #@cli : Add a 'patchdown2d' layer (2D downscale by patch) to the current network.
 #@cli : Default value: 'patch_size=2'.
@@ -33700,6 +33694,49 @@ nn_patchdown3d : check "isvarname(['$1']) && # out
                    "nn_patchdown3d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_patchdown3d_init_backward("$nout,$nin,$patch_size"));"\
                     "nn_patchdown3d_backward("$nout,$nin");"
+  _${net}_forward.=${_${nout}_forward}
+  _${net}_backward..=${_${nout}_backward}
+  _${net}_init.="$0 "$out,$in,"${3--1}\n"
+  _nn_previous_layer=$out
+
+#@cli nn_patch2dmat : out,in,patch_size>0,0<=_overlap<patch_size,_arrangement={ 0:patch-as-column | 1:patch-as-row }
+#@cli : Add a 'patch2dmat' layer (rearrangement of image patches as matrix columns or rows) to the current network.
+#@cli : If 'arrangement=0', each patch is a column of the output matrix \
+# ('width=nb_patches', 'height=patch_size^2*spectrum').
+#@cli : If 'arrangement=1', each patch is a row of the output matrix \
+# ('width=patch_size^2*spectrum', 'height=nb_patches').
+#@cli : Default values: 'overlap=0' and 'arrangement=0'.
+nn_patch2dmat : check "isvarname(['$1']) && # out
+                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
+                       isint($3,1) && # patch_size
+                       isint(${4=0},0) && $4<$3 && # overlap
+                       isbool(${5=0}) # arrangement
+                       "
+  net,out=${-nn_network},$1
+  if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
+  nout,nin=${net}_$out,${nn_varname\ $in}
+  nn_check_layer $nin
+  patch_size,overlap,arrangement=${3-5}
+
+  s0,s1=columns,rows
+  e[^-1] "[nn_lib] Add 'patch2dmat' layer '"$out"' to network '"$net"', with input '"$in"', "\
+         "patch size "$patch_size", overlap "$overlap" and output arrangement as "${s$arrangement}"."
+
+  if s=[${_${nin}_size}];s[2]!=1
+    error[0--3] "Command '$0', layer '"$nout"': "\
+            "Input layer '"$nin"' must be 2D (depth=1), but its size is ("${_${nin}_size}")."
+  fi
+  _${net}_layer_names.=$out,
+  _${net}_layer_types.=patch2dmat,
+  _${nout}_size:=s=[${_${nin}_size}];po=$patch_size-$overlap;\
+                 nb=max(1,ceil((s[0]-$overlap)/po))*max(1,ceil((s[1]-$overlap)/po));\
+                 fs=s[3]*$patch_size^2;\
+                 [$arrangement?fs:nb,$arrangement?nb:fs,1,1]
+  _${nout}_input=$in
+  _${nout}_properties="patch_size="$patch_size", overlap="$overlap", arrangement="${s$arrangement}
+  _${nout}_forward="begin(nn_patch2dmat_init_forward("$nout,$nin,$patch_size,$overlap,$arrangement"));"\
+                   "nn_patch2dmat_forward("$nout,$nin");"
+  _${nout}_backward="nn_patch2dmat_backward("$nout,$nin");"
   _${net}_forward.=${_${nout}_forward}
   _${net}_backward..=${_${nout}_backward}
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
@@ -46355,8 +46392,8 @@ fx_gmicky_preview :
 #@gui : - <b>2025/08/21</b> : version <i>3.6.0</i>.\n
 #@gui : - <b>2026/02/13</b> : version <i>3.7.0</i>.\n
 #@gui : - <b>2026/07/01</b> : version <i>4.0.0</i>.\n
-#@gui : - <span foreground="#EE5500"><b>2026/09/04</b> : version <i>4.0.5</i> (Current stable).</span>\n
-#@gui : - <b>2026/09/16</b> : version <i>4.0.6</i> (Current pre-release).\n
+#@gui : - <span foreground="#EE5500"><b>2026/10/14</b> : version <i>4.0.6</i> (Current stable).</span>\n
+##@gui : - <b>2026/09/16</b> : version <i>4.0.7</i> (Current pre-release).\n
 #@gui : "}
 #@gui : sep = separator()
 #@gui : url = link{"View changelog for next major version (4.1)","https://discuss.pixls.us/t/on-the-road-to-gmic-4-1"}
