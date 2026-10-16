@@ -29457,7 +29457,6 @@ nn_lib :
       const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
       const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
       const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
-
       OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
       OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
       OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
@@ -29491,6 +29490,7 @@ nn_lib :
 
     nn_affine_init_backward(OUT,IN,weight_decay) = (
       const OUT#_weight_decay = weight_decay;
+      OUT#_params_t = transpose(OUT#_params,OUT#_cols);
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
     );
@@ -29499,7 +29499,7 @@ nn_lib :
       nn_define_backward(IN#);
       OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
         ref(d#OUT,d#OUT#_S2);
-      d#OUT#_S1 = mul(transpose(OUT#_params,OUT#_cols),d#OUT#_S2,size(IN#)/OUT#_cols);
+      d#OUT#_S1 = mul(OUT#_params_t,d#OUT#_S2,size(IN#)/OUT#_cols);
       OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
         (d#IN+=d#OUT#_S1);
       d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
