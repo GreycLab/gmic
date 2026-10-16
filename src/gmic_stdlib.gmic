@@ -29453,17 +29453,17 @@ nn_lib :
       const OUT#_rows = h##OUT#_ind;
       const OUT#_cols = w##OUT#_ind - 1;
       const OUT#_axis = _'axis#';
-      const OUT#_is_x = OUT#_axis==_'x';
       const OUT#_width = OUT#_axis==_'x'?OUT#_rows:IN#_width;
       const OUT#_height = OUT#_axis==_'y'?OUT#_rows:IN#_height;
       const OUT#_depth = OUT#_axis==_'z'?OUT#_rows:IN#_depth;
       const OUT#_spectrum = OUT#_axis==_'c'?OUT#_rows:IN#_spectrum;
       OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
+
+      const OUT#_M = size(IN#)/OUT#_cols;
+      const OUT#_is_x = OUT#_axis==_'x';
       OUT#_is_x?(OUT#_params_t = transpose(OUT#_params,OUT#_cols));
       OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
       OUT#_is_x?(
-        # Axis 'x': OUT is the (M x rows) matrix IN.P^T + B, so B has the biases repeated block-wise.
-        const OUT#_M = IN#_height*IN#_depth*IN#_spectrum;
         OUT#_biases_whds = resize(OUT#_biases,OUT#_rows,1,1,1,OUT#_rows,OUT#_M,1,1,1);
       ):(
         OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
@@ -29489,7 +29489,7 @@ nn_lib :
       ):(
         OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
           ref(IN#,OUT#_S1);
-        OUT#_S2 = mul(OUT#_params,OUT#_S1,size(IN#)/OUT#_cols);
+        OUT#_S2 = mul(OUT#_params,OUT#_S1,OUT#_M);
       );
       OUT#_S2+=OUT#_biases_whds;
       OUT#_is_permutation?(OUT# = OUT#_inv_permute(OUT#_S2,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
@@ -29512,11 +29512,11 @@ nn_lib :
       ):(
         OUT#_is_permutation?(d#OUT#_S2 = OUT#_permute(d#OUT,OUT#_width,OUT#_height,OUT#_depth,OUT#_spectrum)):
           ref(d#OUT,d#OUT#_S2);
-        d#OUT#_S1 = mul(OUT#_params_t,d#OUT#_S2,size(IN#)/OUT#_cols);
+        d#OUT#_S1 = mul(OUT#_params_t,d#OUT#_S2,OUT#_M);
         OUT#_is_permutation?(d#IN+=OUT#_inv_permute(d#OUT#_S1,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
           (d#IN+=d#OUT#_S1);
-        d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,size(IN#)/OUT#_cols),OUT#_cols);
-        d#OUT#_biases = (size(IN#)/OUT#_cols)*resize(d#OUT#_S2,OUT#_rows,2);
+        d#OUT#_params = mul(d#OUT#_S2,transpose(OUT#_S1,OUT#_M),OUT#_cols);
+        d#OUT#_biases = OUT#_M*resize(d#OUT#_S2,OUT#_rows,2);
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
