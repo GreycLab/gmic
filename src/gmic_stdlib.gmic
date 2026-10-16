@@ -29460,19 +29460,22 @@ nn_lib :
       OUT#_params = crop(##OUT#_ind,0,0,OUT#_cols,OUT#_rows);
 
       const OUT#_M = size(IN#)/OUT#_cols;
-      const OUT#_is_x = OUT#_axis==_'x';
-      OUT#_is_x?(OUT#_params_t = transpose(OUT#_params,OUT#_cols));
+      const OUT#_is_first_axis = OUT#_axis==_'x' ||
+                                 (OUT#_axis==_'y' && IN#_width==1) ||
+                                 (OUT#_axis==_'z' && IN#_width==1 && IN#_height==1) ||
+                                 (OUT#_axis==_'c' && IN#_width==1 && IN#_height==1 && IN#_depth==1);
+      OUT#_is_first_axis?(OUT#_params_t = transpose(OUT#_params,OUT#_cols));
       OUT#_biases = crop(##OUT#_ind,OUT#_cols,0,1,OUT#_rows);
-      OUT#_is_x?(
+      OUT#_is_first_axis?(
         OUT#_biases_whds = resize(OUT#_biases,OUT#_rows,1,1,1,OUT#_rows,OUT#_M,1,1,1);
       ):(
         OUT#_biases_whds = resize(OUT#_biases,OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum,1);
       );
-      OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
+      !OUT#_is_first_axis && OUT#_axis==_'y' && (IN#_depth!=1 || IN#_spectrum!=1)?(
         OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xzcy');
         OUT#_inv_permute(X,w,h,d,s) = permute(X,w,d,s,h,'xcyz');
         const OUT#_is_permutation = 1;
-      ):OUT#_axis==_'z' && IN#_spectrum!=1?(
+      ):!OUT#_is_first_axis && OUT#_axis==_'z' && IN#_spectrum!=1?(
         OUT#_permute(X,w,h,d,s) = permute(X,w,h,d,s,'xycz');
         OUT#_inv_permute(X,w,h,d,s) = permute(X,w,h,s,d,'xycz');
         const OUT#_is_permutation = 1;
@@ -29484,7 +29487,7 @@ nn_lib :
     );
 
     nn_affine_forward(OUT,IN) = (
-      OUT#_is_x?(
+      OUT#_is_first_axis?(
         OUT#_S2 = mul(IN#,OUT#_params_t,OUT#_rows);
       ):(
         OUT#_is_permutation?(OUT#_S1 = OUT#_permute(IN#,IN#_width,IN#_height,IN#_depth,IN#_spectrum)):
@@ -29505,7 +29508,7 @@ nn_lib :
 
     nn_affine_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      OUT#_is_x?(
+      OUT#_is_first_axis?(
         d#IN+=mul(d#OUT,OUT#_params,OUT#_cols);
         d#OUT#_params = mul(transpose(d#OUT,OUT#_rows),IN#,OUT#_cols);
         d#OUT#_biases = OUT#_M*resize(d#OUT,OUT#_rows,OUT#_M,1,1,OUT#_rows,1,1,1,2);
