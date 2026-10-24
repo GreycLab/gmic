@@ -29827,7 +29827,7 @@ nn_lib :
 
     # conv2d: 2D convolutional layer.
     #--------------------------------
-    nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions) = (
+    nn_conv2d_init_forward(OUT,IN,kernel_size,stride,dilation,shrink,boundary_conditions,groups) = (
       const OUT#_ind = $""#OUT;
       const OUT#_shrink = shrink;
       const OUT#_width = int((IN#_width - 1)/stride) + 1 - 2*OUT#_shrink;
@@ -29860,20 +29860,49 @@ nn_lib :
         const OUT#_padded_spectrum = IN#_spectrum;
       );
       const OUT#_padded_shrink_stride = OUT#_shrink_stride + OUT#_padding;
+
+      # Define geometry of groups (grouped convolution).
+      # Each group links 'in_group' input channels to 'out_group' output channels.
+      # Weights of group g are the rows [g*out_group,(g+1)*out_group[ of OUT#_params (contiguous in memory).
+      const OUT#_groups = groups;
+      const OUT#_in_group = OUT#_padded_spectrum/OUT#_groups;
+      const OUT#_out_group = OUT#_spectrum/OUT#_groups;
+      const OUT#_padded_whd = OUT#_padded_width*OUT#_padded_height*OUT#_padded_depth;
+      const OUT#_group_in_size = OUT#_padded_whd*OUT#_in_group;
+      const OUT#_group_out_size = OUT#_whd*OUT#_out_group;
+      const OUT#_group_params_size = OUT#_kernel_size^2*OUT#_in_group*OUT#_out_group;
     );
 
     nn_conv2d_forward(OUT,IN) = (
       OUT#_padding?nn_crop_forward(OUT#_padded,IN#):ref(IN#,OUT#_padded);
-      OUT# = convolve(OUT#_padded,
-                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
-                      OUT#_params,
-                      OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum*OUT#_spectrum,
-                      OUT#_padding?0:OUT#_boundary_conditions,0,2,
-                      OUT#_kernel_center,OUT#_kernel_center,0,
-                      OUT#_stride,OUT#_stride,1,
-                      OUT#_dilation,OUT#_dilation,1,
-                      OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,0,
-                      OUT#_width,OUT#_height,OUT#_depth);
+      OUT#_groups==1?( # Standard convolution: single call to convolve()
+        OUT# = convolve(OUT#_padded,
+                        OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
+                        OUT#_params,
+                        OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum*OUT#_spectrum,
+                        OUT#_padding?0:OUT#_boundary_conditions,0,2,
+                        OUT#_kernel_center,OUT#_kernel_center,0,
+                        OUT#_stride,OUT#_stride,1,
+                        OUT#_dilation,OUT#_dilation,1,
+                        OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,0,
+                        OUT#_width,OUT#_height,OUT#_depth);
+      ):( # Grouped convolution: one call to convolve() per group.
+        OUT# = vector(OUT#_whd*OUT#_spectrum);
+        repeat (OUT#_groups,_nn_g,
+          copy(OUT#[_nn_g*OUT#_group_out_size],
+            convolve(OUT#_padded[_nn_g*OUT#_group_in_size,OUT#_group_in_size],
+                     OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_in_group,
+                     OUT#_params[_nn_g*OUT#_group_params_size,OUT#_group_params_size],
+                     OUT#_kernel_size,OUT#_kernel_size,1,OUT#_in_group*OUT#_out_group,
+                     OUT#_padding?0:OUT#_boundary_conditions,0,2,
+                     OUT#_kernel_center,OUT#_kernel_center,0,
+                     OUT#_stride,OUT#_stride,1,
+                     OUT#_dilation,OUT#_dilation,1,
+                     OUT#_padded_shrink_stride,OUT#_padded_shrink_stride,0,
+                     OUT#_width,OUT#_height,OUT#_depth),
+                   OUT#_group_out_size);
+        );
+      );
       repeat (OUT#_spectrum,_nn_k,copy(OUT#[_nn_k*OUT#_whd],OUT#_biases[_nn_k],OUT#_whd,1,0,-1)); # Add biases
     );
 
@@ -29881,6 +29910,7 @@ nn_lib :
       const OUT#_width_stride = OUT#_width*OUT#_stride;
       const OUT#_height_stride = OUT#_height*OUT#_stride;
       const OUT#_prestrided_whd = OUT#_width_stride*OUT#_height_stride*OUT#_depth;
+      const OUT#_group_prestrided_size = OUT#_prestrided_whd*OUT#_out_group;
       const OUT#_weight_decay = weight_decay;
       batch_d#OUT#_params = vector(#size(OUT#_params));
       batch_d#OUT#_biases = vector(#size(OUT#_biases));
@@ -29898,24 +29928,47 @@ nn_lib :
       );
 
       # Compute dLOSS/dIN (via dLOSS/dOUT_padded).
+      # Input channel _nn_k only contributes to the output channels of its own group.
       nn_define_backward(IN#);
       OUT#_padding?(d#OUT#_padded = vector(#size(OUT#_padded))):ref(d#IN,d#OUT#_padded);
 
-      repeat (OUT#_padded_spectrum,_nn_k,
-        draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
-             correlate(d#OUT#_prestrided,
-                       OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
-                       crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
-                            _nn_k*OUT#_kernel_size^2,0,OUT#_kernel_size^2,OUT#_spectrum),
-                       OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum,
-                       0,0,2,
-                       OUT#_kernel_center,OUT#_kernel_center,0,
-                       1,1,1,
-                       OUT#_dilation,OUT#_dilation,1,
-                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
-                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+      OUT#_groups==1?( # Standard convolution: no slicing of vectors
+        repeat (OUT#_padded_spectrum,_nn_k,
+          draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
+            correlate(d#OUT#_prestrided,
+                      OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
+                      crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
+                           _nn_k*OUT#_kernel_size^2,0,OUT#_kernel_size^2,OUT#_spectrum),
+                      OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum,
+                      0,0,2,
+                      OUT#_kernel_center,OUT#_kernel_center,0,
+                      1,1,1,
+                      OUT#_dilation,OUT#_dilation,1,
+                      -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
+            0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
+            -1); # Add to dOUT_padded
+        );
+      ):( # Grouped convolution: input channel _nn_k only receives gradients from the output channels of its group.
+        repeat (OUT#_padded_spectrum,_nn_k,
+          _nn_g = int(_nn_k/OUT#_in_group); # Group of input channel _nn_k.
+          _nn_kl = _nn_k%OUT#_in_group;     # Index of input channel _nn_k inside its group.
+          draw(d#OUT#_padded,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
+            correlate(d#OUT#_prestrided[_nn_g*OUT#_group_prestrided_size,OUT#_group_prestrided_size],
+                      OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_out_group,
+                      crop(OUT#_params,w##OUT#_ind - 1,OUT#_spectrum,1,1,
+                           _nn_kl*OUT#_kernel_size^2,_nn_g*OUT#_out_group,
+                           OUT#_kernel_size^2,OUT#_out_group),
+                      OUT#_kernel_size,OUT#_kernel_size,1,OUT#_out_group,
+                      0,0,2,
+                      OUT#_kernel_center,OUT#_kernel_center,0,
+                      1,1,1,
+                      OUT#_dilation,OUT#_dilation,1,
+                      -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
+                      OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth),
              0,0,0,_nn_k,OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,1,
              -1); # Add to dOUT_padded
+        );
       );
       OUT#_padding?nn_crop_backward(OUT#_padded,IN#);
 
@@ -29925,14 +29978,17 @@ nn_lib :
       batch_d#OUT#_biases+=d#OUT#_biases;
 
       # Compute dLOSS/dweights.
+      # Output channel _nn_k only sees the input channels of its own group.
       const OUT#_dkc = OUT#_dilation*OUT#_kernel_center;
       d#OUT#_params = vector(#size(OUT#_params));
-      repeat (OUT#_spectrum,_nn_k,
-        draw(d#OUT#_params,
-             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*OUT#_padded_spectrum,
-             correlate(crop(d#OUT#_prestrided,
-                            OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
-                            0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth,1),
+
+      OUT#_groups==1?( # Standard convolution: no slicing of vectors
+        repeat (OUT#_spectrum,_nn_k,
+          draw(d#OUT#_params,
+            OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*OUT#_padded_spectrum,
+            correlate(crop(d#OUT#_prestrided,
+                           OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
+                           0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth,1),
                        OUT#_width_stride,OUT#_height_stride,OUT#_depth,1,
                        OUT#_padded,
                        OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_padded_spectrum,
@@ -29942,8 +29998,29 @@ nn_lib :
                        1,1,1,
                        -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
                        OUT#_kernel_size,OUT#_kernel_size,1),
-             0,0,0,_nn_k*OUT#_padded_spectrum,
-             OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum);
+            0,0,0,_nn_k*OUT#_padded_spectrum,
+            OUT#_kernel_size,OUT#_kernel_size,1,OUT#_padded_spectrum);
+        );
+      ):( # Grouped convolution: output channel _nn_k only sees the input channels of its group
+        repeat (OUT#_spectrum,_nn_k,
+          _nn_g = int(_nn_k/OUT#_out_group);  # Group of output channel _nn_k.
+          draw(d#OUT#_params,
+            OUT#_kernel_size,OUT#_kernel_size,1,OUT#_spectrum*OUT#_in_group,
+            correlate(crop(d#OUT#_prestrided,
+                           OUT#_width_stride,OUT#_height_stride,OUT#_depth,OUT#_spectrum,
+                           0,0,0,_nn_k,OUT#_width_stride,OUT#_height_stride,OUT#_depth,1),
+                       OUT#_width_stride,OUT#_height_stride,OUT#_depth,1,
+                       OUT#_padded[_nn_g*OUT#_group_in_size,OUT#_group_in_size],
+                       OUT#_padded_width,OUT#_padded_height,OUT#_padded_depth,OUT#_in_group,
+                       0,0,1,
+                       OUT#_dkc,OUT#_dkc,0,
+                       OUT#_dilation,OUT#_dilation,1, # Correct stride value is actually dilation
+                       1,1,1,
+                       -OUT#_padded_shrink_stride,-OUT#_padded_shrink_stride,0,
+                       OUT#_kernel_size,OUT#_kernel_size,1),
+            0,0,0,_nn_k*OUT#_in_group,
+            OUT#_kernel_size,OUT#_kernel_size,1,OUT#_in_group);
+        );
       );
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
@@ -32364,14 +32441,17 @@ nn_conv : check "isvarname(['$1']) && # out
   _nn_previous_layer=$out
 
 #@cli nn_conv2d : out,in,nb_channels>0,_kernel_size>0,_stride>0,_dilation>0,_shrink>=0,_boundary_conditions,\
-# _learning_mode,_weight_decay>=0,_initialization
+# _learning_mode,_weight_decay>=0,_initialization,_groups>0
 #@cli : Add a 'conv2d' layer (2D convolutional layer) to the current network.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
 #@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
 # 4:Residual He-initialization }.
+#@cli : 'groups' is the number of groups of the (grouped) convolution. It must divide both the number
+#@cli : of input channels and 'nb_channels'. 'groups=1' is a standard convolution, and
+#@cli : 'groups=nb_channels=(number of input channels)' is a depthwise convolution.
 #@cli : Default values: 'kernel_size=3', 'stride=1', 'dilation=1', \
-# 'shrink=0', 'boundary_conditions=0', 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+# 'shrink=0', 'boundary_conditions=0', 'learning_mode=3', 'weight_decay=0', 'initialization=3' and 'groups=1'.
 nn_conv2d : check "isvarname(['$1']) && # out
                    (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                    isint($3,1) && # nb_channels
@@ -32382,18 +32462,25 @@ nn_conv2d : check "isvarname(['$1']) && # out
                    isint(${8=0},0,3) && # boundary_conditions
                    isint(${9=3},0,3) && # learning_mode
                    ${10=0}>=0 && # weight_decay
-                   isint(${11=3},0,4) # initialization
+                   isint(${11=3},0,4) && # initialization
+                   isint(${12=1},1) # groups
                    "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization=${3-11}
+  nb_channels,kernel_size,stride,dilation,shrink,boundary_conditions,learning_mode,weight_decay,initialization,groups=${3-12}
   s0,s1,s2,s3=dirichlet,neumann,periodic,mirror
+
+  nin_spectrum={[${_${nin}_size}][3]}
+  if $nb_channels%$groups" || "$nin_spectrum%$groups
+    error[0--4] "Command '$0': 'groups' ("$groups") must divide both the number of input channels ("$nin_spectrum") "\
+                "and 'nb_channels' ("$nb_channels")."
+  fi
 
   e[^-1] "[nn_lib] Add 'conv2d' layer '"$out"' to network '"$net"', with input '"$in"', "\
          $nb_channels" channels, kernel size "$kernel_size", stride "$stride", dilation "$dilation", "\
-         "border shrink "$shrink" and "${s$boundary_conditions}" boundary conditions."
+         "border shrink "$shrink", "$groups" group(s) and "${s$boundary_conditions}" boundary conditions."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=conv2d,
@@ -32402,9 +32489,9 @@ nn_conv2d : check "isvarname(['$1']) && # out
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="kernel_size="$kernel_size", stride="$stride", dilation="$dilation", "\
                       "shrink="$shrink", boundary_conditions="${s$boundary_conditions}", "\
-                      "learning_mode="$learning_mode", weight_decay="$weight_decay
+                      "learning_mode="$learning_mode", weight_decay="$weight_decay", groups="$groups
 
-  whds={[${_${nin}_size}][3]*$kernel_size^2+1},$nb_channels,1,1
+  whds={$nin_spectrum/$groups*$kernel_size^2+1},$nb_channels,1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -32414,7 +32501,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
     $whds
     if $initialization==1
       f. "const s = "$kernel_size"; const s2 = int(s/2); const ss = s^2; "\
-         "int(x/ss)==y%"{[${_${nin}_size}][3]}" && x%ss==s2*(s + 1)"
+         "int(x/ss)==(y%"{$nb_channels/$groups}")%"{$nin_spectrum/$groups}" && x%ss==s2*(s + 1)"
     elif $initialization==2 # Lecun-initialization
       f. "g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -32426,7 +32513,7 @@ nn_conv2d : check "isvarname(['$1']) && # out
     => $nout
   fi
   _${nout}_forward="begin(nn_conv2d_init_forward("$nout,$nin,$kernel_size,$stride,$dilation,\
-                   $shrink,$boundary_conditions"));"\
+                   $shrink,$boundary_conditions,$groups"));"\
                    "nn_conv2d_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_conv2d_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_conv2d_backward("$nout,$nin");"\
