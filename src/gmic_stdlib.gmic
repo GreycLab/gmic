@@ -30463,13 +30463,13 @@ nn_lib :
       const OUT#_outg = h##OUT#_ind/groups; # Output size per group
       OUT#_params = crop(##OUT#_ind,0,0,OUT#_ing,h##OUT#_ind);
       OUT#_biases = crop(##OUT#_ind,OUT#_ing,0,1,h##OUT#_ind);
+      OUT#_group>1?(OUT# = vector(##OUT#_spectrum));
     );
 
     nn_fc_forward(OUT,IN) = (
       OUT#_groups==1?(
         OUT# = mul(OUT#_params,IN#);
       ):(
-        OUT# = vector(##OUT#_spectrum);
         repeat(OUT#_groups,_nn_k,
           _nn_oo = _nn_k*OUT#_outg;
           copy(OUT#[_nn_oo],
@@ -30687,10 +30687,10 @@ nn_lib :
         );
       );
       OUT#_count = vmax(OUT#_count,1);
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
     );
 
     nn_matpatch2d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_spectrum);
       _nn_k = 0;
       repeat (OUT#_nb_rows,_nn_n,
         repeat (OUT#_nb_cols,_nn_m,
@@ -30721,10 +30721,10 @@ nn_lib :
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
       const OUT#_is_ceil = is_ceil;
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
     );
 
     nn_maxpool2d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
       OUT#_from = vector(#size(OUT#));
       _nn_off = 0;
       repeat (OUT#_spectrum,_nn_c,
@@ -30776,10 +30776,10 @@ nn_lib :
       const OUT#_patch_size = patch_size;
       const OUT#_is_maxabs = is_maxabs;
       const OUT#_is_ceil = is_ceil;
+      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
     );
 
     nn_maxpool3d_forward(OUT,IN) = (
-      OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
       OUT#_from = vector(#size(OUT#));
       _nn_off = 0;
       repeat (OUT#_spectrum,_nn_c,
@@ -31304,11 +31304,11 @@ nn_lib :
       const OUT#_depth = OUT#_axis && OUT#_axis!=_'z'?IN#_depth:1;
       const OUT#_spectrum = OUT#_axis && OUT#_axis!=_'c'?IN#_spectrum:1;
       const OUT#_p = p;
+      OUT#_axis?(OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum));
     );
 
     nn_norm_forward(OUT,IN) = (
       OUT#_axis?(
-        OUT# = vector(##OUT#_width*OUT#_height*OUT#_depth*OUT#_spectrum);
         _nn_off = 0;
         OUT#_axis==_'x'?repeat (OUT#_height*OUT#_depth*OUT#_spectrum,_nn_l, # Along x-axis
           OUT#_crop = IN#[_nn_l*IN#_width,IN#_width];
