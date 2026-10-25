@@ -30454,18 +30454,31 @@ nn_lib :
 
     # fc: Fully-connected layer.
     #---------------------------
-    nn_fc_init_forward(OUT,IN) = (
+    nn_fc_init_forward(OUT,IN,groups) = (
       const OUT#_ind = $""#OUT;
       const OUT#_width = 1;
       const OUT#_height = 1;
       const OUT#_depth = 1;
       const OUT#_spectrum = h##OUT#_ind;
-      OUT#_params = crop(##OUT#_ind,0,0,size(IN#),h##OUT#_ind);
-      OUT#_biases = crop(##OUT#_ind,size(IN#),0,1,h##OUT#_ind);
+      const OUT#_groups = groups;
+      const OUT#_ing = size(IN#)/groups;    # Input size per group
+      const OUT#_outg = h##OUT#_ind/groups; # Output size per group
+      OUT#_params = crop(##OUT#_ind,0,0,OUT#_ing,h##OUT#_ind);
+      OUT#_biases = crop(##OUT#_ind,OUT#_ing,0,1,h##OUT#_ind);
     );
 
     nn_fc_forward(OUT,IN) = (
-      OUT# = mul(OUT#_params,IN#);
+      OUT#_groups==1?(
+        OUT# = mul(OUT#_params,IN#);
+      ):(
+        OUT# = vector(##OUT#_spectrum);
+        repeat(OUT#_groups,_nn_k,
+          _nn_oo = _nn_k*OUT#_outg;
+          copy(OUT#[_nn_oo],
+               mul(OUT#_params[_nn_oo*OUT#_ing,OUT#_outg*OUT#_ing],IN#[_nn_k*OUT#_ing,OUT#_ing]),
+               OUT#_outg);
+        );
+      );
       OUT#+=OUT#_biases;
     );
 
@@ -30477,8 +30490,26 @@ nn_lib :
 
     nn_fc_backward(OUT,IN) = (
       nn_define_backward(IN#);
-      d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
-      d#OUT#_params = mul(d#OUT,IN#,size(IN#));
+      OUT#_groups==1?(
+        d#IN+=mul(transpose(OUT#_params,size(IN#)),d#OUT);
+        d#OUT#_params = mul(d#OUT,IN#,size(IN#));
+      ):(
+        d#OUT#_params = vector(#size(OUT#_params));
+        repeat(OUT#_groups,_nn_k,
+          _nn_ii = _nn_k*OUT#_ing;
+          _nn_oo = _nn_k*OUT#_outg;
+
+          # Gradient w.r.t. the input (accumulated).
+          copy(d#IN[_nn_ii],
+               mul(transpose(OUT#_params[_nn_oo*OUT#_ing,OUT#_outg*OUT#_ing],OUT#_ing),d#OUT[_nn_oo,OUT#_outg]),
+               OUT#_ing,1,1,-1);
+
+          # Gradient w.r.t. the weights of the group (outer product).
+          copy(d#OUT#_params[_nn_oo*OUT#_ing],
+               mul(d#OUT[_nn_oo,OUT#_outg],IN#[_nn_ii,OUT#_ing],OUT#_ing),
+               OUT#_outg*OUT#_ing);
+        );
+      );
       d#OUT#_biases = d#OUT;
       OUT#_weight_decay>0?(d#OUT#_params+=OUT#_weight_decay*OUT#_params);
       batch_d#OUT#_params+=d#OUT#_params;
@@ -32876,35 +32907,41 @@ nn_dropout : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization
-#@cli : Add a 'fc' layer (fully connected layer) to the current network.
-#@cli : 'learning_mode' can be { 0:No learning | 1:Weights only | 2:Biases only | 3:Weights+biases }.
-#@cli : 'initialization' can be { 0:Zero | 1:Identity | 2:Lecun-initialization | 3:He-initialization | \
-# 4:Residual He-initialization }.
-#@cli : Default value: 'learning_mode=3', 'weight_decay=0' and 'initialization=3'.
+#@cli nn_fc : out,in,nb_channels>0,_learning_mode,_weight_decay>=0,_initialization,_groups>0
+#@cli : (...)
+#@cli : 'groups' is the number of groups (the input size and 'nb_channels' must be divisible by it).
+#@cli : Default value: 'learning_mode=3', 'weight_decay=0', 'initialization=3' and 'groups=1'.
 nn_fc : check "isvarname(['$1']) && # out
                (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                isint($3,1) && # nb_channels
                isint(${4=3},0,3) && # learning_mode
                ${5=0}>=0 && # weight_decay
-               isint(${6=3},0,4) # initialization
+               isint(${6=3},0,4) && # initialization
+               isint(${7=1},1) # groups
                "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  nb_channels,learning_mode,weight_decay,initialization=${3-6}
+  nb_channels,learning_mode,weight_decay,initialization,groups=${3-7}
 
-  e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"' and "$nb_channels" channels."
+  e[^-1] "[nn_lib] Add 'fc' layer '"$out"' to network '"$net"', with input '"$in"', "$nb_channels" channels"\
+         " and "$groups" group(s)."
+
+  size_in:=prod(${_${nin}_size})
+  if $size_in%$groups" || "$nb_channels%$groups
+    error[0--4] "Command '$0': Input size ("$size_in") and number of channels ("$nb_channels") "\
+                "must be divisible by 'groups' ("$groups")."
+  fi
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=fc,
   _${nout}_size=1,1,1,$nb_channels
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
-  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay
+  _${nout}_properties="learning_mode="$learning_mode", weight_decay="$weight_decay", groups="$groups
 
-  whds={prod(${_${nin}_size})+1},$nb_channels,1,1
+  whds={$size_in/$groups + 1},$nb_channels,1,1
   if isint(${$nout})
     if {$nout,[w,h,d,s]!=[$whds]}
       error[0--4] "Command '$0': Image ["$nout"] has incorrect size ("{$nout,[w,h,d,s]}"), "\
@@ -32912,8 +32949,8 @@ nn_fc : check "isvarname(['$1']) && # out
     fi
   else
     $whds
-    if $initialization==1 # Identity
-      f. "(x%h)==(y%(w - 1))"
+    if $initialization==1 # Identity (per group)
+      f. "(x%(h/"$groups"))==(y%(w - 1))"
     elif $initialization==2 # Lecun-initialization
       f. "g*sqrt(1/(w - 1))"
     elif $initialization==3 # He-initialization
@@ -32924,7 +32961,7 @@ nn_fc : check "isvarname(['$1']) && # out
     1,100% j.. .,100% rm. # Always set biases to 0
     => $nout
   fi
-  _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin"));"\
+  _${nout}_forward="begin(nn_fc_init_forward("$nout,$nin,$groups"));"\
                    "nn_fc_forward("$nout,$nin");"
   _${nout}_backward="begin(nn_fc_init_backward("$nout,$nin,$weight_decay"));"\
                     "nn_fc_backward("$nout,$nin");"\
