@@ -32886,7 +32886,7 @@ nn_div : check "isnum2 = isnum($2); isnum3 = isnum($3);
 
 #@cli nn_dropout : out,in,0<=dropout_rate<1,_axes
 #@cli : Add a 'dropout' layer to the current network.
-#@cli : 'axes' is a combination of { x | y | z | c } (e.g. 'xyz', 'c', 'xzc'), or '0', and gives the axes along which\
+#@cli : 'axes' is a combination of { x | y | z | c } (e.g. 'xyz', 'c', 'xzc'), or '0', and gives the axes along which \
 # the same dropout decision is shared: 0:One decision per element | xyz:Per channel (default) | \
 # xyzc:Whole layer (drop path).
 nn_dropout : check "isvarname(['$1']) && # out
@@ -32900,20 +32900,20 @@ nn_dropout : check "isvarname(['$1']) && # out
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
   dropout_rate,axes=${3-4}
-  n_axes:=s=['$axes'];m=0;repeat(size(s),k,c=s[k];m|=c==_'x'?1:c==_'y'?2:c==_'z'?4:c==_'c'?8:0);m
+  mask_axes:=s=['$axes'];m=0;repeat(size(s),k,c=s[k];m|=c==_'x'?1:c==_'y'?2:c==_'z'?4:c==_'c'?8:0);m
 
-  if ['$axes']!='0' str="dropout rate "$dropout_rate" and axes '"$axes"'"
-  else str="and dropout rate "$dropout_rate
+  if ['$axes']!='0' str=", dropout rate "$dropout_rate" and axes '"$axes"'"
+  else str=" and dropout rate "$dropout_rate
   fi
 
-  e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"', "$str"."
+  e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"'"$str"."
 
   _${net}_layer_names.=$out,
   _${net}_layer_types.=dropout,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
   _${nout}_properties="dropout_rate="$dropout_rate",axes="$axes
-  _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate,$n_axes"));"\
+  _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate,$mask_axes"));"\
                    "nn_dropout_forward("$nout,$nin");"
   _${nout}_backward="nn_dropout_backward("$nout,$nin");"
   _${net}_training.="nn_set_training("$nout");"
