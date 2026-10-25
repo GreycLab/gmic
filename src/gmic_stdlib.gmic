@@ -33800,7 +33800,7 @@ nn_norm : check "isvarname(['$1']) && # out
   _${net}_init.="$0 "$out,$in,"${3--1}\n"
   _nn_previous_layer=$out
 
-#@cli nn_normalize : out,in,axes,_normalization_type,_group_x>=0,_group_y>=0,_group_z>=0,_group_c>=0,_learning_mode
+#@cli nn_normalize : out,in,axes,_normalization_type,_groups_x>=0,_groups_y>=0,_groups_z>=0,_groups_c>=0,_learning_mode
 #@cli : Add a 'normalize' layer to the current network.
 #@cli : This normalization layer is generic and can simulate the behavior of \
 # a LayerNorm, an InstanceNorm, a GroupNorm, or an RMSNorm.
@@ -33822,34 +33822,34 @@ nn_norm : check "isvarname(['$1']) && # out
 # 'N' groups. 'N' must divide the corresponding input dimension, and a 'group_*' argument cannot be set \
 # for an axis that is already listed in 'axes'.
 #@cli : 'learning_mode' can be { 0:No learning | 1:Gamma only | 2:Beta only | 3:Gamma+beta }
-#@cli : Default values: 'normalization_type=0', 'group_x=group_y=group_z=group_c=0' and 'learning_mode=3'.
+#@cli : Default values: 'normalization_type=0', 'groups_x=groups_y=groups_z=groups_c=0' and 'learning_mode=3'.
 nn_normalize : check "isvarname(['$1']) && # out
                       (s2 = ['$2']; isvarname(s2) || s2=='.') && # in
                       isin(['$3'],'x','y','z','c','xy','xz','xc','yz','yc','zc',
                                   'xyz','xyc','xzc','yzc','xyzc') && # axes
                       isint(${4=0},0,3) && # normalization_type
-                      isint(${5=0},0) && # group_x
-                      isint(${6=0},0) && # group_y
-                      isint(${7=0},0) && # group_z
-                      isint(${8=0},0) && # group_c
+                      isint(${5=0},0) && # groups_x
+                      isint(${6=0},0) && # groups_y
+                      isint(${7=0},0) && # groups_z
+                      isint(${8=0},0) && # groups_c
                       isint(${9=3},0,3) # learning_mode
                       "
   net,out=${-nn_network},$1
   if '$2'=='.' in=$_nn_previous_layer else in=$2 fi
   nout,nin=${net}_$out,${nn_varname\ $in}
   nn_check_layer $nin
-  axes,normalization_type,group_x,group_y,group_z,group_c,learning_mode=${3-9}
+  axes,normalization_type,groups_x,groups_y,groups_z,groups_c,learning_mode=${3-9}
   has_beta:=!($normalization_type&1) # Types 0 (Avg_std) and 2 (Affine) have a Beta
   if !$has_beta learning_mode&=1 fi # Disable Beta when RMS-normalization or linear transform is selected
   s0,s1,s2,s3=avg_std-normalization,rms-normalization,affine-transform,linear-transform
 
   e[^-1] "[nn_lib] Add 'normalize' layer '"$out"' to network '"$net"', with input '"$in"', "\
-         "axes '"$axes"', "${s$normalization_type}" and groups ("$group_x,$group_y,$group_z,$group_c")."
+         "axes '"$axes"', "${s$normalization_type}" and groups ("$groups_x,$groups_y,$groups_z,$groups_c")."
 
-  if "axes = ['"$axes"']; (find(axes,_'x')>=0 && $group_x) || (find(axes,_'y')>=0 && $group_y) ||
-                          (find(axes,_'z')>=0 && $group_z) || (find(axes,_'c')>=0 && $group_c)"
+  if "axes = ['"$axes"']; (find(axes,_'x')>=0 && $groups_x) || (find(axes,_'y')>=0 && $groups_y) ||
+                          (find(axes,_'z')>=0 && $groups_z) || (find(axes,_'c')>=0 && $groups_c)"
     error[0--3] "Command '$0', layer '"$nout"': "\
-                "Invalid number of specified groups ("$group_x,$group_y,$group_z,$group_c") for axes '"$axes"'."
+                "Invalid number of specified groups ("$groups_x,$groups_y,$groups_z,$groups_c") for axes '"$axes"'."
   fi
 
   _${net}_layer_names.=$out,
@@ -33858,17 +33858,17 @@ nn_normalize : check "isvarname(['$1']) && # out
   _${nout}_input=$in
   _${nout}_learning_mode=$learning_mode
   _${nout}_properties="axes="$axes", normalization_type="${s$normalization_type}", "\
-                      "groups=("$group_x,$group_y,$group_z,$group_c)", learning_mode="$learning_mode
+                      "groups=("$groups_x,$groups_y,$groups_z,$groups_c)", learning_mode="$learning_mode
 
   ca_w,ca_h,ca_d,ca_s:="axes = ['"$axes"']; dim = ["${_${nout}_size}"]; # Get dimensions of complementary axes
-    [ find(axes,_'x')>=0?1:$group_x?$group_x:dim[0],
-      find(axes,_'y')>=0?1:$group_y?$group_y:dim[1],
-      find(axes,_'z')>=0?1:$group_z?$group_z:dim[2],
-      find(axes,_'c')>=0?1:$group_c?$group_c:dim[3] ]"
+    [ find(axes,_'x')>=0?1:$groups_x?$groups_x:dim[0],
+      find(axes,_'y')>=0?1:$groups_y?$groups_y:dim[1],
+      find(axes,_'z')>=0?1:$groups_z?$groups_z:dim[2],
+      find(axes,_'c')>=0?1:$groups_c?$groups_c:dim[3] ]"
 
   if max([${_${nout}_size}]%[$ca_w,$ca_h,$ca_d,$ca_s])
     error[0--3] "Command '$0', layer '"$nout"': "\
-                "Number of specified groups ("$group_x,$group_y,$group_z,$group_c") must divide the corresponding "\
+                "Number of specified groups ("$groups_x,$groups_y,$groups_z,$groups_c") must divide the corresponding "\
                 "input dimensions ("${_${nout}_size}")."
   fi
 
