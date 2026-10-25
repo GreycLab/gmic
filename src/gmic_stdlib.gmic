@@ -32901,9 +32901,8 @@ nn_dropout : check "isvarname(['$1']) && # out
   nn_check_layer $nin
   dropout_rate,axes=${3-4}
   mask_axes:=s=['$axes'];m=0;repeat(size(s),k,c=s[k];m|=c==_'x'?1:c==_'y'?2:c==_'z'?4:c==_'c'?8:0);m
-
-  if ['$axes']!='0' str=", dropout rate "$dropout_rate" and axes '"$axes"'"
-  else str=" and dropout rate "$dropout_rate
+  if ['$axes']!='0' str=", dropout rate "$dropout_rate" and axes '"$axes"'" s_axes=$axes
+  else str=" and dropout rate "$dropout_rate s_axes=(none)
   fi
 
   e[^-1] "[nn_lib] Add 'dropout' layer '"$out"' to network '"$net"', with input '"$in"'"$str"."
@@ -32912,7 +32911,7 @@ nn_dropout : check "isvarname(['$1']) && # out
   _${net}_layer_types.=dropout,
   _${nout}_size=${_${nin}_size}
   _${nout}_input=$in
-  _${nout}_properties="dropout_rate="$dropout_rate",axes="$axes
+  _${nout}_properties="dropout_rate="$dropout_rate", axes="$s_axes
   _${nout}_forward="begin(nn_dropout_init_forward("$nout,$nin,$dropout_rate,$mask_axes"));"\
                    "nn_dropout_forward("$nout,$nin");"
   _${nout}_backward="nn_dropout_backward("$nout,$nin");"
