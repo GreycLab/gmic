@@ -32591,32 +32591,52 @@ nn_check_layer :
     error[0--3] "Command '$0': Layer with name '$1' does not exist."
   fi
 
-#@cli nn_clone : out0,out1,in
+#@cli nn_clone : out0,_out1,_out2,_out3,in
 #@cli : Add a 'clone' layer to the current network.
-nn_clone : check "isvarname(['$1']) && # out0
-                  isvarname(['$2']) && # out1
-                  (s3 = ['$3']; isvarname(s3) || s3=='.') # in
+#@cli : This layer clones the input as one to four outputs.
+nn_clone : check "n = narg($*); isint(n,1,5) &&
+                  isvarname(['$1']) && # out0
+                  (s2 = ['$2']; isvarname(s2) || (n==2 && s2=='.')) && # out1 or in
+                  (s3 = ['${3=}']; n<3 || isvarname(s3) || (n==3 && s3=='.')) && # out2 or in
+                  (s4 = ['${4=}']; n<4 || isvarname(s4) || (n==4 && s4=='.')) && # out3 or in
+                  (s5 = ['${5=}']; n<5 || isvarname(s5) || s5=='.') # in
                   "
-  net,out0,out1=${-nn_network},${1,2}
-  if '$3'=='.' in=$_nn_previous_layer else in=$3 fi
-  nout0,nout1,nin=${net}_$out0,${net}_$out1,${nn_varname\ $in}
+  net=${-nn_network}
+  nb_outs=narg($*)-1
+  out0=$1 nout0=${net}_$out0 outs=$out0 nouts=$nout0 types=clone in=$2
+  if $nb_outs>1
+    out1=$2 nout1=${net}_$out1 outs.=,$out1 nouts.=,$nout1 types.=,clone in=$3
+    if $nb_outs>2
+      out2=$3 nout2=${net}_$out2 outs.=,$out2 nouts.=,$nout2 types.=,clone in=$4
+      if $nb_outs>3
+        out3=$4 nout3=${net}_$out3 outs.=,$out3 nouts.=,$nout3 types.=,clone in=$5
+      fi
+    fi
+  fi
+  if $nb_outs==1 s_outs=" '"$out0"'"
+  elif $nb_outs==2 s_outs="s '"$out0"' and '"$out1"'"
+  elif $nb_outs==3 s_outs="s '"$out0"', '"$out1"' and '"$out2"'"
+  else s_outs="s '"$out0"', '"$out1"', '"$out2"' and '"$out3"'"
+  fi
+  if '$in'=='.' in=$_nn_previous_layer fi
+  nin=${nn_varname\ $in}
   nn_check_layer $nin
 
-  e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and "\
-         "outputs '"$out0"' and '"$out1"'."
+  e[^-1] "[nn_lib] Add 'clone' layer to network '"$net"', with input '"$in"' and output"$s_out0"."
 
-  _${net}_layer_names.=$out0,$out1,
-  _${net}_layer_types.=clone,clone,
-  _${nout0}_size=${_${nin}_size}
-  _${nout1}_size=${_${nin}_size}
-  _${nout0}_input,_${nout1}_input=$in
-  _${nout0}_properties,_${nout1}_properties=
-  _${nout0}_forward="begin(nn_clone_init_forward("$nout0,$nout1,$nin"));"\
-                    "nn_clone_forward("$nout0,$nout1,$nin");"
-  _${nout0}_backward="nn_clone_backward("$nout0,$nout1,$nin");"
+  _${net}_layer_names.=$outs,
+  _${net}_layer_types.=$types,
+  repeat $nb_outs {
+    _${nout$>}_size=${_${nin}_size}
+    _${nout$>}_input=$in
+    _${nout$>}_properties=
+  }
+  _${nout0}_forward="begin(nn_clone_init_forward("$nouts,$nin"));"\
+                    "nn_clone_forward("$nouts,$nin");"
+  _${nout0}_backward="nn_clone_backward("$nouts,$nin");"
   _${net}_forward.=${_${nout0}_forward}
   _${net}_backward..=${_${nout0}_backward}
-  _${net}_init.="$0 "$out0,$out1,$in"\n"
+  _${net}_init.="$0 "$outs,$in"\n"
   _nn_previous_layer=$out0
 
 #@cli nn_conv : out,in,nb_channels>0,kernel_width>0,kernel_height>0,kernel_depth>0,\
@@ -34744,10 +34764,10 @@ nn_transpose : check "isvarname(['$1']) && # out
 #@cli : 'constant': (none).
 #@cli : 'adaptive': ( lr_min,lr_max,nb_warmup_iterations,nb_cooldown_iterations,patience_down,factor_down,\
 # patience_up,factor_up ).
-#@cli : Default values: 'loss=.', 'optimizer=adam', 'optimizer_params=(default)', \
+#@cli : Default values: 'optimizer=adam', 'optimizer_params=(default)', \
 # 'scheduler=constant' and 'scheduler_params=(default)'.
 nn_trainer : check "isvarname(['$1']) && # out
-                    (s2 = ['${2=.}']; s2=='.' || isvarname(s2)) && # in
+                    (s2 = ['$2']; s2=='.' || isvarname(s2)) && # in
                     (s3 = ['${3=adam}']; isvarname(s3) &&
                      isin(s3,'adam','adamax','rmsprop','sgd')) && # optimizer
                     (s5 = ['${5=constant}']; isvarname(s5) && # scheduler
