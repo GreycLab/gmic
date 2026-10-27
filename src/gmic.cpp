@@ -1795,6 +1795,28 @@ inline int sscanf_lfcc(const char *const str, double *const value, char *const c
   return 1;
 }
 
+// Fast equivalent of 'cimg_sscanf(s,"$%d",&n)==1'.
+inline bool sscanf_dd(const char *const str, int &n) {
+  if (*str!='$') return false;
+  const char *const p = str + 1;
+  char *end = 0;
+  const long v = std::strtol(p,&end,10);
+  if (end==p) return false;
+  n = (int)v;
+  return true;
+}
+
+// Fast equivalent of 'cimg_sscanf(s,"${%d%c",&n,&c)==2 && c=='}''.
+inline bool sscanf_dbdb(const char *const s, int &n) {
+  if (s[0]!='$' || s[1]!='{') return false;
+  const char *const p = s + 2;
+  char *end = 0;
+  const long v = std::strtol(p,&end,10);
+  if (end==p || *end!='}') return false;
+  n = (int)v;
+  return true;
+}
+
 // Return an image argument as a shared or non-shared copy of an existing image in the list.
 template<typename T>
 CImg<T> gmic::_gmic_image_arg(CImgList<T>& images, const CImgList<T>& parent_images,
@@ -5021,7 +5043,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
 
   CImg<char> gmic_selection, name, o_status,
     _argument_text, _argx, _argy, _argz, _argc, _title, _indices, _message, _formula, _color,
-    _command(257), _s_selection(256);
+    _command(257), _s_selection(256), substr(324);
   char _c0 = 0,
     *argument_text = &_c0,
     *argx = &_c0,
@@ -13276,7 +13298,6 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   append_string_to(substituted_command,ptr_sub);
 
               } else { // '$' expression found
-                CImg<char> substr(324);
                 inbraces.assign(1,1,1,1,0);
                 int iind = 0, iind1 = 0, l_inbraces = 0;
                 bool is_braces = false;
@@ -13347,8 +13368,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   has_arguments = true;
 
                   // Substitute $i and ${i} -> value of the i^th argument.
-                } else if ((cimg_sscanf(nsource,"$%d",&iind)==1 ||
-                            (cimg_sscanf(nsource,"${%d%c",&iind,&sep)==2 && sep=='}'))) {
+                } else if (sscanf_dd(nsource,iind) ||
+                           (sscanf_dbdb(nsource,iind) && (sep = '}'))) { // 'sep' tell '$i' from '${i}'
                   const int niind = iind + (iind<0?(int)nb_arguments + 1:0);
                   if ((niind<=0 && iind) || niind>=g_list_c.width() || !g_list_c[niind]) {
                     error(true,0,command_name,
