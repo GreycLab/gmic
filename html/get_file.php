@@ -1,4 +1,11 @@
 <?php
+
+// Block chinese bot.
+if ($_SERVER['REMOTE_ADDR'] === '115.199.54.67') {
+    http_response_code(403);
+    die("Access denied.");
+}
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
