@@ -60159,27 +60159,25 @@ fx_equalize_shadow :
 #@gui : Amplitude (%) = float(10,0,100)
 #@gui : Ray Length = float(2,0,2)
 #@gui : Mode = choice("Boundary","Dense")
-#@gui : Density (%) = float(80,0,100)
+#@gui : Density (%) = float(30,0,100)
 #@gui : Smoothness (%) = float(0.1,0,5)
 #@gui : Threshold (%) = float(50,0,100)
 #@gui : Light Position = point(50,50,0,1,255,255,0,-128,1%)
 #@gui : Light Color = color(255,255,255)
-#@gui : Blend Mode = choice(7,"Add","Alpha","Grain Merge","Hard Light","Lighten","Lightness",
+#@gui : Blend Mode = choice(2,"Add","Alpha","Grain Merge","Hard Light","Lighten","Lightness",
 #@gui : "Luminance","Overlay","Soft Light","Value")
 #@gui : Opacity (%) = float(100,0,100)
-#@gui : sep = separator()
-#@gui : Preview Light Shape = bool(1)
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2021/04/06</i>.</small>")
 fx_guided_lightrays :
   bmode=${"arg0 $12,add,alpha,grainmerge,hardlight,lighten,lchlightness,\
            luminance,overlay,softlight,value"}
   if $3 cond="i" else cond="i && !(j(-1) && j(1) && j(0,-1) && j(0,1))" fi
-  if 0$_is_preview" && "$14 i[1] [0] gui_set_layer_opacity[1] 50 fi
+  i[0] [0]
 
-  l[0] { # Process top layer only (light shape)
+  l[0] { # Process light shape.
     if s==2" || "s==4 channels 100% else compose_channels max fi
-    ge $6%
+    >= $6%
 
     # Draw lightrays.
     100%,100%
@@ -60191,13 +60189,13 @@ fx_guided_lightrays :
       const yl = Yl*(h - 1)/100;
       "$cond" && u<=$4%?(
         u = x - xl; v = y - yl;
-        polygon(#-1,2,xl,yl,xl + L*u,yl + L*v,-1,255);
+        polygon(#-1,2,xl,yl,xl + L*u,yl + L*v,-1,1);
      )"
-
     equalize. 65536,1,{iM} n. 0,1 power:=10^(-$1%) ^. {max(1e-2,$power)} b. $5% n. 0,255
     i[-2] (${9-11}:cyzx) r.. .,.,1,3 a[-2,-1] c
     k. gui_set_layer_mode $bmode gui_set_layer_opacity $13
   }
+
   if 0$_is_preview gui_merge_layers
   elif 0$_output_mode k[0]
   fi
