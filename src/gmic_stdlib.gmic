@@ -34303,35 +34303,40 @@ nn_print :
   e[^-1] "[nn_lib] Print info on network '"$net"'."
 
   v 0 e " * Network name: "$b$net$n
-  repeat narg(${_${net}_layer_names})-1 {
-    type=${arg0\ $>,${_${net}_layer_types}}
-    name=${arg0\ $>,${_${net}_layer_names}}
-    properties=${_${net}_${name}_properties}
-    input=${_${net}_${name}_input}
-    str_input,sep=
-    repeat narg($input) {
-      in=${arg0\ $>,$input}
-      if isnum($in) str_input.=$sep$c$in$n\ (constant)
-      else nin=${nn_varname\ $in} str_input.=$sep$c$in$n\ (${_${nin}_size})
+
+  if ['${_${net}_layer_names}']==0
+    e "\n * Total: 0 layers, 0 parameters.\n"
+  else
+    repeat narg(${_${net}_layer_names})-1 {
+      type=${arg0\ $>,${_${net}_layer_types}}
+      name=${arg0\ $>,${_${net}_layer_names}}
+      properties=${_${net}_${name}_properties}
+      input=${_${net}_${name}_input}
+      str_input,sep=
+      repeat narg($input) {
+        in=${arg0\ $>,$input}
+        if isnum($in) str_input.=$sep$c$in$n\ (constant)
+        else nin=${nn_varname\ $in} str_input.=$sep$c$in$n\ (${_${nin}_size})
+        fi
+        sep={`"$<==1?' and ':', \0'"`}
+      }
+      e "   - Layer: "$b$name$n" (type: "$g$type$n")"
+      if ['$input']!=0
+        s={`find(['$input'],_',')>0?_'s':0`}
+        e "       * Input"$s": "$str_input" → Output: "$c$name$n" ("${_${net}_${name}_size}")"
+      else
+        e "       * Output: "$c$name$n" ("${_${net}_${name}_size}")"
       fi
-      sep={`"$<==1?' and ':', \0'"`}
+      if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
+        e "       * Parameters: "$c{${net}_${name},whds}$n
+      fi
+      if ['$properties']!=0
+        ies={`find(['$properties'],_',')>0?'ies':[_'y',0,0]`}
+        e "       * Propert"$ies": "$c$properties$n
+      fi
     }
-    e "   - Layer: "$b$name$n" (type: "$g$type$n")"
-    if ['$input']!=0
-      s={`find(['$input'],_',')>0?_'s':0`}
-      e "       * Input"$s": "$str_input" → Output: "$c$name$n" ("${_${net}_${name}_size}")"
-    else
-      e "       * Output: "$c$name$n" ("${_${net}_${name}_size}")"
-    fi
-    if isin('$type','conv','conv2d','conv3d','fc','affine','normalize','parameters')
-      e "       * Parameters: "$c{${net}_${name},whds}$n
-    fi
-    if ['$properties']!=0
-      ies={`find(['$properties'],_',')>0?'ies':[_'y',0,0]`}
-      e "       * Propert"$ies": "$c$properties$n
-    fi
-  }
-  e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
+    e "\n * Total: "${b}{narg(${_${net}_layer_names})-1}$n" layers, "$b${-nn_size}$n" parameters.\n"
+  fi
 
 #@cli nn_reshape : out,in,width>0,_height>0,_depth>0,_spectrum>0
 #@cli : Add a 'reshape' layer to the current network.
