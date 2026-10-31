@@ -2486,31 +2486,31 @@ typedef enum {
   id_histogram=53,
   id_ifft=54,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
   id_keep=61,
-  id_label=62,id_light3d,id_line,id_local,id_log10,id_log2,
-  id_matchpatch=68,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
-  id_name=78,id_named,id_network,id_noarg,id_noise,id_normalize,
-  id_object3d=84,id_onfail,id_output,
-  id_parallel=87,id_pass,id_permute,id_point,id_polygon,id_progress,
-  id_quit=93,
-  id_rand=94,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
-  id_screen=103,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+  id_label=62,id_light3d,id_line,id_local,id_log10,id_log1p,id_log2,id_logit,
+  id_matchpatch=70,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name=80,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d=86,id_onfail,id_output,
+  id_parallel=89,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_quit=95,
+  id_rand=96,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen=105,id_serialize,id_shared,id_shift,id_sigmoid,id_sign,id_sinc,id_sinh,id_skip,
     id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
-  id_tanh=121,id_text,
-  id_uncommand=123,id_unroll,id_unserialize,
-  id_vanvliet=126,id_verbose,
-  id_wait=128,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_tanh=124,id_text,
+  id_uncommand=126,id_unroll,id_unserialize,
+  id_vanvliet=129,id_verbose,
+  id_wait=131,id_warn,id_warp,id_watershed,id_while,id_window,
     id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 3.
-  id_abs=149,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
-  id_log=163,
-  id_map=164,id_max,id_min,id_mod,id_mul,id_neq,
-  id_pow=171,
-  id_rol=173,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
+  id_abs=152,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
+  id_log=166,
+  id_map=167,id_max,id_min,id_mod,id_mul,id_neq,
+  id_pow=174,
+  id_rol=176,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
 
   // Commands of length 2.
-  id_do=189,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
-  id_or=201,id_qr
+  id_do=192,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
+  id_or=204,id_qr
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length and in lexicographic order!).
@@ -2527,14 +2527,14 @@ const char *gmic::builtin_command_names[] = {
   "histogram",
   "ifft","image","index","inpaint","input","isoline3d","isosurface3d",
   "keep",
-  "label","light3d","line","local","log10","log2",
+  "label","light3d","line","local","log10","log1p","log2","logit",
   "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
   "parallel","pass","permute","point","polygon","progress",
   "quit",
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
-  "screen","serialize","shared","shift","sign","sinc","sinh","skip",
+  "screen","serialize","shared","shift","sigmoid","sign","sinc","sinh","skip",
     "smooth","solve","sort","split","sqrt","srand","status","store","streamline3d","sub3d",
   "tanh","text",
   "uncommand","unroll","unserialize",
@@ -2572,14 +2572,14 @@ const int gmic::builtin_command_ids[] = {
   id_histogram,
   id_ifft,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
   id_keep,
-  id_label,id_light3d,id_line,id_local,id_log10,id_log2,
+  id_label,id_light3d,id_line,id_local,id_log10,id_log1p,id_log2,id_logit,
   id_matchpatch,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
   id_name,id_named,id_network,id_noarg,id_noise,id_normalize,
   id_object3d,id_onfail,id_output,
   id_parallel,id_pass,id_permute,id_point,id_polygon,id_progress,
   id_quit,
   id_rand,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
-  id_screen,id_serialize,id_shared,id_shift,id_sign,id_sinc,id_sinh,id_skip,
+  id_screen,id_serialize,id_shared,id_shift,id_sigmoid,id_sign,id_sinc,id_sinh,id_skip,
     id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
   id_tanh,id_text,
   id_uncommand,id_unroll,id_unserialize,
@@ -8666,11 +8666,17 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // 'log'.
         gmic_simple_command(log,"Compute pointwise base-e logarithm of image%s.");
 
+        // 'log10'.
+        gmic_simple_command(log10,"Compute pointwise base-10 logarithm of image%s.");
+
+        // 'log1p'.
+        gmic_simple_command(log1p,"Compute pointwise base-e logarithm of one plus image%s.");
+
         // 'log2'.
         gmic_simple_command(log2,"Compute pointwise base-2 logarithm of image%s.");
 
-        // 'log10'.
-        gmic_simple_command(log10,"Compute pointwise base-10 logarithm of image%s.");
+        // 'logit'.
+        gmic_simple_command(logit,"Compute logit of image%s.");
 
         // 'lt'.
         gmic_arithmetic_command(lt,
@@ -11462,6 +11468,9 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
           ++position;
           continue;
         }
+
+        // 'sigmoid'.
+        gmic_simple_command(sigmoid,"Compute pointwise sigmoid of image%s.");
 
         // 'sign'.
         gmic_simple_command(sign,"Compute pointwise sign of image%s.");
