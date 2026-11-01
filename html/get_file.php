@@ -20,9 +20,21 @@ $rel = $_GET['file'] ?? '';
 if ($debug) dbg("Requested: $rel");
 
 // Restrict downloadable version to latest stable.
-$latest_version = '4.0.7';
-if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $matches)) {
-    $requested_version = $matches[1];
+
+// 1. Guess last stable version number
+$latest_version = '4.0.7'; // Fallback number
+$html_file = __DIR__ . '/download.html';
+if (file_exists($html_file)) {
+    $html_content = file_get_contents($html_file);
+    // Look for the link to the source tar.gz file (e.g. "gmic_4.0.7.tar.gz")
+    if (preg_match('/gmic_(\d+\.\d+\.\d+)\.tar\.gz/', $html_content, $matches_html)) {
+        $latest_version = $matches_html[1];
+    }
+}
+
+// 2. Look for a pattern like 'A.B.C', where A,B,C are digits in the requested filename.
+if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $matches_file)) {
+    $requested_version = $matches_file[1];
     if ($requested_version !== $latest_version) {
         http_response_code(410); // 410 = Gone
         die("Access denied.");
