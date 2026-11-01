@@ -19,12 +19,13 @@ function dbg($m){ echo '<p>'.htmlspecialchars($m).'</p>'; }
 $rel = $_GET['file'] ?? '';
 if ($debug) dbg("Requested: $rel");
 
-// Restrict downloadable version.
-$obsolete_versions = ['4.0.0', '4.0.1', '4.0.2', '4.0.3', '4.0.4', '4.0.5', '4.0.6'];
-foreach ($obsolete_versions as $version) {
-    if (strpos($rel, $version) !== false) {
-        http_response_code(410); // 410 = Gone (Le fichier n'existe plus)
-        die("Access denied: Version $version is obsolete. Please visit https://gmic.eu/download.html");
+// Restrict downloadable version to latest stable.
+$latest_version = '4.0.7';
+if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $matches)) {
+    $requested_version = $matches[1];
+    if ($requested_version !== $latest_version) {
+        http_response_code(410); // 410 = Gone (Fichier obsolète/supprimé)
+        die("Access denied: Version $requested_version is obsolete. Please visit gmic.eu to get version $latest_version.");
     }
 }
 
