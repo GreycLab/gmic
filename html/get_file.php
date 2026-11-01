@@ -24,8 +24,8 @@ $latest_version = '4.0.7';
 if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $matches)) {
     $requested_version = $matches[1];
     if ($requested_version !== $latest_version) {
-        http_response_code(410); // 410 = Gone (Fichier obsolète/supprimé)
-        die("Access denied: Version $requested_version is obsolete. Please visit gmic.eu to get version $latest_version.");
+        http_response_code(410); // 410 = Gone
+        die("Access denied.");
     }
 }
 
