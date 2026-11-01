@@ -1,7 +1,8 @@
 <?php
 
-// Block chinese bot.
-if ($_SERVER['REMOTE_ADDR'] === '115.199.54.67') {
+// Block chinese bots (115.19.x.x to 115.199.x.x)
+$ip = $_SERVER['REMOTE_ADDR'];
+if (strpos($ip, '115.19') === 0) {
     http_response_code(403);
     die("Access denied.");
 }
