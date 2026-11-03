@@ -158,7 +158,7 @@ if ($method === 'GET') {
     // $allowed === null: lock/read failure -> let the request through (fail-open)
     if ($allowed === false) {
         header('Retry-After: ' . $rl_time_window);
-        fail(429, "Rate limit exceeded. You can only download $rl_max_downloads files per hour. Please try again later.");   // 429 = Too Many Requests
+        fail(429, "Access denied.");   // 429 = Too Many Requests
     }
 
     // Download statistics
