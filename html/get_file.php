@@ -1,10 +1,14 @@
 <?php
 
-// Block chinese bots (115.19.x.x to 115.199.x.x)
+// Block bots.
 $ip = $_SERVER['REMOTE_ADDR'];
-if (strpos($ip, '115.19') === 0) {
-    http_response_code(403);
-    die("Access denied.");
+$banned_prefixes = ['115.19', '14.19'];
+
+foreach ($banned_prefixes as $prefix) {
+    if (strpos($ip, $prefix) === 0) {
+        http_response_code(403);
+        die("Access denied.");
+    }
 }
 
 ini_set('display_errors', 1);
