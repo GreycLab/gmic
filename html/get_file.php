@@ -2,7 +2,10 @@
 
 // Block bots.
 $ip = $_SERVER['REMOTE_ADDR'];
-$banned_prefixes = ['115.19', '14.19'];
+$banned_prefixes = [
+    '115.19',
+    '14.19',
+];
 
 foreach ($banned_prefixes as $prefix) {
     if (strpos($ip, $prefix) === 0) {
