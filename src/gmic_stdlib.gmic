@@ -55459,30 +55459,28 @@ fx_morph_interactive_preview : gui_check_x11_gdi32 1
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/29</i>.</small>")
 fx_perspective :
   foreach {
-    to_rgba
-    sw,sh:=[w,h]-1
-
-    # Linear system A.m = b : Destination point (in pixels) -> Source corner (u,v).
-    repeat 4 {
-      px:=arg1(1+2*$>,$1,$2,$3,$4,$5,$6,$7,$8)*$sw%
-      py:=arg1(2+2*$>,$1,$2,$3,$4,$5,$6,$7,$8)*$sh%
-      pu:=arg1(1+2*$>,0,0,$sw,0,$sw,$sh,0,$sh)
-      pv:=arg1(2+2*$>,0,0,$sw,0,$sw,$sh,0,$sh)
-      ($px,$py,1,0,0,0,{-$px*$pu},{-$py*$pu};0,0,0,$px,$py,1,{-$px*$pv},{-$py*$pv})
-    }
-    a[-4--1] y                        # A : 8x8
-    (0;0;$sw;0;$sw;$sh;0;$sh)         # b : 1x8
-    solve[-1] [-2]                    # b <- (m0..m7)
-    repeat 8 { hc$>={i(#-1,0,$>)} }
-    rm[-2,-1]
-
-    # Absolute warping field (u,v) for each output pixel.
+    if $9==0 to_alpha fi
     100%,100%,1,2,"
-      den = ($hc6)*x + ($hc7)*y + 1;
-      c==0?(($hc0)*x + ($hc1)*y + ($hc2))/den
-          :(($hc3)*x + ($hc4)*y + ($hc5))/den"
-    warp[0] [1],0,$9,$10
-    rm[1]
+      begin(
+        const sw = w - 1; const swp = sw%;
+        const sh = h - 1; const shp = sh%;
+        x0 = $1*swp; y0 = $2*shp; x1 = $3*swp; y1 = $4*shp; x2 = $5*swp; y2 = $6*shp; x3 = $7*swp; y3 = $8*shp;
+        A = [ x0,y0,1, 0,0,0,   0,0,
+              0,0,0,   x0,y0,1, 0,0,
+              x1,y1,1, 0,0,0,   -sw*x1,-sw*y1,
+              0,0,0,   x1,y1,1, 0,0,
+              x2,y2,1, 0,0,0,   -sw*x2,-sw*y2,
+              0,0,0,   x2,y2,1, -sh*x2,-sh*y2,
+              x3,y3,1, 0,0,0,   0,0,
+              0,0,0,   x3,y3,1, -sh*x3,-sh*y3 ];
+        B = [ 0,0,sw,0,sw,sh,0,sh ];
+        W = solve(A,B);
+        W67_1 = [ W[6,2],1 ];
+        W012 = W[0,3];
+        W345 = W[3,3];
+      );
+      X1 = [ x,y,1 ]; [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
+    warp.. .,0,$9,$10 rm.
   }
 
 fx_perspective_preview :
