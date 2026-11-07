@@ -24387,6 +24387,43 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
     fi
   }
 
+#@cli perspective : [image],x0[%],y0[%],x1[%],y1[%],x2[%],y2[%],x3[%],y3[%],_interpolation,_boundary_conditions
+#@cli : Draw specified '[image]' on selected images, as a 3D quadrilatere in perspective.
+#@cli : 'interpolation' can be { 0:Nearest-neighbor | 1:Linear | 2:Cubic }.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : Default values: 'interpolation=1' and 'boundary_conditions=0'.
+#@cli : $ image.jpg to_rgba 512,512,1,4 perspective[-1] [-2],20%,20%,80%,30%,70%,80%,40%,70%
+perspective : check ${"is_image_arg $1"}" && isexpr([${2-9}]) && isint(${10=1},0,2) && isint(${11=0},0,3)"
+  i0,i1,i2,b0,b1,b2,b3=nearest-neighbor,linear,cubic,dirichlet,neumann,periodic,mirror
+  e[^-1] "Draw image $1 in perspective, in image$? at coordinates (${2,3})-(${4,5})-(${6,7})-(${8,9}), "\
+    "with "${i$10}" interpolation and "${i$11}" boundary conditions."
+  pass$1 0 channels. 0,{s} sh. 100% f. 1 rm.
+  foreach[^-1] {
+    pass. 1
+    [0],[0],1,2,"
+      begin(
+        const w0_1 = w#0 - 1; const h0_1 = h#0 - 1;
+        const w1_1 = w#1 - 1; const h1_1 = h#1 - 1;
+        const x0 = ispercentage($2)?w0_1*$2:$2; const y0 = ispercentage($3)?h0_1*$3:$3;
+        const x1 = ispercentage($4)?w0_1*$4:$4; const y1 = ispercentage($5)?h0_1*$5:$5;
+        const x2 = ispercentage($6)?w0_1*$6:$6; const y2 = ispercentage($7)?h0_1*$7:$7;
+        const x3 = ispercentage($8)?w0_1*$8:$8; const y3 = ispercentage($9)?h0_1*$9:$9;
+        A = [ x0,y0,1, 0,0,0,   0,0,
+              0,0,0,   x0,y0,1, 0,0,
+              x1,y1,1, 0,0,0,   -w1_1*x1,-w1_1*y1,
+              0,0,0,   x1,y1,1, 0,0,
+              x2,y2,1, 0,0,0,   -w1_1*x2,-w1_1*y2,
+              0,0,0,   x2,y2,1, -h1_1*x2,-h1_1*y2,
+              x3,y3,1, 0,0,0,   0,0,
+              0,0,0,   x3,y3,1, -h1_1*x3,-h1_1*y3 ];
+        B = [ 0,0,w1_1,0,w1_1,h1_1,0,h1_1 ];
+        W = solve(A,B); W67_1 = [ W[6,2],1 ]; W012 = W[0,3]; W345 = W[3,3];
+      );
+      X1 = [ x,y,1 ]; [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
+    +warp.. .,0,$10,$11 sh. 0,{s-2} sh.. 100% j[0] ..,0,0,0,0,1,. k[0]
+  }
+  rm.
+
 #@cli spline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_opacity,_color1,...
 #@cli : Draw specified colored spline curve on selected images (cubic hermite spline).
 #@cli : Default values: 'opacity=1' and 'color1=0'.
@@ -55458,30 +55495,8 @@ fx_morph_interactive_preview : gui_check_x11_gdi32 1
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/29</i>.</small>")
 fx_perspective :
-  foreach {
-    if $10==0 to_alpha fi
-    100%,100%,1,2,"
-      begin(
-        const sw = w - 1; const swp = sw%;
-        const sh = h - 1; const shp = sh%;
-        x0 = $1*swp; y0 = $2*shp; x1 = $3*swp; y1 = $4*shp; x2 = $5*swp; y2 = $6*shp; x3 = $7*swp; y3 = $8*shp;
-        A = [ x0,y0,1, 0,0,0,   0,0,
-              0,0,0,   x0,y0,1, 0,0,
-              x1,y1,1, 0,0,0,   -sw*x1,-sw*y1,
-              0,0,0,   x1,y1,1, 0,0,
-              x2,y2,1, 0,0,0,   -sw*x2,-sw*y2,
-              0,0,0,   x2,y2,1, -sh*x2,-sh*y2,
-              x3,y3,1, 0,0,0,   0,0,
-              0,0,0,   x3,y3,1, -sh*x3,-sh*y3 ];
-        B = [ 0,0,sw,0,sw,sh,0,sh ];
-        W = solve(A,B);
-        W67_1 = [ W[6,2],1 ];
-        W012 = W[0,3];
-        W345 = W[3,3];
-      );
-      X1 = [ x,y,1 ]; [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
-    warp.. .,0,$9,$10 rm.
-  }
+  if $10==0 to_a fi
+  foreach { nm={n} 100%,100%,1,100% perspective. ..,$1%,$2%,$3%,$4%,$5%,$6%,$7%,$8%,$9,$10 k. => $nm }
 
 fx_perspective_preview :
   fx_perspective $*
