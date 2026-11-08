@@ -24387,27 +24387,34 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
     fi
   }
 
-#@cli perspective : [image],x0[%],y0[%],x1[%],y1[%],x2[%],y2[%],x3[%],y3[%],_interpolation,_boundary_conditions
+#@cli perspective : [image],x0[%],y0[%],x1[%],y1[%],x2[%],y2[%],x3[%],y3[%],_opacity,_interpolation,_boundary_conditions
 #@cli : Draw specified '[image]' on selected images, as a 3D quadrilatere in perspective.
 #@cli : 'interpolation' can be { 0:Nearest-neighbor | 1:Linear | 2:Cubic }.
 #@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
-#@cli : Default values: 'interpolation=1' and 'boundary_conditions=0'.
+#@cli : Default values: 'opacity=1', 'interpolation=1' and 'boundary_conditions=0'.
 #@cli : $ image.jpg to_rgba 512,512,1,4 perspective[-1] [-2],20%,20%,80%,30%,70%,80%,40%,70%
-perspective : check ${"is_image_arg $1"}" && isexpr([${2-9}]) && isint(${10=1},0,2) && isint(${11=0},0,3)"
+perspective : check ${"is_image_arg $1"}" && isexpr([${2-9}]) && "\
+                    "isnum(${10=1}) && isint(${11=1},0,2) && isint(${12=0},0,3)"
   i0,i1,i2,b0,b1,b2,b3=nearest-neighbor,linear,cubic,dirichlet,neumann,periodic,mirror
   e[^-1] "Draw image $1 in perspective, in image$? at coordinates (${2,3})-(${4,5})-(${6,7})-(${8,9}), "\
-    "with "${i$10}" interpolation and "${i$11}" boundary conditions."
+    "with opacity $10, "${i$11}" interpolation and "${i$12}" boundary conditions."
   pass$1 0 channels. 0,{s} sh. 100% f. 1 rm.
   foreach[^-1] {
     x0,y0,x1,y1,x2,y2,x3,y3:="
       const w1 = w - 1; const h1 = h - 1;
-      [ ispercentage($2)?w1*$2:$2, ispercentage($3)?h1*$3:$3,
-        ispercentage($4)?w1*$4:$4, ispercentage($5)?h1*$5:$5,
-        ispercentage($6)?w1*$6:$6, ispercentage($7)?h1*$7:$7,
-        ispercentage($8)?w1*$8:$8, ispercentage($9)?h1*$9:$9 ]"
+      round([ ispercentage($2)?w1*$2:$2, ispercentage($3)?h1*$3:$3,
+              ispercentage($4)?w1*$4:$4, ispercentage($5)?h1*$5:$5,
+              ispercentage($6)?w1*$6:$6, ispercentage($7)?h1*$7:$7,
+              ispercentage($8)?w1*$8:$8, ispercentage($9)?h1*$9:$9 ])"
+    if $12
+      xm,ym,xM,yM:=0,0,w-1,h-1
+    else
+      xm,ym,xM,yM:="X = [ $x0,$x1,$x2,$x3 ]; Y = [ $y0,$y1,$y2,$y3 ]; [ min(X),min(Y),max(X),max(Y) ]"
+    fi
     pass. 1
-    [0],[0],1,2,"
+    {[$xM-$xm+1,$yM-$ym+1]},1,2,"
       begin(
+        const xm = $xm; const ym = $ym;
         const w1 = w#1 - 1; const h1 = h#1 - 1;
         const x0 = $x0; const y0 = $y0; const x1 = $x1; const y1 = $y1;
         const x2 = $x2; const y2 = $y2; const x3 = $x3; const y3 = $y3;
@@ -24422,8 +24429,11 @@ perspective : check ${"is_image_arg $1"}" && isexpr([${2-9}]) && isint(${10=1},0
         B = [ 0,0,w1,0,w1,h1,0,h1 ];
         W = solve(A,B); W67_1 = [ W[6,2],1 ]; W012 = W[0,3]; W345 = W[3,3];
       );
-      X1 = [ x,y,1 ]; [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
-    +warp.. .,0,$10,$11 sh. 0,{s-2} sh.. 100% j[0] ..,0,0,0,0,1,. k[0]
+      X1 = [ x + xm,y + ym,1 ];
+      [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
+    +warp.. .,0,$11,$12
+    sh. 0,{s-2} sh.. 100% j[0] ..,$xm,$ym,0,0,$10,.
+    k[0]
   }
   rm.
 
@@ -55499,7 +55509,8 @@ fx_morph_interactive_preview : gui_check_x11_gdi32 1
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/29</i>.</small>")
 fx_perspective :
   if $10==0 to_a fi
-  foreach { nm={n} 100%,100%,1,100% perspective. ..,$1%,$2%,$3%,$4%,$5%,$6%,$7%,$8%,$9,$10 k. => $nm }
+  foreach { nm={n} 100%,100%,1,100% perspective. ..,$1%,$2%,$3%,$4%,$5%,$6%,$7%,$8%,1,$9,$10 k. => $nm }
+  c 0,255
 
 fx_perspective_preview :
   fx_perspective $*
