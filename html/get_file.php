@@ -9,6 +9,14 @@ $stats_file       = __DIR__ . '/downloads.json';  // stays at the root (no perso
 $stats_lock       = __DIR__ . '/downloads.lock';
 $debug_ips        = ['127.0.0.1', '::1'];   // only these IPs may use ?debug=1
 
+// External files: alias => URL (whitelist; a raw URL is never accepted from the query)
+$external_files = [
+    'fedora45-stable' => 'https://dda.greyc.fr/registry/download?idFile=170',
+    'fedora45-dev'    => 'https://dda.greyc.fr/registry/download?idFile=172',
+    'fedora44-stable' => 'https://dda.greyc.fr/registry/download?idFile=136',
+    'fedora44-dev'    => 'https://dda.greyc.fr/registry/download?idFile=124',
+];
+
 ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
@@ -85,43 +93,56 @@ $debug = isset($_GET['debug']) && $_GET['debug'] === '1' && in_array($ip, $debug
 if ($debug) ini_set('display_errors', '1');
 function dbg(string $m): void { echo '<p>' . htmlspecialchars($m) . '</p>'; }
 
-/* ───────────── 3. Requested file ───────────── */
-$rel = $_GET['file'] ?? '';
-if (!is_string($rel) || $rel === '') fail(404);   // also rejects ?file[]=... (array)
-if ($debug) dbg("Requested: $rel");
+/* ───────────── 3. Requested file (local or external) ───────────── */
+$external_url = null;   // set only for external files
+$target       = null;   // set only for local files
+$ext          = $_GET['ext'] ?? '';
 
-// Restrict downloadable version to latest stable.
-$latest_version = '4.0.7'; // fallback number
-$html_file = __DIR__ . '/download.html';
-if (is_file($html_file)) {
-    $html_content = file_get_contents($html_file);
-    // Look for the link to the source tar.gz file (e.g. "gmic_4.0.7.tar.gz")
-    if ($html_content !== false && preg_match('/gmic_(\d+\.\d+\.\d+)\.tar\.gz/', $html_content, $m)) {
-        $latest_version = $m[1];
+if ($ext !== '') {
+    // External file: only aliases from the whitelist are accepted
+    // (also rejects ?ext[]=... since an array is not a string)
+    if (!is_string($ext) || !isset($external_files[$ext])) fail(404);
+    $external_url = $external_files[$ext];
+    $key = 'external/' . $ext;     // stats key, cannot collide with a local path
+    if ($debug) dbg("External: $ext -> $external_url");
+} else {
+    $rel = $_GET['file'] ?? '';
+    if (!is_string($rel) || $rel === '') fail(404);   // also rejects ?file[]=... (array)
+    if ($debug) dbg("Requested: $rel");
+
+    // Restrict downloadable version to latest stable.
+    $latest_version = '4.0.7'; // fallback number
+    $html_file = __DIR__ . '/download.html';
+    if (is_file($html_file)) {
+        $html_content = file_get_contents($html_file);
+        // Look for the link to the source tar.gz file (e.g. "gmic_4.0.7.tar.gz")
+        if ($html_content !== false && preg_match('/gmic_(\d+\.\d+\.\d+)\.tar\.gz/', $html_content, $m)) {
+            $latest_version = $m[1];
+        }
     }
-}
-// Look for a pattern like 'A.B.C' (digits) in the requested filename.
-if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $m) && $m[1] !== $latest_version) {
-    fail(410, 'Access denied.');   // 410 = Gone
-}
+    // Look for a pattern like 'A.B.C' (digits) in the requested filename.
+    if (preg_match('/(\d+\.\d+\.\d+)/', $rel, $m) && $m[1] !== $latest_version) {
+        fail(410, 'Access denied.');   // 410 = Gone
+    }
 
-// Validate file path to prevent directory traversal
-$base   = realpath(__DIR__ . '/files');
-$target = ($base !== false) ? realpath($base . '/' . $rel) : false;
-if (
-    $target === false ||
-    strpos($target, $base . DIRECTORY_SEPARATOR) !== 0 ||   // the separator prevents matching e.g. /files_secret
-    !is_file($target)
-) {
-    if ($debug) dbg('Invalid or unauthorized path.');
-    fail(404);
-}
+    // Validate file path to prevent directory traversal
+    $base   = realpath(__DIR__ . '/files');
+    $target = ($base !== false) ? realpath($base . '/' . $rel) : false;
+    if (
+        $target === false ||
+        strpos($target, $base . DIRECTORY_SEPARATOR) !== 0 ||   // the separator prevents matching e.g. /files_secret
+        !is_file($target)
+    ) {
+        if ($debug) dbg('Invalid or unauthorized path.');
+        fail(404);
+    }
 
-// Canonical stats key (independent of how the URL was written)
-$key = str_replace(DIRECTORY_SEPARATOR, '/', substr($target, strlen($base) + 1));
+    // Canonical stats key (independent of how the URL was written)
+    $key = str_replace(DIRECTORY_SEPARATOR, '/', substr($target, strlen($base) + 1));
+}
 
 if ($debug) {
-    dbg("Target: $target");
+    if ($target !== null) dbg("Target: $target");
     dbg("Stats key: $key");
     dbg('Debug mode: rate limit, stats and download skipped.');
     exit;
@@ -180,6 +201,15 @@ if ($method === 'GET') {
 }
 
 /* ───────────── 5. Serve the file ───────────── */
+
+// External file: redirect to the other server (no bandwidth used here)
+if ($external_url !== null) {
+    header('Cache-Control: no-store');                  // each click must reach this script
+    header('Location: ' . $external_url, true, 302);    // 302, not 301: the target may change
+    exit;
+}
+
+// Local file
 header('Content-Description: File Transfer');
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="' . basename($target) . '"');
