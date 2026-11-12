@@ -11,10 +11,10 @@ $debug_ips        = ['127.0.0.1', '::1'];   // only these IPs may use ?debug=1
 
 // External files: alias => URL (whitelist; a raw URL is never accepted from the query)
 $external_files = [
-    'fedora45-stable' => 'https://dda.greyc.fr/registry/download?idFile=170',
-    'fedora45-dev'    => 'https://dda.greyc.fr/registry/download?idFile=172',
-    'fedora44-stable' => 'https://dda.greyc.fr/registry/download?idFile=136',
-    'fedora44-dev'    => 'https://dda.greyc.fr/registry/download?idFile=124',
+    'fedora45-stable' => 'https://dda.greyc.fr/registry/file/3/fedora-45/4.0.7/gmic-4.0.7-1.fc45.x86_64.rpm',
+    'fedora45-dev'    => 'https://dda.greyc.fr/registry/file/3/fedora-45/4.0.8_pre/gmic_fedora45_x86_64.rpm',
+    'fedora44-stable' => 'https://dda.greyc.fr/registry/file/3/fedora-44/4.0.7/gmic-4.0.7-1.fc44.x86_64.rpm',
+    'fedora44-dev'    => 'https://dda.greyc.fr/registry/file/3/fedora-44/4.0.8_pre/gmic_fedora44_x86_64.rpm',
 ];
 
 ini_set('display_errors', '0');
