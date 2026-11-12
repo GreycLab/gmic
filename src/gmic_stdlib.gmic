@@ -12327,6 +12327,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Lights & Shadows/Equalize Shadow",\
   "Lights & Shadows/Guided Light Rays",\
   "Lights & Shadows/Illuminate 2D Shape",\
+  "Lights & Shadows/Lens Flare",\
   "Lights & Shadows/Light Glow",\
   "Lights & Shadows/Light Leaks",\
   "Lights & Shadows/Light Patch",\
@@ -12438,6 +12439,8 @@ _update_gmicol : # Keep only a subset of existing filters
   "Rendering/Nebulous",\
   "Rendering/Neon Lightning",\
   "Rendering/Newton Fractal",\
+  "Rendering/Paint Background",\
+  "Rendering/Perspective Water Waves",\
   "Rendering/Plasma",\
   "Rendering/Popcorn Fractal",\
   "Rendering/Pseudorandom Noise",\
@@ -24386,6 +24389,56 @@ line_aa : check "isnum(${5=1}) && isnum(${6=0})"
     else eval ${-math_lib}"line_aa($x0,$y0,$x1,$y1,$5,$6)"
     fi
   }
+
+#@cli perspective : [image],x0[%],y0[%],x1[%],y1[%],x2[%],y2[%],x3[%],y3[%],_opacity,_interpolation,_boundary_conditions
+#@cli : Draw specified '[image]' on selected images, as a 3D quadrilatere in perspective.
+#@cli : 'interpolation' can be { 0:Nearest-neighbor | 1:Linear | 2:Cubic }.
+#@cli : 'boundary_conditions' can be { 0:Dirichlet | 1:Neumann | 2:Periodic | 3:Mirror }.
+#@cli : Default values: 'opacity=1', 'interpolation=1' and 'boundary_conditions=0'.
+#@cli : $ image.jpg to_rgba 512,512,1,4 perspective[-1] [-2],20%,20%,80%,30%,70%,80%,40%,70%
+perspective : check ${"is_image_arg $1"}" && isexpr([${2-9}]) && "\
+                    "isnum(${10=1}) && isint(${11=1},0,2) && isint(${12=0},0,3)"
+  i0,i1,i2,b0,b1,b2,b3=nearest-neighbor,linear,cubic,dirichlet,neumann,periodic,mirror
+  e[^-1] "Draw image $1 in perspective, in image$? at coordinates (${2,3})-(${4,5})-(${6,7})-(${8,9}), "\
+    "with opacity $10, "${i$11}" interpolation and "${i$12}" boundary conditions."
+  pass$1 0 channels. 0,{s} sh. 100% f. 1 rm.
+  foreach[^-1] {
+    x0,y0,x1,y1,x2,y2,x3,y3:="
+      const w1 = w - 1; const h1 = h - 1;
+      round([ ispercentage($2)?w1*$2:$2, ispercentage($3)?h1*$3:$3,
+              ispercentage($4)?w1*$4:$4, ispercentage($5)?h1*$5:$5,
+              ispercentage($6)?w1*$6:$6, ispercentage($7)?h1*$7:$7,
+              ispercentage($8)?w1*$8:$8, ispercentage($9)?h1*$9:$9 ])"
+    if $12
+      xm,ym,xM,yM:=0,0,w-1,h-1
+    else
+      xm,ym,xM,yM:="X = [ $x0,$x1,$x2,$x3 ]; Y = [ $y0,$y1,$y2,$y3 ]; [ min(X),min(Y),max(X),max(Y) ]"
+    fi
+    pass. 1
+    {[$xM-$xm+1,$yM-$ym+1]},1,2,"
+      begin(
+        const xm = $xm; const ym = $ym;
+        const w1 = w#1 - 1; const h1 = h#1 - 1;
+        const x0 = $x0; const y0 = $y0; const x1 = $x1; const y1 = $y1;
+        const x2 = $x2; const y2 = $y2; const x3 = $x3; const y3 = $y3;
+        A = [ x0,y0,1, 0,0,0,   0,0,
+              0,0,0,   x0,y0,1, 0,0,
+              x1,y1,1, 0,0,0,   -w1*x1,-w1*y1,
+              0,0,0,   x1,y1,1, 0,0,
+              x2,y2,1, 0,0,0,   -w1*x2,-w1*y2,
+              0,0,0,   x2,y2,1, -h1*x2,-h1*y2,
+              x3,y3,1, 0,0,0,   0,0,
+              0,0,0,   x3,y3,1, -h1*x3,-h1*y3 ];
+        B = [ 0,0,w1,0,w1,h1,0,h1 ];
+        W = solve(A,B); W67_1 = [ W[6,2],1 ]; W012 = W[0,3]; W345 = W[3,3];
+      );
+      X1 = [ x + xm,y + ym,1 ];
+      [ dot(W012,X1), dot(W345,X1) ]/dot(W67_1,X1)"
+    +warp.. .,0,$11,$12
+    sh. 0,{s-2} sh.. 100% j[0] ..,$xm,$ym,0,0,$10,.
+    k[0]
+  }
+  rm.
 
 #@cli spline : x0[%],y0[%],u0[%],v0[%],x1[%],y1[%],u1[%],v1[%],_opacity,_color1,...
 #@cli : Draw specified colored spline curve on selected images (cubic hermite spline).
@@ -37527,7 +37580,9 @@ blend : skip "${1=},${2=},${3=}" check "isbool(${4=0})"
   # Parse command arguments.
   is_image_arg:=${"is_image_arg $1"}
   if $is_image_arg mode,opacity=${2,3} else mode,opacity=${1,2} fi
-  if ['$mode']==0 mode=alpha fi
+  if ['$mode']==0 mode=alpha
+  elif ['$mode']=='addition' mode=add
+  fi
   if ['$opacity']==0 opacity=1 fi
   opacity:=$opacity # Manage both 'value' and 'value%'
   check "inrange($opacity,0,1)"
@@ -55458,32 +55513,9 @@ fx_morph_interactive_preview : gui_check_x11_gdi32 1
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/29</i>.</small>")
 fx_perspective :
-  foreach {
-    to_rgba
-    sw,sh:=[w,h]-1
-
-    # Linear system A.m = b : Destination point (in pixels) -> Source corner (u,v).
-    repeat 4 {
-      px:=arg1(1+2*$>,$1,$2,$3,$4,$5,$6,$7,$8)*$sw%
-      py:=arg1(2+2*$>,$1,$2,$3,$4,$5,$6,$7,$8)*$sh%
-      pu:=arg1(1+2*$>,0,0,$sw,0,$sw,$sh,0,$sh)
-      pv:=arg1(2+2*$>,0,0,$sw,0,$sw,$sh,0,$sh)
-      ($px,$py,1,0,0,0,{-$px*$pu},{-$py*$pu};0,0,0,$px,$py,1,{-$px*$pv},{-$py*$pv})
-    }
-    a[-4--1] y                        # A : 8x8
-    (0;0;$sw;0;$sw;$sh;0;$sh)         # b : 1x8
-    solve[-1] [-2]                    # b <- (m0..m7)
-    repeat 8 { hc$>={i(#-1,0,$>)} }
-    rm[-2,-1]
-
-    # Absolute warping field (u,v) for each output pixel.
-    100%,100%,1,2,"
-      den = ($hc6)*x + ($hc7)*y + 1;
-      c==0?(($hc0)*x + ($hc1)*y + ($hc2))/den
-          :(($hc3)*x + ($hc4)*y + ($hc5))/den"
-    warp[0] [1],0,$9,$10
-    rm[1]
-  }
+  if $10==0 to_a fi
+  foreach { nm={n} 100%,100%,1,100% perspective. ..,$1%,$2%,$3%,$4%,$5%,$6%,$7%,$8%,1,$9,$10 k. => $nm }
+  c 0,255
 
 fx_perspective_preview :
   fx_perspective $*
