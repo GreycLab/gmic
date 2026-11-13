@@ -40748,12 +40748,13 @@ demos : check "isint(${1=2},0,2)" check_display $0
           "Fourier Filtering","Tower of Hano\357","Histogram Demo","Hough Transform","Jawbreaker","Virtual Landscape",\
           "The Game of Life","Light Effect","Mandelbrot Explorer","3D Metaballs","Minesweeper","Minimal Path",\
           "Pacman","Paint","Plasma Effect","RGB Quantization","3D Reflection","3D Rubber Object","Shade Bobs",\
-          "Spline Editor","3D Starfield","Tetris","Tic-Tac-Toe","Image Waves","Fractal Whirls","Color Curves"
+          "Spline Editor","3D Starfield","Tetris","Tic-Tac-Toe","Image Waves","Fractal Whirls","Color Curves",\
+          "Burning Filaments","3D Tunnel","Rotating DLA"
   commands=x_2048,x_blobs,x_bouncing,x_connect4,x_fire,x_fireworks,x_fisheye,\
            x_fourier,x_hanoi,x_histogram,x_hough,x_jawbreaker,x_landscape,x_life,\
            x_light,x_mandelbrot,x_metaballs3d,x_minesweeper,x_minimal_path,x_pacman,x_paint,\
            x_plasma,x_quantize_rgb,x_reflection3d,x_rubber3d,x_shadebobs,x_spline,x_starfield3d,\
-           x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves
+           x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves,x_burning_filaments,x_tunnel3d,x_rotating_dla
   nb_entries:=narg($entries)
   parallel_mode:=1-($1!=2?$1:$_cpus>=2)
 
@@ -41266,6 +41267,70 @@ x_bouncing : check_display $0
     w. rm. wait 20
   while {*}" && "!{*,ESC}" && "!{*,Q}
   w 0 rm }
+
+#@cli x_burning_filaments
+#@cli : Launch the burning ashes demo.
+x_burning_filaments : check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"Burning Filaments"$n" ----------------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-----------------------------------------------------"
+  w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] Burning Ashes" # Init display window
+  300,300x2 => trail,canvas
+  100,100,1,4,"[ u(w#$trail - 1),u(h#$trail - 1),unitnorm([g,g]) ]" => agents
+  for {*}" && "!{*,ESC}" && "!{*,Q} {
+    f[canvas] 0
+    f[agents] ":begin(
+        const no = 5;  # nb_orientations
+        const da = 40; # angle
+        const sd = 10; # sensor_distance;
+        const md = 5;  # move_distance;
+
+        # Pre-compute rotation matrices.
+        Rs = vector(#4*no);
+        off = 0; repeat (no,k, ang = lerp(-da,da,k/(no - 1)); copy(Rs[off],rot(ang°)); off+=4);
+      );
+
+      A = I; X = A[0,2]; U = A[2,2];
+
+      # Get sensor information.
+      max_orientation = max_value = -inf;
+      repeat (no,k,
+        R = Rs[4*k,4];
+        sX = round(X + sd*mul(R,U));
+        value = i(#$trail,sX,1,2);
+        value>max_value?(max_value = value; max_orientation = k);
+      );
+
+      # Turn agent according to sensor measure.
+      max_orientation = round(max_orientation*(no - 1)/(no - 1));
+      R = Rs[4*max_orientation,4];
+      U = lerp(U,mul(R,U),0.2);
+
+      # Move agent along new orientation.
+      X+=md*U;
+      X[0]%=w#$trail;
+      X[1]%=h#$trail;
+      iX = round(X);
+
+      ++i(#$trail,iX);
+      ang = atan2(U[1],U[0]);
+      ellipse(#$canvas,iX,4,1,ang,0.2,255);
+      [ X,unitnorm(U) ]"
+
+    b[trail] 3,2 deform[trail] 2 n[trail] 0,1
+    +map[canvas] hot
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
+    w. wait 40 rm.
+  }
+  rm w[] 0
 
 #@cli x_color_curves : _colorspace={ rgb | cmy | cmyk | hsi | hsl | hsv | lab | lch | ycbcr | last }
 #@cli : Apply color curves on selected RGB[A] images, using an interactive window.
@@ -44400,6 +44465,47 @@ x_reflection3d : check_display $0
   while {*}" && "!{*,ESC}" && "!{*,Q}
   rm[-5--1] w[] 0
 
+
+
+#@cli x_rotating_dla
+#@cli : Launch the rotating DLA demo.
+x_rotating_dla : check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"3D rubber object"$n" -------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-------------------------------------------"
+  rm 480,480 noise 0.001,2 != 0 =. 1,50%,50%
+  w[] ${"fitscreen .,40%,70%"},0,"[G'MIC] Rotating DLA"
+  for {*}" && "!{*,ESC}" && "!{*,Q}
+    +>[0] 0.45 distance. 1 b. 1 g. xy,6 a[-2--1] c orientation.
+    1000,1,1,1,":
+      do (x = v(w#0 - 1); y = v(h#0 - 1), i(#0,x,y));
+      repeat (w#0,k,
+        G = I(#-1,x,y,0,1);
+        dl = 1/max(abs(G));
+        nx = x - dl*G[0];
+        ny = y - dl*G[1];
+        i(#0,round(nx),round(ny))?break();
+        x = nx; y = ny;
+      );
+      i(#0,x,y) = 1"
+    rm[-2,-1]
+
+    # Render frame.
+    +b[0] 2,3 *. 800 c. 0,255 map. curl
+    rotate[0] 2,1,0,50%,50% zoom[0] 0.97
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
+    w. wait 40 rm.
+  }
+  rm w[] 0
+
 #@cli x_rubber3d
 #@cli : Launch the 3D rubber object demo.
 x_rubber3d : check_display $0
@@ -45679,6 +45785,84 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
   while {*}" && "!{*,ESC}" && "!{*,Q}
   rmn cmap,formula,mformula
   w[] 0
+
+#@cli x_tunnel3d
+#@cli : Launch the 3D tunnel demo.
+x_tunnel3d : check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"3D Tunnel"$n" ------------------------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-----------------------------------------------------"
+  rm w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] 3D Tunnel" # Init display window
+
+  # Generate template mesh for the 3D tunnel.
+  curve3d 0,0,t,1,64,0,63,16,0 rv3d # Generate a straight bar along z-axis
+  s3d eval "i[#1,1]-=32" rows... 0,{-3,h-4*32-1} rows.. 0,{-2,h-3*32-1} rows. 0,{h-32-1} a y # Remove closed extremities
+  2,1024,1,3,"x?[255,200,128]:[255,0,0]"
+  (0^0^0;0.25^0.25^1;1^1^1;0^0^0)
+  2,{-2,h},1,3,"Y = lerp(0,h#-1,(y/h)^0.5); cut(I(#-1,0,Y,0,2),0,1)" rm.. *[-2,-1] # Colors for depth shading
+
+  t3d.. . rm. . => template3d,mesh3d
+  +l. { s3d off_p:=8+{2,h} k... r 13,{h/13},1,1,-1 permute zycx } => primitives # Keep editable version of primitives
+
+  # Generate sequence of 3D tunnel centers.
+  1,48,1,2,g b. y,4,2 n. -1.5,2 a. .,y => coords
+  +g. y b. 1,2 channels. 0,2 sh. 100% f. 1 rm. orientation. => orientations # Desired camera orientations
+
+  # Display animation
+  repeat inf {
+    nbf=256 mzi2=-inf
+    repeat $nbf { f=$>
+      z:=16+lerp(0,h#$coords/2,$>/$nbf)
+      zi2:=2*int($z/2)
+      if $zi2!=$mzi2 # Generate 3D mesh for current tunnel view.
+        +z[template3d] 0,8,0,{template3d,8+3*i[6]-1} r. 3,{h/3},1,1,-1 permute. zycx # Extract 3D coordinates
+        f. "C = I[#$coords,$zi2 + i2,2]; [ i0 + C[0],i1 + C[1],i2 ]"
+        permute. cyzx y. +j[template3d] .,0,8,0,0 rm..
+        mzi2:=$zi2
+        j[mesh3d] . rm.
+      fi
+
+      cx,cy:="I(#$coords,0,$z,0,2,2)"
+      u,v,w:="unitnorm(I(#$orientations,0,$z,0,2,2))"
+      M:="W = unitnorm(I(#$orientations,0,$z,0,2,2));
+          V = cross(W,[1,0,0]);
+          U = cross(V,W);
+          1.5*[ U,V,W ]" # Camera matrix
+
+      +-3d[mesh3d] $cx,$cy,{$z%2}
+      apply_matrix3d. $M
+      r3d. 0,0,1,{180*cos(2*pi*$>/$nbf)}
+
+      # Add depth effect.
+      f[primitives] "
+        P = I;
+        z = int(y/16);
+        P[5] = P[7] = P[9] = P[11] = xor(z,y)%2;
+        P[6] = 16*i[#-1,8+3*i1+2];
+        P[8] = 16*i[#-1,8+3*i2+2];
+        P[10] = 16*i[#-1,8+3*i3+2];
+        P[12] = 16*i[#-1,8+3*i4+2];
+        P"
+      +permute[primitives] cyzx y. j.. .,0,$off_p rm.
+
+      # Render frame.
+      is_close:=!{*}" || "{*,ESC}" || "{*,Q}
+      if $is_close break fi
+      600,600,1,3 j3d. ..,50%,50%,-500,1,2,0,0,500
+      if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+        w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+      fi
+      w. wait 30 rm[-2,-1]
+    }
+    if $is_close break fi
+  }
+  rm w[] 0
 
 #@cli x_warp : _nb_keypoints_xgrid>=2,_nb_keypoints_ygrid>=2,_nb_keypoints_contours>=0,\
 # _preview_fidelity={ 0:Coarsest | 1:Coarse | 2:Normal | 3:Fine | 4:Finest },\
