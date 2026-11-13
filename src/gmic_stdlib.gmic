@@ -40749,12 +40749,12 @@ demos : check "isint(${1=2},0,2)" check_display $0
           "The Game of Life","Light Effect","Mandelbrot Explorer","3D Metaballs","Minesweeper","Minimal Path",\
           "Pacman","Paint","Plasma Effect","RGB Quantization","3D Reflection","3D Rubber Object","Shade Bobs",\
           "Spline Editor","3D Starfield","Tetris","Tic-Tac-Toe","Image Waves","Fractal Whirls","Color Curves",\
-          "Burning Ashes","3D Tunnel","Rotating DLA"
+          "Burning Filaments","3D Tunnel","Rotating DLA"
   commands=x_2048,x_blobs,x_bouncing,x_connect4,x_fire,x_fireworks,x_fisheye,\
            x_fourier,x_hanoi,x_histogram,x_hough,x_jawbreaker,x_landscape,x_life,\
            x_light,x_mandelbrot,x_metaballs3d,x_minesweeper,x_minimal_path,x_pacman,x_paint,\
            x_plasma,x_quantize_rgb,x_reflection3d,x_rubber3d,x_shadebobs,x_spline,x_starfield3d,\
-           x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves,x_burning_ashes,x_tunnel3d,x_rotating_dla
+           x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves,x_burning_filaments,x_tunnel3d,x_rotating_dla
   nb_entries:=narg($entries)
   parallel_mode:=1-($1!=2?$1:$_cpus>=2)
 
@@ -41267,6 +41267,70 @@ x_bouncing : check_display $0
     w. rm. wait 20
   while {*}" && "!{*,ESC}" && "!{*,Q}
   w 0 rm }
+
+#@cli x_burning_filaments
+#@cli : Launch the burning ashes demo.
+x_burning_filaments :
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"Burning Filaments"$n" ----------------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-----------------------------------------------------"
+  w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] Burning Ashes" # Init display window
+  300,300x2 => trail,canvas
+  100,100,1,4,"[ u(w#$trail - 1),u(h#$trail - 1),unitnorm([g,g]) ]" => agents
+  for {*}" && "!{*,ESC}" && "!{*,Q} {
+    f[canvas] 0
+    f[agents] ":begin(
+        const no = 5;  # nb_orientations
+        const da = 40; # angle
+        const sd = 10; # sensor_distance;
+        const md = 5;  # move_distance;
+
+        # Pre-compute rotation matrices.
+        Rs = vector(#4*no);
+        off = 0; repeat (no,k, ang = lerp(-da,da,k/(no - 1)); copy(Rs[off],rot(ang°)); off+=4);
+      );
+
+      A = I; X = A[0,2]; U = A[2,2];
+
+      # Get sensor information.
+      max_orientation = max_value = -inf;
+      repeat (no,k,
+        R = Rs[4*k,4];
+        sX = round(X + sd*mul(R,U));
+        value = i(#$trail,sX,1,2);
+        value>max_value?(max_value = value; max_orientation = k);
+      );
+
+      # Turn agent according to sensor measure.
+      max_orientation = round(max_orientation*(no - 1)/(no - 1));
+      R = Rs[4*max_orientation,4];
+      U = lerp(U,mul(R,U),0.2);
+
+      # Move agent along new orientation.
+      X+=md*U;
+      X[0]%=w#$trail;
+      X[1]%=h#$trail;
+      iX = round(X);
+
+      ++i(#$trail,iX);
+      ang = atan2(U[1],U[0]);
+      ellipse(#$canvas,iX,4,1,ang,0.2,255);
+      [ X,unitnorm(U) ]"
+
+    b[trail] 3,2 deform[trail] 2 n[trail] 0,1
+    +map[canvas] hot
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
+    w. wait 40 rm.
+  }
+  rm w[] 0
 
 #@cli x_color_curves : _colorspace={ rgb | cmy | cmyk | hsi | hsl | hsv | lab | lch | ycbcr | last }
 #@cli : Apply color curves on selected RGB[A] images, using an interactive window.
@@ -45684,7 +45748,15 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
 #@cli x_tunnel3d
 #@cli : Launch the 3D tunnel demo.
 x_tunnel3d :
-
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"3D Tunnel"$n" ------------------------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-----------------------------------------------------"
   w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] 3D Tunnel" # Init display window
 
   # Generate template mesh for the 3D tunnel.
@@ -45717,7 +45789,10 @@ x_tunnel3d :
 
       cx,cy:="I(#$coords,0,$z,0,2,2)"
       u,v,w:="unitnorm(I(#$orientations,0,$z,0,2,2))"
-      M:="W = unitnorm(I(#$orientations,0,$z,0,2,2)); V = cross(W,[1,0,0]); U = cross(V,W); 1.5*[ U,V,W ]" # Camera matrix
+      M:="W = unitnorm(I(#$orientations,0,$z,0,2,2));
+          V = cross(W,[1,0,0]);
+          U = cross(V,W);
+          1.5*[ U,V,W ]" # Camera matrix
 
       +-3d[mesh3d] $cx,$cy,{$z%2}
       apply_matrix3d. $M
@@ -45739,7 +45814,10 @@ x_tunnel3d :
       is_close:=!{*}" || "{*,ESC}" || "{*,Q}
       if $is_close break fi
       600,600,1,3 j3d. ..,50%,50%,-500,1,2,0,0,500
-      w. rm[-2,-1] wait 30
+      if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+        w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+      fi
+      w. wait 30 rm[-2,-1]
     }
     if $is_close break fi
   }
