@@ -41270,7 +41270,7 @@ x_bouncing : check_display $0
 
 #@cli x_burning_filaments
 #@cli : Launch the burning ashes demo.
-x_burning_filaments :
+x_burning_filaments : check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e "\n
 ------ "${g}"Burning Filaments"$n" ----------------------------\n
@@ -44465,6 +44465,47 @@ x_reflection3d : check_display $0
   while {*}" && "!{*,ESC}" && "!{*,Q}
   rm[-5--1] w[] 0
 
+
+
+#@cli x_rotating_dla
+#@cli : Launch the rotating DLA demo.
+x_rotating_dla : check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"3D rubber object"$n" -------------------\n
+----\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-------------------------------------------"
+  rm 480,480 noise 0.001,2 != 0 =. 1,50%,50%
+  w[] ${"fitscreen .,40%,70%"},0,"[G'MIC] Rotating DLA"
+  for {*}" && "!{*,ESC}" && "!{*,Q}
+    +>[0] 0.45 distance. 1 b. 1 g. xy,6 a[-2--1] c orientation.
+    1000,1,1,1,":
+      do (x = v(w#0 - 1); y = v(h#0 - 1), i(#0,x,y));
+      repeat (w#0,k,
+        G = I(#-1,x,y,0,1);
+        dl = 1/max(abs(G));
+        nx = x - dl*G[0];
+        ny = y - dl*G[1];
+        i(#0,round(nx),round(ny))?break();
+        x = nx; y = ny;
+      );
+      i(#0,x,y) = 1"
+    rm[-2,-1]
+
+    # Render frame.
+    +b[0] 2,3 *. 800 c. 0,255 map. curl
+    rotate[0] 2,1,0,50%,50% zoom[0] 0.97
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
+    w. wait 40 rm.
+  }
+  rm w[] 0
+
 #@cli x_rubber3d
 #@cli : Launch the 3D rubber object demo.
 x_rubber3d : check_display $0
@@ -45747,7 +45788,7 @@ x_tixy : skip "${1=sin(t-sqrt((x-8)^2+(y-8)^2))}" check_display $0
 
 #@cli x_tunnel3d
 #@cli : Launch the 3D tunnel demo.
-x_tunnel3d :
+x_tunnel3d : check_display $0
   use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
   e "\n
 ------ "${g}"3D Tunnel"$n" ------------------------------------\n
@@ -45757,7 +45798,7 @@ x_tunnel3d :
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -----------------------------------------------------"
-  w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] 3D Tunnel" # Init display window
+  rm w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] 3D Tunnel" # Init display window
 
   # Generate template mesh for the 3D tunnel.
   curve3d 0,0,t,1,64,0,63,16,0 rv3d # Generate a straight bar along z-axis
