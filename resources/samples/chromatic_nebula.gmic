@@ -1,0 +1,49 @@
+#!/usr/bin/env gmic
+# File : chromatic_nebula.gmic
+# Author : David Tschumperle
+
+# Entrypoint when run from CLI:
+go =>[^] "Chromatic Nebula" e[] "" animate 40
+
+# Main function
+go :
+  v 0
+
+  180,180,160,3
+  2000,1,1,1,":
+    draw_gauss3d(ind,xc,yc,zc,u,v,w,siz,anisotropy,R,G,B,A) = (
+      unref(dg3d_mask,dg3d_one,dg3d_rgb,dg3d_isiz2);
+      dg3d_vU = unitnorm([ u,v,w ]);
+      dg3d_vUvUt = mul(dg3d_vU,dg3d_vU,3);
+      dg3d_T = invert(dg3d_vUvUt + max(0.025,1 - sqrt(anisotropy))*(eye(3) - dg3d_vUvUt));
+      dg3d_expr = string('T = [',v2s(dg3d_T),']; X = ([ x,y,z ] - siz/2)/siz; exp(-12*dot(X,T*X))');
+      dg3d_mask = expr(dg3d_expr,siz,siz,siz);
+      dg3d_rgb = [ vector(##siz^3,R),vector(##siz^3,G),vector(##siz^3,B) ];
+      const dg3d_isiz2 = int(siz/2);
+      draw(#ind,dg3d_rgb,xc - dg3d_isiz2,yc - dg3d_isiz2,zc - dg3d_isiz2,0,siz,siz,siz,3,A/255,dg3d_mask);
+
+      # Trick: These two lines allow to generate a perfectly looping animation.
+      draw(#ind,dg3d_rgb,xc - dg3d_isiz2,yc - dg3d_isiz2,zc - dg3d_isiz2 + d#0/2,0,siz,siz,siz,3,A/255,dg3d_mask);
+      draw(#ind,dg3d_rgb,xc - dg3d_isiz2,yc - dg3d_isiz2,zc - dg3d_isiz2 - d#0/2,0,siz,siz,siz,3,A/255,dg3d_mask);
+    );
+
+    X = [ u([w#0,h#0] - 1),u(d#0/4,3*d#0/4) ];
+    U = unitnorm([g,g,g]);
+    siz = v(5);
+    anisotropy = u(0.6,1);
+    R = u(20,255);
+    G = u(20,255);
+    B = u(20,255);
+    A = u(20,255)/(1 + siz)^0.75;
+
+    siz==0?draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],11,anisotropy,R,G,B,A):
+    siz==1?draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],21,anisotropy,R,G,B,A):
+    siz==2?draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],31,anisotropy,R,G,B,A):
+    siz==3?draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],41,anisotropy,R,G,B,A):
+    siz==4?draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],51,anisotropy,R,G,B,A):
+           draw_gauss3d(#0,X[0],X[1],X[2],U[0],U[1],U[2],61,anisotropy,R,G,B,A)"
+  rm.
+  normalize_local , n 0,255
+  slices {[d/4,3*d/4-1]} s z
+
+# End of file.
