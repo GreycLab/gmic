@@ -278,7 +278,7 @@ inline double gmic_mp_store(const double *const ptrs, const unsigned int siz,
 
 #endif // #if cimg_OS==2
 
-#if defined(gmic_is_parallel) && cimg_OS!=2
+#if defined(__NetBSD__) || defined(__MACOSX__) || defined(__APPLE__) || (defined(gmic_is_parallel) && cimg_OS!=2)
 #include <pthread.h>
 #define gmic_parallel_use_pthread
 #endif
