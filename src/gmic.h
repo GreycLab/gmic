@@ -219,7 +219,7 @@ namespace gmic_library {
 #define CImg gmic_image
 #define CImgList gmic_list
 
-#if defined(cimg_use_abort) && !defined(__MACOSX__) && !defined(__APPLE__)
+#if defined(cimg_use_abort)
 inline bool *gmic_current_is_abort();
 #define cimg_abort_init bool *const gmic_is_abort = ::gmic_current_is_abort()
 #define cimg_abort_test if (*gmic_is_abort) throw CImgAbortException()

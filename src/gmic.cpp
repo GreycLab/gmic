@@ -2008,19 +2008,17 @@ inline unsigned int count_commas(const char *const str) {
 
 // Return current thread id.
 inline void* get_tid() {
-#if defined(__MACOSX__) || defined(__APPLE__)
-  void* tid = (void*)(cimg_ulong)getpid();
-#elif cimg_OS==1
-#if defined(__NetBSD__) || cimg_use_pthread==1
+#if cimg_OS==1
+#if defined(__NetBSD__) || defined(__MACOSX__) || defined(__APPLE__) || cimg_use_pthread==1
   void* tid = (void*)(cimg_ulong)pthread_self();
 #else
   void* tid = (void*)(cimg_ulong)syscall(SYS_gettid);
-#endif
+#endif // #if defined(__NetBSD__) || defined(__MACOSX__) || defined(__APPLE__) || cimg_use_pthread==1
 #elif cimg_OS==2
   void* tid = (void*)(cimg_ulong)GetCurrentThreadId();
 #else
   void* tid = (void*)0;
-#endif // #if defined(__MACOSX__) || defined(__APPLE__)
+#endif // #if cimg_OS==1
   return tid;
 }
 
@@ -2219,7 +2217,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
 }
 
 double gmic::mp_abort() {
-#if defined(cimg_use_abort) && !defined(__MACOSX__) && !defined(__APPLE__)
+#if defined(cimg_use_abort)
   cimg_abort_init;
   *gmic_is_abort = true;
   cimg_abort_test;
