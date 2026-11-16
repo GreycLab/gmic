@@ -53165,6 +53165,124 @@ fx_equalize_hsv_preview :
   gui_split_preview "fx_equalize_hsv $*",${-3--1}
   if $5 r. ${-gui_preview_wh},1,3,0,0,0.5,0.5 fi
 
+#@gui Local Color Correction : fx_local_color_correction, fx_local_color_correction_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Applies local color correction, influenced by anchor points.
+#@gui : "}, sep = separator()
+#@gui : Influence Smoothness (%) = float(40,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #1:</b></span></small>")
+#@gui : Position = point(50,30,1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(20,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #2:</b></span></small>")
+#@gui : Position = point(50,70,1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(-10,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #3:</b></span></small>")
+#@gui : Position = point(20,20,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #4:</b></span></small>")
+#@gui : Position = point(80,20,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #5:</b></span></small>")
+#@gui : Position = point(80,80,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #6:</b></span></small>")
+#@gui : Position = point(20,80,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/16</i>.</small>")
+__fx_local_color_correction :
+  i_smoothness,\
+  x0,y0,dc0,db0,ds0,dh0,\
+  x1,y1,dc1,db1,ds1,dh1,\
+  x2,y2,dc2,db2,ds2,dh2,\
+  x3,y3,dc3,db3,ds3,dh3,\
+  x4,y4,dc4,db4,ds4,dh4,\
+  x5,y5,dc5,db5,ds5,dh5=${1-37}
+
+fx_local_color_correction :
+  __$0 $*
+  srgb2rgb rgb2oklab
+  foreach {
+    nm={n} w,h,w1,h1:=w,h,w-1,h-1
+    split_opacity l[0] {
+
+      # Generate dense field of parameter values.
+      l[] { repeat 6 { if !isnan(${x$>}) ({[${x$>},${y$>},${dc$>},${db$>},${ds$>},${dh$>}]}:c) fi } a x }
+
+      # Generate low-resolution map of interpolated parameter values.
+      {0,ceil([w,h]*min(1,256/max(w,h)))},1,4,"
+        begin(
+          const w1 = w - 1;
+          const h1 = h - 1;
+          const diag2 = w1^2 + h1^2;
+          const temperature = 10^-lerp(5,0.5,$i_smoothness%^0.5);
+          xs = crop(#-1,0,0,0,0,w#-1,1,1,1)%;
+          ys = crop(#-1,0,0,0,1,w#-1,1,1,1)%;
+          dcs = crop(#-1,0,0,0,2,w#-1,1,1,1)%;
+          dbs = crop(#-1,0,0,0,3,w#-1,1,1,1)%;
+          dss = crop(#-1,0,0,0,4,w#-1,1,1,1)%;
+          dhs = crop(#-1,0,0,0,5,w#-1,1,1,1)%;
+        );
+
+        # Get local parameter values by linear interpolation.
+        dist = (((xs - x/w1)*w1)^2 + ((ys - y/h1)*h1)^2)/diag2;
+        weights = softmin(dist,temperature);
+        dc = 1 + dot(weights,dcs);
+        db = dot(weights,dbs);
+        ds = 1 + dot(weights,dss);
+        dh = dot(weights,dhs)*pi;
+        [ dc,db,ds,dh ]"
+      rm..
+
+      # Applies color correction.
+      f.. "const interpolation = 1;
+        P = I(#-1,x*(w#-1 - 1)/(w - 1),y*(h#-1 - 1)/(h - 1));
+        I = I;
+        P[0]!=1?(I[0] = 0.5 + (I[0] - 0.5)*P[0]);
+        P[1]!=0?(I[0]+=P[1]);
+        P[2]!=1?(I[1]*=P[2]; I[2]*=P[2]);
+        P[3]!=0?(R = rot(P[3]); Q = R*I[1,2]; copy(I[1],Q));
+        I[0] = cut(I[0],0,1);
+        I"
+      rm.
+    }
+    a c
+  }
+  oklab2rgb rgb2srgb
+
+fx_local_color_correction_preview :
+  __fx_local_color_correction $*
+  fx_local_color_correction $*
+
+  # Add black halo to make anchor points more visible.
+  33,33 circle. 16,16,13,1,1 b. 2 n. 0,255 channels. -3,0
+  repeat 6 { if !isnan(${x$>}) ja[0] .,{0,round([(w-1)*${x$>}%,(h-1)*${y$>}%]-16)} fi }
+  rm.
+
 #@gui Mixer [CMYK] : fx_mix_cmyk, fx_mix_cmyk(1)+
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Mixes channels using the CMYK color model.
