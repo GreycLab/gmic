@@ -16287,15 +16287,12 @@ map_clut :
   if !$! return fi
   to_color
   if ${"is_image_arg $1"} pass$1 0 else clut "$1" fi
-  if w>1" && "max(h,d)==1 f.. "[ i(#-1,R,0,0,0),i(#-1,G,0,0,1),i(#-1,B,0,0,2) ]" rm. return fi
+  if w>1" && "max(h,d)==1 f[^-1] "[ i(#-1,R,0,0,0),i(#-1,G,0,0,1),i(#-1,B,0,0,2) ]" rm. return fi # 1D LUT
   l:=round((w*h*d)^(1/3))
   if w*h*d!=$l^3 error "Command '$0': Specified CLUT $1 has invalid dimensions "({w},{h},{d},{s}). fi
   r. $l,$l,$l,100%,-1
-  repeat $!-1 { l[$>,-1] {
-    nm={0,n} split_opacity[0] /[0] {256/$l}
-    +warp. [0],0,1,1
-    rm[0] mv. 0 a[^-1] c =>[0] $nm
-  } } rm.
+  foreach[^-1] { nm={n} pass. 1 f[0] "I(#-1,round([R*(w#-1 - 1),G*(h#-1 - 1),B*(d#-1 - 1)]/255),1,1)" rm. => $nm }
+  rm.
 
 #@cli transfer_histogram : [style],_nb_levels>0,_color_channels
 #@cli : Transfer the channel-wise histograms of the specified style image to selected images.
@@ -51174,7 +51171,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
       if !$is_png" && "!$is_cube error "Filename extension must be '.cube' or '.png'." fi
       if $is_png r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 o[0] "$4/$5"
       else
-        if {0,w>32} rs3d[0] 32 fi
+        if {0,w>32} rs3d[0] 32,,1 fi
         output_cube[0] "$4/$5"
       fi
       rm[0]
