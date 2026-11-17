@@ -7142,6 +7142,10 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             uind = selection[l] + off;
             CImg<float> val, vec;
             gmic_check_shared_image(images[uind]).gmic_symmetric_eigen(val,vec);
+
+            val.print("VAL");
+            vec.print("VEC");
+
             if (is_get) {
               val.move_to(images);
               vec.move_to(images);
