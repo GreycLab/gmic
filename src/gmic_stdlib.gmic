@@ -42399,9 +42399,10 @@ x_glenz3d : check_display $0
   1,128,1,7,"[ u,u,v($nb_cols - 1),abs(3*g),g,g,g ]" => glenz_attr
 
   # Do animation.
+  t0=$|
   for {*}" && "!{*,ESC}" && "!{*,Q} {
-    t0=$|
     [background] => canvas
+    dt,t0:=($|-$t0)/8,$|
 
     # Draw checkeboard.
     ++3d[checkerboard3d] 0,{(100*$t0)%(4*$W%)},0 r3d. 1,0,0,-80 j3d.. .,50%,{-2,h/2},0,1,2,0,0,250 rm.
@@ -42409,12 +42410,13 @@ x_glenz3d : check_display $0
     # Draw 3D glenz objects.
     repeat {glenz_attr,h} {
       t,x,c,amp0,rx,ry,rz={glenz_attr,I[$>]}
-      t:=($t+$t0/6)%1
       y:="const y0 = 70*$H%; const amp = lerp($amp0,0.3,$t)*$W; y0 - amp*abs(sin(20*$t))^0.5"
       z:=lerp(100000,-600,$t^0.1)
       [glenz3d_$c] o3d. {lerp(0,0.75,$t)}
       r3d. 1,0,0,{600*$rx*$t} r3d. 0,1,0,{600*$ry*$t} r3d. 0,0,1,{600*$rz*$t}
       -3d. 0,0.5,0 *3d. {$W/6} +3d. {3*lerp(-$W,$W,$x)},$y,$z
+      t+=$dt
+      if $t>=1 point[glenz_attr] 0,$>,0,1,{"[ 0,u,v($nb_cols - 1),abs(3*g),g,g,g ]"} else =[glenz_attr] $t,0,$> fi
     }
     +3d[-{glenz_attr,h}--1]
     j3d.. .,50%,43%,0,1,3,1,1 rm.
