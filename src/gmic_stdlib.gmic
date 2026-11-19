@@ -8796,7 +8796,7 @@ parse_gui_images :
         type=${_f${f}_p${p}_type}
         arg0=${_f${f}_p${p}_a0}
         if isin(['$type'],'file','filein','fileout','folder','value')
-          if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"$type\"
+          if !${_f{$f}_p${p}_nb_args} pipeline.=$c\"\"
           else
             args= ac=
             repeat ${_f${f}_p${p}_nb_args} { a=$> args.=$ac${_f${f}_p${p}_a${a}} ac=, }
@@ -12367,6 +12367,7 @@ _update_gmicol : # Keep only a subset of existing filters
   "Patterns/Hearts",\
   "Patterns/Hedcut",\
   "Patterns/Lava",\
+  "Patterns/Liquid Marble",\
   "Patterns/Marble",\
   "Patterns/Maze",\
   "Patterns/Mineral Mosaic",\
@@ -16286,15 +16287,12 @@ map_clut :
   if !$! return fi
   to_color
   if ${"is_image_arg $1"} pass$1 0 else clut "$1" fi
-  if w>1" && "max(h,d)==1 f.. "[ i(#-1,R,0,0,0),i(#-1,G,0,0,1),i(#-1,B,0,0,2) ]" rm. return fi
+  if w>1" && "max(h,d)==1 f[^-1] "[ i(#-1,R,0,0,0),i(#-1,G,0,0,1),i(#-1,B,0,0,2) ]" rm. return fi # 1D LUT
   l:=round((w*h*d)^(1/3))
   if w*h*d!=$l^3 error "Command '$0': Specified CLUT $1 has invalid dimensions "({w},{h},{d},{s}). fi
   r. $l,$l,$l,100%,-1
-  repeat $!-1 { l[$>,-1] {
-    nm={0,n} split_opacity[0] /[0] {256/$l}
-    +warp. [0],0,1,1
-    rm[0] mv. 0 a[^-1] c =>[0] $nm
-  } } rm.
+  foreach[^-1] { nm={n} pass. 1 f[0] "I(#-1,round([R*(w#-1 - 1),G*(h#-1 - 1),B*(d#-1 - 1)]/255),1,1)" rm. => $nm }
+  rm.
 
 #@cli transfer_histogram : [style],_nb_levels>0,_color_channels
 #@cli : Transfer the channel-wise histograms of the specified style image to selected images.
@@ -19714,7 +19712,7 @@ denoise_patchpca : check "${1=1.8} && $1>=0 && isint(${2=7},1) && isint(${3=11},
       for (q = -m1, q<=m2, ++q,
         for (p = -m1, p<=m2, ++p,
           pY = Qt*(patch(x + p,y + q) - X);
-          copy(pY[k],zero[0],size(pY) - k);
+          k<size(pY)?copy(pY[k],zero[0],size(pY) - k);
           (Y = Q*pY)+=X;
           draw(#"$aggreg",Y,x + p - n1,y + q - n1,0,c,$2,$2,1,1,-1,mask);
           draw(#"$weights",mask,x + p - n1,y + q - n1,0,c,$2,$2,1,1,-1);
@@ -19899,7 +19897,7 @@ erode_threshold : check "isint($1,1) && isint(${2=$1},1) && isint(${3=1},1) && $
 #@cli : optionally along the specified axes only.
 #@cli : See also: ''ifft''.
 #@cli : $ image.jpg luminance +fft append[-2,-1] c norm[-1] log[-1] shift[-1] 50%,50%,0,0,2
-#@cli : $ image.jpg w2:=int(w/2) h2:=int(h/2) fft shift $w2,$h2,0,0,2 ellipse $w2,$h2,30,30,0,1,0 \
+#@cli : $ image.jpg w2,h2:=int([w,h]/2) fft shift $w2,$h2,0,0,2 ellipse $w2,$h2,30,30,0,1,0 \
 # shift -$w2,-$h2,0,0,2 ifft remove[-1]
 #@cli : $$ https://gmic.eu/oldtutorial/_fft
 
@@ -24372,6 +24370,7 @@ _imagealpha :
 #@cli : Default values: 'opacity=1', 'pattern=(undefined)' and 'color1=0'.
 #@cli : $ image.jpg repeat 500 line 50%,50%,{u(w)},{u(h)},0.5,${-rgb} done line 0,0,100%,100%,1,0xCCCCCCCC,255 \
 # line 100%,0,0,100%,1,0xCCCCCCCC,255
+#@cli : $$
 
 #@cli line_aa : x0[%],y0[%],x1[%],y1[%],_opacity,_color1,...
 #@cli : Draw specified antialiased colored line on selected images.
@@ -36283,7 +36282,7 @@ linify : check "${1=40}>=0 && $1<=100 && ${2=2}>=0 && ${3=40%}>0 && ${4=10}>=0 &
           progress = density==ref0?100:round(100*(ref - ref0)/(density - ref0));
           run('progress ',v2s(progress));
           if (narg("$_debug"),
-            run('+c[1] 0,255 r. {*,w},{*,h},1,3,2 to. ',v2s(progress),'%,1%,1%,5%,1 w. -1,-1,0 rm.')
+            run('if {*,u} +c[1] 0,255 r. {*,w},{*,h},1,3,2 to. ',v2s(progress),'%,1%,1%,5%,1 w. -1,-1,0 rm. fi')
           );
         );
         ++nb_lines;
@@ -39069,12 +39068,9 @@ _check120 :
   _total_lines+=$lines
   e "   - Scanned : "${lines}" lines"
 
-check120 :
+check120 : skip "${1=*.[gch]*}"
   _total_lines=0
-  files 0,*.h c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
-  files 0,*.cpp c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
-  files 0,*.c c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
-  files 0,*.gmic c={`narg($files)?',':0`} if narg(${}) files=$files$c${} fi
+  files 0,"$1" files=${}
   repeat narg($files) {
     arg0 $>,$files file=${}
     e " * File '"$file"'."
@@ -40739,19 +40735,20 @@ demos : check "isint(${1=2},0,2)" check_display $0
 ----\n
 ---- "${c}"Mouse button"$n" to select a demo.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------"
   l[] {
   entries="2048 game","Blobs Editor","Bouncing Balls","Connect Four","Fire Effect","Fireworks","Fish-Eye Effect",\
-          "Fourier Filtering","Tower of Hano\357","Histogram Demo","Hough Transform","Jawbreaker","Virtual Landscape",\
+          "Fourier Filtering","Tower of Hano\357","Histogram Demo","3D Glenz","Jawbreaker","Virtual Landscape",\
           "The Game of Life","Light Effect","Mandelbrot Explorer","3D Metaballs","Minesweeper","Minimal Path",\
           "Pacman","Paint","Plasma Effect","RGB Quantization","3D Reflection","3D Rubber Object","Shade Bobs",\
           "Spline Editor","3D Starfield","Tetris","Tic-Tac-Toe","Image Waves","Fractal Whirls","Color Curves",\
           "Burning Filaments","3D Tunnel","Rotating DLA"
   commands=x_2048,x_blobs,x_bouncing,x_connect4,x_fire,x_fireworks,x_fisheye,\
-           x_fourier,x_hanoi,x_histogram,x_hough,x_jawbreaker,x_landscape,x_life,\
+           x_fourier,x_hanoi,x_histogram,x_glenz3d,x_jawbreaker,x_landscape,x_life,\
            x_light,x_mandelbrot,x_metaballs3d,x_minesweeper,x_minimal_path,x_pacman,x_paint,\
            x_plasma,x_quantize_rgb,x_reflection3d,x_rubber3d,x_shadebobs,x_spline,x_starfield3d,\
            x_tetris,x_tictactoe,x_waves,x_whirl,_demo_color_curves,x_burning_filaments,x_tunnel3d,x_rotating_dla
@@ -40862,10 +40859,9 @@ demos : check "isint(${1=2},0,2)" check_display $0
     fi
 
     w. -1,-1,0
-    if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
-      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,D}" || "{*,R})
+      w[] ${"fitscreen[] "{round({*,-R}?[w,h]:[{*,w,h}]*({*,-C}?0.75:1.25))}}
     fi
-    rm.
 
     # Manage user selection.
     if !$mb" && "$omb" && "$ind_clicked" && "$ind_clicked==$ind
@@ -41146,10 +41142,11 @@ x_blobs : check_display $0
 ----\n
 ---- "${c}"Mouse"$n" to insert/move/delete blobs.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
------------------------------------------------------"
+----------------------------------------------"
   l[] {
 
   # Create background image [0].
@@ -41187,11 +41184,11 @@ x_blobs : check_display $0
            * Colors and sizes of appearing blobs are\n   chosen randomly",\
            50,180,18,1,1,255
     fi
-    w. rm.
-    if ({*,CTRLLEFT}" || "{*,CTRLRIGHT})" && "({*,C}" || "{*,-D})
-      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    w. wait 20
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,D}" || "{*,R})
+      w[] ${"fitscreen[] "{round({*,-R}?[w,h]:[{*,w,h}]*({*,-C}?0.75:1.25))}}
     fi
-    wait 20
+    rm.
 
     # Manage blob insertion, removal or move.
     if $x<0||$y<0 continue fi
@@ -41222,7 +41219,7 @@ x_bouncing : check_display $0
 ------ "${g}"Bouncing balls"$n" ------------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -----------------------------------------------------"
@@ -41276,11 +41273,12 @@ x_burning_filaments : check_display $0
 ------ "${g}"Burning Filaments"$n" ----------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -----------------------------------------------------"
-  w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] Burning Ashes" # Init display window
+  w[] ${"fitscreen 600,600,40%,60%"},0,"[G'MIC] Burning Filaments" # Init display window
   300,300x2 => trail,canvas
   100,100,1,4,"[ u(w#$trail - 1),u(h#$trail - 1),unitnorm([g,g]) ]" => agents
   for {*}" && "!{*,ESC}" && "!{*,Q} {
@@ -41325,10 +41323,10 @@ x_burning_filaments : check_display $0
 
     b[trail] 3,2 deform[trail] 2 n[trail] 0,1
     +map[canvas] hot
-    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
-      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
-    fi
     w. wait 40 rm.
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,D}" || "{*,R})
+      w[] ${"fitscreen[] "{round({*,-R}?[600,600]:[{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
   }
   rm w[] 0
 
@@ -42103,7 +42101,7 @@ x_fire : skip "${1=}" check_display $0
 ------ "${g}"Fire effect"$n" ------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -42152,7 +42150,7 @@ x_fireworks : check_display $0
 ------ "${g}"Fireworks"$n" --------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------"
@@ -42212,7 +42210,7 @@ x_fisheye : check_display $0
 ---- "${c}"Mouse pointer"$n" moves fish-eye center.\n
 ---- "${c}"Mouse buttons"$n" set fish-eye size.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -42349,6 +42347,84 @@ x_fourier : check_display $0
     rm[^0] # Clean images and window
   } rm
 
+#@cli x_glenz3d
+#@cli : Launch the 3D glenz demo.
+x_glenz3d : check_display $0
+  use_vt100 g=$_vt100_g c=$_vt100_c n=$_vt100_n r=$_vt100_r
+  e "\n
+------ "${g}"3D Glenz"$n" ----------------------------------------\n
+----\n
+---- "${c}"Mouse buttons"$n" on the right image to set min/max frequencies.\n
+---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
+---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
+----\n
+-----------------------------------------------------------------"
+
+  # Init canvas.
+  rm W,H=800,600
+  $W,$H,1,3,"y<h/2?lerp([ 100,100,255 ],[ 30,0,0 ],2*y/h):[ 0,0,0 ]" => background
+  w[] ${"fitscreen .,40%,60%"},0,"[G'MIC] 3D Glenz" # Init display window
+
+  # Generate 3D base glenz object.
+  l[] {
+    ({'CImg3d'},14,24:y)
+    1,14,1,3,"y<8?[ y&1,(y&2)>>1,(y&4)>>2 ] - 0.5:(V = [ 0,0,0 ]; V[(y - 8)>>1] = 0.75*(y&1?1:-1); V)"
+    0 eval "
+      add(p0,p1,p2,p3,p4) = da_push([ 3,p0,p1,p4 ],[ 3,p1,p2,p4 ],[ 3,p2,p3,p4 ],[ 3,p3,p0,p4 ]);
+      add(0,2,6,4,8); add(3,1,5,7,9); add(0,4,5,1,10); add(3,7,6,2,11); add(0,1,3,2,12); add(5,4,6,7,13)"
+    da_freeze. 1,100%,1,3,200 1,100%,1,1,0.5 permute cyzx y a y
+  } => glenz3d
+
+  # Create chromatic variations of the base glenz.
+  nb_cols=10
+  repeat $nb_cols {
+    ({lerp(0,360,$>/$nb_cols)}^1^1) hsv2rgb. col={^} rm.
+    +l[glenz3d] { s3d 1,100%,1,3,y&1?[$col]:[255,255,255] permute. cyzx y. j... . rm. a y } => glenz3d_$>
+  }
+  rm[glenz3d]
+
+  # Generate 3D checkerboard.
+  l[] {
+    plane3d {$W*[4,2]},101,100 -3d {2*$W},$W,0
+    s3d 1,100%,1,3,"(y&1)?[ 100,0,50 ]:[ 130,20,70 ]" permute. cyzx y. j... . rm. a y
+  } => checkerboard3d
+
+  # Init glenz attributes.
+  1,128,1,7,"[ u,u,v($nb_cols - 1),abs(3*g),g,g,g ]" => glenz_attr
+
+  # Do animation.
+  t0=$|
+  for {*}" && "!{*,ESC}" && "!{*,Q} {
+    [background] => canvas
+    dt,t0:=($|-$t0)/8,$|
+
+    # Draw checkeboard.
+    ++3d[checkerboard3d] 0,{(100*$t0)%(4*$W%)},0 r3d. 1,0,0,-80 j3d.. .,50%,{-2,h/2},0,1,2,0,0,250 rm.
+
+    # Draw 3D glenz objects.
+    repeat {glenz_attr,h} {
+      t,x,c,amp0,rx,ry,rz={glenz_attr,I[$>]}
+      y:="const y0 = 70*$H%; const amp = lerp($amp0,0.3,$t)*$W; y0 - amp*abs(sin(20*$t))^0.5"
+      z:=lerp(100000,-600,$t^0.1)
+      [glenz3d_$c] o3d. {lerp(0,0.75,$t)}
+      r3d. 1,0,0,{600*$rx*$t} r3d. 0,1,0,{600*$ry*$t} r3d. 0,0,1,{600*$rz*$t}
+      -3d. 0,0.5,0 *3d. {$W/6} +3d. {3*lerp(-$W,$W,$x)},$y,$z
+      t+=$dt
+      if $t>=1 point[glenz_attr] 0,$>,0,1,{"[ 0,u,v($nb_cols - 1),abs(3*g),g,g,g ]"} else =[glenz_attr] $t,0,$> fi
+    }
+    +3d[-{glenz_attr,h}--1]
+    j3d.. .,50%,43%,0,1,3,1,1 rm.
+    w. wait 30 rm.
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
+      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
+    elif {*,CTRLLEFT}" && "{*,R}
+      w[] ${"fitscreen[] "$W,$H",40%,60%"}
+    fi
+  }
+  rm w[] 0
+
 #@cli x_grab_color : _variable_name
 #@cli : Open a color grabber widget from the first selected image.
 #@cli : Argument 'variable_name' specifies the variable that contains the selected color values at any time.
@@ -42431,7 +42507,7 @@ x_hanoi : check_display $0
 ---- "${c}"Left button"$n" and "${c}"mouse"$n" to move a disk.\n
 ---- "${c}"Right button"$n" to rotate 3D view.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -42892,7 +42968,7 @@ x_landscape : check_display $0
 ---- Enjoy the view!\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------------------------"
@@ -43079,7 +43155,7 @@ x_light : check_display $0
 ---- Move light position with "${c}"mouse"$n".\n
 ---- "${c}"Mouse buttons"$n" fade light in/out.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -43344,7 +43420,7 @@ x_metaballs3d : check_display $0
 ----\n
 ---- "${c}"Mouse button"$n" or '"${c}"SPACE"$n"' key to toggle rendering mode.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -----------------------------------------------------------"
@@ -43751,7 +43827,7 @@ x_pacman : check_display $0
 ----\n
 ---- "${c}"Arrow keys"$n" to control pacman.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------------------------"
@@ -44169,7 +44245,7 @@ x_plasma : check_display $0
 ------ "${g}"Plasma effect"$n" ----------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -44248,7 +44324,7 @@ x_quantize_rgb : check "isint(${1=16},2)" check_display $0
 ---- Key '"${c}"SPACE"$n"' does a single iteration of k-means and pauses.\n
 ---- Key '"${c}"RETURN"$n"' runs k-means algorithm.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------------------------"
@@ -44408,7 +44484,7 @@ x_reflection3d : check_display $0
 ------ "${g}"3D reflection"$n" ----------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -44475,7 +44551,8 @@ x_rotating_dla : check_display $0
 ------ "${g}"3D rubber object"$n" -------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -44499,10 +44576,10 @@ x_rotating_dla : check_display $0
     # Render frame.
     +b[0] 2,3 *. 800 c. 0,255 map. curl
     rotate[0] 2,1,0,50%,50% zoom[0] 0.97
-    if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
-      w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
-    fi
     w. wait 40 rm.
+    if {*,CTRLLEFT}" && "({*,C}" || "{*,D}" || "{*,R})
+      w[] ${"fitscreen[] "{round({*,-R}?[480,480]:[{*,w,h}]*({*,-C}?0.75:1.25))}}
+    fi
   }
   rm w[] 0
 
@@ -44514,7 +44591,7 @@ x_rubber3d : check_display $0
 ------ "${g}"3D rubber object"$n" -------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------"
@@ -45157,7 +45234,7 @@ x_shadebobs : check_display $0
 ------ "${g}"Shade bobs"$n" -------------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -------------------------------------------------"
@@ -45794,7 +45871,8 @@ x_tunnel3d : check_display $0
 ------ "${g}"3D Tunnel"$n" ------------------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
+---- Keys '"${c}"CTRL+R"$n"' to reset window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 -----------------------------------------------------"
@@ -45855,10 +45933,10 @@ x_tunnel3d : check_display $0
       is_close:=!{*}" || "{*,ESC}" || "{*,Q}
       if $is_close break fi
       600,600,1,3 j3d. ..,50%,50%,-500,1,2,0,0,500
-      if {*,CTRLLEFT}" && "({*,C}" || "{*,-D})
-        w[] ${"fitscreen[] "{round([{*,w,h}]*({*,-C}?0.75:1.25))}}
-      fi
       w. wait 30 rm[-2,-1]
+      if {*,CTRLLEFT}" && "({*,C}" || "{*,D}" || "{*,R})
+        w[] ${"fitscreen[] "{round({*,-R}?[600,600]:[{*,w,h}]*({*,-C}?0.75:1.25))}}
+      fi
     }
     if $is_close break fi
   }
@@ -46070,7 +46148,7 @@ x_waves : check_display $0
 ---- "${c}"Left mouse button"$n" to drop balls.\n
 ---- "${c}"Right mouse button"$n" to rotate view.\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"CTRL+F"$n"' to switch fullscreen mode.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
@@ -46136,7 +46214,7 @@ x_whirl : check "${1=0.2}>=0" check_display $0
 ------ "${g}"Fractal whirls"$n" ----------------------------\n
 ----\n
 ---- Keys '"${c}"CTRL+D"$n"' to increase window size.\n
----- Keys '"${c}"CTRL+C"$n"' to reset window size.\n
+---- Keys '"${c}"CTRL+C"$n"' to decrease window size.\n
 ---- Keys '"${c}"ESC"$n"' or '"${c}"Q"$n"' to exit.\n
 ----\n
 --------------------------------------------------"
@@ -50142,7 +50220,7 @@ fx_colorize_interactive_preview : skip "${4=},${5=},${6=}" gui_check_x11_gdi32 1
 fx_recolorize :
   repeat int($!/2) {
     if $3 s:=$>,$>+1 else s:=2*$>,2*$>+1 fi
-    l[$s] rv[0,1] {
+    l[$s] { rv[0,1]
       channels[0] 0 to_rgb.. # Convert to pure gray
       to_rgba. split_opacity. !=. 0 # Retrieve mask of color patches
       srgb2rgb[-3,-2] rgb2lab8[-3,-2] channels... 0 channels.. 1,2 # Now, list is [0]=lightness / [1]=chroma / [2]=mask
@@ -51173,7 +51251,7 @@ fx_clut_from_ab : skip "${4=},${5=}"
       if !$is_png" && "!$is_cube error "Filename extension must be '.cube' or '.png'." fi
       if $is_png r[0] {0,r=round(whd^0.5);[r,r]},1,3,-1 o[0] "$4/$5"
       else
-        if {0,w>32} rs3d[0] 32 fi
+        if {0,w>32} rs3d[0] 32,,1 fi
         output_cube[0] "$4/$5"
       fi
       rm[0]
@@ -52470,8 +52548,7 @@ fx_colorful_blobs :
     rx$>,ry$>:="P = ["${x$>},${y$>}"];
                 R = ["${rx$>},${ry$>}"];
                 oP = isnan("${p_x$>}")?[-1,-1]:["${p_x$>},${p_y$>}"];
-                oP==[-1,-1]?P + [10,0]:P!=oP?R + P - oP:R"
-
+                oP==[-1,-1]?(norm(R - [ 50,50 ])<1e-3?P + [ 10,0 ]:R):P!=oP?R+P-oP:R"
     if !isnan(${x$>})
       x,y,rx,ry,R,G,B:="const w1 = (w - 1)%; const h1 = (h -1)%; "\
                        round([${x$>}*w1,${y$>}*h1,${rx$>}*w1,${ry$>}*h1,${R$>},${G$>},${B$>}])
@@ -53166,6 +53243,124 @@ fx_equalize_hsv_preview :
   fi
   gui_split_preview "fx_equalize_hsv $*",${-3--1}
   if $5 r. ${-gui_preview_wh},1,3,0,0,0.5,0.5 fi
+
+#@gui Local Color Correction : fx_local_color_correction, fx_local_color_correction_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Applies local color correction, influenced by anchor points.
+#@gui : "}, sep = separator()
+#@gui : Influence Smoothness (%) = float(40,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #1:</b></span></small>")
+#@gui : Position = point(50,30,1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(20,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #2:</b></span></small>")
+#@gui : Position = point(50,70,1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(-10,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #3:</b></span></small>")
+#@gui : Position = point(20,20,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #4:</b></span></small>")
+#@gui : Position = point(80,20,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #5:</b></span></small>")
+#@gui : Position = point(80,80,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Anchor #6:</b></span></small>")
+#@gui : Position = point(20,80,-1,1)
+#@gui : Contrast (%) = float(0,-100,100)
+#@gui : Brightness (%) = float(0,-100,100)
+#@gui : Saturation (%) = float(0,-100,100)
+#@gui : Hue (%) = float(0,-100,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/16</i>.</small>")
+__fx_local_color_correction :
+  i_smoothness,\
+  x0,y0,dc0,db0,ds0,dh0,\
+  x1,y1,dc1,db1,ds1,dh1,\
+  x2,y2,dc2,db2,ds2,dh2,\
+  x3,y3,dc3,db3,ds3,dh3,\
+  x4,y4,dc4,db4,ds4,dh4,\
+  x5,y5,dc5,db5,ds5,dh5=${1-37}
+
+fx_local_color_correction :
+  __$0 $*
+  srgb2rgb rgb2oklab
+  foreach {
+    nm={n} w,h,w1,h1:=w,h,w-1,h-1
+    split_opacity l[0] {
+
+      # Generate dense field of parameter values.
+      l[] { repeat 6 { if !isnan(${x$>}) ({[${x$>},${y$>},${dc$>},${db$>},${ds$>},${dh$>}]}:c) fi } a x }
+
+      # Generate low-resolution map of interpolated parameter values.
+      {0,ceil([w,h]*min(1,256/max(w,h)))},1,4,"
+        begin(
+          const w1 = w - 1;
+          const h1 = h - 1;
+          const diag2 = w1^2 + h1^2;
+          const temperature = 10^-lerp(5,0.5,$i_smoothness%^0.5);
+          xs = crop(#-1,0,0,0,0,w#-1,1,1,1)%;
+          ys = crop(#-1,0,0,0,1,w#-1,1,1,1)%;
+          dcs = crop(#-1,0,0,0,2,w#-1,1,1,1)%;
+          dbs = crop(#-1,0,0,0,3,w#-1,1,1,1)%;
+          dss = crop(#-1,0,0,0,4,w#-1,1,1,1)%;
+          dhs = crop(#-1,0,0,0,5,w#-1,1,1,1)%;
+        );
+
+        # Get local parameter values by linear interpolation.
+        dist = (((xs - x/w1)*w1)^2 + ((ys - y/h1)*h1)^2)/diag2;
+        weights = softmin(dist,temperature);
+        dc = 1 + dot(weights,dcs);
+        db = dot(weights,dbs);
+        ds = 1 + dot(weights,dss);
+        dh = dot(weights,dhs)*pi;
+        [ dc,db,ds,dh ]"
+      rm..
+
+      # Applies color correction.
+      f.. "const interpolation = 1;
+        P = I(#-1,x*(w#-1 - 1)/(w - 1),y*(h#-1 - 1)/(h - 1));
+        I = I;
+        P[0]!=1?(I[0] = 0.5 + (I[0] - 0.5)*P[0]);
+        P[1]!=0?(I[0]+=P[1]);
+        P[2]!=1?(I[1]*=P[2]; I[2]*=P[2]);
+        P[3]!=0?(R = rot(P[3]); Q = R*I[1,2]; copy(I[1],Q));
+        I[0] = cut(I[0],0,1);
+        I"
+      rm.
+    }
+    a c
+  }
+  oklab2rgb rgb2srgb
+
+fx_local_color_correction_preview :
+  __fx_local_color_correction $*
+  fx_local_color_correction $*
+
+  # Add black halo to make anchor points more visible.
+  33,33 circle. 16,16,13,1,1 b. 2 n. 0,255 channels. -3,0
+  repeat 6 { if !isnan(${x$>}) ja[0] .,{0,round([(w-1)*${x$>}%,(h-1)*${y$>}%]-16)} fi }
+  rm.
 
 #@gui Mixer [CMYK] : fx_mix_cmyk, fx_mix_cmyk(1)+
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -67501,7 +67696,8 @@ fx_output_565 :
 #@gui : "Mandelbrot Explorer","3D Metaballs","Minesweeper",
 #@gui : "Minimal Path","Pacman","Paint","Plasma Effect","RGB Quantization","3D Reflection","3D Rubber Object",
 #@gui : "Shadebobs","Spline Editor",
-#@gui : "3D Starfield","Tetris","Tic-Tac-Toe","3D Waves","Fractal Whirl")
+#@gui : "3D Starfield","Tetris","Tic-Tac-Toe","3D Waves","Fractal Whirl","Burning Filaments","3D Tunnel",
+#@gui : "Rotating DLA","3D Glenz")
 #@gui : sep = separator()
 #@gui : note = note("<small><b>Note:</b> This filter proposes a showcase of some interactive demos, all written
 #@gui : as G'MIC scripts.</small>")
@@ -67514,7 +67710,8 @@ fx_output_565 :
 fx_gmic_demos :
   coms=2048,blobs,bouncing,connect4,fire,fireworks,fisheye,fourier,hanoi,histogram,hough,jawbreaker,landscape,life,\
        light,mandelbrot,metaballs3d,minesweeper,minimal_path,pacman,paint,plasma,quantize_rgb,reflection3d,\
-       rubber3d,shadebobs,spline,starfield3d,tetris,tictactoe,waves,whirl
+       rubber3d,shadebobs,spline,starfield3d,tetris,tictactoe,waves,whirl,burning_filaments,tunnel3d,rotating_dla,\
+       glenz3d
   com=${arg0\ $1,$coms}
   if $!>0 sel=0 else sel= fi
   +l[$sel] { m "foo : x_"$com foo rm um foo }
@@ -67639,7 +67836,7 @@ fx_intarsia :
     ('"</table>\n</td><td>"')
 
     # Render result and overview images.
-    starting=${arg0\ $5,\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\"}
+    starting=${"arg0 $5,\"Top left\",\"Top right\",\"Bottom left\",\"Bottom right\""}
     label=${arg0\ $6,Row,Column}
     if $6 dir0="T &#8594; B" dir1="B &#8594; T" else dir0="L &#8594; R" dir1="R &#8594; L" fi
     dir:=arg0(2*$5+$6,0,0,1,0,0,1,1,1)
@@ -68020,9 +68217,11 @@ fx_solve_maze_preview :
 
 #@cli _gallery_codesamples
 #@cli : This entry defines some examples of coding fun filters for the G'MIC gallery page.
-#@cli : $ https://gmic.eu/samples/rotating_dla.gmic go _fps=15 _label="Rotating~Diffusion-Limited~Aggregation"
-#@cli : $ https://gmic.eu/samples/hilbert_curve.gmic go _fps=15 _label="Hilbert~Curve"
-#@cli : $ https://gmic.eu/samples/french_flag.gmic go _fps=20 _label="French~Flag"
+#@cli : $ https://gmic.eu/samples/glenz3d.gmic go _fps=20 _label="3D Glenz"
+#@cli : $ https://gmic.eu/samples/chromatic_nebula.gmic go _fps=15 _label="Chromatic Nebula"
+#@cli : $ https://gmic.eu/samples/rotating_dla.gmic go _fps=15 _label="Rotating Diffusion-Limited Aggregation"
+#@cli : $ https://gmic.eu/samples/hilbert_curve.gmic go _fps=15 _label="Hilbert Curve"
+#@cli : $ https://gmic.eu/samples/french_flag.gmic go _fps=20 _label="French Flag"
 #@cli : $ https://gmic.eu/samples/snow.gmic go _fps=20 _label="Snow"
 #@cli : $ https://gmic.eu/samples/fire.gmic go _fps=15 _label="Fire"
 #@cli : $ https://gmic.eu/samples/cube3d.gmic go _fps=20 _label="3D Cube"
@@ -68033,7 +68232,7 @@ fx_solve_maze_preview :
 #@cli : $ https://gmic.eu/samples/landscape.gmic go _fps=12 _label="Landscape"
 #@cli : $ https://gmic.eu/samples/mandelbrot.gmic go _fps=8 _label="Mandelbrot"
 #@cli : $ https://gmic.eu/samples/lissajous.gmic go _fps=10 _label="Lissajous"
-#@cli : $ https://gmic.eu/samples/torus3d.gmic go _fps=10 _label="3D~torus"
+#@cli : $ https://gmic.eu/samples/torus3d.gmic go _fps=10 _label="3D Torus"
 #@cli : $ https://gmic.eu/samples/heart.gmic go _fps=15 _label="Heart"
 #@cli : $ https://gmic.eu/samples/distortion.gmic go _fps=20 _label="Distortion"
 #@cli : $ https://gmic.eu/samples/rotozoom.gmic go _fps=15 _label="Rotozoom"
