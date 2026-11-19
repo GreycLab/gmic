@@ -2006,6 +2006,466 @@ inline unsigned int count_commas(const char *const str) {
   return n;
 }
 
+#include <csignal>
+
+//------------------------------------------------------------------------------
+// Clipboard handling (commands 'copy', 'copy_byte', 'paste' and 'paste_byte').
+// A process-wide internal buffer is always maintained, and mirrored (best effort)
+// to the OS clipboard (Linux: wl-clipboard or xclip, macOS: pbcopy/pbpaste (text only),
+// Windows: Win32 clipboard API). Set environment variable GMIC_CLIPBOARD=internal to
+// disable the mirroring to the OS clipboard.
+//------------------------------------------------------------------------------
+#define gmic_cb_mime_text "text/plain"
+#define gmic_cb_mime_png "image/png"
+#define gmic_cb_mime_image "application/x-gmic-image"
+#define gmic_cb_mime_bytes "application/octet-stream"
+
+struct gmic_clipboard_t {
+  int kind;                       // 0:empty, 1:text, 2:image, 3:raw bytes.
+  CImg<unsigned char> exact;      // Text bytes (1), serialized image (2) or raw bytes (3).
+  CImg<unsigned char> enc;        // Image only: PNG data (if G,GA,RGB,RGBA 2D image) or serialized image.
+  const char *enc_mime;           // Mime type of 'enc'.
+  CImg<unsigned char> os_sent;    // Last payload sent to the OS clipboard (if any).
+  const char *os_mime;            // Mime type of 'os_sent' (0 if last OS update failed).
+  gmic_clipboard_t():kind(0),enc_mime(0),os_mime(0) {}
+};
+
+inline gmic_clipboard_t& gmic_clipboard() {
+  static gmic_clipboard_t cb;
+  return cb;
+}
+
+struct gmic_clipboard_lock {
+  gmic_clipboard_lock() { cimg::mutex(26); }
+  ~gmic_clipboard_lock() { cimg::mutex(26,0); }
+};
+
+// Clipboard content, as retrieved by 'paste' commands.
+struct gmic_cb_content {
+  int kind;                       // 0:empty, 1:text, 2:image, 3:raw bytes.
+  bool is_internal;               // 'exact' holds a full-precision serialization of the image.
+  CImg<unsigned char> exact, enc, dib8;
+  const char *enc_mime;
+  gmic_cb_content():kind(0),is_internal(false),enc_mime(0) {}
+};
+
+// Temporary file name.
+inline void gmic_cb_tmpname(CImg<char>& fn, const char *const ext) {
+  fn.assign(1024);
+  cimg_snprintf(fn,fn.width(),"%s%c%s.%s",cimg::temporary_path(),cimg_directory_separator,cimg::filenamerand(),ext);
+}
+
+inline bool gmic_cb_write_file(const char *const fn, const CImg<unsigned char>& data) {
+  std::FILE *const f = std::fopen(fn,"wb");
+  if (!f) return false;
+  const bool ok = !data.size() || std::fwrite(data.data(),1,data.size(),f)==data.size();
+  return std::fclose(f)==0 && ok;
+}
+
+inline bool gmic_cb_read_file(const char *const fn, CImg<unsigned char>& data) {
+  std::FILE *const f = std::fopen(fn,"rb");
+  if (!f) return false;
+  std::fseek(f,0,SEEK_END);
+  const long len = std::ftell(f);
+  std::fseek(f,0,SEEK_SET);
+  bool ok = false;
+  if (len>0) {
+    data.assign((unsigned int)len);
+    ok = std::fread(data.data(),1,(size_t)len,f)==(size_t)len;
+  }
+  std::fclose(f);
+  return ok;
+}
+
+// Encode image as PNG (only for 2D G,GA,RGB,RGBA images). Also return the 8-bit version of the image.
+template<typename T>
+inline bool gmic_cb_encode_png(const CImg<T>& img, CImg<unsigned char>& png, CImg<unsigned char>& img8) {
+  if (img.is_empty() || img.depth()!=1 || img.spectrum()<1 || img.spectrum()>4) return false;
+  bool ok = false;
+  CImg<char> fn;
+  try {
+    CImg<float> tmp(img);
+    tmp.round(1).cut(0,255);
+    img8.assign(tmp);
+    gmic_cb_tmpname(fn,"png");
+    img8.save_png(fn);
+    if (gmic_cb_read_file(fn,png) && png.size()>8 && png[0]==0x89 && png[1]=='P' && png[2]=='N' && png[3]=='G')
+      ok = true;
+  } catch (...) { ok = false; }
+  if (fn) std::remove(fn);
+  if (!ok) { png.assign(); img8.assign(); }
+  return ok;
+}
+
+template<typename T>
+inline bool gmic_cb_decode_png(const CImg<unsigned char>& png, CImg<T>& img) {
+  bool ok = false;
+  CImg<char> fn;
+  gmic_cb_tmpname(fn,"png");
+  if (gmic_cb_write_file(fn,png)) {
+    try {
+      CImg<T> tmp;
+      tmp.load_png(fn);
+      if (tmp) { tmp.move_to(img); ok = true; }
+    } catch (...) { ok = false; }
+  }
+  std::remove(fn);
+  return ok;
+}
+
+//-- OS clipboard back-ends ---------------------------------------------------
+#if cimg_OS==1
+
+inline bool gmic_cb_has_tool(const char *const name) {
+  char cmd[160];
+  cimg_snprintf(cmd,sizeof(cmd),"command -v %s >/dev/null 2>&1",name);
+  return std::system(cmd)==0;
+}
+
+// 0:none, 1:wl-clipboard, 2:xclip, 3:pbcopy/pbpaste (text only).
+inline int gmic_cb_backend() {
+  static int backend = -1;
+  if (backend<0) {
+    backend = 0;
+    const char *const env = std::getenv("GMIC_CLIPBOARD");
+    if (env && !std::strcmp(env,"internal")) backend = 0;
+    else if (std::getenv("WAYLAND_DISPLAY") && gmic_cb_has_tool("wl-copy") && gmic_cb_has_tool("wl-paste")) backend = 1;
+    else if (std::getenv("DISPLAY") && gmic_cb_has_tool("xclip")) backend = 2;
+    else if (gmic_cb_has_tool("pbcopy") && gmic_cb_has_tool("pbpaste")) backend = 3;
+  }
+  return backend;
+}
+
+inline bool gmic_cb_os_set(const char *const mime, const CImg<unsigned char>& data,
+                           const CImg<unsigned char> *const dib8 = 0) {
+  cimg::unused(dib8);
+  const int backend = gmic_cb_backend();
+  if (!backend) return false;
+  const bool is_text = !std::strcmp(mime,gmic_cb_mime_text);
+  char cmd[256];
+  switch (backend) {
+  case 1 :
+    if (is_text) cimg_snprintf(cmd,sizeof(cmd),"wl-copy >/dev/null 2>&1");
+    else cimg_snprintf(cmd,sizeof(cmd),"wl-copy --type %s >/dev/null 2>&1",mime);
+    break;
+  case 2 :
+    cimg_snprintf(cmd,sizeof(cmd),"xclip -selection clipboard -t %s -i >/dev/null 2>&1",is_text?"UTF8_STRING":mime);
+    break;
+  default :
+    if (!is_text) return false;
+    cimg_snprintf(cmd,sizeof(cmd),"pbcopy >/dev/null 2>&1");
+  }
+  void (*const old_handler)(int) = std::signal(SIGPIPE,SIG_IGN);
+  std::FILE *const f = popen(cmd,"w");
+  bool ok = false;
+  if (f) {
+    ok = !data.size() || std::fwrite(data.data(),1,data.size(),f)==data.size();
+    ok = (pclose(f)==0) && ok;
+  }
+  std::signal(SIGPIPE,old_handler);
+  return ok;
+}
+
+inline bool gmic_cb_os_get(const char *const mime, CImg<unsigned char>& data) {
+  const int backend = gmic_cb_backend();
+  if (!backend) return false;
+  const bool is_text = !std::strcmp(mime,gmic_cb_mime_text);
+  char cmd[256];
+  switch (backend) {
+  case 1 :
+    cimg_snprintf(cmd,sizeof(cmd),"wl-paste --no-newline --type %s 2>/dev/null",mime);
+    break;
+  case 2 :
+    cimg_snprintf(cmd,sizeof(cmd),"xclip -selection clipboard -t %s -o 2>/dev/null",is_text?"UTF8_STRING":mime);
+    break;
+  default :
+    if (!is_text) return false;
+    cimg_snprintf(cmd,sizeof(cmd),"pbpaste 2>/dev/null");
+  }
+  std::FILE *const f = popen(cmd,"r");
+  if (!f) return false;
+  CImg<unsigned char> buf(65536), res;
+  unsigned long total = 0;
+  size_t n = 0;
+  data.assign();
+  CImg<unsigned char> all(65536);
+  while ((n = std::fread(buf.data(),1,buf.width(),f))>0) {
+    if (total + n>(unsigned long)all.width()) {
+      CImg<unsigned char> tmp((unsigned int)std::max<unsigned long>(2*all.width(),total + n));
+      if (total) std::memcpy(tmp.data(),all.data(),total);
+      tmp.move_to(all);
+    }
+    std::memcpy(all.data() + total,buf.data(),n);
+    total+=n;
+  }
+  const bool ok = pclose(f)==0 && total>0;
+  if (ok) {
+    data.assign((unsigned int)total);
+    std::memcpy(data.data(),all.data(),total);
+  }
+  return ok;
+}
+
+inline bool gmic_cb_os_get_dib(CImg<unsigned char>&) { return false; }
+
+#elif cimg_OS==2
+
+inline bool gmic_cb_win_put(const UINT fmt, const void *const p, const size_t n) {
+  HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE,n?n:1);
+  if (!h) return false;
+  void *const q = GlobalLock(h);
+  if (!q) { GlobalFree(h); return false; }
+  if (n) std::memcpy(q,p,n);
+  GlobalUnlock(h);
+  if (!SetClipboardData(fmt,h)) { GlobalFree(h); return false; }
+  return true;
+}
+
+inline UINT gmic_cb_win_format(const char *const mime) {
+  if (!std::strcmp(mime,gmic_cb_mime_png)) return RegisterClipboardFormatA("PNG");
+  return RegisterClipboardFormatA(mime);
+}
+
+inline bool gmic_cb_os_set(const char *const mime, const CImg<unsigned char>& data,
+                           const CImg<unsigned char> *const dib8 = 0) {
+  if (!OpenClipboard(0)) return false;
+  EmptyClipboard();
+  bool ok = false;
+  if (!std::strcmp(mime,gmic_cb_mime_text)) {
+    const int nw = MultiByteToWideChar(CP_UTF8,0,(const char*)data.data(),(int)data.size(),0,0);
+    CImg<unsigned short> wide(nw + 1,1,1,1,0); // 'wchar_t' is 16-bit on Windows.
+    if (nw>0)
+      MultiByteToWideChar(CP_UTF8,0,(const char*)data.data(),(int)data.size(),(wchar_t*)wide.data(),nw);
+    ok = gmic_cb_win_put(CF_UNICODETEXT,wide.data(),(nw + 1)*sizeof(wchar_t));
+  } else {
+    ok = gmic_cb_win_put(gmic_cb_win_format(mime),data.data(),data.size());
+    if (ok && dib8 && *dib8) { // Also provide a standard DIB (bottom-up, 24 or 32 bits).
+      const int w = dib8->width(), h = dib8->height(), s = dib8->spectrum(), bpp = s==2 || s==4?32:24;
+      const size_t rowbytes = (size_t)((w*bpp + 31)/32)*4, nb = sizeof(BITMAPINFOHEADER) + rowbytes*h;
+      CImg<unsigned char> dib(nb,1,1,1,0);
+      BITMAPINFOHEADER *const bi = (BITMAPINFOHEADER*)dib.data();
+      bi->biSize = sizeof(BITMAPINFOHEADER); bi->biWidth = w; bi->biHeight = h; bi->biPlanes = 1;
+      bi->biBitCount = (WORD)bpp; bi->biCompression = BI_RGB; bi->biSizeImage = (DWORD)(rowbytes*h);
+      for (int y = 0; y<h; ++y) {
+        unsigned char *ptrd = dib.data() + sizeof(BITMAPINFOHEADER) + rowbytes*(h - 1 - y);
+        for (int x = 0; x<w; ++x) {
+          const unsigned char
+            c0 = (*dib8)(x,y,0,0), c1 = s>=3?(*dib8)(x,y,0,1):c0, c2 = s>=3?(*dib8)(x,y,0,2):c0,
+            a = s==2?(*dib8)(x,y,0,1):s==4?(*dib8)(x,y,0,3):255;
+          *(ptrd++) = c2; *(ptrd++) = c1; *(ptrd++) = c0;
+          if (bpp==32) *(ptrd++) = a;
+        }
+      }
+      gmic_cb_win_put(CF_DIB,dib.data(),dib.size());
+    }
+  }
+  CloseClipboard();
+  return ok;
+}
+
+inline bool gmic_cb_os_get(const char *const mime, CImg<unsigned char>& data) {
+  if (!OpenClipboard(0)) return false;
+  bool ok = false;
+  const bool is_text = !std::strcmp(mime,gmic_cb_mime_text);
+  const UINT fmt = is_text?CF_UNICODETEXT:gmic_cb_win_format(mime);
+  if (fmt && IsClipboardFormatAvailable(fmt)) {
+    HANDLE h = GetClipboardData(fmt);
+    if (h) {
+      const void *const p = GlobalLock(h);
+      if (p) {
+        if (is_text) {
+          const wchar_t *const w = (const wchar_t*)p;
+          const int n = WideCharToMultiByte(CP_UTF8,0,w,-1,0,0,0,0);
+          if (n>1) {
+            data.assign(n - 1);
+            WideCharToMultiByte(CP_UTF8,0,w,-1,(char*)data.data(),n,0,0);
+            ok = true;
+          }
+        } else {
+          const size_t n = (size_t)GlobalSize(h);
+          if (n) { data.assign((unsigned int)n); std::memcpy(data.data(),p,n); ok = true; }
+        }
+        GlobalUnlock(h);
+      }
+    }
+  }
+  CloseClipboard();
+  return ok;
+}
+
+// Retrieve a standard uncompressed 24/32 bits DIB as an 8-bit RGB image.
+inline bool gmic_cb_os_get_dib(CImg<unsigned char>& img8) {
+  if (!OpenClipboard(0)) return false;
+  bool ok = false;
+  if (IsClipboardFormatAvailable(CF_DIB)) {
+    HANDLE h = GetClipboardData(CF_DIB);
+    const unsigned char *const p = h?(const unsigned char*)GlobalLock(h):0;
+    if (p) {
+      const BITMAPINFOHEADER *const bi = (const BITMAPINFOHEADER*)p;
+      if (bi->biCompression==BI_RGB && (bi->biBitCount==24 || bi->biBitCount==32) && bi->biWidth>0 && bi->biHeight) {
+        const int w = bi->biWidth, h8 = bi->biHeight<0?-bi->biHeight:bi->biHeight, bypp = bi->biBitCount/8;
+        const size_t rowbytes = (size_t)((w*bi->biBitCount + 31)/32)*4;
+        const unsigned char *const pix = p + bi->biSize;
+        if (GlobalSize(h)>=bi->biSize + rowbytes*h8) {
+          img8.assign(w,h8,1,3);
+          for (int y = 0; y<h8; ++y) {
+            const unsigned char *ptrs = pix + rowbytes*(bi->biHeight<0?y:h8 - 1 - y);
+            for (int x = 0; x<w; ++x, ptrs+=bypp) { img8(x,y,0,0) = ptrs[2]; img8(x,y,0,1) = ptrs[1]; img8(x,y,0,2) = ptrs[0]; }
+          }
+          ok = true;
+        }
+      }
+      GlobalUnlock(h);
+    }
+  }
+  CloseClipboard();
+  return ok;
+}
+
+#else
+
+inline bool gmic_cb_os_set(const char*, const CImg<unsigned char>&, const CImg<unsigned char>* = 0) { return false; }
+inline bool gmic_cb_os_get(const char*, CImg<unsigned char>&) { return false; }
+inline bool gmic_cb_os_get_dib(CImg<unsigned char>&) { return false; }
+
+#endif
+
+//-- Copy ---------------------------------------------------------------------
+// Return true if the OS clipboard has been updated too.
+inline bool gmic_cb_set(const int kind, const CImg<unsigned char>& exact, const CImg<unsigned char>& enc,
+                        const char *const enc_mime, const CImg<unsigned char> *const dib8 = 0) {
+  gmic_clipboard_t &cb = gmic_clipboard();
+  cb.kind = kind;
+  cb.exact = exact;
+  if (kind==2) cb.enc = enc; else cb.enc.assign();
+  cb.enc_mime = enc_mime;
+  const CImg<unsigned char> &payload = kind==2?cb.enc:cb.exact;
+  const char *const mime = kind==1?gmic_cb_mime_text:kind==3?gmic_cb_mime_bytes:enc_mime;
+  const bool is_os = gmic_cb_os_set(mime,payload,dib8);
+  if (is_os) { cb.os_sent = payload; cb.os_mime = mime; }
+  else { cb.os_sent.assign(); cb.os_mime = 0; }
+  return is_os;
+}
+
+// Copy string as text (or as raw bytes if 'is_bytes' is true).
+inline bool gmic_cb_copy_text(const char *const str, const bool is_bytes=false) {
+  gmic_clipboard_lock lock;
+  const unsigned int len = (unsigned int)std::strlen(str);
+  CImg<unsigned char> bytes;
+  if (len) { bytes.assign(len); std::memcpy(bytes.data(),str,len); }
+  return gmic_cb_set(is_bytes?3:1,bytes,CImg<unsigned char>::empty(),0);
+}
+
+template<typename T>
+inline bool gmic_cb_copy_image(const CImg<T>& img) {
+  gmic_clipboard_lock lock;
+  const CImg<unsigned char> exact = img.get_serialize();
+  CImg<unsigned char> png, img8;
+  if (gmic_cb_encode_png(img,png,img8)) {
+    // Use PNG (readable by other applications) only if it is a lossless representation of the image.
+    // Otherwise (e.g. float values), use the exact G'MIC serialization, so that no precision is lost.
+    bool is_lossless = img8.size()==img.size();
+    if (is_lossless) {
+      const T *ptrs = img.data();
+      cimg_for(img8,ptrd,unsigned char) if ((double)*(ptrs++)!=(double)*ptrd) { is_lossless = false; break; }
+    }
+    if (is_lossless) return gmic_cb_set(2,exact,png,gmic_cb_mime_png,&img8);
+    return gmic_cb_set(2,exact,exact,gmic_cb_mime_image,&img8);
+  }
+  return gmic_cb_set(2,exact,exact,gmic_cb_mime_image);
+}
+
+template<typename T>
+inline bool gmic_cb_copy_bytes(const CImg<T>& img) {
+  gmic_clipboard_lock lock;
+  CImg<unsigned char> bytes(img.size());
+  const T *ptrs = img.data();
+  cimg_for(bytes,ptrd,unsigned char) {
+    const double v = (double)*(ptrs++);
+    *ptrd = (unsigned char)(v<=0?0:v>=255?255:v + 0.5);
+  }
+  return gmic_cb_set(3,bytes,CImg<unsigned char>::empty(),0);
+}
+
+//-- Paste --------------------------------------------------------------------
+// Get current clipboard content (the OS clipboard has priority, unless it still holds what we sent to it).
+inline void gmic_cb_get(gmic_cb_content& content) {
+  gmic_clipboard_t &cb = gmic_clipboard();
+  static const char *const mimes[] = { gmic_cb_mime_png, gmic_cb_mime_image, gmic_cb_mime_bytes, gmic_cb_mime_text, 0 };
+  const bool prefer_internal = cb.kind && !cb.os_mime; // Last update of OS clipboard failed.
+  CImg<unsigned char> data;
+  const char *found = 0;
+  if (!prefer_internal)
+    for (const char *const *m = mimes; *m && !found; ++m) if (gmic_cb_os_get(*m,data)) found = *m;
+  if (found) {
+    if (cb.kind && cb.os_mime && !std::strcmp(found,cb.os_mime) && data==cb.os_sent) { // Unchanged -> use internal
+      content.kind = cb.kind; content.is_internal = true; content.exact = cb.exact; content.enc = cb.enc;
+      content.enc_mime = cb.enc_mime;
+    } else if (!std::strcmp(found,gmic_cb_mime_png)) {
+      content.kind = 2; content.enc = data; content.enc_mime = gmic_cb_mime_png;
+    } else if (!std::strcmp(found,gmic_cb_mime_image)) {
+      content.kind = 2; content.enc = data; content.enc_mime = gmic_cb_mime_image;
+    } else if (!std::strcmp(found,gmic_cb_mime_bytes)) {
+      content.kind = 3; content.exact = data;
+    } else { content.kind = 1; content.exact = data; }
+  } else if (cb.kind) { // Nothing readable in OS clipboard -> internal
+    content.kind = cb.kind; content.is_internal = true; content.exact = cb.exact; content.enc = cb.enc;
+    content.enc_mime = cb.enc_mime;
+  } else if (gmic_cb_os_get_dib(content.dib8)) { // Image in standard (DIB) format.
+    content.kind = 2;
+  }
+}
+
+// Return 0 if nothing is available, 1 if text, 2 if image, 3 if raw bytes (or text containing null characters).
+template<typename T>
+inline int gmic_cb_paste(CImg<T>& img, CImg<char>& text) {
+  gmic_clipboard_lock lock;
+  gmic_cb_content content;
+  gmic_cb_get(content);
+  switch (content.kind) {
+  case 2 : {
+    bool ok = false;
+    try {
+      if (content.is_internal) { CImgList<T>::get_unserialize(content.exact)[0].move_to(img); ok = (bool)img; }
+      else if (content.dib8) { img.assign(content.dib8); ok = true; }
+      else if (content.enc_mime && !std::strcmp(content.enc_mime,gmic_cb_mime_png)) ok = gmic_cb_decode_png(content.enc,img);
+      else { CImgList<T>::get_unserialize(content.enc)[0].move_to(img); ok = (bool)img; }
+    } catch (...) { ok = false; }
+    return ok?2:0;
+  }
+  case 1 : {
+    for (unsigned int i = 0; i<content.exact.size(); ++i) if (!content.exact[i]) return 3;
+    text.assign(content.exact.size() + 1,1,1,1,0);
+    if (content.exact.size()) std::memcpy(text.data(),content.exact.data(),content.exact.size());
+    return 1;
+  }
+  case 3 : return 3;
+  }
+  return 0;
+}
+
+// Return false if nothing is available.
+template<typename T>
+inline bool gmic_cb_paste_bytes(CImg<T>& img) {
+  gmic_clipboard_lock lock;
+  gmic_cb_content content;
+  gmic_cb_get(content);
+  CImg<unsigned char> bytes;
+  switch (content.kind) {
+  case 1 : case 3 : bytes = content.exact; break;
+  case 2 :
+    if (content.dib8) { CImg<unsigned char> png; CImg<unsigned char> img8; gmic_cb_encode_png(content.dib8,png,img8); bytes = png; }
+    else bytes = content.enc;
+    break;
+  }
+  if (!bytes) return false;
+  img.assign(bytes.size(),1,1,1);
+  const unsigned char *ptrs = bytes.data();
+  cimg_for(img,ptrd,T) *ptrd = (T)*(ptrs++);
+  return true;
+}
+
+
 // Return current thread id.
 inline void* get_tid() {
 #if defined(__MACOSX__) || defined(__APPLE__)
@@ -2477,40 +2937,40 @@ typedef enum {
   // Commands of length>3.
   id_abscut=1,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
   id_bilateral=11,id_blur,id_boxfilter,id_break,
-  id_camera=15,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_createdir,id_crop,
+  id_camera=15,id_check,id_check3d,id_command,id_continue,id_convolve,id_copy,id_copy_byte,id_correlate,id_cosh,id_createdir,id_crop,
     id_cumulate,id_cursor,
-  id_debug=27,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
-  id_echo=37,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
-  id_files=48,id_fill,id_flood,id_foreach,
-  id_guided=52,
-  id_histogram=53,
-  id_ifft=54,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
-  id_keep=61,
-  id_label=62,id_light3d,id_line,id_local,id_log10,id_log1p,id_log2,id_logit,
-  id_matchpatch=70,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
-  id_name=80,id_named,id_network,id_noarg,id_noise,id_normalize,
-  id_object3d=86,id_onfail,id_output,
-  id_parallel=89,id_pass,id_permute,id_point,id_polygon,id_progress,
-  id_quit=95,
-  id_rand=96,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
-  id_screen=105,id_serialize,id_shared,id_shift,id_sigmoid,id_sign,id_sinc,id_sinh,id_skip,
+  id_debug=29,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
+  id_echo=39,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
+  id_files=50,id_fill,id_flood,id_foreach,
+  id_guided=54,
+  id_histogram=55,
+  id_ifft=56,id_image,id_index,id_inpaint,id_input,id_isoline3d,id_isosurface3d,
+  id_keep=63,
+  id_label=64,id_light3d,id_line,id_local,id_log10,id_log1p,id_log2,id_logit,
+  id_matchpatch=72,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
+  id_name=82,id_named,id_network,id_noarg,id_noise,id_normalize,
+  id_object3d=88,id_onfail,id_output,
+  id_parallel=91,id_pass,id_paste,id_paste_byte,id_permute,id_point,id_polygon,id_progress,
+  id_quit=99,
+  id_rand=100,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
+  id_screen=109,id_serialize,id_shared,id_shift,id_sigmoid,id_sign,id_sinc,id_sinh,id_skip,
     id_smooth,id_solve,id_sort,id_split,id_sqrt,id_srand,id_status,id_store,id_streamline3d,id_sub3d,
-  id_tanh=124,id_text,
-  id_uncommand=126,id_unroll,id_unserialize,
-  id_vanvliet=129,id_verbose,
-  id_wait=131,id_warn,id_warp,id_watershed,id_while,id_window,
+  id_tanh=128,id_text,
+  id_uncommand=130,id_unroll,id_unserialize,
+  id_vanvliet=133,id_verbose,
+  id_wait=135,id_warn,id_warp,id_watershed,id_while,id_window,
     id_window0,id_window1,id_window2,id_window3,id_window4,id_window5,id_window6,id_window7,id_window8,id_window9,
 
   // Commands of length 3.
-  id_abs=152,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
-  id_log=166,
-  id_map=167,id_max,id_min,id_mod,id_mul,id_neq,
-  id_pow=174,
-  id_rol=176,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
+  id_abs=156,id_add,id_and,id_bsl,id_bsr,id_cos,id_cut,id_div,id_erf,id_exp,id_fft,id_for,
+  id_log=170,
+  id_map=171,id_max,id_min,id_mod,id_mul,id_neq,
+  id_pow=178,
+  id_rol=180,id_ror,id_set,id_sin,id_sqr,id_sub,id_svd,id_tan,id_xor,
 
   // Commands of length 2.
-  id_do=192,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
-  id_or=204,id_qr
+  id_do=196,id_eq,id_fi,id_ge,id_gt,id_if,id_le,id_lt,
+  id_or=208,id_qr
 } builtin_command_id;
 
 // Array of G'MIC built-in commands (must be sorted in length and in lexicographic order!).
@@ -2519,7 +2979,7 @@ const char *gmic::builtin_command_names[] = {
   // Commands of length>3.
   "abscut","acos","acosh","add3d","append","asin","asinh","atan","atan2","atanh",
   "bilateral","blur","boxfilter","break",
-  "camera","check","check3d","command","continue","convolve","correlate","cosh","createdir","crop","cumulate","cursor",
+  "camera","check","check3d","command","continue","convolve","copy","copy_byte","correlate","cosh","createdir","crop","cumulate","cursor",
   "debug","delete","denoise","deriche","dilate","discard","displacement","distance","div3d","done",
   "echo","eigen","elif","ellipse","else","endian","equalize","erode","error","eval","exec",
   "files","fill","flood","foreach",
@@ -2531,7 +2991,7 @@ const char *gmic::builtin_command_names[] = {
   "matchpatch","maxabs","mdiv","median","minabs","mirror","mmul","move","mproj","mul3d",
   "name","named","network","noarg","noise","normalize",
   "object3d","onfail","output",
-  "parallel","pass","permute","point","polygon","progress",
+  "parallel","pass","paste","paste_byte","permute","point","polygon","progress",
   "quit",
   "rand","remove","repeat","resize","return","reverse","rotate","rotate3d","round",
   "screen","serialize","shared","shift","sigmoid","sign","sinc","sinh","skip",
@@ -2563,7 +3023,7 @@ const int gmic::builtin_command_ids[] = {
   // Commands of length>3.
   id_abscut,id_acos,id_acosh,id_add3d,id_append,id_asin,id_asinh,id_atan,id_atan2,id_atanh,
   id_bilateral,id_blur,id_boxfilter,id_break,
-  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_correlate,id_cosh,id_createdir,id_crop,
+  id_camera,id_check,id_check3d,id_command,id_continue,id_convolve,id_copy,id_copy_byte,id_correlate,id_cosh,id_createdir,id_crop,
     id_cumulate,id_cursor,
   id_debug,id_delete,id_denoise,id_deriche,id_dilate,id_discard,id_displacement,id_distance,id_div3d,id_done,
   id_echo,id_eigen,id_elif,id_ellipse,id_else,id_endian,id_equalize,id_erode,id_error,id_eval,id_exec,
@@ -2576,7 +3036,7 @@ const int gmic::builtin_command_ids[] = {
   id_matchpatch,id_maxabs,id_mdiv,id_median,id_minabs,id_mirror,id_mmul,id_move,id_mproj,id_mul3d,
   id_name,id_named,id_network,id_noarg,id_noise,id_normalize,
   id_object3d,id_onfail,id_output,
-  id_parallel,id_pass,id_permute,id_point,id_polygon,id_progress,
+  id_parallel,id_pass,id_paste,id_paste_byte,id_permute,id_point,id_polygon,id_progress,
   id_quit,
   id_rand,id_remove,id_repeat,id_resize,id_return,id_reverse,id_rotate,id_rotate3d,id_round,
   id_screen,id_serialize,id_shared,id_shift,id_sigmoid,id_sign,id_sinc,id_sinh,id_skip,
@@ -6213,6 +6673,35 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
             cimg::mutex(29,0);
           }
           ++position;
+          continue;
+        }
+
+        // 'copy' and 'copy_byte'.
+        if (id_builtin_command==id_copy || id_builtin_command==id_copy_byte) {
+          const bool is_bytes = id_builtin_command==id_copy_byte;
+          const char *const cname = is_bytes?"copy_byte":"copy";
+          if (is_selection) { // Copy selected image
+            if (selection.height()!=1)
+              error(true,0,0,
+                    "Command '%s': Invalid image selection%s (%u image%s selected, exactly one expected).",
+                    cname,gmic_selection.data(),selection.height(),selection.height()!=1?"s":"");
+            const CImg<T>& img = images[*selection];
+            if (!img)
+              error(true,0,0,
+                    "Command '%s': Image%s is empty.",
+                    cname,gmic_selection.data());
+            print(0,"Copy %simage%s to clipboard.",is_bytes?"bytes of ":"",gmic_selection.data());
+            if (is_bytes) gmic_cb_copy_bytes(img); else gmic_cb_copy_image(img);
+          } else { // Copy string
+            if (position_argument>=command_line.size())
+              error(true,0,0,
+                    "Command '%s': Missing argument (a string to copy, or use an image selection).",
+                    cname);
+            gmic_substitute_args(false);
+            print(0,"Copy string '%s' to clipboard%s.",gmic_argument_text_printed(),is_bytes?" (as bytes)":"");
+            gmic_cb_copy_text(argument,is_bytes);
+            ++position;
+          }
           continue;
         }
 
@@ -10207,6 +10696,51 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
         // Commands starting by 'p...'
         //-----------------------------
       gmic_commands_p :
+
+        // 'paste' and 'paste_byte'.
+        if (id_builtin_command==id_paste || id_builtin_command==id_paste_byte) {
+          const bool is_bytes = id_builtin_command==id_paste_byte;
+          const char *const cname = is_bytes?"paste_byte":"paste";
+          if (is_selection)
+            error(true,0,0,
+                  "Command '%s': Image selection is not allowed.",
+                  cname);
+          CImg<T> img;
+          if (is_bytes) {
+            if (!gmic_cb_paste_bytes(img))
+              error(true,0,0,
+                    "Command 'paste_byte': Clipboard is empty.");
+            print(0,"Paste %lu byte%s from clipboard, as a new image.",
+                  (unsigned long)img.size(),img.size()!=1?"s":"");
+            img.move_to(images);
+            CImg<char>::string("[clipboard]").move_to(image_names);
+            is_change = true;
+          } else {
+            CImg<char> text;
+            switch (gmic_cb_paste(img,text)) {
+            case 2 :
+              print(0,"Paste image from clipboard, as a new image (%dx%dx%dx%d).",
+                    img.width(),img.height(),img.depth(),img.spectrum());
+              img.move_to(images);
+              CImg<char>::string("[clipboard]").move_to(image_names);
+              is_change = true;
+              break;
+            case 1 : {
+              CImg<char> _text(text);
+              print(0,"Paste string '%s' from clipboard, into status.",
+                    cimg::strellipsize(_text,80,false));
+              CImg<char>::string(text).move_to(status);
+            } break;
+            case 3 :
+              error(true,0,0,
+                    "Command 'paste': Clipboard contains binary data, use 'paste_byte' instead.");
+            default :
+              error(true,0,0,
+                    "Command 'paste': Clipboard is empty or contains neither a valid image nor text.");
+            }
+          }
+          continue;
+        }
 
         // 'parallel'.
         if (id_builtin_command==id_parallel && no_get_selection) {
