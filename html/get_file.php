@@ -36,25 +36,32 @@ function json_update(string $file, string $lock_file, callable $fn, int $flags =
     if (!$fp) return null;
     if (!flock($fp, LOCK_EX)) { fclose($fp); return null; }
     try {
-        $data = [];
-        if (is_file($file)) {
-            $raw = file_get_contents($file);
-            if ($raw === false) return null;
-            if (trim($raw) !== '') {
-                $data = json_decode($raw, true);
-                if (!is_array($data)) return null;   // corrupted: never overwrite it
-            }
+        clearstatcache(true);
+        $bak  = $file . '.bak';
+        $data = null;
+
+        // Lecture : fichier principal, sinon sauvegarde. Vide/corrompu = rejeté.
+        foreach ([$file, $bak] as $candidate) {
+            $raw = @file_get_contents($candidate);
+            if ($raw === false || trim($raw) === '') continue;
+            $d = json_decode($raw, true);
+            if (is_array($d)) { $data = $d; break; }
         }
+        if ($data === null) {
+            // Aucune source lisible : création autorisée seulement si rien n'a jamais existé
+            if (file_exists($file) || file_exists($bak)) return null;   // on ne remet JAMAIS à zéro
+            $data = [];
+        }
+
         [$data, $result] = $fn($data);
         $json = json_encode($data, $flags);
-        if ($json !== false) {
-            // Atomic write: temp file + rename
+        if ($json !== false && $json !== '') {
             $tmp = tempnam(dirname($file), 'tmp_');
             if ($tmp !== false) {
-                chmod($tmp, 0644);
-                if (file_put_contents($tmp, $json) === false || !rename($tmp, $file)) {
-                    @unlink($tmp);
-                }
+                $ok = (file_put_contents($tmp, $json) === strlen($json));  // détecte écriture partielle
+                if ($ok) { chmod($tmp, 0644); $ok = rename($tmp, $file); }
+                if ($ok) { @copy($file, $bak); }                          // sauvegarde d'un état valide
+                else     { @unlink($tmp); }
             }
         }
         return $result;
