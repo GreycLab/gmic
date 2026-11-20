@@ -10285,8 +10285,8 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                 pthread_create(&_gmic_threads[l].thread_id,0,gmic_parallel<T>,(void*)&_gmic_threads[l]);
 
 #elif cimg_OS==2 // #ifdef gmic_parallel_use_pthread
-              _gmic_threads[l].thread_id = CreateThread(0,0,(LPTHREAD_START_ROUTINE)gmic_parallel<T>,
-                                                        (void*)&_gmic_threads[l],0,0);
+              _gmic_threads[l].thread_id = CreateThread(0,(SIZE_T)8*1024*1024,(LPTHREAD_START_ROUTINE)gmic_parallel<T>,
+                                                        (void*)&_gmic_threads[l],STACK_SIZE_PARAM_IS_A_RESERVATION,0);
 #endif // #ifdef gmic_parallel_use_pthread
 #else // #ifdef gmic_is_parallel
               gmic_parallel<T>((void*)&_gmic_threads[l]);
