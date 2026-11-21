@@ -2704,9 +2704,9 @@ const char* gmic_basename(const char *const str)  {
   else ll = l - 1;
   if (*str=='[' && (str[ll]==']' || str[ll]=='.')) return str;
   const char *p = 0, *np = str;
-  while (np>=str && (p=np)) np = std::strchr(np,'/') + 1;
+  while (np>=str && (p=np)) { np = std::strchr(np,'/'); if (np) ++np; }
   np = p;
-  while (np>=str && (p=np)) np = std::strchr(np,'\\') + 1;
+  while (np>=str && (p=np)) { np = std::strchr(np,'\\'); if (np) ++np; }
   return p;
 }
 
@@ -3706,9 +3706,11 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
       // Remove comments.
       _line = s_line;
-      if (*_line=='#') *_line = 0; else do { // Remove comments
+      if (*_line=='#') *_line = 0; else for (;;) { // Remove comments
           if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
-        } while (_line++);
+          if (!_line) break;
+          ++_line;
+        }
 
       // Remove redundant trailing spaces.
       char *linee = s_line.data() + std::strlen(s_line) - 1;
