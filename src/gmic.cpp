@@ -6924,6 +6924,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1)) {
             nb_scales = (double)(unsigned int)nb_scales;
             if (!cimg::type<double>::is_inf(nb_iterations)) nb_iterations = (double)(unsigned int)nb_iterations;
+            gmic_use_argx;
             if (nb_scales) cimg_snprintf(argx,_argx.width(),"%g ",nb_scales); else std::strcpy(argx,"auto-");
             if (ind0) {
               gmic_use_argy; cimg_snprintf(argy,_argy.width()," with guide [%u]",*ind0);
@@ -11188,7 +11189,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                !std::strcmp(argx,"uint64") || !std::strcmp(argx,"int64") ||
                !std::strcmp(argx,"float32") || !std::strcmp(argx,"float64")) &&
               is_compressed<=1 && is_gmz<=1) ++position;
-          else { std::strcpy(argx,"auto"); is_compressed = is_compressed0?1U:0U; is_gmz = 1; }
+          else { std::strcpy(gmic_use_argx,"auto"); is_compressed = is_compressed0?1U:0U; is_gmz = 1; }
 
           print(0,
                 "Serialize %simage%s as %s%scompressed buffer%s, with datatype '%s'.",
