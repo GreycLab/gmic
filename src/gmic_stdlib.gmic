@@ -61698,6 +61698,357 @@ fx_canvas :
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
 
+#@gui Cracked Mud : fx_cracked_mud, fx_cracked_mud(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a dried-mud texture with multi-scale cracks.
+#@gui : "}, sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Plates:</b></span></small>")
+#@gui : Plate Size (%) = ~float(14,3,50)
+#@gui : Irregularity (%) = ~float(30,0,80)
+#@gui : Plate Variation (%) = ~float(35,0,100)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Cracks:</b></span></small>")
+#@gui : Subdivision Levels = ~int(2,1,3)
+#@gui : Subdivision Density (%) = ~float(45,0,100)
+#@gui : Crack Width (%) = ~float(5.5,0.5,20)
+#@gui : Crack Width Variation (%) = ~float(60,0,100)
+#@gui : Crack Depth (%) = ~float(80,0,100)
+#@gui : Plate Curl (%) = ~float(50,0,100)
+#@gui : Secondary Angle Spread (°) = ~float(11,0,75)
+#@gui : Secondary Length (%) = ~float(100,10,300)
+#@gui : Secondary Branching (%) = ~float(50,0,250)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Surface:</b></span></small>")
+#@gui : Surface Roughness (%) = ~float(50,0,100)
+#@gui : Stain Contrast (%) = ~float(50,0,100)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Colors:</b></span></small>")
+#@gui : Plate Color = color(200,172,150)
+#@gui : Dust Color = color(228,205,182)
+#@gui : Crack Color = color(48,34,26,255)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Lighting:</b></span></small>")
+#@gui : Light Angle = ~float(60,0,360)
+#@gui : Light Elevation = ~float(35,10,80)
+#@gui : Shadow Strength (%) = ~float(60,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/18</i>.</small>")
+fx_cracked_mud :
+  ps,irr,pvar=${1-3}                                       # Plates
+  lvl,dens,cw,cwv,dep,curl,asp,slen,sbr=${4-12}            # Cracks
+  rough,stain=${13-14}                                     # Surface
+  pr,pg,pb,dr,dg,db,kr,kg,kb,kal=${15-24}                  # Colors
+  ang,elev,ao=${25-27}                                     # Lighting
+  foreach { nm={n}
+
+    # Sizes in pixels, all relative to the image size and to the plate size.
+    mw,mh:=w,h rm
+    msz:=max($mw,$mh)*$ps%
+    hw0:=$cw%*$msz*0.5
+    hu:=2*$hw0
+    dd,cu,ro,cvv:=$dep%*$hu*1.5,$curl%*$hu*0.7,$rough%*$hu*0.25,$cwv%
+    asr:=$asp°
+    lnf:=$slen%
+    brf:=$sbr%
+
+    # Primary cracks, then secondary (and tertiary) cracks, merged with max() into one
+    # 3-channel map (0: crack profile, 1: proximity to cracks, 2: random value per plate).
+    dn:=$dens%
+    sz:=max($msz,6)
+    wp:=$irr%*$sz
+    hw:=max($hw0,0.6)
+    $mw,$mh,1,1 _fx_cracked_mud_plates. $sz,$wp,$hw,$cvv
+    repeat $lvl-1 {
+      lv:=$>+1
+      sz:=max($msz*0.42^$lv,6)
+      wp:=$irr%*$sz
+      hw:=max($hw0*0.45^$lv,0.6)
+      $mw,$mh,1,1
+      _fx_cracked_mud_branch[0,1] $sz,$wp,$hw,$cvv,$dn,$asr,$lnf,$brf
+      max[0] [1] rm.
+    }
+
+    # Texture layers: large stains, medium-scale bumps, fine grain.
+    $mw,$mh _fx_cracked_mud_noise. {$msz*2},5
+    $mw,$mh _fx_cracked_mud_noise. {max($msz*0.05,4)},3
+    $mw,$mh,1,1,"u(-1,1)"
+    b. 0.7
+
+    # Height map (in pixels): crack floor, lifted plate rims, surface roughness.
+    $mw,$mh,1,1,"
+      k = i(#0,x,y,0,0);
+      p = i(#0,x,y,0,1);
+      -$dd*k + $cu*p*(1 - k) + $ro*(1 - k)*(0.6*i(#2,x,y,0,0) + 0.4*i(#3,x,y,0,0))"
+    b. 0.6
+
+    # Lighting parameters.
+    ldx:=cos($ang°)*cos($elev°)
+    ldy:=-sin($ang°)*cos($elev°)
+    ldz:=sin($elev°)
+    sdx:=cos($ang°)
+    sdy:=-sin($ang°)
+    te:=tan($elev°)
+    sstp:=2
+    nst:=$ao>0?max(1,ceil(min(($dd+$cu)/$te,64)/$sstp)):0
+    aoc:=$ao%
+    amb:=0.6-0.4*$ao%
+    stn:=$stain%
+    rgh:=$rough%
+    pvr:=$pvar%*0.6
+
+    # Final rendering: Lambertian shading + soft cast shadows + albedo (+ alpha of the cracks)
+    $mw,$mh,1,4,"
+      k = i(#0,x,y,0,0);
+      v = i(#0,x,y,0,2);
+      st = i(#1,x,y,0,0);
+      n2 = i(#2,x,y,0,0);
+      n3 = i(#3,x,y,0,0);
+      h0 = i(#4,x,y,0,0);
+      dhx = (i(#4,x + 1,y,0,0,0,1) - i(#4,x - 1,y,0,0,0,1))/2;
+      dhy = (i(#4,x,y + 1,0,0,0,1) - i(#4,x,y - 1,0,0,0,1))/2;
+      shade = cut(((-dhx*$ldx - dhy*$ldy + $ldz)/sqrt(1 + dhx^2 + dhy^2))/$ldz,0,2);
+      mx = 0;
+      for (tt = 1, tt<=$nst, ++tt,
+        hh = i(#4,x + $sdx*tt*$sstp,y + $sdy*tt*$sstp,0,0,1,1) - h0 - tt*$sstp*$te;
+        mx = max(mx,hh)
+      );
+      sh = cut(mx/1.5,0,1);
+      light = $amb + (1 - $amb)*shade*(1 - sh*$aoc);
+      pa = [ $pr,$pg,$pb ];
+      da = [ $dr,$dg,$db ];
+      ka = [ $kr,$kg,$kb ];
+      dm = cut(0.6*(1 + st)*$stn,0,1);
+      gf = 1 + 0.18*$rgh*(0.5*n3 + 0.5*n2);
+      vf = 1 + $pvr*(v - 0.5);
+      alb = (pa + (da - pa)*dm)*gf*vf;
+      kk = cut((k - 0.5)/0.4,0,1);
+      [ (alb + (ka - alb)*kk)*light, 255 + ($kal - 255)*kk ]"
+    if $kal==255 channels. 0,2 fi
+    k. c 0,255 => $nm
+  }
+
+# Fractal (multi-octave) value noise normalized to [-1,1], same size as the selected images.
+_fx_cracked_mud_noise : # scale,octaves
+  foreach {
+    nsc,noc=$*
+    nw,nh:=w,h
+    rm
+    $nw,$nh
+    repeat $noc {
+      ns:=max($nsc/2^$>,1.5)
+      {ceil($nw/$ns)+3},{ceil($nh/$ns)+3},1,1,"u(-1,1)"
+      r. $nw,$nh,1,1,5
+      *. {0.55^$>}
+      +[0] [1]
+      rm.
+    }
+    n -1,1
+  }
+
+# Primary cracks: warped jittered Voronoi, distance to cell edges = F2-F1.
+# Selected image: [0] = blank image of the right size, replaced by a 3-channel map
+# (crack profile, proximity to cracks, random value of the plate).
+_fx_cracked_mud_plates : # size,warp,halfwidth,variation
+  lsz,lwp,lhw,lwv=$*
+  lw,lh:=w,h
+  rm
+
+  # [0]: warp fields (x, y) and width modulation.
+  ${lw},${lh}x3 _fx_cracked_mud_noise {$lsz*1.5},5 a c
+
+  # [1]: random jitter (x, y) and random value for each seed of the grid.
+  lgx,lgy:=ceil([$lw,$lh]/$lsz)+5
+  $lgx,$lgy,1,3 rand. 1
+
+  # [2]: final crack map.
+  $lw,$lh,1,3,"
+    px = x + $lwp*i(#0,x,y,0,0,1,1);
+    py = y + $lwp*i(#0,x,y,0,1,1,1);
+    cx = floor(px/$lsz);
+    cy = floor(py/$lsz);
+    d1 = 1e9;
+    d2 = 1e9;
+    ia = 0;
+    ja = 0;
+    for (oy = -1, oy<=1, ++oy,
+      for (ox = -1, ox<=1, ++ox,
+        gx = cx + ox + 2;
+        gy = cy + oy + 2;
+        qx = (gx - 2 + i(#1,gx,gy,0,0,0,1))*$lsz;
+        qy = (gy - 2 + i(#1,gx,gy,0,1,0,1))*$lsz;
+        d = sqrt((px - qx)^2 + (py - qy)^2);
+        if (d<d1,
+          d2 = d1; d1 = d; ia = gx; ja = gy,
+          if (d<d2, d2 = d)
+        )
+      )
+    );
+    e = (d2 - d1)/2;
+    hw = $lhw*max(1 + $lwv*i(#0,x,y,0,2,1,1),0);
+    soft = max(1,0.25*hw);
+    [ cut((hw - e)/soft,0,1),exp(-max(e - hw,0)/(0.07*$lsz)),i(#1,ia,ja,0,2,0,1) ]"
+  rm[0,1]
+
+# Secondary / tertiary cracks: lightning-like branching crack trees (instead of Voronoi).
+# Same interface as _fx_cracked_mud_level: selected images [0] = crack map of the previous
+# levels, [1] = blank image. Output: [0] unchanged, [1] = 4 channels (crack profile,
+# proximity to cracks, 0, proximity to the visible cracks).
+# Each tree starts on the edge of an existing crack, leaves it perpendicularly with a zigzag
+# path (direction re-drawn every few pixels) and emits side branches at random places, which
+# branch recursively (up to a given generation). A walker stops at a random length, or when it
+# touches a crack; when it approaches another crack, it is bent towards its normal.
+_fx_cracked_mud_branch : # size,warp,halfwidth,variation,density,angle,length,branching
+  bsz,bwp,bhw,bwv,bdn,basp,blf,bbf=$*
+  bw,bh:=w,h
+  rm[1]
+
+  # [1] = distance to the existing cracks, [2] = same, smoothed (used for the directions).
+  +channels[0] 0,0
+  lt[1] 0.5
+  distance[1] 0
+  +b[1] 2
+
+  # Tunable constants.
+  bds:=0.8
+  blm:=2.5*$bsz*$blf
+  bmst:=ceil($blm/$bds)+6
+  brs:=0.3*$bsz
+  brc:=0.4*$bsz
+  bir:=$bwp/$bsz
+  bjg:=0.35+0.9*$bir
+  bsg:=max(0.2*$bsz,3)
+  bpb:=$bbf*$bds/(0.5*$bsz)
+  bmaxq:=150
+  bsp0:=0.15*$bsz
+  bgen:=3
+  bnw:=round(1.2*$bdn*$bw*$bh/$bsz^2)
+
+  # [3] = mask of the new cracks, [4] = queue of walkers (x,y,angle,length,width,generation,t0),
+  # [5] = dummy image for fill.
+  $bw,$bh,1,1
+  $bmaxq,1,1,7
+  1,1,1,1
+  fill[5] "
+    for (nk = 0, nk<$bnw, ++nk,
+      ok = 0;
+      sx = 0;
+      sy = 0;
+      for (tr = 0, tr<80 && !ok, ++tr,
+        sx = int(u($bw));
+        sy = int(u($bh));
+        dd = i(#1,sx,sy,0,0,0,1);
+        ok = (dd>=1 && dd<1.6);
+        if (ok,
+          for (ak = 0, ak<8, ++ak,
+            if (i(#3,sx + $brs*cos(ak*pi/4),sy + $brs*sin(ak*pi/4),0,0,1,1)>0.5, ok = 0)
+          )
+        )
+      );
+      if (ok,
+        gx = i(#2,sx + 2,sy,0,0,1,1) - i(#2,sx - 2,sy,0,0,1,1);
+        gy = i(#2,sx,sy + 2,0,0,1,1) - i(#2,sx,sy - 2,0,0,1,1);
+        gl = max(sqrt(gx^2 + gy^2),1e-6);
+        gx = gx/gl;
+        gy = gy/gl;
+        i(#4,0,0,0,0) = sx - 1.5*gx;
+        i(#4,0,0,0,1) = sy - 1.5*gy;
+        i(#4,0,0,0,2) = atan2(gy,gx) + u(-$basp,$basp);
+        i(#4,0,0,0,3) = $blm*u(0.3,1);
+        i(#4,0,0,0,4) = 1;
+        i(#4,0,0,0,5) = 0;
+        i(#4,0,0,0,6) = -1.5;
+        qn = 1;
+        for (qi = 0, qi<qn, ++qi,
+          px = i(#4,qi,0,0,0);
+          py = i(#4,qi,0,0,1);
+          th0 = i(#4,qi,0,0,2);
+          lp = i(#4,qi,0,0,3);
+          wf = i(#4,qi,0,0,4);
+          gen = i(#4,qi,0,0,5);
+          tl = i(#4,qi,0,0,6);
+          th = th0;
+          tgt = th0;
+          sgc = 0;
+          fm = 2*pi/($bsz*u(0.4,0.9));
+          pm = u(2*pi);
+          dm = i(#1,px,py,0,0,1,1);
+          alive = 1;
+          fin = -1;
+          rr = $bhw*wf;
+          for (st = 0, alive && st<$bmst, ++st,
+            dcur = i(#1,px,py,0,0,1,1);
+            dm = max(dm,dcur);
+            tt = max(tl,0);
+            if (sgc<=0,
+              tgt = th0 + u(-1,1)*$bjg;
+              sgc = ceil($bsg/$bds*u(0.6,1.4))
+            );
+            sgc = sgc - 1;
+            th0 = th0 + u(-0.04,0.04);
+            th = th + 0.45*(tgt - th) + u(-0.05,0.05);
+            hx = cos(th);
+            hy = sin(th);
+            ret = (tl>3 && dcur<dm - 2 && dcur<$brc);
+            if (ret,
+              ggx = i(#2,px + 2,py,0,0,1,1) - i(#2,px - 2,py,0,0,1,1);
+              ggy = i(#2,px,py + 2,0,0,1,1) - i(#2,px,py - 2,0,0,1,1);
+              gl2 = max(sqrt(ggx^2 + ggy^2),1e-6);
+              wt = (1 - dcur/$brc)^2;
+              hx = hx*(1 - wt) - wt*ggx/gl2;
+              hy = hy*(1 - wt) - wt*ggy/gl2;
+              hl = max(sqrt(hx^2 + hy^2),1e-6);
+              hx = hx/hl;
+              hy = hy/hl
+            );
+            rr = max($bhw*wf*max(1 - 0.7*min(tt/lp,1)^1.5,0.3)*max(1 + $bwv*sin(fm*tt + pm),0.3),0.55);
+            soft = max(1,0.25*rr);
+            cxp = round(px);
+            cyp = round(py);
+            rds = ceil(rr + 0.3*soft);
+            for (oy = -rds, oy<=rds, ++oy,
+              for (ox = -rds, ox<=rds, ++ox,
+                qx = cxp + ox;
+                qy = cyp + oy;
+                if (qx>=0 && qx<$bw && qy>=0 && qy<$bh,
+                  vv = cut((rr - sqrt((qx - px)^2 + (qy - py)^2))/soft + 0.3,0,1);
+                  if (vv>i(#3,qx,qy,0,0), i(#3,qx,qy,0,0) = vv)
+                )
+              )
+            );
+            if (tl>$bsp0 && gen<$bgen && qn<$bmaxq && u(1)<$bpb*0.6^gen,
+              sd = (u(1)<0.5)?-1:1;
+              i(#4,qn,0,0,0) = px;
+              i(#4,qn,0,0,1) = py;
+              i(#4,qn,0,0,2) = th + sd*u(0.4,1.1);
+              i(#4,qn,0,0,3) = lp*u(0.35,0.75);
+              i(#4,qn,0,0,4) = 0.8*min(rr/$bhw,1);
+              i(#4,qn,0,0,5) = gen + 1;
+              i(#4,qn,0,0,6) = 0;
+              qn = qn + 1
+            );
+            px = px + $bds*hx;
+            py = py + $bds*hy;
+            tl = tl + $bds;
+            if (tl>3 && i(#1,px,py,0,0,1,1)<0.8, alive = 0);
+            if (tl>lp, alive = 0);
+            if (px<-3 || px>$bw + 2 || py<-3 || py>$bh + 2, alive = 0);
+            if (fin>0, fin = fin - 1; if (fin==0, alive = 0));
+            if (fin<0 && tl>((gen>0)?(12 + 0.4*$bsz):(0.3*$bsz)) &&
+                i(#3,px + (rr + 2.5)*hx,py + (rr + 2.5)*hy,0,0,1,1)>0.6,
+              fin = ceil((rr + 3.5)/$bds))
+          )
+        )
+      )
+    )"
+  rm[4,5]
+
+  # [4] = distance to the new cracks.
+  +lt[3] 0.25
+  distance[4] 0
+
+  # [5] = output: crack profile, proximity to cracks, 0, proximity to the visible cracks.
+  $bw,$bh,1,3,"
+    k = i(#3,x,y,0,0);
+    dn = i(#4,x,y,0,0);
+    c==0?k:(c==1?exp(-dn/(0.07*$bsz)):0)"
+  rm[1-4]
+
 #@gui Cracks : fx_cracks, fx_cracks(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generates procedural crack patterns.
@@ -61954,6 +62305,144 @@ fx_generic_halftone_preview :
 fx_hearts :
   ac "hearts $1",$2
 
+#@gui Interference Waves : fx_interference_waves, fx_interference_waves(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generate wave interference patterns from several point sources.
+#@gui : "}, sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Sources:</b></span></small>")
+#@gui : Source 1 = point(49,43,1,1)
+#@gui : Source 2 = point(29,65,1,1)
+#@gui : Source 3 = point(70,25,-1,1)
+#@gui : Source 4 = point(20,25,-1,1)
+#@gui : Source 5 = point(75,70,-1,1)
+#@gui : Source 6 = point(50,85,-1,1)
+#@gui : Source 7 = point(85,45,-1,1)
+#@gui : Source 8 = point(10,50,-1,1)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Waves:</b></span></small>")
+#@gui : Frequency = ~float(50,0,100)
+#@gui : Frequency Variation = ~float(0,0,50)
+#@gui : Phase Shift = ~float(0,0,360)
+#@gui : Interference Type = ~choice(1,"Additive","Multiplicative")
+#@gui : Sharpness = ~float(2,0,10)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Shape:</b></span></small>")
+#@gui : Squareness = ~float(0,0,100)
+#@gui : Aspect Ratio = float(1,1,10)
+#@gui : Orientation (deg.) = ~float(0,-180,180)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Colors:</b></span></small>")
+#@gui : Palette = ~choice("Three Colors","Rainbow","Grayscale")
+#@gui : Color 1 = ~color(30,60,220)
+#@gui : Color 2 = ~color(255,210,0)
+#@gui : Color 3 = ~color(60,230,150)
+#@gui : Color Cycles = ~float(0.35,0,6)
+#@gui : Color Variation = ~float(1.2,0,6)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Lighting:</b></span></small>")
+#@gui : Relief = ~float(1,0,5)
+#@gui : Light Angle = ~float(135,0,360)
+#@gui : Shininess = ~float(30,1,100)
+#@gui : Specular = ~float(0.8,0,2)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/20</i>.</small>")
+fx_interference_waves :
+  x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7,x8,y8,freq,fvar,pshift,itype,sharp,sqr,ratio,orient,\
+  pal,r1,g1,b1,r2,g2,b2,r3,g3,b3,ccyc,cvar,relief,lang,shin,spec=${1-40}
+  freq:=0.5*600^($freq/100)
+  foreach {
+    wd,ht:=w,h
+
+    # Compute the interference field (channel 0) and the mean source distance (channel 1).
+    $wd,$ht,1,2,"
+      begin(
+        sc = max(w,h);
+        P = [ $x1,$y1, $x2,$y2, $x3,$y3, $x4,$y4, $x5,$y5, $x6,$y6, $x7,$y7, $x8,$y8 ];
+        ph = vector(#8);
+        fq = vector(#8);
+        cnt = 0;
+        for (k = 0, k<8, ++k,
+          ph[k] = $pshift°*k;
+          fq[k] = $freq*(1 + (k&1?1:-1)*$fvar%);
+          if (!isnan(P[2*k]) && !isnan(P[2*k+1]), ++cnt);
+        );
+        cnt = max(cnt,1);
+        ca = cos($orient°);
+        sa = sin($orient°);
+        pp = $sqr<100?2/(1 - $sqr%):0;
+      );
+      X = x/sc;
+      Y = y/sc;
+      acc = $itype?1:0;
+      rd = 0;
+      for (k = 0, k<8, ++k,
+        if (!isnan(P[2*k]) && !isnan(P[2*k+1]),
+          dx = X - P[2*k]%*w/sc;
+          dy = Y - P[2*k+1]%*h/sc;
+          u = (dx*ca + dy*sa)/$ratio;
+          v = -dx*sa + dy*ca;
+          m = max(abs(u),abs(v));
+          dist = pp==2?sqrt(u^2 + v^2):pp==0||m==0?m:m*((abs(u)/m)^pp + (abs(v)/m)^pp)^(1/pp);
+          val = cos(2*pi*fq[k]*dist + ph[k]);
+          acc = $itype?acc*val:acc+val;
+          rd += dist;
+        );
+      );
+      acc = $itype?sign(acc)*abs(acc)^(1/cnt):acc/cnt;
+      sh = $sharp;
+      acc = sh>0?tanh(sh*acc)/tanh(sh):acc;
+      [ acc, rd/cnt ]
+    "
+    rm[0]
+
+    # Colorize and shade the field.
+    $wd,$ht,1,3,"
+      begin(
+        sc = max(w,h);
+        C = [ $r1,$g1,$b1, $r2,$g2,$b2, $r3,$g3,$b3 ];
+        ang = $lang°;
+        Lx = cos(ang)*cos(pi/4);
+        Ly = -sin(ang)*cos(pi/4);
+        Lz = sin(pi/4);
+        Hx = Lx;
+        Hy = Ly;
+        Hz = Lz + 1;
+        hn = sqrt(Hx^2 + Hy^2 + Hz^2);
+        Hx /= hn; Hy /= hn; Hz /= hn;
+        K = sc/(2*pi*$freq);
+      );
+      fld = i(#0,x,y,0,0);
+      gx = (i(#0,x+1,y,0,0,0,1) - i(#0,x-1,y,0,0,0,1))/2;
+      gy = (i(#0,x,y+1,0,0,0,1) - i(#0,x,y-1,0,0,0,1))/2;
+      nx = -$relief*gx*K;
+      ny = -$relief*gy*K;
+      nn = sqrt(nx^2 + ny^2 + 1);
+      nx /= nn; ny /= nn; nz = 1/nn;
+      diff = max(0,nx*Lx + ny*Ly + nz*Lz);
+      shade = 0.35 + 0.9*diff;
+      sp = 255*$spec*max(0,nx*Hx + ny*Hy + nz*Hz)^$shin;
+
+      t = $ccyc*(0.5 + 0.5*fld) + $cvar*i(#0,x,y,0,1);
+      if ($pal==0,
+        t -= floor(t);
+        q = 3*t;
+        sg = int(q);
+        fr = q - sg;
+        fr = fr*fr*(3 - 2*fr);
+        n1 = sg==2?0:sg+1;
+        cr = C[3*sg]*(1-fr) + C[3*n1]*fr;
+        cg = C[3*sg+1]*(1-fr) + C[3*n1+1]*fr;
+        cb = C[3*sg+2]*(1-fr) + C[3*n1+2]*fr;
+      ,
+        if ($pal==1,
+          cr = 127.5 + 127.5*cos(2*pi*t);
+          cg = 127.5 + 127.5*cos(2*pi*(t-1/3));
+          cb = 127.5 + 127.5*cos(2*pi*(t-2/3));
+        ,
+          cr = cg = cb = 255*(0.5 + 0.5*fld);
+        );
+      );
+      [ cr*shade + sp, cg*shade + sp, cb*shade + sp ]
+    "
+    rm[0] c 0,255
+  }
+
 #@gui Lava : fx_lava, fx_lava(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Generates a fluid, lava-like pattern.
@@ -61975,6 +62464,183 @@ fx_lava :
     }
     a c
   }
+
+#@gui Liquid Marble : fx_liquid_marble, fx_liquid_marble_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generate a random liquid marbling pattern, made of ink drops stirred by swirls and strokes.
+#@gui : "}, sep = separator()
+#@gui : Random Seed = ~int(0,0,9999)
+#@gui : Randomize Seed = button()
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Drops:</b></span></small>")
+#@gui : Number of Ink Drops = ~int(12,1,100)
+#@gui : Drop Size (%) = ~float(22,1,60)
+#@gui : Interaction = ~choice("None","Attraction","Repulsion","Fusion")
+#@gui : Interaction Strength = ~float(50,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Deformations:</b></span></small>")
+#@gui : Flow Intensity = ~float(40,0,100)
+#@gui : Swirl = ~float(60,0,100)
+#@gui : Detail Scale = ~float(25,1,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#CC3300"><b>Colors:</b></span></small>")
+#@gui : Color Palette = ~choice(1,"Ink","Ocean","Sunset","Rainbow","Pastel","Gold and Blue","Custom")
+#@gui : Custom Ink Color 1 = ~color(60,45,90)
+#@gui : Custom Ink Color 2 = ~color(220,170,60)
+#@gui : Paper Color = color(192,194,202)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/16</i>.</small>")
+__fx_liquid_marble :
+  seed,randomize_seed,nbd,dsz,imode,istr,flo,swi,det,palsel,r1,g1,b1,r2,g2,b2,pr,pg,pb=${1-19}
+  if $randomize_seed seed:=v(9999) fi
+
+fx_liquid_marble :
+  __$0 $*
+  nbo,amp,dsn,fb,rd,ist:=round(6+0.42*$flo),2*$flo%,$dsz%,4+0.4*$det,0.6+1.4*$det%,0.5*$istr%
+  foreach { nm={n}
+
+    # [1] = scalar parameters (read from the expressions below).
+    ($seed,$nbo,$nbd,$dsn,$swi,$amp,$imode,$ist,$fb,$pr,$pg,$pb,$rd)
+
+    # [2] = random parameters of the deformation operations.
+    $nbo,1,1,7,"
+      sd = i(#1,0,0,0,0);
+      hh = abs(sin(x*12.9898 + c*78.233 + sd*91.3137))*43758.5453;
+      hh - floor(hh)"
+
+    # [3] = ink drops (x,y,radius).
+    $nbd,1,1,3
+    f. "
+      sd = i(#1,0,0,0,0);
+      h0 = abs(sin(x*39.346 + c*11.135 + sd*57.7231 + 5.1)) * 24634.6345;
+      h0 = h0 - floor(h0);
+      c==2?i(#1,3,0,0,0)*(0.6 + 0.8*h0):h0*2.4 - 1.2"
+
+    # [4] = composed displacement field (normalized coordinates).
+    {w#0},{h#0},1,2
+    f. "
+      begin(
+        sc = max(w,h)/2;
+        nbo = i(#1,1,0,0,0);
+        swi = i(#1,4,0,0,0);
+        amp = i(#1,5,0,0,0)
+      );
+      ux = (x - w/2)/sc;
+      vx = (y - h/2)/sc;
+      for (k = 0, k<nbo, ++k,
+        tp = i(#2,k,0,0,0);
+        qx = i(#2,k,0,0,1)*2.4 - 1.2;
+        qy = i(#2,k,0,0,2)*2.4 - 1.2;
+        sgm = i(#2,k,0,0,3);
+        st = i(#2,k,0,0,4) - 0.5;
+        an = i(#2,k,0,0,5)*2*pi;
+        lg = 0.5 + 1.2*i(#2,k,0,0,6);
+        dx = ux - qx;
+        dy = vx - qy;
+        if (tp*100<swi,
+          sgm = 0.15 + 0.55*sgm;
+          th = st*7*amp*exp(-(dx*dx + dy*dy)/(sgm*sgm));
+          ca = cos(th);
+          sa = sin(th);
+          ux = qx + ca*dx - sa*dy;
+          vx = qy + sa*dx + ca*dy,
+          sgm = 0.04 + 0.2*sgm;
+          dn = -sin(an)*dx + cos(an)*dy;
+          dt = cos(an)*dx + sin(an)*dy;
+          mg = st*2.8*amp*exp(-dn*dn/(sgm*sgm))*exp(-dt*dt/(lg*lg));
+          ux -= mg*cos(an);
+          vx -= mg*sin(an)
+        )
+      );
+      [ux,vx]"
+
+    # [5] = ink palette.
+    if $palsel==0 (52,92,72^44,84,64^66,108,90)
+    elif $palsel==1 (16,30,70,12^52,120,180,30^96,160,190,60)
+    elif $palsel==2 (150,220,240,90^30,90,170,20^50,40,60,80)
+    elif $palsel==3 (220,240,240,40,30,140^40,140,220,170,60,60^40,40,60,200,220,200)
+    elif $palsel==4 (240,160,190,250^150,200,230,220^170,240,180,150)
+    elif $palsel==5 (20,200,10^40,160,20^100,60,60)
+    else ($r1,$r2^$g1,$g2^$b1,$b2)
+    fi
+
+    # [6] = final rendering.
+    {0,[w,h]},1,3,"
+      begin(
+        nbd = i(#1,2,0,0,0);
+        imode = i(#1,6,0,0,0);
+        ist = i(#1,7,0,0,0);
+        fb = i(#1,8,0,0,0);
+        sd = i(#1,0,0,0,0);
+        pr = i(#1,9,0,0,0);
+        pg = i(#1,10,0,0,0);
+        pb = i(#1,11,0,0,0);
+        rd = i(#1,12,0,0,0);
+        npal = w(#5)
+      );
+      ux = i(#4,x,y,0,0);
+      vx = i(#4,x,y,0,1);
+      cu = ux;
+      cv = vx;
+      for (o = 0, o<6, ++o,
+        fo = fb * 2^floor(o/2);
+        ro = rd * 0.75^floor(o/2);
+        hk = sin(o*17.31 + sd*23.17 + 1.7) * 9341.7;
+        ha = (hk - floor(hk)) * 2*pi;
+        hk = sin(o*31.7 + sd*47.3 + 3.1) * 7791.3;
+        hp = (hk - floor(hk)) * 2*pi;
+        hk = sin(o*53.9 + sd*11.9 + 0.7) * 5231.1;
+        hb = (hk - floor(hk)) * 2*pi;
+        ph = sin(fo*(cos(ha)*cu + sin(ha)*cv) + hp) * ro/fo;
+        ux += ph*cos(hb);
+        vx += ph*sin(hb)
+      );
+      if (imode==1 || imode==2,
+        du = 0;
+        dv = 0;
+        for (k = 0, k<nbd, ++k,
+          dx = ux - i(#3,k,0,0,0);
+          dy = vx - i(#3,k,0,0,1);
+          rk = i(#3,k,0,0,2);
+          g = exp(-(dx*dx + dy*dy)/(6*rk*rk));
+          du += dx*g;
+          dv += dy*g
+        );
+        sg = (imode==1)?1:-1;
+        ux += sg*ist*du;
+        vx += sg*ist*dv
+      );
+      mn = 1e9;
+      km = 0;
+      phi = 0;
+      for (k = 0, k<nbd, ++k,
+        dx = ux - i(#3,k,0,0,0);
+        dy = vx - i(#3,k,0,0,1);
+        rk = i(#3,k,0,0,2);
+        d2 = (dx*dx + dy*dy)/(rk*rk);
+        if (d2<mn, mn = d2; km = k);
+        phi += 1/(d2 + 0.01)
+      );
+      m = (imode==3)?1/sqrt(phi):sqrt(mn);
+      tt = m/0.85;
+      nb = floor(tt);
+      gg = 0.5 + 0.5*cos(2*pi*(tt - nb));
+      den = min(1,max(0,(gg - 0.25)/0.5));
+      den = den*den*(3 - 2*den);
+      idx = (nb + km)%npal;
+      fc = 1.1 - 0.3*den*den;
+      [ pr*(1 - den) + i(#5,idx,0,0,0)*fc*den,
+        pg*(1 - den) + i(#5,idx,0,0,1)*fc*den,
+        pb*(1 - den) + i(#5,idx,0,0,2)*fc*den ]"
+
+    k. b 0.04% noise 3 c 0,255 => $nm
+  }
+
+fx_liquid_marble_preview :
+  __fx_liquid_marble $*
+  fx_liquid_marble $*
+  u "{"$seed"}{0}{"$nbd"}{"$dsz"}{"$imode"}{"$istr"}_"{$imode?2:1}"{"$flo"}{"$swi"}{"$det"}{"$palsel"}"\
+    "{"$r1,$g1,$b1"}{"$r2,$g2,$b2"}{"$pr,$pg,$pb"}"
 
 #@gui Marble : fx_marble, fx_marble
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -62473,6 +63139,289 @@ fx_pack_sprites_preview :
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2010/12/29</i>.</small>")
 fx_paper :
   ac "texturize_paper",$1
+
+#@gui Penrose Tiling : fx_penrose_tiling, fx_penrose_tiling_preview(0)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Generate Penrose tilings by Robinson-triangle deflation.
+#@gui : "}, sep = separator()
+#@gui : Tiling Type = ~choice(0,"P3 - Thick & thin rhombs","P2 - Kites & darts")
+#@gui : Previous X-Center = value(50)_0
+#@gui : Previous Y-Center = value(50)_0
+#@gui : Center = point(50,50,0,1,0,255,0)_0
+#@gui : Rotation & Zoom = point(75,50,0,1,255,0,255)_0
+#@gui : sep = separator()
+#@gui : Tile A Color (Thick Rhomb / Kite) = ~color(110,170,240,255)
+#@gui : Tile B Color (Thin Rhomb / Dart) = ~color(240,150,60,255)
+#@gui : Random Variation = ~float(0.3,0,1)
+#@gui : sep = separator()
+#@gui : Outline Thickness (% of Tile Edge) = ~float(4,0,50)
+#@gui : Outline Color = ~color(20,20,20,255)
+#@gui : sep = separator()
+#@gui : Anti-Aliasing = choice(1,"None","x2","x3","x4")
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/04</i>.</small>")
+__fx_penrose_tiling :
+  tile_type,pcx,pcy,cx,cy,rx,ry,r_a,g_a,b_a,a_a,r_b,g_b,b_b,a_b,variation,outline,r_o,g_o,b_o,a_o,aa=${1-22}
+
+fx_penrose_tiling :
+  __$0 $*
+  foreach {
+
+    # Result image: RGBA, fully transparent at the beginning.
+    nm={n} ow,oh:=w,h rm {($aa+1)*[$ow,$oh]},1,4
+    sw,sh:=w,h
+
+    # Automatic setting of the tile size and of the subdivision depth.
+    # zoom : from the length of the Center -> Rotation vector (25% of the width gives 1).
+    # edge : tile edge in pixels (zoom = 1 gives the tile size of the former default, depth 7).
+    # rcov : radius of the initial 'sun' needed to cover the whole image from the chosen center.
+    # depth: smallest depth such that edge*phi^depth >= rcov (then R0 = edge*phi^depth covers the image).
+    phi:=(1+sqrt(5))/2
+    zoom:=max(0.5,norm(($rx-$cx)*w%,($ry-$cy)*h%)/(0.075*w))
+    rcov:=sqrt(max(w*$cx%,w-w*$cx%)^2+max(h*$cy%,h-h*$cy%)^2)/cos(pi/10)
+    edge:=max($zoom*0.5/cos(pi/10)*$phi^(-7)*sqrt(w*w+h*h),$rcov*$phi^(-10))
+    depth:=min(10,max(2,2*ceil(log($rcov/$edge)/(2*log($phi)))))
+
+    # Buffers (upper bound on the number of triangles, no culling):
+    # [1],[2] = ping-pong triangle buffers, [3] = children scratch, [4] = polygon scratch,
+    # [5] = single-pixel image used to run the whole computation once, in begin(),
+    # [6] = mask of the tile edges (1 channel, same size as [0]): 1 = background, 0 = edge pixel.
+    nmax:="na = 10; nb = 0;
+      for (it = 0, it<$depth, ++it,
+        if($tile_type==0, nn = na + nb; mm = na + 2*nb, nn = 2*na + nb; mm = na + nb);
+        na = nn; nb = mm
+      ); na + nb + 10"
+
+    {7*$nmax},1,1,1x2
+    21,1,1,1
+    8,1,1,1
+    1,1,1,1
+    $sw,$sh,1,1,1
+
+    f[5] "begin(
+      # Parameters and similarity transform (tiling space -> pixels).
+      const tp = $tile_type;
+      const nit = $depth;
+      const phi = (1 + sqrt(5))/2;
+      const W = w#0;
+      const H = h#0;
+
+      # Center and rotation given by the two interactive points (in % of the image size).
+      const tx = W*$cx%;
+      const ty = H*$cy%;
+      const vu = W*($rx - $cx)%;
+      const vv = H*($ry - $cy)%;
+
+      # Two deflations rotate the sun by 180 degrees (= 36 degrees by 5-fold symmetry):
+      # sg = -1 for depths 2, 6, 10 compensates for this, so the tiling keeps the same
+      # orientation whatever the (even) depth.
+      const sg = nit%4==2?-1:1;
+      const th = atan2(vv,vu) + (sg<0)*pi;
+      const ca = cos(th);
+      const sa = sin(th);
+
+      # Radius of the initial sun: the tile edge ($edge pixels) times phi^depth.
+      # hw is the half-width of the outline (in pixels). The outline itself is rendered
+      # afterwards from the edge mask, using a distance map.
+      const R0 = $edge*phi^nit;
+      const hw = $edge*$outline%/2;
+      const mg = hw + 1;
+
+      # Scanline filler for a convex polygon stored in image [4] (RGBA color: cr,cg,cb,cl).
+      scan(nv,cr,cg,cb,cl) = (
+        w0 = w#0;
+        h0 = h#0;
+        wh = w0*h0;
+        ymn = inf; ymx = -inf;
+        for (ee = 0,ee<nv, ++ee,
+          yv = i[#4,2*ee + 1];
+          ymn = min(ymn,yv); ymx = max(ymx,yv)
+        );
+        for (yy = max(0,ceil(ymn)), yy<=min(h0 - 1,floor(ymx)), ++yy,
+          xl = inf; xr = -inf;
+          for (ee = 0, ee<nv, ++ee,
+            e2 = (ee + 1)%nv;
+            pxa = i[#4,2*ee]; pya = i[#4,2*ee + 1];
+            pxb = i[#4,2*e2]; pyb = i[#4,2*e2 + 1];
+            (pya<=yy && yy<pyb) || (pyb<=yy && yy<pya)?(
+              xi = pxa + (yy - pya)*(pxb - pxa)/(pyb - pya);
+              xl = min(xl,xi); xr = max(xr,xi)
+            )
+          );
+          xs = max(0,ceil(xl)); xe = min(w0 - 1,floor(xr));
+          off = yy*w0 + xs;
+          for (xx = xs, xx<=xe, ++xx,
+            i[#0,off] = cr; i[#0,off + wh] = cg; i[#0,off + 2*wh] = cb; i[#0,off + 3*wh] = cl;
+            ++off
+          )
+        )
+      );
+
+      # put(q,type,x0,y0,x1,y1,x2,y2): store child number q in scratch image [3].
+      put(q,ty,x0,y0,x1,y1,x2,y2) = (
+        bs = 7*q;
+        i[#3,bs] = ty;
+        i[#3,bs + 1] = x0; i[#3,bs + 2] = y0;
+        i[#3,bs + 3] = x1; i[#3,bs + 4] = y1;
+        i[#3,bs + 5] = x2; i[#3,bs + 6] = y2;
+      );
+
+      # seg(xp,yp,xq,yq): draw a thin (1 pixel) line in the edge mask [6] (edge pixels set to 0).
+      seg(xp,yp,xq,yq) = (
+        w0 = w#0;
+        h0 = h#0;
+        ns = ceil(max(abs(xq - xp),abs(yq - yp)));
+        for (ks = 0, ks<=ns, ++ks,
+          tf = ns>0?ks/ns:0;
+          ix = round(xp + tf*(xq - xp));
+          iy = round(yp + tf*(yq - yp));
+          ix>=0 && ix<w0 && iy>=0 && iy<h0?(i[#6,iy*w0 + ix] = 0)
+        )
+      );
+
+      # Initial 'sun': 10 half-tiles around the origin (unit radius).
+      for (k = 0, k<10, ++k,
+        tp==0?(a1 = (2*k - 1)*pi/10; a2 = (2*k + 1)*pi/10):
+              (a1 = k*pi/5;          a2 = (k + 1)*pi/5);
+        sw = if(tp==0, k%2==0, k%2==1);
+        bx = cos(if(sw,a2,a1)); by = sin(if(sw,a2,a1));
+        cx = cos(if(sw,a1,a2)); cy = sin(if(sw,a1,a2));
+        i[#1,7*k] = 0;
+        i[#1,7*k + 1] = 0;  i[#1,7*k + 2] = 0;
+        i[#1,7*k + 3] = bx; i[#1,7*k + 4] = by;
+        i[#1,7*k + 5] = cx; i[#1,7*k + 6] = cy
+      );
+      nin = 10;
+
+      # Deflation, with culling of the children lying outside the image.
+      for (it = 0, it<nit, ++it,
+        nout = 0;
+        for (k = 0, k<nin, ++k,
+          o = 7*k; tt = i[#1,o];
+          ax = i[#1,o + 1]; ay = i[#1,o + 2];
+          bx = i[#1,o + 3]; by = i[#1,o + 4];
+          cx = i[#1,o + 5]; cy = i[#1,o + 6];
+          if(tp==0,
+            # P3: thin half-rhomb -> thin + thick; thick half-rhomb -> 2 thick + 1 thin.
+            if(tt==0,
+              px = ax + (bx - ax)/phi; py = ay + (by - ay)/phi; nc = 2;
+              put(0,0,cx,cy,px,py,bx,by);
+              put(1,1,px,py,cx,cy,ax,ay),
+              qx = bx + (ax - bx)/phi; qy = by + (ay - by)/phi;
+              rx = bx + (cx - bx)/phi; ry = by + (cy - by)/phi; nc = 3;
+              put(0,1,rx,ry,cx,cy,ax,ay);
+              put(1,1,qx,qy,rx,ry,bx,by);
+              put(2,0,rx,ry,qx,qy,ax,ay)
+            ),
+            # P2: half-kite -> 2 half-kites + 1 half-dart; half-dart -> half-kite + half-dart.
+            if(tt==0,
+              qx = ax + (bx - ax)/phi^2; qy = ay + (by - ay)/phi^2;
+              rx = ax + (cx - ax)/phi;   ry = ay + (cy - ay)/phi; nc = 3;
+              put(0,1,qx,qy,rx,ry,ax,ay);
+              put(1,0,bx,by,cx,cy,rx,ry);
+              put(2,0,bx,by,qx,qy,rx,ry),
+              px = cx + (bx - cx)/phi; py = cy + (by - cy)/phi; nc = 2;
+              put(0,1,px,py,ax,ay,bx,by);
+              put(1,0,cx,cy,px,py,ax,ay)
+            )
+          );
+          for (q = 0, q<nc, ++q,
+            bs = 7*q;
+            x0 = i[#3,bs + 1]; y0 = i[#3,bs + 2];
+            x1 = i[#3,bs + 3]; y1 = i[#3,bs + 4];
+            x2 = i[#3,bs + 5]; y2 = i[#3,bs + 6];
+            xa = tx + R0*(ca*x0 - sa*y0); ya = ty + R0*(sa*x0 + ca*y0);
+            xb = tx + R0*(ca*x1 - sa*y1); yb = ty + R0*(sa*x1 + ca*y1);
+            xc = tx + R0*(ca*x2 - sa*y2); yc = ty + R0*(sa*x2 + ca*y2);
+            if(min(xa,xb,xc)<=W - 1 + mg && max(xa,xb,xc)>=-mg &&
+                min(ya,yb,yc)<=H - 1 + mg && max(ya,yb,yc)>=-mg,
+              ob = 7*nout;
+              i[#2,ob] = i[#3,bs];
+              i[#2,ob + 1] = x0; i[#2,ob + 2] = y0;
+              i[#2,ob + 3] = x1; i[#2,ob + 4] = y1;
+              i[#2,ob + 5] = x2; i[#2,ob + 6] = y2;
+              ++nout
+            )
+          )
+        );
+        for (u = 0, u<7*nout, ++u, i[#1,u] = i[#2,u]);
+        nin = nout
+      );
+
+      # Rendering. Pass 0: filled tiles. Pass 1: edges, drawn as thin lines in the edge mask [6]
+      # (the edge shared by the two halves of a tile is skipped: BC for P3, AC for P2).
+      for (pass = 0, pass<=(hw>0), ++pass,
+        for (k = 0, k<nin, ++k,
+          o = 7*k; tt = i[#1,o];
+          ax = i[#1,o + 1]; ay = i[#1,o + 2];
+          bx = i[#1,o + 3]; by = i[#1,o + 4];
+          cx = i[#1,o + 5]; cy = i[#1,o + 6];
+          xa = tx + R0*(ca*ax - sa*ay); ya = ty + R0*(sa*ax + ca*ay);
+          xb = tx + R0*(ca*bx - sa*by); yb = ty + R0*(sa*bx + ca*by);
+          xc = tx + R0*(ca*cx - sa*cy); yc = ty + R0*(sa*cx + ca*cy);
+          if(pass==0,
+            # Tile A = thick rhomb (P3) or kite (P2); tile B = the other one.
+            isA = if(tp==0, tt==1, tt==0);
+
+            # Hash of the midpoint of the diagonal shared by both halves (same for the 2 halves).
+            # Coordinates are expressed in units of the tile edge (multiplication by phi^nit),
+            # so that a given tile keeps the same color whatever the depth.
+            mx = sg*phi^nit*if(tp==0, (bx + cx)/2, (ax + cx)/2);
+            my = sg*phi^nit*if(tp==0, (by + cy)/2, (ay + cy)/2);
+            hv = abs(sin(round(mx*1024)*12.9898 + round(my*1024)*78.233)*43758.5453);
+            hv = hv - floor(hv);
+
+            # The random variation applies to the RGB components only, not to the alpha.
+            dl = $variation*(hv - 0.5)*160;
+            cr = min(255,max(0,if(isA,$r_a,$r_b) + dl));
+            cg = min(255,max(0,if(isA,$g_a,$g_b) + dl));
+            cb = min(255,max(0,if(isA,$b_a,$b_b) + dl));
+            cl = if(isA,$a_a,$a_b);
+            i[#4,0] = xa; i[#4,1] = ya;
+            i[#4,2] = xb; i[#4,3] = yb;
+            i[#4,4] = xc; i[#4,5] = yc;
+            scan(3,cr,cg,cb,cl),
+            for (ed = 0, ed<2, ++ed,
+              if(tp==0,
+                ed==0?(xp = xa; yp = ya; xq = xb; yq = yb):(xp = xa; yp = ya; xq = xc; yq = yc),
+                ed==0?(xp = xa; yp = ya; xq = xb; yq = yb):(xp = xb; yp = yb; xq = xc; yq = yc)
+              );
+              seg(xp,yp,xq,yq)
+            )
+          )
+        )
+      )
+    ); 0"
+    rm[1-5]
+
+    # Outline rendering: Euclidean distance to the edge pixels, soft threshold at the half-width,
+    # then compositing ("over" operator, non-premultiplied RGBA) of the outline color
+    # over the filled tiles. The coverage of the outline is: mask * outline alpha.
+    if $outline>0" && "$a_o>0
+      ==. 0 dilate. {round($edge*$outline%/2)}
+      100%,100%,1,3 fc. $r_o,$g_o,$b_o
+      j... .,0,0,0,0,{$a_o/255},..
+    fi
+    k[0]
+
+    # Reduction of the supersampled image. The RGB components are premultiplied by alpha
+    # before averaging (and unpremultiplied afterwards), to avoid dark fringes
+    # along the transparent areas.
+    if $aa premula r $ow,$oh,1,4,2 ipremula fi
+    => $nm
+  }
+
+fx_penrose_tiling_preview :
+  __fx_penrose_tiling $*
+  rx,ry+=$cx-$pcx,$cy-$pcy
+  fx_penrose_tiling $tile_type,$pcx,$pcy,$cx,$cy,$rx,$ry,\
+    $r_a,$g_a,$b_a,$a_a,$r_b,$g_b,$b_b,$a_b,$variation,$outline,$r_o,$g_o,$b_o,$a_o,{min($aa,1)}
+  line $cx%,$cy%,$rx%,$ry%,1,0x0F0F0F0F,0,0,0,255
+  line $cx%,$cy%,$rx%,$ry%,1,0xF0F0F0F0,255,255,255,255
+  u "{"$tile_type"}"\
+    "{"$cx"}{"$cy"}{"$cx,$cy"}{"$rx,$ry"}"\
+    "{"$r_a,$g_a,$b_a,$a_a"}{"$r_b,$g_b,$b_b,$a_b"}{"$variation"}"\
+    "{"$outline"}{"$r_o,$g_o,$b_o,$a_o"}{"$aa"}"
 
 #@gui Pills : fx_pills, fx_pills_preview
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -64037,6 +64986,56 @@ fx_ball_preview :
   fx_ball ${1-10}
   if $!>1 rv[-2,-1] blend[-2,-1] alpha fi
 
+#@gui Chladni Figures : fx_chladni, fx_chladni_preview(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# This filter replaces the active layer with a generated Chladni figure.
+#@gui : "}, sep = separator()
+#@gui : Frequency X (n) = ~int(5, 1, 20)
+#@gui : Frequency Y (m) = ~int(2, 1, 20)
+#@gui : Sharpness (%) = ~float(15, 1, 100)
+#@gui : Granularity (%) = ~float(8,0,100)
+#@gui : Colormap = choice(4,"Autumn","Cool","Cube","Gray","Hot","HSV","Ice","Jet","Parula","Rainbow",\
+# "Spring","Summer","Winter")
+#@gui : Previous X-Center = value(50)
+#@gui : Previous Y-Center = value(50)
+#@gui : Center = point(50,50,0,1,0,255,0)_0
+#@gui : Zoom = point(75,50,0,1,255,0,255)_0
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/27</i>.</small>")
+__fx_chladni :
+  freq_n,freq_m,sharpness,granularity,colormap,pcenter_x,pcenter_y,center_x,center_y,zoom_x,zoom_y=${1-11}
+
+fx_chladni :
+  __$0 $*
+  foreach {
+    {M=max(w,h);[M,M]},1,1,"begin(
+        const m1 = max(w,h) - 1;
+        const granularity = $granularity%;
+        const vu = ($zoom_x - $center_x)%;
+        const vv = ($zoom_y - $center_y)%;
+        const ang = atan2(vv,vu);
+        const zoom = 0.25/norm(vu,vv)^1.25;
+        R = zoom*rot(-ang);
+      );
+      XY = R*[ x/(w - 1) - $center_x%, y/(h - 1) - $center_y% ];
+      V = abs(cos($freq_n*pi*XY[0])*cos($freq_m*pi*XY[1]) - cos($freq_m*pi*XY[0])*cos($freq_n*pi*XY[1]));
+      density = exp(-$sharpness*V);
+      noise = 1 + granularity*(u - 1);
+      density*noise"
+    k. b 0.5 n 0,255
+    map ${"arg0 "$colormap",autumn,cool,cube,gray,hot,hsv,ice,jet,parula,rainbow,spring,summer,winter"}
+  }
+
+fx_chladni_preview :
+  __fx_chladni $*
+  zoom_x,zoom_y+=$center_x-$pcenter_x,$center_y-$pcenter_y
+  fx_chladni $freq_n,$freq_m,$sharpness,$granularity,$colormap,$pcenter_x,$pcenter_y,$center_x,$center_y,$zoom_x,$zoom_y
+  rs {min($_preview_area_width,$_preview_area_height)}
+  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0x0F0F0F0F,0
+  line $center_x%,$center_y%,$zoom_x%,$zoom_y%,1,0xF0F0F0F0,255
+  u "{"$freq_n"}{"$freq_m"}{"$sharpness"}{"$granularity"}{"$colormap"}"\
+    "{"$center_x"}{"$center_y"}{"$center_x,$center_y"}{"$zoom_x,$zoom_y"}"
+
 #@gui Circle Art : fx_circle_art, fx_circle_art
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Abstract rendering of spiraled circles.
@@ -64099,6 +65098,93 @@ fx_circle_art :
   rm.
   n 0,255
   if $5 r 50%,50%,1,100%,2 fi
+
+#@gui Cosmic Nebula : fx_cosmic_nebula, fx_cosmic_nebula(1)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Generate a procedural cosmic nebula.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color=\"#EE5500\"><b>Gas and Dust:</b></span>")
+#@gui : Gas Scale = ~float(1.5, 0.5, 5.0)
+#@gui : Gas Color 1 = ~color(25,128,204)
+#@gui : Gas Color 2 = ~color(204,51,128)
+#@gui : Core Color = ~color(255,230,178)
+#@gui : Dust Density = ~float(1.5, 0.5, 3.0)
+#@gui : sep = separator(), note = note("<span color=\"#EE5500\"><b>Stars:</b></span>")
+#@gui : Stars Density = ~float(1.0, 0.0, 5.0)
+#@gui : Spikes Angle = ~float(45, 0, 90)
+#@gui : Spikes Size = ~float(1.0, 0.0, 5.0)
+#@gui : Spikes Orientations = ~int(2, 1, 8)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/09/29</i>.</small>")
+fx_cosmic_nebula :
+  C1_R,C1_G,C1_B,C2_R,C2_G,C2_B,CC_R,CC_G,CC_B:=[${2-10}]/255
+  pow_bg,pow_fg:=300/max(0.01,$12),2000/max(0.01,$12)
+
+  foreach {
+    w,h:=w,h nm={n} rm
+
+    # Dust map.
+    $w,$h,1,1 plasma. $1 n. 0,1 pow. $11 to_rgb.
+
+    # Background stars.
+    $w,$h,1,3,">v = 350*u^$pow_bg; $12 && v>5?v*[ u(0.5,1.2),u(0.5,1.2),u(0.7,1.5) ]:_0" *. ..
+
+    # Nebula (Gas 1 + Gas 2).
+    $w,$h,1,1 plasma. $1 n. 0,255 to_rgb. f. "I*[ $C1_R,$C1_G,$C1_B ]"
+    $w,$h,1,1 plasma. {$1+1} n. 0,255 to_rgb. f. "I*[ $C2_R,$C2_G,$C2_B ]"
+    +[-2,-1]
+
+    # Core.
+    $w,$h,1,1 plasma. {$1+0.5} n. 0,255 to_rgb.
+    f. "XY = lerp(-1,1,[ x/w,y/h ]); I*[ $CC_R,$CC_G,$CC_B ]*exp(-8*norm(XY)^2)" +[-2,-1]
+
+    # Mask nebula with dust & apply global fade inline.
+    *. ... rm... f. "XY = lerp(-1,1,[ x/w,y/h ]); I*exp(-2.5*norm(XY)^2)"
+    + # Merge Nebula with Background Stars
+
+    # Foreground Stars.
+    $w,$h,1,3,"v = 1000*u^$pow_fg; (v>100 && $12)?v*[ u(0.8,1.2),u(0.8,1.2),u(0.8,1.2) ]:_0"
+    +b. 1.5 *. 0.5 +
+
+    # Giant Stars (Multi-scale Diffraction Spikes).
+    spike_angle=$13
+    nb_orient=$15
+    repeat 3
+      if !$> prob,rad,spike_size,intensity:=0.000012*$12,0.8,15*$14,1000
+      elif $>==1 prob,rad,spike_size,intensity:=0.000004*$12,1.5,30*$14,2500
+      else prob,rad,spike_size,intensity:=0.000001*$12,2.5,60*$14,5000
+      fi
+
+      if $prob>0
+        $w,$h,1,3,"u<$prob?$intensity*u(0.5,1.5)*[ u(0.8,1.5),u(0.8,1.5),u(0.8,1.5) ]:_0"
+        +b. $rad *. 3 +[-2,-1] # Star body
+
+        # Diffraction spikes : one analytic PSF + one FFT convolution.
+        if $spike_size>0
+          R:=int(ceil($spike_size))
+          {2*$R+1},{2*$R+1},1,1,"
+            X = x - $R; Y = y - $R; v = 0;
+            for (k = 0, k<$nb_orient, ++k,
+              a = ($spike_angle + k*180/$nb_orient)*pi/180;
+              t = X*cos(a) + Y*sin(a);
+              d = -X*sin(a) + Y*cos(a);
+              v += exp(-d*d/0.5)*max(0,1 - abs(t)/$spike_size);
+            );
+            v"
+          /. {is}                     # Normalize kernel (sum=1)...
+          *. {1.5*$nb_orient}         # ...then constant energy PER orientation (1.5 each, as in the original)
+          +convolve_fft[-2] [-1]      # Star body * PSF
+          rm[-2]                      # Remove kernel
+          +[-2,-1]                    # Body + spikes
+        fi
+
+        +[-2,-1] # Add directly to main composition
+      fi
+    done
+
+    # Optical Bloom and Final Clamp.
+    +- 150 max. 0 b. 20 *. 0.4 + c 0,255 => $nm
+  }
 
 #@gui Equation Plot [Parametric] : fx_equation_parametric, fx_equation_parametric
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -65045,6 +66131,274 @@ fx_newton_fractal_preview : skip "${6=},${7=},${8=},${22=},${25=},${28=}"
     "{$27}{$28}{$29}{$30}{$31}{$32}{$33}"\
     "{$34}"_{$33?2:0}\
     "{"$px,$py"}{$37}{"$angle"}{0}{0}{0}{0}{$43}{$44}"
+
+#@gui Paint Background : fx_paint_background, fx_paint_background(0)*
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Generates a painted-wall / oil-sky style background (cloudy pigment layers, impasto, splatters).
+#@gui : "}, sep = separator()
+#@gui : Seed = ~int(0,0,100000)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#EE5500"><b>Pigment Layer:</b></span></small>")
+#@gui : Structure Scale (%) = ~float(35,5,100)
+#@gui : Detail = ~int(5,1,8)
+#@gui : Turbulence (%) = ~float(8,0,50)
+#@gui : Stroke Angle (deg.) = ~float(-8,-180,180)
+#@gui : Stroke Length = ~float(3,1,12)
+#@gui : Sky Gradient (%) = ~float(55,0,100)
+#@gui : Dry-Brush Streaks (%) = ~float(35,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#EE5500"><b>Impasto & Splatters:</b></span></small>")
+#@gui : Impasto (%) = ~float(22,0,100)
+#@gui : Edge Roughness (%) = ~float(60,0,100)
+#@gui : Splatters (%) = ~float(40,0,100)
+#@gui : Splatter Size = ~int(3,1,10)
+#@gui : Accent Splashes (%) = ~float(15,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#EE5500"><b>Surface & Finish:</b></span></small>")
+#@gui : Relief (%) = ~float(10,0,100)
+#@gui : Canvas Grain (%) = ~float(10,0,100)
+#@gui : Softness (%) = ~float(20,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small><span color="#EE5500"><b>Palette:</b></span></small>")
+#@gui : Color 1 (Dark Pigment) = ~color(105,152,200)
+#@gui : Color 2 (Light Pigment) = ~color(200,222,236)
+#@gui : Color 3 (Cream) = ~color(240,231,214)
+#@gui : Color 4 (Ochre) = ~color(203,162,112)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/27</i>.</small>")
+
+# Fractal (fBm) noise in [0,1], appended as a new image.
+# Each layer/octave has its own random seed (derived from pbg_seed), so changing
+# one parameter does not reshuffle the whole composition.
+_fx_paint_background_fbm : # width,height,wavelength,anisotropy,octaves,persistence,angle,layer_id
+  $1,$2,1,1,0
+  M:=max($1,$2)
+  amp=1
+  repeat $5 {
+    srand {$_pbg_seed*7919+$8*131+$>}
+    {max(2,ceil($1/($M*$3*$4/2^$>)))},{max(2,ceil($2/($M*$3/$4/2^$>)))},1,1,0
+    rand. -1,1
+    r. $1,$2,1,1,5
+    *. $amp
+    +[-2,-1]
+    amp:=$amp*$6
+  }
+  n. 0,1
+  if $7 rotate. $7,2,3,{[$1,$2]/2} fi
+
+# seed,scale,detail,turbulence,angle,length,sky,drybrush,impasto,roughness,splatters,splatter_size,accent,relief,\
+# grain,colors(4x3)
+fx_paint_background :
+  _pbg_seed=$1
+  foreach {
+    nm={n} W,H,M:=w,h,max(w,h) rm
+    scale:=$2%
+    persistence:=min(0.8,0.4+0.04*$3)
+
+    # [0] = warp field (domain warping gives the 'smeared brush' look).
+    _$0_fbm $W,$H,{$scale*0.45},1,4,0.5,0,1
+    _$0_fbm $W,$H,{$scale*0.45},1,4,0.5,0,2
+    a[-2,-1] c
+    f. "(i - 0.5)*2*$M*$4%"
+
+    # [1] = large-scale pigment field.
+    _$0_fbm $W,$H,$scale,$6,$3,$persistence,$5,3
+    warp. [0],1,2,1
+    equalize. 1024,0,1
+    f. "(1 - $7%)*i + $7%*(y/(h - 1)*0.9 + (i - 0.5)*0.4 + 0.05)"
+
+    # [2] = dry-brush streaks.
+    _$0_fbm $W,$H,{$scale*0.05},{$6*3},2,0.6,$5,4
+    warp. [0],1,1,1
+
+    # [3] = ragged-edge noise (small scale), [4] = impasto noise.
+    _$0_fbm $W,$H,{$scale*0.04},1,4,0.6,0,5
+    _$0_fbm $W,$H,{$scale*0.8},{max(1,$6*0.6)},3,0.5,$5,6
+    warp. [0],1,2,1
+    equalize. 1024,0,1
+    +f[3] "(i - 0.5)*$10%*1.1*(1 - 0.8*$16%)"
+    +[4,-1]
+
+    # [5] = splatter noise. [6] = accent noise.
+    _$0_fbm $W,$H,{0.004+0.003*$12},1,2,0.6,0,7
+    equalize. 1024,0,1
+    _$0_fbm $W,$H,{$scale*0.7},{max(1,$6*0.5)},3,0.5,$5,8
+    warp. [0],1,2,1
+    equalize. 1024,0,1
+    +f[3] "(i - 0.5)*$10%*0.9*(1 - 0.8*$16%)"
+    +[6,-1]
+
+    # [7] = canvas grain.
+    srand {$_pbg_seed*7919+999}
+    $W,$H,1,1,0
+    rand. 0,1
+    b. 0.5
+    n. 0,1
+
+    # Feature image channels: 0=pigment 1=streaks 2=ragged 3=impasto 4=splatter 5=accent 6=grain
+    rm[0] a c
+
+    # [1] = 4 channels: R,G,B + height.
+    $W,$H,1,4
+    f[1] "
+      begin(
+        P = [ ${17-28} ];
+        sm = $16%;
+        we = 0.03 + 0.4*sm;
+        S(a,b,v) = (tt = cut((v - a)/(b - a),0,1); tt*tt*(3 - 2*tt));
+        thr = 1 - $9%;
+        tha = 1 - $13%;
+        ths = 1 - $11%*0.35;
+      );
+      vb = i(#0,x,y,0,0);
+      vs = i(#0,x,y,0,1);
+      vr = i(#0,x,y,0,2);
+      vn = i(#0,x,y,0,3);
+      vp = i(#0,x,y,0,4);
+      va = i(#0,x,y,0,5);
+      vg = i(#0,x,y,0,6);
+      c3 = min(c,2);
+      q = cut(vb + (vs - 0.5)*$8%*0.25*(1 - 0.7*sm) + (vr - 0.5)*0.012*$3,0,1)*3;
+      k = min(int(q),2);
+      f = q - k;
+      f = f*f*(3 - 2*f);
+      col = P[3*k + c3] + (P[3*k + 3 + c3] - P[3*k + c3])*f;
+      mb = S(thr - we/2,thr + we/2,vn);
+      mab = S(tha - we/2,tha + we/2,va);
+      M = mb*((0.45 + 0.55*S(0.2,0.8,vr))*(1 - sm) + sm);
+      glaze = S(thr - 0.3 - 0.3*sm,thr,vn)*(0.28 + 0.3*sm)*(0.5 + vs);
+      MA = mab*((0.2 + 0.8*S(0.3,0.7,vr))*(1 - sm) + sm)*0.7;
+      ed = 4*mb*(1 - mb) + 0.7*4*mab*(1 - mab);
+      reg = 0.3 + 0.7*(1 - S(0,0.3,abs(vn - thr)));
+      SP = S(ths,ths + 0.015 + 0.1*sm,vp)*reg*(1 - 0.85*M);
+      Wc = (P[6 + c3]*0.3 + 255*0.7)*(0.93 + 0.07*vr);
+      col = col*(1 + (vs - 0.5)*$8%*0.35*(1 - 0.7*sm));
+      col+=(P[c3]*0.9 - col)*MA;
+      col+=(Wc - col)*cut(M*0.92 + glaze*(1 - M),0,1);
+      col+=(Wc - col)*SP;
+      col = 255 - (255 - col)*(1 + sm*0.6*ed);
+      cg = col*(1 + (vg - 0.5)*$15%*0.4);
+      cd = 255 - (255 - col)*(1 + (vg - 0.5)*$15%*0.8);
+      col = cg + (cd - cg)*sm;
+      hh = 0.5*M*(0.4 + 1.2*vr)*(1 - 0.9*sm) + 0.12*vb + 0.35*MA + 0.15*vs + 0.6*SP + 0.3*vg*$15%;
+      c==3?hh:col"
+    rm[0]
+
+    # Relief lighting.
+    +channels[0] 3,3
+    b[1] {$M*0.0012}
+    g[1] xy
+    *[1,2] {$14%*5*$M/1000}
+    +[1,2]
+    *[1] 0.7071
+    +[1] 1
+    channels[0] 0,2
+    * c 0,255 => $nm
+  }
+
+#@gui Perspective Water Waves : fx_perspective_water_waves, fx_perspective_water_waves(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Procedural rendering of a choppy water surface, in perspective.
+#@gui : "}, sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Camera:</b></span>")
+#@gui : Horizon Height = float(0.4,0,3)
+#@gui : Focal = float(1,0.2,4)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Waves:</b></span>")
+#@gui : Number Of Waves = int(96,8,300)
+#@gui : Min Wavelength = float(0.02,0.002,0.5)
+#@gui : Max Wavelength = float(0.25,0.02,2)
+#@gui : Spectrum Exponent = float(1.3,0.5,2.5)
+#@gui : Choppiness = float(0.35,0,1.5)
+#@gui : Direction Spread (deg.) = float(57,0,180)
+#@gui : Main Direction (deg.) = float(0,-180,180)
+#@gui : Time = float(0,0,1000)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Light:</b></span>")
+#@gui : Sun Azimuth (deg.) = float(0,-180,180)
+#@gui : Sun Elevation (deg.) = float(20,1,89)
+#@gui : Sun Intensity = float(0.6,0,5)
+#@gui : Sun Glossiness = float(200,5,2000)
+#@gui : sep = separator()
+#@gui : note = note("<span color="#EE5500"><b>Colors:</b></span>")
+#@gui : Deep Color = color(3,35,50)
+#@gui : Shallow Color = color(15,105,125)
+#@gui : Sky (Horizon) = color(170,215,225)
+#@gui : Sky (Zenith) = color(40,110,140)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/28</i>.</small>")
+fx_perspective_water_waves :
+  horizon_height,focal,nb_waves,min_wavelength,max_wavelength,spectrum_exponent,choppiness,direction_spread,\
+    main_direction,time,sun_azimuth,sun_elevation,sun_intensity,sun_glossiness,deep_r,deep_g,deep_b,shallow_r,\
+    shallow_g,shallow_b,sky_horizon_r,sky_horizon_g,sky_horizon_b,sky_zenith_r,sky_zenith_g,sky_zenith_b=${1-26}
+
+  to_rgb
+  f ":begin(
+        const nw = max(1,round($nb_waves));
+        const wlmin = $min_wavelength;
+        const wlmax = $max_wavelength;
+        const p1 = $spectrum_exponent - 1;
+        const amp0 = $choppiness*sqrt(2/nw);
+        const spr = $direction_spread°;
+        const th0 = $main_direction°;
+        const tt = $time;
+        const lx = sin($sun_azimuth°)*cos($sun_elevation°);
+        const ly = sin($sun_elevation°);
+        const lz = cos($sun_azimuth°)*cos($sun_elevation°);
+        Cd = [ $deep_r,$deep_g,$deep_b ]/255;
+        Cs = [ $shallow_r,$shallow_g,$shallow_b ]/255;
+        Ch = [ $sky_horizon_r,$sky_horizon_g,$sky_horizon_b ]/255;
+        Cz = [ $sky_zenith_r,$sky_zenith_g,$sky_zenith_b ]/255;
+        Csun = [ 1,0.97,0.9 ];
+        c1 = abs(sin(1.7)*43758.5453)%1;
+        c2 = abs(sin(4.1)*24634.6345)%1;
+      );
+
+      sy = (y + 0.5)/h + $horizon_height;
+      Z = $focal/sy;
+      X = (x + 0.5 - 0.5*w)/(h*sy);
+      dX = 1/(h*sy);
+      dZ = $focal/(h*sy*sy);
+      hx = hz = 0;
+      for (n = 0, n<nw, ++n,
+        r1 = abs(sin(n*12.9898)*43758.5453)%1;
+        r2 = abs(sin(n*39.3468)*24634.6345)%1;
+        r3 = abs(sin(n*73.1561)*31415.9265)%1;
+        r4 = abs(sin(n*26.6511)*12345.6789)%1;
+        u = (c1 + n*0.7548776662 + 0.1*r1)%1;
+        v = (c2 + n*0.5698402910 + 0.1*r2)%1;
+        lam = wlmin*(wlmax/wlmin)^u;
+        d = v<0.5?sqrt(2*v) - 1:1 - sqrt(2*(1 - v));
+        th = th0 + spr*d;
+        kk = 2*pi/lam;
+        ox = sin(th);
+        oz = cos(th);
+        wt = cut((0.5 - (abs(ox)*dX + abs(oz)*dZ)/lam)/0.35, 0, 1);
+        sl = amp0*(lam/wlmax)^p1*wt*(0.5 + r3);
+        ar = kk*(ox*X + oz*Z) + 2*pi*r4 - sqrt(9.81*kk)*tt;
+        cs = cos(ar);
+        hx += sl*ox*cs; hz += sl*oz*cs;
+      );
+
+      nn = sqrt(1 + hx*hx + hz*hz);
+      nx = -hx/nn; ny = 1/nn; nz = -hz/nn;
+      vn = sqrt(X*X + 1 + Z*Z);
+      vx = -X/vn; vy = 1/vn; vz = -Z/vn;
+      nv = max(nx*vx + ny*vy + nz*vz, 0.02);
+      rx = 2*nv*nx - vx; ry = 2*nv*ny - vy; rz = 2*nv*nz - vz;
+      rs = cut(rx*lx + ry*ly + rz*lz, 0, 1);
+      tz = cut(ry, 0, 1)^0.5;
+      sky = Ch*(1 - tz) + Cz*tz;
+      g = cut($sun_intensity, 0, 1)*rs^12;
+      sky = sky*(1 - g) + Csun*0.9*g;
+      oc = cut(-4*ry, 0, 1);
+      sky = sky*(1 - oc) + Cd*oc;
+      F = 0.02 + 0.98*(1 - nv)^5;
+      dl = cut(nx*lx + ny*ly + nz*lz, 0, 1);
+      body = Cd + (Cs - Cd)*cut(0.5 + 0.8*(dl - ly), 0, 1);
+      sp = $sun_intensity*rs^$sun_glossiness;
+      255*(body*(1 - F) + sky*F + Csun*sp)"
+  c 0,255
 
 #@gui Pixel Stretch : fx_pixel_stretch, fx_pixel_stretch_preview(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -66401,6 +67755,120 @@ fx_vdhc : skip "${14=}"
 
 fx_vdhc_preview :
   _is_preview=1 fx_vdhc $*
+
+#@gui Water Caustics : fx_water_caustics,fx_water_caustics(0)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Render the network of bright light lines typical of water caustics.
+#@gui : "}, sep = separator()
+#@gui : Cell Size = ~float(45,10,250)
+#@gui : Distortion = ~float(0.8,0.2,4)
+#@gui : Fine Detail = ~float(30,0,100)
+#@gui : Time = ~float(0,0,100)
+#@gui : Quality = choice{0,"Draft","Normal","High (Slower)"}
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Rendering:</b></span></small>")
+#@gui : Line Softness = ~float(0.6,0,3)
+#@gui : Warp Amplitude = ~float(30,0,100)
+#@gui : Warp Smoothness = ~float(20,0,100)
+#@gui : Contrast = ~float(50,0,100)
+#@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Colors:</b></span></small>")
+#@gui : Water Color = color(0,140,200)
+#@gui : Light Color = color(225,255,255)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/11/21</i>.</small>")
+fx_water_caustics :
+  csz,dst,det,tm,qlt,soft,wam,wsm,ctr,wr,wg,wb,lr,lg,lb=$*
+  srand 0
+  foreach {
+    iw,ih:=w,h
+
+    # Caustics as the density of light rays refracted by a random water surface.
+    _fx_water_caustics_density $csz,$dst,$det,$tm,$iw,$ih,{1+$qlt}
+    rm[0] c 0%,99.7% n 0,1
+
+    # Random smooth warping of the rendered caustics, to break the regularity of the lines.
+    if $wam>0
+      $iw,$ih,1,2 rand. -1,1
+      b. {0.01*$wsm*$csz}
+      /. {sqrt(iv)}
+      *. {0.01*$wam*0.3*$csz}
+      warp[0] [1],1,1,3
+      rm.
+    fi
+    +b. {0.5*$csz}
+    b[0] $soft
+    +[0,1]
+    n 0,1
+    ^. {0.2+0.9*$ctr%}
+
+    # Colorization (deep water -> water color -> light color).
+    $iw,$ih,1,3,"
+      v = i(#-1,x,y);
+      t1 = min(v/0.1,1);
+      t2 = min(max(v - 0.1,0)/0.4,1);
+      W = [ $wr,$wg,$wb ];
+      L = [ $lr,$lg,$lb ];
+      D = 0.8*W;
+      D + (W - D)*t1 + (L - W)*t2"
+    rm[0]
+  }
+
+# Accumulate the impacts of light rays refracted by a sum of random plane waves (photon splatting).
+_fx_water_caustics_density :
+  csz,dst,det,tm,iw,ih,ss=$*
+  nbw=64
+  m:=ceil(1.5*$csz)
+
+  # Random wave parameters (one column per wave: direction, wavelength, phase, speed).
+  $nbw,1,1,4 rand. 0,1
+
+  # Wave parameters: wave vector (kx,ky), curvature amplitude and phase.
+  $nbw,1,1,4,"
+    th = pi*(x + 0.9*(i(#-1,x,0,0,0) - 0.5))/w;
+    oct = i(#-1,x,0,0,1) - 0.5 + 2*$det%*max(0,i(#-1,x,0,0,1) - 0.35);
+    k = 2*pi/$csz*2^oct;
+    q = $dst*sqrt(2/w)*2^(-0.5*max(0,oct));
+    ph = 2*pi*i(#-1,x,0,0,2) + $tm*(0.3 + 0.7*i(#-1,x,0,0,3));
+    [ k*cos(th), k*sin(th), q, ph ]"
+  rm[-2]
+
+  # Landing positions of the rays, from a regular grid of starting points (padded and oversampled).
+  sw:=($iw+2*$m)*$ss
+  sh:=($ih+2*$m)*$ss
+  $sw,$sh,1,2,"
+    px = x/$ss - $m;
+    py = y/$ss - $m;
+    dx = 0;
+    dy = 0;
+    for (j = 0, j<w#-1, ++j,
+      kx = i(#-1,j,0,0,0);
+      ky = i(#-1,j,0,0,1);
+      s = i(#-1,j,0,0,2)*sin(kx*px + ky*py + i(#-1,j,0,0,3))/(kx*kx + ky*ky);
+      dx -= kx*s;
+      dy -= ky*s;
+    );
+    [ px + dx, py + dy ]"
+  rm[-2]
+
+  # Bilinear accumulation of the rays in the final image.
+  $iw,$ih,1,1,0
+  f[-1] "begin(
+    for (yy = 0, yy<h#-2, ++yy,
+      for (xx = 0, xx<w#-2, ++xx,
+        u = i(#-2,xx,yy,0,0) - 0.5;
+        v = i(#-2,xx,yy,0,1) - 0.5;
+        iu = int(floor(u));
+        iv = int(floor(v));
+        fu = u - iu;
+        fv = v - iv;
+        i(iu,iv,0,0) += (1 - fu)*(1 - fv);
+        i(iu + 1,iv,0,0) += fu*(1 - fv);
+        i(iu,iv + 1,0,0) += (1 - fu)*fv;
+        i(iu + 1,iv + 1,0,0) += fu*fv;
+      )
+    )
+  );
+  i"
+  rm[-2]
 
 #@gui ____<b>Repair</b>
 #-----------------------
