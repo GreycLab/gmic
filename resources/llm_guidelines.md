@@ -52,3 +52,4 @@ seed,randomize,nbd,dsz,imode,istr,flo,swi,det,palsel,r1,g1,b1,r2,g2,b2,pr,pg,pb=
 ~~~
 then use these named variables in the code, rather than the function’s direct arguments (`$1`, `$2`, etc.), for better readability.
 28. In the code for a G'MIC-Qt filter, do not specify default argument values (e.g., `${1=10},${2=20}`). All arguments are guaranteed to get a value when the filter is called from the plug-in.
+29. If a parameter expresses a value in percent, pixel or degrees, append ` (%)`, ` (px)` or ` (deg.)` to the parameter name.
