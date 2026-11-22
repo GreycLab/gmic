@@ -55735,6 +55735,169 @@ fx_flower_preview :
   line $1%,$2%,$3%,$4%,1,0xF0F0F0F0,0
   line $1%,$2%,$3%,$4%,1,0x0F0F0F0F,255
 
+#@gui Glass Door : fx_glass_door,fx_glass_door(0)
+#@gui : Description = note{"<span color=\"#EE5500\"><b>Description:</b></span> \
+# Simulate an optical distortion of the image seen through a glass block door.
+#@gui : "}, sep = separator()
+#@gui : Block Size (px) = ~int(64,16,256)
+#@gui : Block Shape = ~choice("Dome","Pyramid","Vertical cylinders","Horizontal cylinders","Sphere in cube",\
+# "Spherical dimple in cube")
+#@gui : Flat Top Size (%) = ~float(30,0,95)
+#@gui : Refractive Index (IOR) = ~float(2,1,3)
+#@gui : Lens Curvature (% of block) = ~float(31,0,100)
+#@gui : Base Thickness (% of block) = ~float(117,0,300)
+#@gui : Specular Light = ~float(50,0,100)
+#@gui : Specular Sharpness = ~int(40,1,200)
+#@gui : Mortar Width (%) = ~float(10,0,50)
+#@gui : Mortar Darkness (%) = ~float(70,0,100)
+#@gui : Mortar Softness (px) = ~float(2,0,20)
+#@gui : Frosted Glass = ~float(2,0,10)
+#@gui : Surface Irregularity = ~float(20,0,100)
+#@gui : Texture Grain Size = ~float(1,0.5,10)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/02</i>.</small>")
+fx_glass_door :
+  foreach { nm={n}
+    b $12
+
+    # Number of color channels (the opacity channel, if any, is warped but not shaded).
+    nc:=s if isin($nc,2,4) nc-=1 fi
+
+    # Random perturbation of the surface normal, normalized so that
+    # 'Surface Irregularity' is directly the RMS slope perturbation (in %).
+    100%,100%,1,1 rand. -1,1 b. $14,3 f. "(i - ia)/id" g. xy a[-2,-1] c f. "i/id" *. {$13%}
+
+    # Everything that depends on the block geometry, in a single pass:
+    # channels = [ displacement_x, displacement_y, mortar_shading, specular_light ].
+    100%,100%,1,4,"
+      const size = $1;
+      const shape = $2;             # 0 = dome, 1 = pyramid, 2 = vertical cylinders, 3 = horizontal cylinders,
+                                    # 4 = sphere in cube, 5 = spherical dimple in cube.
+      const isdome = shape==0;
+      const iscylv = shape==2;
+      const iscylh = shape==3;
+      const issph = shape>=4;       # Spherical cap, convex (4) or concave (5).
+      const sg = shape==5?-1:1;     # +1 = bump, -1 = dimple.
+      const pl = min($3%,0.99);     # Relative size of the flat top.
+      const ior = $4;
+      const H = $5%*size;           # Block height, relative to the block size.
+      const Th = $6%*size;          # Glass base thickness, relative to the block size.
+      const spec_amp = $7%;
+      const shine = $8;
+      const mw = $9%;               # Relative width of the mortar ramp.
+      const md = $10%;              # Mortar darkness.
+      const slope = 2*H/size/(1 - pl);
+      const eta = 1/max(ior,1.0001);
+
+      # Spherical cap geometry, in block units (half-block = 1).
+      # The sphere crosses the flat face on the circle of radius 1 inscribed in the block,
+      # with a cap height Hu (limited to a hemisphere).
+      const Hu = cut(2*H/size,0.001,0.999);
+      const Rs = (1 + Hu^2)/(2*Hu);   # Sphere radius.
+      const zc = Hu - Rs;             # Sphere center altitude (below the face for a bump).
+
+      # Half-vector H = normalize(L + V), with L = (-0.577,-0.577,0.577) and V = (0,0,1).
+      const hx = -0.325;
+      const hy = -0.325;
+      const hz = 0.888;
+
+      # Block coordinates in [-1,1], symmetric around the block center.
+      u = 2*(x%size + 0.5)/size - 1;
+      v = 2*(y%size + 0.5)/size - 1;
+      au = abs(u);
+      av = abs(v);
+
+      # Distance to the block center (0 at center, 1 on the borders):
+      # Chebyshev distance for dome/pyramid/sphere, 1D distance across the cylinder axis for cylinders.
+      m = iscylv?au:(iscylh?av:max(au,av));
+
+      # Remapped coordinates for the truncated dome/cylinder (0 on the flat top, then 0 -> 1).
+      uu = sign(u)*max(0,au - pl)/(1 - pl);
+      vv = sign(v)*max(0,av - pl)/(1 - pl);
+
+      # Radial coordinates for the spherical shapes: 'rho' is the distance to the block center,
+      # 'rr' is the remapped radius (0 on the circular flat top, then 0 -> 1 up to the inscribed circle).
+      rho = sqrt(u^2 + v^2);
+      rr = max(0,rho - pl)/(1 - pl);
+      sq = sqrt(max(Rs^2 - rr^2,1e-6));
+
+      # Height of the spherical cap above the flat face (0 outside the circle).
+      cap = rho<1?zc + sq:0;
+
+      # Elevation Z(u,v) of the block: (truncated) dome, truncated pyramid, (truncated) cylinder,
+      # or (truncated) spherical cap embedded in a flat cube face (bump, or dimple whose bottom lies at Z = 0).
+      Z = issph?(sg>0?cap:Hu - cap)*size/2:
+        (iscylv?H*(1 - uu^2):
+        (iscylh?H*(1 - vv^2):
+        (isdome?
+          H*(1 - uu^2)*(1 - vv^2):
+          H*min(1,(1 - m)/(1 - pl)))));
+
+      # Partial derivatives of Z.
+      # For the sphere: dZ/dx = -sg * (rr/sq) * (1/(1 - pl)) * (u/rho), which is 0 on the flat top (rr = 0).
+      dzdx = issph?(rho<1?-sg*rr/sq*u/(max(rho,1e-6)*(1 - pl)):0):
+        (iscylv?-2*slope*uu:
+        (iscylh?0:
+        (isdome?
+          -2*slope*uu*(1 - vv^2):
+          (m>pl && au>=av?-slope*sign(u):0))));
+      dzdy = issph?(rho<1?-sg*rr/sq*v/(max(rho,1e-6)*(1 - pl)):0):
+        (iscylh?-2*slope*vv:
+        (iscylv?0:
+        (isdome?
+          -2*slope*vv*(1 - uu^2):
+          (m>pl && av>au?-slope*sign(v):0))));
+
+      # Surface normal, perturbed by the random micro-relief.
+      P = I(#1,x,y);
+      nx = -dzdx + P[0];
+      ny = -dzdy + P[1];
+      L = sqrt(nx^2 + ny^2 + 1);
+      Nx = nx/L;
+      Ny = ny/L;
+      Nz = 1/L;
+
+      # Snell-Descartes refraction, view ray from camera I = (0,0,-1).
+      cs = Nz;                               # Dot product (-I . N)
+      kk = 1 - eta^2*(1 - cs^2);
+      bend = eta*cs - sqrt(max(0,kk));       # Bending factor
+
+      # Refracted ray vector (Rx,Ry,Rz).
+      Rx = bend*Nx;
+      Ry = bend*Ny;
+      Rz = -eta + bend*Nz;
+
+      # Intersect the ray with the back of the glass block.
+      travel = Z + Th;
+      disp_x = travel*Rx/(-Rz);
+      disp_y = travel*Ry/(-Rz);
+
+      # Mortar shading: smooth ramp over the outer 'mw' fraction of the block.
+      ramp = mw>0?cut((1 - m)/mw,0,1):1;
+      mortar = 1 - md*(1 - ramp*ramp*(3 - 2*ramp));
+
+      # Blinn-Phong specular highlight (light from top-left).
+      nh = max(0,Nx*hx + Ny*hy + Nz*hz);
+      spec = 255*nh^shine*spec_amp;
+
+      [ disp_x,disp_y,mortar,spec ]"
+
+    # Remove the micro-relief image, then split the result:
+    # [1] = disp_x, [2] = disp_y, [3] = mortar, [4] = specular.
+    rm[1] s[1] c a[1,2] c  # Now: [1] = displacement field, [2] = mortar, [3] = specular.
+
+    # Soften the mortar shading for smoother transitions between blocks.
+    b[2] $11
+
+    # Warp the image (all channels, opacity included).
+    warp[0] [1],1,1,3
+
+    # Add the specular highlight first, then apply the mortar shading,
+    # on the color channels only.
+    f[0] "c<$nc?cut((i + i(#3,x,y,0,0))*i(#2,x,y,0,0),0,255):i" k[0]
+    => $nm
+  }
+
 #@gui Heightfield Warp : fx_heightfield_warp,fx_heightfield_warp_preview
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # Applies a geometric warp by projecting the image onto a 3D heightfield surface.
@@ -56012,6 +56175,179 @@ fx_morph_interactive_preview : gui_check_x11_gdi32 1
   if [$3][0]!=-1 gui_warning_preview "No preview available\n\nKeypoints from previous\nrun have been saved"
   else gui_warning_preview "No preview available"
   fi
+
+#@gui Page Curl : fx_page_curl, fx_page_curl_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Curl up a corner of the image, as on a sheet of paper.
+#@gui : "}, sep = separator()
+#@gui : Corner = ~choice(0,"Top Left","Top Right","Bottom Left","Bottom Right")
+#@gui : Fold Corner Position = ~point(40,40,0,1)
+#@gui : Curl Radius (%) = ~float(10,1,40)
+#@gui : sep = separator()
+#@gui : Back Side = choice{0,"Uniform Color","Other Layer (Image)"}
+#@gui : Swap Layers = bool(0)
+#@gui : Back Side Tint Color / Opacity = ~color(246,241,229,89)
+#@gui : sep = separator()
+#@gui : Shading (%) = ~float(100,0,250)
+#@gui : Shadow Opacity (%) = ~float(60,0,100)
+#@gui : Shadow Softness (%) = ~float(60,0,300)
+#@gui : Light Azimuth (deg.) = ~float(30,-180,180)
+#@gui : Light Elevation (deg.) = ~float(50,15,85)
+#@gui : sep = separator()
+#@gui : Background Color = color(255,255,255,0)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/07</i>.</small>")
+fx_page_curl :
+
+  # Back-side image mode: needs at least two images. Otherwise, fall back to the uniform color.
+  bmode:=$5&&$!>1 hab,hbk=0
+  if $bmode
+    k[0,1]
+    if $6 reverse fi
+    hab:=(s#0==2)||(s#0==4) # Does the front image have an alpha channel?
+    hbk:=(s#1==2)||(s#1==4) # Does the back image have an alpha channel?
+    to_rgba ri[1] [0],3 a[0,1] c # [0] = 8 channels : front RGBA + back RGBA
+  fi
+
+  foreach { nm={n}
+    ha:=$hab||(!$bmode&&(s==2||s==4))    # Does the original image have an alpha channel?
+    if !$bmode to_rgba fi                # RGBA : front RGB + alpha (4 channels)
+
+    # The point is given in the original image: bring it back to the bottom-right corner frame.
+    cfx,cfy:=isin($1,0,2),isin($1,0,1)
+    cvx,cvy:=(w-1)*cut($cfx*$2+(1-$cfx)*(100-$2),0,100)%,(h-1)*cut($cfy*$3+(1-$cfy)*(100-$3),0,100)%
+
+    # Fold direction, then fold size (in % of min(w,h)), deduced from the moved corner.
+    cangle:=atan2($cvy,$cvx)*180/pi
+    csize:=max(5,max(1,norm($cvx,$cvy))/(2-pi*$4%)/min(w,h)*100)
+
+    if $1<3 axes=${"arg0 $1,xy,y,x"} mirror $axes fi
+    +_$0 $csize,$cangle,$4,$bmode,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$ha
+    if $1<3 mirror $axes fi
+
+    if !$bmode" || "0$_is_preview k.
+    else
+      rv s. c,2 rm..                     # [0] = result, [1] = back layer (RGBA)
+      if !$hbk channels[1] 0,2 fi        # The back layer had no alpha channel: drop it
+    fi
+    => $nm
+  }
+
+fx_page_curl_preview :
+  _is_preview=1 fx_page_curl $*
+
+# Render the page curl on the bottom-right corner of image [0].
+# Image [0] has 4 channels (front RGB + front alpha), or 8 channels if bmode=1
+# (front RGB + front alpha + back RGB + back alpha).
+# ha=1 if the original image had an alpha channel (the output is then RGBA).
+_fx_page_curl :
+  size,angle,radius,bmode,bkr,bkg,bkb,bka,shading,sh_opacity,sh_soft,light_az,light_el,bgr,bgg,bgb,bga,ha=$*
+  R:=max(0.75,$radius*$size*min(w,h)/10000)
+  transp:=$bga<255||$ha
+
+  # Compute [1] = geometry. Layer 'T' = visible top surface of the flap (back side of the paper), layer 'F' = front side
+  # of the paper, seen on the inner part of the roll. Channels: 0-5 = T (x,y,coverage,shade,specular,height),
+  # 6-11 = F (same), 12 = flat page coverage, 13 = height map.
+  # Coverages of T and F include the alpha of the original image(s):
+  # F uses the front alpha, T uses front alpha x back alpha (bmode only).
+  100%,100%,1,14,"begin(
+      const phi = $angle°;
+      const dx = cos(phi);
+      const dy = sin(phi);
+      const L = min(w,h)*$size%;
+      const R = $R;
+      const bm = $bmode;
+      const ab = 3 + 4*bm;
+      const uC = (w - 1)*dx + (h - 1)*dy;
+      const t0 = uC - L;
+      const az = phi + $light_az°;
+      const el = $light_el°;
+      const lx = cos(el)*cos(az);
+      const ly = cos(el)*sin(az);
+      const lz = sin(el);
+      const ldx = lx*dx + ly*dy;
+      hx = lx; hy = ly; hz = lz + 1;
+      hn = norm(hx,hy,hz);
+      hx/=hn; hy/=hn; hz/=hn;
+      hdx = hx*dx + hy*dy;
+      const ks = $shading%;
+      const sp = 24;
+      cvg(X,Y,w,h) = cut(min(min(X + 0.5,w - 0.5 - X),min(Y + 0.5,h - 0.5 - Y)) + 0.5,0,1);
+      shade(ns,nz,ks,ld,lz) = max(0.12,1 + ks*(ns*ld + nz*lz - lz));
+      specular(ns,nz,ks,hd,hz,sp) = 0.2*ks*max(0,max(0,ns*hd + nz*hz)^sp - hz^sp);
+    );
+    ss = x*dx + y*dy; vv = -x*dy + y*dx;
+    dd = cut((ss - t0)/R,-1,1);
+    a = asin(dd);
+    inflap = ss<=t0 + R;
+    flat = ss<t0;
+    uT = flat?2*t0 + pi*R - ss:t0 + R*(pi - a);
+    xT = uT*dx - vv*dy; yT = uT*dy + vv*dx;
+    cT = inflap?cvg(xT,yT,w,h)*i(#0,xT,yT,0,3,1,1)/255*lerp(1,i(#0,xT,yT,0,ab,1,1)/255,bm):0;
+    nsT = flat?0:dd; nzT = flat?1:cos(a);
+    zT = flat?2*R:R*(1 + cos(a));
+    inroll = ss>=t0 && inflap;
+    uF = t0 + R*a;
+    xF = uF*dx - vv*dy; yF = uF*dy + vv*dx;
+    cF = inroll?cvg(xF,yF,w,h)*i(#0,xF,yF,0,3,1,1)/255:0;
+    nsF = -dd; nzF = cos(a);
+    zF = R*(1 - cos(a));
+    cB = cut(t0 - ss + 0.5,0,1);
+    hm = cT>0.5?zT:(cF>0.5?zF:0);
+    [xT,yT,cT,shade(nsT,nzT,ks,ldx,lz),specular(nsT,nzT,ks,hdx,hz,sp),zT,
+     xF,yF,cF,shade(nsF,nzF,ks,ldx,lz),specular(nsF,nzF,ks,hdx,hz,sp),zF,cB,hm]"
+
+  # Compute [2] = cast shadow (ray-marching in the height map).
+  100%,100%,1,1,"
+    begin(
+      const R = $R;
+      const az = $angle° + $light_az°;
+      const el = $light_el°;
+      const cx = cos(az);
+      const cy = sin(az);
+      const te = tan(el);
+      const zmax = 2*R;
+      const N = 24;
+    );
+    z0 = i(#1,x,y,0,13,0,0);
+    res = 0;
+    i(#1,x,y,0,2,0,0)<0.5 && z0<zmax?for (k = 1, k<=N && !res, ++k,
+      hg = z0 + (zmax - z0)*k/N;
+      t = (hg - z0)/te;
+      res = i(#1,x + t*cx,y + t*cy,0,13,0,0)>hg + 0.01;
+    );
+    res"
+
+  # [3] = flap silhouette (ambient occlusion). [2] = final darkness map in [0,1].
+  100%,100%,1,1,"i(#1,x,y,0,2,0,0)>0.5 || i(#1,x,y,0,8,0,0)>0.5"
+  sigma:=max(0.5,0.5*$R*$sh_soft%)
+  +b[2] {3*$sigma} b[2] $sigma b[3] {1.2*$R}
+  f[2] "cut(0.85*(i + i(#4,x,y))/2 + 0.35*i(#3,x,y),0,1)*$sh_opacity%"
+  rm[3,4]
+
+  # [3] = composition of all layers (premultiplied alpha). Output is RGBA if the background is not fully opaque
+  # or if the original image had an alpha channel.
+  100%,100%,1,{3+$transp},"
+    begin(
+      bk = [ $bkr,$bkg,$bkb ];
+      bg = [ $bgr,$bgg,$bgb ];
+      const tn = $bka/255;
+      const ba = $bga/255;
+    );
+    cc = min(c,2);
+    g0 = i(#1,x,y,0,0,0,0); g1 = i(#1,x,y,0,1,0,0); cT = i(#1,x,y,0,2,0,0);
+    cF = i(#1,x,y,0,8,0,0); cB = i(#1,x,y,0,12,0,0); dk = i(#2,x,y,0,0,0,0);
+    pa = cB*i(#0,x,y,0,3,0,0)/255;
+    Pg = (1 - dk)*lerp(bg[cc]*ba,i(#0,x,y,0,cc,0,0),pa);
+    Ga = 1 - (1 - ba)*(1 - pa)*(1 - dk);
+    CF = i(#0,i(#1,x,y,0,6,0,0),i(#1,x,y,0,7,0,0),0,cc,1,1)*i(#1,x,y,0,9,0,0)*(1 - dk) + 255*i(#1,x,y,0,10,0,0);
+    src = i(#0,g0,g1,0,cc + 4*$bmode,1,1);
+    CT = (1 - tn)*src + tn*bk[cc];
+    CT = CT*i(#1,x,y,0,3,0,0) + 255*i(#1,x,y,0,4,0,0);
+    P = lerp(cF*CF + (1 - cF)*Pg,CT,cT);
+    A = lerp(lerp(Ga,1,cF),1,cT);
+    c<3?cut(P/max(A,1e-6),0,255):255*A"
+  k[3]
 
 #@gui Perspective : fx_perspective, fx_perspective_preview(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -60871,6 +61207,157 @@ __fx_illuminate_shape2d : # Input selection must contains a single image. Output
     if !$keep_output_transparency remove_opacity. fi
   fi
   =>[^] $nm
+
+#@gui Lens Flare : fx_lens_flare, fx_lens_flare_preview(1)
+#@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
+# Renders a lens flare effect (code variation of the GEGL <i>gegl:lens-flare</i> operation.)
+#@gui : "}, sep = separator()
+#@gui : Position = point(30,30,0,1,255,255,0,128,1%)
+#@gui : Optical Axis = point(50,50,0,1)
+#@gui : Dominant color = color(255,38,43)
+#@gui : Size (%) = float(100,10,400)
+#@gui : Intensity (%) = float(100,0,200)
+#@gui : Aperture Shape = choice(5,"Circle","Triangle","Square","Pentagon","Hexagon","Heptagon","Octagon")
+#@gui : Aperture Rotation (deg) = float(0,-180,180)
+#@gui : Blade Roundness (%) = float(10,0,100)
+#@gui : Same Area as Circle = bool(1)
+#@gui : Ghosts Blurriness (%) = float(100,0,400)
+#@gui : Blending Mode = choice(0,"Addition","Dodge","Hard Light","Lighten","Normal","Screen")
+#@gui : Opacity (%) = float(100,0,100)
+#@gui : sep = separator()
+#@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2026/10/10</i>.</small>")
+__fx_lens_flare :
+  posX,posY,axisX,axisY,colR,colG,colB,size,intensity,shape,rot,brd,eqa,blur,opacity=${1-14},$16
+  blending_mode=${"arg0 $15,addition,dodge,hardlight,lighten,normal,screen"}
+
+fx_lens_flare :
+  __$0 $*
+  foreach {
+    nm=${-gui_layer_name}
+    100%,100%,1,3,":
+      begin(
+        const W = w*$size%;
+        const cx = int($posX*w%);
+        const cy = int($posY*h%);
+        const ax = int($axisX*w%);
+        const ay = int($axisY*h%);
+        const dx = ax - cx;
+        const dy = ay - cy;
+        const sz1 = W*0.0375;
+        const sz2 = W*0.078125;
+        const sz3 = W*0.1796875;
+        const sz4 = W*0.3359375;
+        const sz5 = W*0.084375;
+
+        # Aperture shape.
+        const poly = $shape>0;
+        const nb = $shape + 2;
+        const sec = 2*pi/nb;
+        const hp = pi/nb;
+        const ch = cos(hp);
+        const rot0 = $rot*pi/180;
+        const rd = $brd/100;
+        # Factor giving the polygon the same area as the circle (if requested).
+        const kn = if($eqa, sqrt(nb*sin(2*pi/nb)/(2*pi)), 1);
+        # Lower bound of (polygonal distance)/(euclidean distance), used for early rejection.
+        const fmin = if(poly, (1 - rd)*kn + rd, 1);
+        # Ghost edge blurriness (1 = original look). Clamped to avoid division by zero.
+        const bl = max($blur/100, 0.01);
+        # Ring ghosts (type 4) extend up to sz*(1 + 0.04*bl): used for early rejection.
+        const kb = 1 + 0.04*bl;
+
+        rt = [ 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4 ];
+        rs = [ 0.027, 0.01, 0.005, 0.031, 0.015, 0.037, 0.022, 0.025, 0.058, 0.017,
+               0.2, 0.5, 0.075, 0.1, 0.039, 0.19, 0.195, 0.20, 0.038 ];
+        rk = [ 0.6699, 0.2692, -0.0112, 0.6490, 0.4696, 0.4087, -0.2003, -0.4103, -0.4503, -0.5112,
+               -1.496, -1.496, 0.4487, 1, -1.301, 1.309, 1.309, 1.309, -1.301 ];
+        rc = [ 0.937255, 0.937255, 0.937255,
+               0.960784, 0.960784, 0.960784,
+               1, 0.149020, 0.168627,
+               0.270588, 0.231373, 0.250980,
+               0.313726, 0.058824, 0.015686,
+               0, 0.054902, 0.443137,
+               0.352941, 0.709804, 0.556863,
+               0.219608, 0.549020, 0.415686,
+               0.035294, 0.113725, 0.074510,
+               0.094118, 0.054902, 0,
+               0.094118, 0.054902, 0,
+               0.164706, 0.074510, 0,
+               0, 0.035294, 0.066667,
+               0, 0.015686, 0.039216,
+               0.019608, 0.019608, 0.054902,
+               0.035294, 0.015686, 0,
+               0.035294, 0.015686, 0,
+               0.133333, 0.074510, 0,
+               0.054902, 0.101961, 0,
+               0.039216, 0.098039, 0.050980,
+               0.035294, 0, 0.066667,
+               0.035294, 0.062745, 0.019608,
+               0.066667, 0.015686, 0,
+               0.066667, 0.015686, 0 ];
+
+        hue0 = atan2(sqrt(3)*(rc[7] - rc[8]), 2*rc[6] - rc[7] - rc[8]);
+        hue1 = atan2(sqrt(3)*($colG - $colB), 2*$colR - $colG - $colB);
+        ct = cos(hue1 - hue0);
+        st = sin(hue1 - hue0)/sqrt(3);
+        for (k = 0, k<24, ++k,
+          r0 = rc[3*k];
+          g0 = rc[3*k + 1];
+          b0 = rc[3*k + 2];
+          mm = (1 - ct)*(r0 + g0 + b0)/3;
+          rc[3*k] = max(0, min(1, ct*r0 + mm + st*(b0 - g0)));
+          rc[3*k + 1] = max(0, min(1, ct*g0 + mm + st*(r0 - b0)));
+          rc[3*k + 2] = max(0, min(1, ct*b0 + mm + st*(g0 - r0)));
+        );
+      );
+
+      c<3?(
+        hy = sqrt((x - cx)^2 + (y - cy)^2);
+        acc = 1;
+        pr = (sz1 - hy)/sz1;
+        pr>0?(acc*=1 - pr*pr*rc[c]);
+        pr = (sz2 - hy)/sz2;
+        pr>0?(acc*=1 - pr*pr*rc[3 + c]);
+        pr = (sz3 - hy)/sz3;
+        pr>0?(acc*=1 - pr*pr*rc[6 + c]);
+        pr = (sz4 - hy)/sz4;
+        pr>0?(acc*=1 - pr*rc[9 + c]);
+        pr = abs((hy - sz5)/(sz5*0.07));
+        pr<1?(acc*=1 - (1 - pr)*rc[12 + c]);
+
+        for (k = 0, k<19, ++k,
+          sz = W*rs[k];
+          ddx = x - int(rk[k]*dx + ax);
+          ddy = y - int(rk[k]*dy + ay);
+          rr = sqrt(ddx^2 + ddy^2);
+          if (rr<sz*kb/fmin,
+            if (poly,
+              a = atan2(ddy,ddx) - rot0 - if(rk[k]<0,pi,0);
+              m = a - sec*floor(a/sec);
+              rr = (1 - rd)*kn*rr*cos(m - hp)/ch + rd*rr;
+            );
+            ty = rt[k];
+            cc = rc[3*(k + 5) + c];
+            if (ty==1,
+              (pr = (sz - rr)/sz; if (pr>0, acc*=1 - pr*pr*cc)),
+              if (ty==2,
+                (pr = (sz - rr)/(sz*0.15*bl); if (pr>0, acc*=1 - min(pr,1)*cc)),
+                if (ty==3,
+                  (pr = (sz - rr)/(sz*0.12*bl); if (pr>0, (if (pr>1, pr = 1 - pr*0.12); acc*=1 - pr*cc))),
+                  (pr = abs((rr - sz)/(sz*0.04*bl)); if (pr<1, acc*=1 - (1 - pr)*cc)))));
+          );
+        );
+        min(255,$intensity*(1 - acc)*255%)
+      ):i"
+    => "name(Lens Flare),mode("$blending_mode"),opacity("$opacity")"
+    rv
+    if 0$_is_preview" || "0$_output_mode==0 gui_merge_layers else rm. fi
+  }
+
+fx_lens_flare_preview :
+  _is_preview=1 fx_lens_flare $*
+  line $1%,$2%,$3%,$4%,0.7,0x0F0F0F0F,0,0,0,255
+  line $1%,$2%,$3%,$4%,0.7,0xF0F0F0F0,255,255,255,255
 
 #@gui Light Glow : fx_lightglow, fx_lightglow(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
