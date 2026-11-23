@@ -2704,9 +2704,9 @@ const char* gmic_basename(const char *const str)  {
   else ll = l - 1;
   if (*str=='[' && (str[ll]==']' || str[ll]=='.')) return str;
   const char *p = 0, *np = str;
-  while (np>=str && (p=np)) np = std::strchr(np,'/') + 1;
+  while (np>=str && (p=np)) { np = std::strchr(np,'/'); if (np) ++np; }
   np = p;
-  while (np>=str && (p=np)) np = std::strchr(np,'\\') + 1;
+  while (np>=str && (p=np)) { np = std::strchr(np,'\\'); if (np) ++np; }
   return p;
 }
 
@@ -3706,9 +3706,11 @@ gmic& gmic::add_commands(const char *const data_commands, const char *const comm
 
       // Remove comments.
       _line = s_line;
-      if (*_line=='#') *_line = 0; else do { // Remove comments
+      if (*_line=='#') *_line = 0; else for (;;) { // Remove comments
           if ((_line=std::strchr(_line,'#')) && is_blank(*(_line - 1))) { *--_line = 0; break; }
-        } while (_line++);
+          if (!_line) break;
+          ++_line;
+        }
 
       // Remove redundant trailing spaces.
       char *linee = s_line.data() + std::strlen(s_line) - 1;
@@ -6924,6 +6926,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
               (!*argx || (ind0=selection2cimg(argx,images.size(),image_names,"displacement")).height()==1)) {
             nb_scales = (double)(unsigned int)nb_scales;
             if (!cimg::type<double>::is_inf(nb_iterations)) nb_iterations = (double)(unsigned int)nb_iterations;
+            gmic_use_argx;
             if (nb_scales) cimg_snprintf(argx,_argx.width(),"%g ",nb_scales); else std::strcpy(argx,"auto-");
             if (ind0) {
               gmic_use_argy; cimg_snprintf(argy,_argy.width()," with guide [%u]",*ind0);
@@ -11188,7 +11191,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                !std::strcmp(argx,"uint64") || !std::strcmp(argx,"int64") ||
                !std::strcmp(argx,"float32") || !std::strcmp(argx,"float64")) &&
               is_compressed<=1 && is_gmz<=1) ++position;
-          else { std::strcpy(argx,"auto"); is_compressed = is_compressed0?1U:0U; is_gmz = 1; }
+          else { std::strcpy(gmic_use_argx,"auto"); is_compressed = is_compressed0?1U:0U; is_gmz = 1; }
 
           print(0,
                 "Serialize %simage%s as %s%scompressed buffer%s, with datatype '%s'.",
