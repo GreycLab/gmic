@@ -49623,6 +49623,7 @@ fx_quadtree :
 # ---
 #@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Printing:</b></span></small>")
 #@gui : Registration Error (px) = ~float(3,0,30)
+#@gui : Registration Direction (deg.) = ~float(0,0,360)
 #@gui : Print Imperfections (%) = float(35,0,100)
 #@gui : sep = separator(), note = note("<small><span color="#CC3300"><b>Paper:</b></span></small>")
 #@gui : Paper Color = color(245,240,228)
@@ -49633,7 +49634,7 @@ fx_risograph :
   ninks,pal,csep,levels,\
   r1,g1,b1,r2,g2,b2,r3,g3,b3,r4,g4,b4,r5,g5,b5,r6,g6,b6=${1-22}
   htype,freq,sangle,amode,gain,opac=${24-29}
-  regerr,imperf,pr,pg,pb,ptex=${72-77}
+  regerr,regdir,imperf,pr,pg,pb,ptex=${72-78}
   # Screen period in pixels (absolute, so that preview and final rendering match at zoom 1).
   cell:=1000/$freq
   nm1:=$ninks-1
@@ -49719,7 +49720,7 @@ fx_risograph :
     $iw,$ih,1,$ninks,"
       begin(
         kk = $ninks; imp = $imperf%; dg = $gain%; am = $amode;
-        cell = $cell; amp = $regerr; hg = $htype;
+        cell = $cell; amp = $regerr; rd = $regdir; hg = $htype;
         hts = vector6(0); cl = vector6(0); sci = vector6(0); ipn = vector6(0);
         dgv = vector6(0); ca = vector6(0); sa = vector6(0); ox = vector6(0); oy = vector6(0);
         ang = vector6(0);
@@ -49736,16 +49737,17 @@ fx_risograph :
           rkj = i(#1,j,0,0,3);
           angle = $sangle + (am==0?(kk==1?45:ang[rkj]):0) + sv[7*j + 2];
           ca[j] = cos(angle°); sa[j] = sin(angle°);
-          # Misregistration: automatic shift + shift of the ink.
+          # Misregistration: automatic shift (rotated by the registration direction) + shift of the ink.
           mag = amp*(0.5 + 0.5*(j*0.618%1));
-          ox[j] = mag*cos((j*137.5 + 20)°) + sv[7*j + 5];
-          oy[j] = mag*sin((j*137.5 + 20)°) + sv[7*j + 6]);
+          ox[j] = mag*cos((j*137.5 + 20 + rd)°) + sv[7*j + 5];
+          oy[j] = mag*sin((j*137.5 + 20 + rd)°) + sv[7*j + 6]);
       );
       j = c;
       hj = hts[j]; cj = cl[j];
       xs = x - ox[j]; ys = y - oy[j];
       jx = xs + 211*j; jy = ys + 137*j;
-      aj = i(#2,xs,ys,0,j,1,1);
+      # Ink coverage, shifted by the misregistration (linear interpolation, mirror boundary conditions).
+      aj = i(#2,xs,ys,0,j,1,3);
       # Dot gain: the ink spreads, mostly in the midtones.
       ag = max(0,min(1,aj + dgv[j]*4*aj*(1 - aj)));
       a2 = ag*(1 - imp*0.5*i(#5,jx,jy,0,0,0,2));
@@ -49789,7 +49791,7 @@ fx_risograph_preview :
   # Default value of the inks shown in the GUI (the filter replaces them by the inks actually in use).
   _riso_inks=${5-22}
   fx_risograph $*
-  _fx_risograph_gui ${1-4},$_riso_inks,${23-77}
+  _fx_risograph_gui ${1-4},$_riso_inks,${23-78}
 
 _fx_risograph_gui :
   ninks,pal,esel=$1,$2,${23}
@@ -49818,7 +49820,7 @@ _fx_risograph_gui :
     "{${51}}_"$v4"{${52}}_"$v4"{${53}}_"$v4"{${54}}_"$v4"{${55}}_"$v4"{${56}}_"$v4"{${57}}_"$v4\
     "{${58}}_"$v5"{${59}}_"$v5"{${60}}_"$v5"{${61}}_"$v5"{${62}}_"$v5"{${63}}_"$v5"{${64}}_"$v5\
     "{${65}}_"$v6"{${66}}_"$v6"{${67}}_"$v6"{${68}}_"$v6"{${69}}_"$v6"{${70}}_"$v6"{${71}}_"$v6\
-    "{${72}}{${73}}{${74},${75},${76}}{${77}}"
+    "{${72}}{${73}}{${74}}{${75},${76},${77}}{${78}}"
 
 # Append a w x h noise image with uniform distribution of values in [0,1], smoothed by a Gaussian of std. $3.
 # The smoothing is periodic, so that the noise tiles seamlessly when sampled with an offset (periodic boundary).
