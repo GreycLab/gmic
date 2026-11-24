@@ -63033,10 +63033,6 @@ fx_mosaic :
 #@gui : these layers are passed to the filter.
 #@gui : </small>"}
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/12/16</i>.</small>")
 fx_shapes :
   if $1 # Predefined shapes
@@ -63065,7 +63061,7 @@ fx_shapes :
 fx_shapes_preview :
   if $1 foreach {
     w,h={w},{h}
-    gui_split_preview "fx_shapes ${1-3},1,${5--2}",$-1
+    fx_shapes ${1-3},1,${5--1}
     r $w,$h,1,100%,0,0,0.5,0.5
   } else
     if $!>$2 repeat $!-$2 { l[0-{$2-1},{$2+$>}] {
@@ -63367,7 +63363,7 @@ fx_pack_ellipses :
   }
 
 fx_pack_ellipses_preview :
-  gui_split_preview "fx_pack_ellipses ${1-12},1,0"
+  fx_pack_ellipses ${1-12},1,0
 
 #@gui Pack Sprites : fx_pack_sprites, fx_pack_sprites_preview : *
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -63927,11 +63923,6 @@ fx_reaction_diffusion :
 #@gui : Height = _int(1024,32,8192)
 #@gui : Equalize Light = float(0,0,100)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter tries to re-synthesize a <b>micro</b>-texture
 #@gui : (given as the input image) onto an output (seamless) image with an arbitrary size.
 #@gui : It uses a phase randomization technique, as described in:</small>"}
@@ -63951,7 +63942,7 @@ fx_syntexturize :
   }
 
 fx_syntexturize_preview :
-  gui_split_preview "fx_syntexturize 100%,100%,$3",${-3--1}
+  fx_syntexturize 100%,100%,$3
 
 #@gui Resynthesize Texture [Patch-Based] : syntexturize_matchpatch, fx_syntexturize_matchpatch_preview(1)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -63964,11 +63955,6 @@ fx_syntexturize_preview :
 #@gui : Blending Size = int(5,1,24)
 #@gui : Precision = float(1,0,5)
 #@gui : Equalize Light = float(0,0,100)
-#@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note:</b> This filter tries to re-synthesize an input texture image onto a
 #@gui : bigger output image (with an arbitrary size).
@@ -63984,7 +63970,7 @@ _fx_syntexturize_matchpatch_preview :
   }
 
 fx_syntexturize_matchpatch_preview :
-  gui_split_preview "_fx_syntexturize_matchpatch_preview ${1--2}",${-3--1}
+  _fx_syntexturize_matchpatch_preview $*
 
 #@gui Rorschach : fx_rorschach, fx_rorschach
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -68470,7 +68456,7 @@ fx_smooth_diffusion :
 #@gui : Guide As = choice("Self","Top Layer","Bottom Layer")
 #@gui : Radius = int(5,1,100)
 #@gui : Smoothness = float(30,0,512)
-#@gui : Iterations = int(1,1,10)
+#@gui : Iterations = int(3,1,10)
 #@gui : sep = separator()
 #@gui : Channel(s) = ~choice("All","RGBA [All]","RGBA [Red-Green-Blue]","RGBA [Red]","RGBA [Green]","RGBA [Blue]",\
 # "RGBA [Alpha]","Linear RGB [All]","Linear RGB [Red]","Linear RGB [Green]","Linear RGB [Blue]","YCbCr [All]",\
@@ -68481,13 +68467,8 @@ fx_smooth_diffusion :
 # "CMYK [All]","CMYK [Cyan-Magenta-Yellow]","CMYK [Cyan]","CMYK [Magenta]","CMYK [Yellow]","CMYK [Key]","YIQ [All]",\
 # "YIQ [Luma]","YIQ [Chromas]","RYB [All]","RYB [Red]","RYB [Yellow]","RYB [Blue]")
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2019/10/02</i>.</small>")
-fx_smooth_guided : skip ${6=0},${7=0}
+fx_smooth_guided :
   if $1" && "!narg($_guide)
     if $!<2 gui_warning_preview "Missing guide layer" return fi
     store[{$1==1?0:-1}] _guide
@@ -68508,7 +68489,7 @@ fx_smooth_guided_preview :
     store[{$1==1?0:-1}] _guide
   fi
   _is_preview=1
-  gui_split_preview "fx_smooth_guided $*",${-3--1}
+  fx_smooth_guided $*
 
 #@gui Smooth [Mean-Curvature] : fx_smooth_meancurvature, fx_smooth_meancurvature(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -68721,11 +68702,6 @@ fx_smooth_selective :
 #@gui : Preview Data = choice{5,"Skin Mask","Base Scale","Medium Scale (Original)","Medium Scale (Smoothed)",
 #@gui : "Fine Scale","Result Image"}
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : url = link("Click here for a video tutorial","http://www.youtube.com/watch?v=H8pQfq-ybCc")
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2013/12/20</i>.</small>")
@@ -68758,18 +68734,22 @@ _fx_smooth_skin :
 
 fx_smooth_skin_preview :
   if !$14
-    gui_split_preview "if $5 balance_gamma 128,128,128 fi if !$1 f 1 elif $1==2 detect_skin $2 "\
-     "else detect_skin $2,$6%,$7%,$8% fi M:=iM b $3% * {255*$M/iM} * $4 c 0,255",${-3--1}
+    if $5 balance_gamma 128,128,128 fi
+    if !$1 f 1
+    elif $1==2 detect_skin $2
+    else detect_skin $2,$6%,$7%,$8%
+    fi
+    M:=iM b $3% * {255*$M/iM} * $4 c 0,255
   elif $14==1
-    gui_split_preview "b $9%",${-3--1}
+    b $9%
   elif $14==2
-    gui_split_preview "split_details 4,$9%,$10% k.. n 0,255",${-3--1}
+    split_details 4,$9%,$10% k.. n 0,255
   elif $14==3
-    gui_split_preview "split_details 4,$9%,$10% k.. _fx_smooth_skin $12,$11 n 0,255",${-3--1}
+    split_details 4,$9%,$10% k.. _fx_smooth_skin $12,$11 n 0,255
   elif $14==4
-    gui_split_preview "split_details 4,$9%,$10% k. n 0,255",${-3--1}
+    split_details 4,$9%,$10% k. n 0,255
   else
-    gui_split_preview "fx_smooth_skin $*",${-3--1}
+    fx_smooth_skin $*
   fi
 
   if $1==1
@@ -68912,9 +68892,7 @@ fx_scale2x_cnn_preview :
     input_cached gmic_scale2x_cnn.gmz,2 rm
   } fi
   rs 128,128,0
-  foreach {
-    gui_split_preview "scale2x_cnn $1",9,50,50
-  }
+  foreach { gui_split_preview "scale2x_cnn $1",9,50,50 }
 
 #@gui Upscale [DCCI2x]: fx_scale_dcci2x, fx_scale_dcci2x_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -69378,17 +69356,12 @@ fx_animate_edges_preview : skip "${4=}"
 #@gui : Starting Frame = int(20,0,199)
 #@gui : Frame Skip = _int(0,0,20)
 #@gui : sep = separator()
-#@gui : Preview Type = choice("Full","Forward Horizontal","Forward Vertical","Backward Horizontal",
-#@gui : "Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom","Duplicate Right",
-#@gui : "Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse")
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>David Tschumperlé</i>.      Latest Update: <i>2011/07/06</i>.</small>")
 fx_fire_edges :
   fire_edges ${1-7} rv
 
 fx_fire_edges_preview :
-  gui_split_preview "fire_edges $1,$2,$3,$4,1,$6,0",${-3--1}
+  fire_edges $1,$2,$3,$4,1,$6,0
 
 #@gui Lava Lamp : fx_lavalampbw, fx_lavalampbw_preview(0)
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
@@ -69906,11 +69879,6 @@ fx_dragoncurve :
 #@gui : Display Debug Info on Preview = bool()
 #@gui : Debug Font Size = choice(2,"Tiny","Small","Normal","Large")
 #@gui : sep = separator()
-#@gui : Preview Type = choice{"Full (Allows Multi-Layers)","Forward Horizontal","Forward Vertical",
-#@gui : "Backward Horizontal","Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom",
-#@gui : "Duplicate Right","Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse"}
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note{"<small><b>Note: </b>
 #@gui : This filter can execute any set of instructions understood by the <b>G'MIC</b> language interpreter.
 #@gui : Here, you can then test some commands before creating your own G'MIC custom commands and plug-in
@@ -69942,11 +69910,6 @@ fx_dragoncurve :
 #@gui : Display Debug Info on Preview = bool()
 #@gui : Debug Font Size = choice(2,"Tiny","Small","Normal","Large")
 #@gui : sep = separator()
-#@gui : Preview Type = choice{"Full (Allows Multi-Layers)","Forward Horizontal","Forward Vertical",
-#@gui : "Backward Horizontal","Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom",
-#@gui : "Duplicate Right","Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse"}
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
-#@gui : sep = separator()
 #@gui : note = note{"<small><b>Note: </b>
 #@gui : This filter can execute any set of instructions understood by the <b>G'MIC</b> language interpreter.
 #@gui : Here, you can then test some commands before creating your own G'MIC custom commands and plug-in
@@ -69977,11 +69940,6 @@ fx_dragoncurve :
 #@gui : Value Action = choice("None","Cut","Normalize")
 #@gui : Display Debug Info on Preview = bool()
 #@gui : Debug Font Size = choice(2,"Tiny","Small","Normal","Large")
-#@gui : sep = separator()
-#@gui : Preview Type = choice{"Full (Allows Multi-Layers)","Forward Horizontal","Forward Vertical",
-#@gui : "Backward Horizontal","Backward Vertical","Duplicate Top","Duplicate Left","Duplicate Bottom",
-#@gui : "Duplicate Right","Duplicate Horizontal","Duplicate Vertical","Checkered","Checkered Inverse"}
-#@gui : Preview Split = point(50,50,0,200,200,200,0,10)_0
 #@gui : sep = separator()
 #@gui : note = note{"<small><b>Note: </b>
 #@gui : This filter can execute any set of instructions understood by the <b>G'MIC</b> language interpreter.
@@ -70019,9 +69977,7 @@ fx_custom_code_preview : skip "${1=-skip ,}"
   w,h={w},{h}
   l {
     ({'{/"$1"}'}) discard. 92,10 _gcp_arg={t} rm.
-    if $6 gui_split_preview "fx_custom_code $_gcp_arg,${2--2}",${-3--1}
-    else fx_custom_code $_gcp_arg,${2--2}
-    fi
+    fx_custom_code $_gcp_arg,${2--2}
   onfail
     error_msg=${}
     rs $w,$h,1,1
