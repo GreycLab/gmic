@@ -24,33 +24,34 @@
 17. When adding or subtracting two terms, put spaces around the `+` or `-` operator, e.g. `x + y`, rather than `x+y`.
 18. Use `°` rather than `*pi/180`, e.g. `x = angle°` rather than `x = angle*pi/180`.
 19. Function `mod()` does not exist for compute modulos. Use the `%` operator instead, e.g. `x%y` rather than `mod(x,y)`.
+20. Function `clamp(value,min,max)` does not exist. Use `cut(value,min,max)` instead.
 
 ## Definition of filter parameters and GUI
-20. When defining a G'MIC-Qt filter, the main command name must begin with the prefix `fx_`. If a command to generate the preview is required, it must have the same name, suffixed by `_preview`.
-21. When defining the filter parameter GUI, the three first lines after the definition must be:
+21. When defining a G'MIC-Qt filter, the main command name must begin with the prefix `fx_`. If a command to generate the preview is required, it must have the same name, suffixed by `_preview`.
+22. When defining the filter parameter GUI, the three first lines after the definition must be:
 ~~~
 #@gui : Description = note{"<span color="#EE5500"><b>Description:</b></span> \
 # A one-line description of what the filter does. Keep it short and concise.
 #@gui : "}, sep = separator()
 ~~~
-22. When defining the filter parameter GUI, the two last lines must be:
+23. When defining the filter parameter GUI, the two last lines must be:
 ~~~
 #@gui : sep = separator()
 #@gui : note = note("<small>Author: <i>Author Name</i>.      Latest Update: <i>YYYY/MM/DD</i>.</small>")
 ~~~
 where `YYYY/MM/DD` is the date of the day. There must be exactly 6 non-breaking spaces before `Latest Update:`.
-23. Parameter names must be capitalized as in an English title, following APA conventions
-24.  Do not include a `Random Seed` parameter for the filter unless you are certain that the rendering displayed in the preview window will be roughly the same as the final rendering once the filter is applied.
-25. When defining a `choice()` parameter, if the default choice is the first item, you don't need to specify a `0` as the first argument.
-26. If it might be useful to randomize a parameter so that the user can randomly explore the filter's parameter space, prefix the parameter type with `~`. E.g., `Color = ~color(255,255,255)`.
-27. If certain filter parameters share a common theme (such as "Colors" or "Geometry"), group them between two `separator()`, and add a group header note after the first separator, such as:
+24. Parameter names must be capitalized as in an English title, following APA conventions
+25.  Do not include a `Random Seed` parameter for the filter unless you are certain that the rendering displayed in the preview window will be roughly the same as the final rendering once the filter is applied.
+26. When defining a `choice()` parameter, if the default choice is the first item, you don't need to specify a `0` as the first argument.
+27. If it might be useful to randomize a parameter so that the user can randomly explore the filter's parameter space, prefix the parameter type with `~`. E.g., `Color = ~color(255,255,255)`.
+28. If certain filter parameters share a common theme (such as "Colors" or "Geometry"), group them between two `separator()`, and add a group header note after the first separator, such as:
 ~~~
 #@gui : note = note("<small><span color="#CC3300"><b>Colors:</b></span></small>")
 ~~~
-28. If a filter has more than 6 parameters, define variables for each of these parameters, e.g. with:
+29. If a filter has more than 6 parameters, define variables for each of these parameters, e.g. with:
 ~~~
 seed,randomize,nbd,dsz,imode,istr,flo,swi,det,palsel,r1,g1,b1,r2,g2,b2,pr,pg,pb=${1-19}
 ~~~
 then use these named variables in the code, rather than the function’s direct arguments (`$1`, `$2`, etc.), for better readability.
-29. In the code for a G'MIC-Qt filter, do not specify default argument values (e.g., `${1=10},${2=20}`). All arguments are guaranteed to get a value when the filter is called from the plug-in.
-30. If a parameter expresses a value in percent, pixel or degrees, append ` (%)`, ` (px)` or ` (deg.)` to the parameter name.
+30. In the code for a G'MIC-Qt filter, do not specify default argument values (e.g., `${1=10},${2=20}`). All arguments are guaranteed to get a value when the filter is called from the plug-in.
+31. If a parameter expresses a value in percent, pixel or degrees, append ` (%)`, ` (px)` or ` (deg.)` to the parameter name.
