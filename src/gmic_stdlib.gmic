@@ -18148,6 +18148,12 @@ arrange : skip "${1=AH}" check "inrange(${2=0.5},-1,1) && isint(${3=0},0,2)" ski
   else
     nbi=1 if $3 sh. 0 +histogram. 1,{'I'},{'I'} nbi:=i rm[-2,-1] fi # Number of output layers
     if $3<2 $w_res,$h_res,$nbi,$s_res fi
+
+    # Trick: As 'run()' in eval below may re-allocate image list, thus breaking current instance reference,
+    # we artificially increase the number of images in the list, so that if reallocation is needed,
+    # it will happen here, before the eval command is executed.
+    0x2 rm[-2--1]
+
     eval[$nb_images] ">begin(zi = 0);
       i==_'I'?(
         N = I; ind = N[2]; wi = W = N[4]; hi = H = N[5];
