@@ -2366,6 +2366,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
     CImg<char>::string(title).move_to(p_gmic_instance->callstack);
   } else CImg<char>::string("*expr").move_to(p_gmic_instance->callstack);
   unsigned int nposition = 0;
+  const CImg<T> *const images_data = images._data;
   try {
     p_gmic_instance->_run(p_gmic_instance->command_line_to_CImgList(gmic::strreplace_fw(str)),nposition,
                           images,image_names,
@@ -2373,11 +2374,13 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   } catch (gmic_exception &e) {
     CImg<char>::string(e.what()).move_to(is_error);
   }
+  if (!is_error && images._data!=images_data)
+    CImg<char>::string("Running pipeline has re-allocated the image list.").move_to(is_error);
+
   p_gmic_instance->callstack.remove();
   if (is_error || !p_gmic_instance->status || !*p_gmic_instance->status ||
       sscanf_lfc(p_gmic_instance->status,&res,&sep)!=1)
     res = cimg::type<double>::nan();
-
   if (is_parallel_run) delete p_gmic_instance;
   if (is_error)
     throw CImgArgumentException("[" cimg_appname "_math_parser] CImg<%s>: Function 'run()': %s",
@@ -4916,14 +4919,19 @@ CImg<char> gmic::substitute_item(const char *const source,
           const CImgList<char>
             ncommand_line = command_line_to_CImgList(strreplace_fw(inbraces));
           unsigned int nposition = 0;
+          const CImg<T> *const images_data = images._data;
           CImg<char>::string("*substitute").move_to(callstack);
           const unsigned int psize = images.size();
           _run(ncommand_line,nposition,images,image_names,parent_images,parent_image_names,
                variable_sizes,0,inbraces,command_selection,false);
           if (images.size()!=psize)
             error(true,0,0,
-                  "Item substitution '${\"%s\"}': Expression incorrectly changes the number of images (from %u to %u).",
+                  "Item substitution '${\"%s\"}': Running pipeline incorrectly changed the number of images (from %u to %u).",
                   cimg::strellipsize(inbraces,64,false),psize,images.size());
+          if (images._data!=images_data)
+            error(true,0,0,
+                  "Item substitution '${\"%s\"}': Running pipeline has re-allocated the image list.",
+                  cimg::strellipsize(inbraces,64,false));
           callstack.remove();
           is_return = false;
         }
