@@ -2341,12 +2341,13 @@ double gmic::mp_name(const unsigned int ind, double *const out_str, const unsign
 }
 
 template<typename T>
-double gmic::mp_run(char *const str, const bool is_parallel_run,
-                    void *const p_list, const T& pixel_type) {
+double gmic::mp_run(char *const str, void *const p_mp, const T& pixel_type) {
   cimg::unused(pixel_type);
   CImg<void*> gr;
   cimg::mutex(24);
-  try { gr = current_run("Function 'run()'",p_list); } catch (...) { cimg::mutex(24,0); throw; }
+  typedef typename CImg<T>::_cimg_math_parser _cimg_math_parser;
+  _cimg_math_parser &mp = *(_cimg_math_parser*)p_mp;
+  try { gr = current_run("Function 'run()'",&mp.imglist); } catch (...) { cimg::mutex(24,0); throw; }
   cimg::mutex(24,0);
   double res = cimg::type<double>::nan();
   gmic &gmic_instance = *(gmic*)gr[0];
@@ -2356,6 +2357,12 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   CImgList<char> &parent_image_names = *(CImgList<char>*)gr[4];
   const unsigned int *const variable_sizes = (const unsigned int*)gr[5];
   const CImg<unsigned int> *const command_selection = (const CImg<unsigned int>*)gr[6];
+#if cimg_use_openmp==0
+  const unsigned int n_thread = 0;
+#else
+  const unsigned int n_thread = omp_get_thread_num();
+#endif
+  const bool is_parallel_run = n_thread && mp.is_noncritical_run;
 
   gmic *const p_gmic_instance = is_parallel_run?new gmic(gmic_instance):&gmic_instance;
   CImg<char> is_error;
@@ -2366,7 +2373,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
     CImg<char>::string(title).move_to(p_gmic_instance->callstack);
   } else CImg<char>::string("*expr").move_to(p_gmic_instance->callstack);
   unsigned int nposition = 0;
-  const CImg<T> *const images_data = images._data;
+  const CImg<T> *const imglist_data = mp.imglist._data;
   try {
     p_gmic_instance->_run(p_gmic_instance->command_line_to_CImgList(gmic::strreplace_fw(str)),nposition,
                           images,image_names,
@@ -2374,7 +2381,7 @@ double gmic::mp_run(char *const str, const bool is_parallel_run,
   } catch (gmic_exception &e) {
     CImg<char>::string(e.what()).move_to(is_error);
   }
-  if (!is_error && images._data!=images_data)
+  if (!is_error && mp.is_pixelwise_evaluation && imglist_data && imglist_data!=mp.imglist._data)
     CImg<char>::string("Running pipeline has re-allocated the image list.").move_to(is_error);
 
   p_gmic_instance->callstack.remove();
@@ -4919,19 +4926,15 @@ CImg<char> gmic::substitute_item(const char *const source,
           const CImgList<char>
             ncommand_line = command_line_to_CImgList(strreplace_fw(inbraces));
           unsigned int nposition = 0;
-          const CImg<T> *const images_data = images._data;
           CImg<char>::string("*substitute").move_to(callstack);
           const unsigned int psize = images.size();
           _run(ncommand_line,nposition,images,image_names,parent_images,parent_image_names,
                variable_sizes,0,inbraces,command_selection,false);
           if (images.size()!=psize)
             error(true,0,0,
-                  "Item substitution '${\"%s\"}': Running pipeline incorrectly changed the number of images (from %u to %u).",
+                  "Item substitution '${\"%s\"}': Running pipeline incorrectly changed the number of images "
+                  "(from %u to %u).",
                   cimg::strellipsize(inbraces,64,false),psize,images.size());
-          if (images._data!=images_data)
-            error(true,0,0,
-                  "Item substitution '${\"%s\"}': Running pipeline has re-allocated the image list.",
-                  cimg::strellipsize(inbraces,64,false));
           callstack.remove();
           is_return = false;
         }
