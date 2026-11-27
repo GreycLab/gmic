@@ -2219,6 +2219,7 @@ double gmic::mp_dollar(const char *const str, void *const p_list) {
 double gmic::mp_abort() {
 #if defined(cimg_use_abort)
   cimg_abort_init;
+  cimg_pragma_openmp(atomic write)
   *gmic_is_abort = true;
   cimg_abort_test;
 #endif
@@ -2471,8 +2472,10 @@ static void *gmic_parallel(void *arg) {
                            *st.parent_images,*st.parent_image_names,
                            st.variable_sizes,0,0,st.command_selection,true);
   } catch (gmic_exception &e) {
-    cimg_forY(*st.gmic_threads,l)
+    cimg_forY(*st.gmic_threads,l) {
+      cimg_pragma_openmp(atomic write)
       (*st.gmic_threads)[l].gmic_instance->is_abort_thread = true;
+    }
     st.exception._command.assign(e._command);
     st.exception._message.assign(e._message);
   }
@@ -2778,6 +2781,7 @@ gmic &gmic::assign(const gmic &gmic_instance) {
   light3d_x = gmic_instance.light3d_x;
   light3d_y = gmic_instance.light3d_y;
   light3d_z = gmic_instance.light3d_z;
+  cimg_pragma_openmp(atomic write)
   _progress = 0;
   progress = &_progress;
   is_change = gmic_instance.is_change;
@@ -4175,7 +4179,11 @@ gmic& gmic::_gmic(const char *const command_line,
   status.assign();
 
   light3d.assign(); light3d_x = light3d_y = 0; light3d_z = -5e8f;
-  progress = p_progress?p_progress:&_progress; *progress = -1;
+  cimg_pragma_openmp(atomic write)
+  _progress = -1;
+  progress = p_progress?p_progress:&_progress;
+  cimg_pragma_openmp(atomic write)
+  *progress = -1;
   nb_carriages_default = nb_carriages_stdout = 0;
   reference_time = (gmic_uint64)-1;
   network_timeout = 0;
@@ -4993,6 +5001,7 @@ gmic& gmic::_run(const CImgList<char>& command_line,
   status.assign();
   is_change = is_debug_info = is_quit = is_return = is_lbrace_command = is_abort_thread = false;
   is_start = true;
+  cimg_pragma_openmp(atomic write)
   *progress = -1;
   if (reference_time==(gmic_uint64)-1) reference_time = cimg::time();
   CImgList<T> parent_images;
@@ -10591,6 +10600,7 @@ gmic& gmic::_run(const CImgList<char>& command_line, unsigned int& position,
                   value);
           else
             print(0,"Disable progress index.");
+          cimg_pragma_openmp(atomic write)
           *progress = (float)value;
           ++position;
           continue;
